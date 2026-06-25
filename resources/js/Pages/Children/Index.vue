@@ -3,10 +3,14 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
 
-defineProps({
+const props = defineProps({
     children: {
         type: Array,
         default: () => [],
+    },
+    canManage: {
+        type: Boolean,
+        default: false,
     },
 });
 
@@ -34,7 +38,9 @@ function destroy(child) {
 
     <AuthenticatedLayout>
         <template #header>
-            <h2 class="text-xl font-semibold text-hort-navy">Kinder</h2>
+            <h2 class="text-xl font-semibold text-hort-navy">
+                {{ canManage ? 'Kinder' : 'Meine Kinder' }}
+            </h2>
         </template>
 
         <div class="space-y-4">
@@ -46,6 +52,7 @@ function destroy(child) {
             </div>
 
             <Link
+                v-if="canManage"
                 :href="route('children.create')"
                 class="flex w-full items-center justify-center gap-2 rounded-2xl bg-hort-teal px-6 py-4 text-base font-semibold text-hort-navy shadow-sm transition hover:bg-hort-teal-dark active:scale-[0.99]"
             >
@@ -77,6 +84,7 @@ function destroy(child) {
                             </p>
                         </div>
                         <button
+                            v-if="canManage"
                             type="button"
                             @click="destroy(child)"
                             class="shrink-0 rounded-lg p-2 text-hort-navy/30 transition hover:bg-red-50 hover:text-red-600"
@@ -111,8 +119,14 @@ function destroy(child) {
                 v-else
                 class="rounded-2xl border-2 border-dashed border-hort-navy/15 p-6 text-center text-sm text-hort-navy/50"
             >
-                Noch keine Kinder angelegt. Lege das erste Kind an, um seinen
-                Stammplan festzulegen.
+                <template v-if="canManage">
+                    Noch keine Kinder angelegt. Lege das erste Kind an, um seinen
+                    Stammplan festzulegen.
+                </template>
+                <template v-else>
+                    Dir ist noch kein Kind zugeordnet. Bitte wende dich an das
+                    Hort-Team.
+                </template>
             </p>
         </div>
     </AuthenticatedLayout>

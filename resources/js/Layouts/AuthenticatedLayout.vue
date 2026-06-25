@@ -6,13 +6,20 @@ import DropdownLink from '@/Components/DropdownLink.vue';
 import { Link, usePage } from '@inertiajs/vue3';
 
 const appName = computed(() => usePage().props.appName ?? 'Hort-Manager');
-const userName = computed(() => usePage().props.auth?.user?.name ?? '');
+const user = computed(() => usePage().props.auth?.user);
+const userName = computed(() => user.value?.name ?? '');
+const isStaff = computed(() => user.value?.role === 'staff');
 
 // Primary navigation — shown as top links on desktop and as a bottom tab bar on mobile.
-const navItems = [
-    { label: 'Dashboard', route: 'dashboard', pattern: 'dashboard', icon: 'home' },
-    { label: 'Kinder', route: 'children.index', pattern: 'children.*', icon: 'children' },
-];
+const navItems = computed(() => [
+    { label: 'Start', route: 'dashboard', pattern: 'dashboard', icon: 'home' },
+    {
+        label: isStaff.value ? 'Kinder' : 'Meine Kinder',
+        route: 'children.index',
+        pattern: 'children.*',
+        icon: 'children',
+    },
+]);
 
 function isActive(pattern) {
     return route().current(pattern);

@@ -19,6 +19,18 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
+    canManageGuardians: {
+        type: Boolean,
+        default: false,
+    },
+    allParents: {
+        type: Array,
+        default: () => [],
+    },
+    guardianIds: {
+        type: Array,
+        default: () => [],
+    },
 });
 
 const weekdayNames = {
@@ -38,6 +50,7 @@ const form = useForm({
         planned_time: day.planned_time ? day.planned_time.slice(0, 5) : '',
         method: day.method ?? '',
     })),
+    guardians: [...props.guardianIds],
 });
 
 function submit() {
@@ -171,6 +184,48 @@ function submit() {
                                 </div>
                             </div>
                         </div>
+                    </section>
+
+                    <!-- Eltern-Zuordnung (nur Team) -->
+                    <section v-if="canManageGuardians" class="space-y-4">
+                        <div>
+                            <h3 class="text-lg font-medium text-hort-navy">
+                                Eltern
+                            </h3>
+                            <p class="mt-1 text-sm text-gray-500">
+                                Wähle die Eltern dieses Kindes. Sie können dann den
+                                Stammplan und kurzfristige Änderungen selbst pflegen.
+                            </p>
+                        </div>
+
+                        <div
+                            v-if="allParents.length"
+                            class="space-y-2 rounded-md border border-gray-200 p-2"
+                        >
+                            <label
+                                v-for="parent in allParents"
+                                :key="parent.id"
+                                class="flex cursor-pointer items-center gap-3 rounded-lg p-2 hover:bg-hort-sand"
+                            >
+                                <input
+                                    type="checkbox"
+                                    :value="parent.id"
+                                    v-model="form.guardians"
+                                    class="rounded border-gray-300 text-hort-teal-dark focus:ring-hort-teal"
+                                />
+                                <span class="text-sm">
+                                    <span class="font-medium text-hort-navy">
+                                        {{ parent.name }}
+                                    </span>
+                                    <span class="text-gray-500">
+                                        · {{ parent.email }}
+                                    </span>
+                                </span>
+                            </label>
+                        </div>
+                        <p v-else class="text-sm text-gray-500">
+                            Noch keine Eltern-Konten vorhanden.
+                        </p>
                     </section>
 
                     <div class="flex items-center justify-end gap-4">

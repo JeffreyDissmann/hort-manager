@@ -8,6 +8,7 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -36,5 +37,15 @@ class User extends Authenticatable
     public function isStaff(): bool
     {
         return $this->role === UserRole::Staff;
+    }
+
+    /**
+     * The children (Kinder) this user is a parent of.
+     *
+     * @return BelongsToMany<Child, $this>
+     */
+    public function children(): BelongsToMany
+    {
+        return $this->belongsToMany(Child::class);
     }
 }

@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Enums\DepartureMethod;
+use App\Enums\UserRole;
 use App\Models\Child;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -12,23 +14,37 @@ use Inertia\Response;
 
 class ChildController extends Controller
 {
-    /** List all children. Reads are open to any authenticated user. */
-    public function index(): Response
+    /**
+     * Staff see and manage every child; parents see only their own
+     * (which they may edit). Reading the shared overview lives in Wochenplan.
+     */
+    public function index(Request $request): Response
     {
+        $user = $request->user();
+
+        $query = $user->isStaff()
+            ? Child::query()
+            : $user->children()->getQuery();
+
         return Inertia::render('Children/Index', [
-            'children' => Child::query()
+            'children' => $query
                 ->orderBy('name')
-                ->get(['id', 'name', 'date_of_birth', 'note']),
+                ->get(['children.id', 'name', 'date_of_birth', 'note']),
+            'canManage' => $user->isStaff(),
         ]);
     }
 
-    public function create(): Response
+    public function create(Request $request): Response
     {
+        $this->authorize('create', Child::class);
+
         return Inertia::render('Children/Create');
     }
 
     public function store(Request $request): RedirectResponse
     {
+        $this->authorize('create', Child::class);
+
         $child = Child::create($this->validateChild($request));
 
         return redirect()
@@ -37,8 +53,10 @@ class ChildController extends Controller
     }
 
     /** Edit a child plus their weekly Stammplan (all five weekdays). */
-    public function edit(Child $child): Response
+    public function edit(Request $request, Child $child): Response
     {
+        $this->authorize('update', $child);
+
         $child->load('weeklySchedules');
 
         // Build a complete Mo–Fr grid, filling gaps with empty entries.
@@ -50,17 +68,29 @@ class ChildController extends Controller
             'method' => $byWeekday->get($weekday)?->method?->value,
         ])->all();
 
+        $canManageGuardians = $request->user()->can('manageGuardians', $child);
+
         return Inertia::render('Children/Edit', [
             'child' => $child->only(['id', 'name', 'date_of_birth', 'note']),
             'schedule' => $schedule,
             'methodOptions' => collect(DepartureMethod::cases())
                 ->map(fn (DepartureMethod $m) => ['value' => $m->value, 'label' => $m->label()])
                 ->all(),
+            'canManageGuardians' => $canManageGuardians,
+            // Only staff get the parent picker and current links.
+            'allParents' => $canManageGuardians
+                ? User::where('role', UserRole::Parent)->orderBy('name')->get(['id', 'name', 'email'])
+                : [],
+            'guardianIds' => $canManageGuardians
+                ? $child->guardians()->pluck('users.id')
+                : [],
         ]);
     }
 
     public function update(Request $request, Child $child): RedirectResponse
     {
+        $this->authorize('update', $child);
+
         $child->update($this->validateChild($request));
 
         $validated = $request->validate([
@@ -84,6 +114,16 @@ class ChildController extends Controller
             );
         }
 
+        // Guardian links are staff-only.
+        if ($request->user()->can('manageGuardians', $child)) {
+            $guardians = $request->validate([
+                'guardians' => ['array'],
+                'guardians.*' => [Rule::exists('users', 'id')->where('role', UserRole::Parent->value)],
+            ]);
+
+            $child->guardians()->sync($guardians['guardians'] ?? []);
+        }
+
         return redirect()
             ->route('children.index')
             ->with('status', "Stammplan für {$child->name} gespeichert.");
@@ -91,6 +131,8 @@ class ChildController extends Controller
 
     public function destroy(Child $child): RedirectResponse
     {
+        $this->authorize('delete', $child);
+
         $name = $child->name;
         $child->delete();
 

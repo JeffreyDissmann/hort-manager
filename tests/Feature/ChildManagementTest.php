@@ -3,61 +3,111 @@
 namespace Tests\Feature;
 
 use App\Enums\DepartureMethod;
+use App\Enums\UserRole;
 use App\Models\Child;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class ChildManagementTest extends TestCase
 {
     use RefreshDatabase;
 
+    private function staff(): User
+    {
+        return User::factory()->create(['role' => UserRole::Staff]);
+    }
+
+    private function parent(): User
+    {
+        return User::factory()->create(['role' => UserRole::Parent]);
+    }
+
     public function test_guests_cannot_manage_children(): void
     {
         $this->get(route('children.index'))->assertRedirect(route('login'));
     }
 
-    public function test_index_lists_children(): void
+    public function test_staff_index_lists_all_children(): void
     {
-        $child = Child::factory()->create(['name' => 'Emma']);
+        Child::factory()->create(['name' => 'Emma']);
+        Child::factory()->create(['name' => 'Mia']);
 
-        $this->actingAs(User::factory()->create())
+        $this->actingAs($this->staff())
             ->get(route('children.index'))
-            ->assertOk();
-
-        $this->assertDatabaseHas('children', ['name' => 'Emma', 'id' => $child->id]);
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Children/Index')
+                ->where('canManage', true)
+                ->has('children', 2)
+            );
     }
 
-    public function test_a_child_can_be_created(): void
+    public function test_parent_index_shows_only_their_own_children(): void
     {
-        $response = $this->actingAs(User::factory()->create())
+        $parent = $this->parent();
+        $own = Child::factory()->create(['name' => 'Emma']);
+        Child::factory()->create(['name' => 'Mia']); // someone else's
+        $parent->children()->attach($own);
+
+        $this->actingAs($parent)
+            ->get(route('children.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('canManage', false)
+                ->has('children', 1)
+                ->where('children.0.name', 'Emma')
+            );
+    }
+
+    public function test_staff_can_create_a_child(): void
+    {
+        $response = $this->actingAs($this->staff())
             ->post(route('children.store'), [
                 'name' => 'Liam',
                 'date_of_birth' => '2019-04-01',
-                'note' => 'Erdnussallergie',
+                'note' => 'Geht freitags allein',
             ]);
 
         $child = Child::firstWhere('name', 'Liam');
 
         $this->assertNotNull($child);
         $response->assertRedirect(route('children.edit', $child));
-        $this->assertSame('Erdnussallergie', $child->note);
+        $this->assertSame('Geht freitags allein', $child->note);
     }
 
     public function test_creating_a_child_requires_a_name(): void
     {
-        $this->actingAs(User::factory()->create())
+        $this->actingAs($this->staff())
             ->post(route('children.store'), ['name' => ''])
             ->assertSessionHasErrors('name');
 
         $this->assertDatabaseCount('children', 0);
     }
 
-    public function test_updating_a_child_upserts_the_weekly_schedule(): void
+    public function test_parents_cannot_create_or_delete_children(): void
+    {
+        $parent = $this->parent();
+        $child = Child::factory()->create();
+        $parent->children()->attach($child);
+
+        $this->actingAs($parent)
+            ->post(route('children.store'), ['name' => 'Neu'])
+            ->assertForbidden();
+
+        $this->actingAs($parent)
+            ->delete(route('children.destroy', $child))
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('children', ['id' => $child->id]);
+    }
+
+    public function test_staff_updating_a_child_upserts_the_weekly_schedule(): void
     {
         $child = Child::factory()->create();
 
-        $this->actingAs(User::factory()->create())
+        $this->actingAs($this->staff())
             ->patch(route('children.update', $child), [
                 'name' => 'Mia',
                 'schedule' => [
@@ -69,45 +119,93 @@ class ChildManagementTest extends TestCase
             ->assertRedirect(route('children.index'));
 
         $this->assertSame('Mia', $child->refresh()->name);
-
-        // Days with a time are stored; the empty day is not.
         $this->assertDatabaseHas('weekly_schedules', [
             'child_id' => $child->id,
             'weekday' => 1,
             'planned_time' => '16:00',
             'method' => DepartureMethod::PickedUp->value,
         ]);
-        $this->assertDatabaseMissing('weekly_schedules', [
-            'child_id' => $child->id,
-            'weekday' => 2,
-        ]);
+        $this->assertDatabaseMissing('weekly_schedules', ['child_id' => $child->id, 'weekday' => 2]);
         $this->assertSame(2, $child->weeklySchedules()->count());
     }
 
-    public function test_clearing_a_weekday_time_removes_that_schedule(): void
+    public function test_a_parent_can_edit_their_own_childs_stammplan(): void
     {
+        $parent = $this->parent();
         $child = Child::factory()->create();
-        $child->weeklySchedules()->create([
-            'weekday' => 3,
-            'planned_time' => '15:00',
-            'method' => DepartureMethod::PickedUp,
-        ]);
+        $parent->children()->attach($child);
 
-        $this->actingAs(User::factory()->create())
+        $this->actingAs($parent)
             ->patch(route('children.update', $child), [
                 'name' => $child->name,
                 'schedule' => [
-                    ['weekday' => 3, 'planned_time' => '', 'method' => null],
+                    ['weekday' => 3, 'planned_time' => '15:00', 'method' => DepartureMethod::PickedUp->value],
                 ],
-            ]);
+            ])
+            ->assertRedirect(route('children.index'));
 
-        $this->assertDatabaseMissing('weekly_schedules', [
+        $this->assertDatabaseHas('weekly_schedules', [
             'child_id' => $child->id,
             'weekday' => 3,
+            'planned_time' => '15:00',
         ]);
     }
 
-    public function test_a_child_can_be_deleted(): void
+    public function test_a_parent_cannot_edit_another_childs_stammplan(): void
+    {
+        $parent = $this->parent();
+        $other = Child::factory()->create(); // not linked
+
+        $this->actingAs($parent)
+            ->get(route('children.edit', $other))
+            ->assertForbidden();
+
+        $this->actingAs($parent)
+            ->patch(route('children.update', $other), ['name' => 'Hack'])
+            ->assertForbidden();
+    }
+
+    public function test_staff_can_assign_guardians_to_a_child(): void
+    {
+        $child = Child::factory()->create();
+        $mum = $this->parent();
+        $dad = $this->parent();
+
+        $this->actingAs($this->staff())
+            ->patch(route('children.update', $child), [
+                'name' => $child->name,
+                'guardians' => [$mum->id, $dad->id],
+            ])
+            ->assertRedirect();
+
+        $this->assertEqualsCanonicalizing(
+            [$mum->id, $dad->id],
+            $child->guardians()->pluck('users.id')->all(),
+        );
+    }
+
+    public function test_a_parent_cannot_change_guardian_links(): void
+    {
+        $parent = $this->parent();
+        $intruder = $this->parent();
+        $child = Child::factory()->create();
+        $parent->children()->attach($child);
+
+        $this->actingAs($parent)
+            ->patch(route('children.update', $child), [
+                'name' => $child->name,
+                'guardians' => [$intruder->id], // should be ignored
+            ])
+            ->assertRedirect();
+
+        // Guardian list is unchanged: still just the original parent.
+        $this->assertEqualsCanonicalizing(
+            [$parent->id],
+            $child->guardians()->pluck('users.id')->all(),
+        );
+    }
+
+    public function test_a_child_can_be_deleted_by_staff(): void
     {
         $child = Child::factory()->create();
         $child->weeklySchedules()->create([
@@ -116,12 +214,11 @@ class ChildManagementTest extends TestCase
             'method' => DepartureMethod::PickedUp,
         ]);
 
-        $this->actingAs(User::factory()->create())
+        $this->actingAs($this->staff())
             ->delete(route('children.destroy', $child))
             ->assertRedirect(route('children.index'));
 
         $this->assertDatabaseMissing('children', ['id' => $child->id]);
-        // Schedules cascade with the child.
         $this->assertDatabaseMissing('weekly_schedules', ['child_id' => $child->id]);
     }
 }

@@ -24,7 +24,7 @@ class DatabaseSeeder extends Seeder
             'role' => UserRole::Staff,
         ]);
 
-        User::factory()->create([
+        $parent = User::factory()->create([
             'name' => 'Familie Schmidt',
             'email' => 'eltern@hort.test',
             'role' => UserRole::Parent,
@@ -39,8 +39,11 @@ class DatabaseSeeder extends Seeder
             'Sophia' => [1 => null, 2 => '16:00', 3 => '16:00', 4 => '16:00', 5 => null],
         ];
 
+        $children = [];
+
         foreach ($plans as $name => $week) {
             $child = Child::factory()->create(['name' => $name]);
+            $children[$name] = $child;
 
             foreach ($week as $weekday => $time) {
                 if ($time === null) {
@@ -55,5 +58,11 @@ class DatabaseSeeder extends Seeder
                 ]);
             }
         }
+
+        // Link the demo parent to two of the children.
+        $parent->children()->sync([
+            $children['Emma']->id,
+            $children['Mia']->id,
+        ]);
     }
 }
