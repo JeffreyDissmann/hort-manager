@@ -1,3 +1,67 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## What this is
+
+**hort-manager** — a management app for a German after-school daycare (*Hort*). Two-sided: **Erzieher** (staff) and **Eltern** (parents). The job it exists to do: track **when each child leaves each day, and how**.
+
+**The frontend UI language is German.** User-facing strings, labels, and routes that users see should be German (domain terms below are the canonical vocabulary). Code, comments, and identifiers stay English.
+
+## Run everything through Laravel Sail
+
+This project runs in Docker via Sail. **Never run `php`/`composer`/`npm`/`artisan` on the host** — the host has the wrong runtimes (e.g. Node 18, too old for Vite 8). Prefix every command with `./vendor/bin/sail`. This overrides the bare `php artisan ...` examples in the Boost guidelines below.
+
+| Task | Command |
+|------|---------|
+| Start / stop containers | `./vendor/bin/sail up -d` / `./vendor/bin/sail down` |
+| App URL | http://localhost (port 80, served by Sail) |
+| Vite dev server (HMR) | `./vendor/bin/sail npm run dev` |
+| Build assets | `./vendor/bin/sail npm run build` |
+| Migrate | `./vendor/bin/sail artisan migrate` (fresh: `migrate:fresh`) |
+| Run all tests | `./vendor/bin/sail artisan test` |
+| Run one test | `./vendor/bin/sail artisan test --filter=TestMethodName` |
+| Format PHP (do before finishing) | `./vendor/bin/sail pint --dirty` |
+| Tinker / REPL | `./vendor/bin/sail artisan tinker` |
+
+**Database is SQLite** (`database/database.sqlite`) — there is no MySQL service. Backups are a file copy.
+
+## Domain model
+
+```
+User            role: erzieher | elternteil          (Breeze auth on the users table)
+  └─ children   parent ↔ child link (which kids are a given Elternteil's)
+Child           Name, Geburtsdatum?, Notiz           (flat list — NO groups)
+WeeklySchedule  (Stammplan)  child + weekday 1–5 → planned_time + method
+DailyDeparture  (Tagesboard) one row per child per day:
+                status, planned_time/planned_method (seeded from Stammplan, overridable),
+                left_at + marked_by (set when staff marks them off), note
+Excursion       (Ausflug)  name, date, depart_at, return_at, [children]
+```
+
+**Departure states are a fixed set** — do not make them configurable:
+`noch_da` · `abgeholt` (picked up) · `nach_hause` (sent home / goes alone) · `ausflug` (on a trip).
+
+### Two rules that shape the architecture
+- **Open information policy:** any logged-in user (incl. every parent) may *read* the full schedule and board of *all* children. The parent↔child link identifies whose kid is whose — it is **not** a read-access boundary. Don't scope read queries per-parent.
+- **Parents submit, staff sees:** a parent's same-day change writes directly onto today's `DailyDeparture` row and shows on the staff board immediately — **no approval step**.
+
+### Daily flow
+Each morning, today's `DailyDeparture` rows are seeded from each child's `WeeklySchedule` for that weekday. Staff/parents may override today's planned time/method. When a child leaves, staff marks the row `abgeholt` or `nach_hause` with a timestamp. The staff **Tagesboard** is the central live view.
+
+## Build order (vertical slices)
+
+1. **Kinder + Stammplan** — manage children and their weekly default plan (current).
+2. **Tagesboard** — live staff board; mark Abgeholt / Nach Hause.
+3. **Eltern-Portal** — parent login, view child, submit same-day change.
+4. **Ausflug** — trips with depart/return times feeding the board.
+
+## Planned (not yet built)
+
+Slack integration with the Hort's free-tier Slack: SSO + posting announcements/departures to channels. Deferred until the core app works.
+
+---
+
 <laravel-boost-guidelines>
 === foundation rules ===
 
