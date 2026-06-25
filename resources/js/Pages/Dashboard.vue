@@ -1,29 +1,39 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Head } from '@inertiajs/vue3';
+import { Head, Link, usePage } from '@inertiajs/vue3';
+import { computed } from 'vue';
+
+const userName = computed(() => usePage().props.auth?.user?.name ?? '');
 </script>
 
 <template>
-    <Head title="Dashboard" />
+    <Head title="Übersicht" />
 
     <AuthenticatedLayout>
         <template #header>
-            <h2
-                class="text-xl font-semibold leading-tight text-gray-800"
-            >
-                Dashboard
+            <h2 class="text-xl font-semibold text-hort-navy">
+                Hallo {{ userName }} 👋
             </h2>
         </template>
 
-        <div class="py-12">
-            <div class="mx-auto max-w-7xl sm:px-6 lg:px-8">
-                <div
-                    class="overflow-hidden bg-white shadow-sm sm:rounded-lg"
-                >
-                    <div class="p-6 text-gray-900">
-                        You're logged in!
-                    </div>
+        <div class="space-y-4">
+            <Link
+                :href="route('children.index')"
+                class="flex items-center justify-between rounded-2xl bg-white p-5 shadow-sm transition hover:shadow active:scale-[0.99]"
+            >
+                <div>
+                    <h3 class="font-semibold text-hort-navy">Kinder & Stammplan</h3>
+                    <p class="mt-1 text-sm text-hort-navy/60">
+                        Kinder verwalten und Abholzeiten festlegen.
+                    </p>
                 </div>
+                <span class="text-2xl text-hort-teal-dark">→</span>
+            </Link>
+
+            <div
+                class="rounded-2xl border-2 border-dashed border-hort-navy/15 p-5 text-sm text-hort-navy/50"
+            >
+                Das Tagesboard (wer geht heute wann?) kommt als Nächstes.
             </div>
         </div>
     </AuthenticatedLayout>

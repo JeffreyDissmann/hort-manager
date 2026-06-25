@@ -22,17 +22,16 @@ function submit() {
 
     <AuthenticatedLayout>
         <template #header>
-            <h2 class="text-xl font-semibold leading-tight text-gray-800">
+            <h2 class="text-xl font-semibold leading-tight text-hort-navy">
                 Kind hinzufügen
             </h2>
         </template>
 
-        <div class="py-12">
-            <div class="mx-auto max-w-2xl sm:px-6 lg:px-8">
-                <form
-                    @submit.prevent="submit"
-                    class="space-y-6 bg-white p-6 shadow-sm sm:rounded-lg"
-                >
+        <div class="mx-auto max-w-2xl">
+            <form
+                @submit.prevent="submit"
+                class="space-y-6 rounded-2xl bg-white p-6 shadow-sm"
+            >
                     <div>
                         <InputLabel for="name" value="Name" />
                         <TextInput
@@ -84,6 +83,5 @@ function submit() {
                     </div>
                 </form>
             </div>
-        </div>
     </AuthenticatedLayout>
 </template>

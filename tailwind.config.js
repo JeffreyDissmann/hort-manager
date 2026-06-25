@@ -14,6 +14,20 @@ export default {
         extend: {
             fontFamily: {
                 sans: ['Figtree', ...defaultTheme.fontFamily.sans],
+                // Playful hand-drawn display font, used for the brand wordmark + big headings.
+                display: ['Barriecito', ...defaultTheme.fontFamily.sans],
+            },
+            // Schwabinger Schülerladen brand palette.
+            colors: {
+                hort: {
+                    navy: '#223E55',
+                    'navy-dark': '#18293F',
+                    blue: '#244C71',
+                    teal: '#6AC2C7',
+                    'teal-dark': '#4FA8AD',
+                    purple: '#895B9E',
+                    sand: '#F7F5F0',
+                },
             },
         },
     },

@@ -56,17 +56,16 @@ function submit() {
 
     <AuthenticatedLayout>
         <template #header>
-            <h2 class="text-xl font-semibold leading-tight text-gray-800">
+            <h2 class="text-xl font-semibold leading-tight text-hort-navy">
                 {{ child.name }} – Stammplan
             </h2>
         </template>
 
-        <div class="py-12">
-            <div class="mx-auto max-w-3xl space-y-6 sm:px-6 lg:px-8">
-                <form
-                    @submit.prevent="submit"
-                    class="space-y-8 bg-white p-6 shadow-sm sm:rounded-lg"
-                >
+        <div class="mx-auto max-w-3xl">
+            <form
+                @submit.prevent="submit"
+                class="space-y-8 rounded-2xl bg-white p-6 shadow-sm"
+            >
                     <!-- Stammdaten -->
                     <section class="space-y-6">
                         <h3 class="text-lg font-medium text-gray-900">
@@ -187,6 +186,5 @@ function submit() {
                     </div>
                 </form>
             </div>
-        </div>
     </AuthenticatedLayout>
 </template>
