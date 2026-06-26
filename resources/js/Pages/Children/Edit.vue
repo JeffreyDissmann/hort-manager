@@ -49,6 +49,7 @@ const form = useForm({
         weekday: day.weekday,
         planned_time: day.planned_time ? day.planned_time.slice(0, 5) : '',
         method: day.method ?? '',
+        comment: day.comment ?? '',
     })),
     guardians: [...props.guardianIds],
 });
@@ -140,48 +141,59 @@ function submit() {
                             <div
                                 v-for="day in form.schedule"
                                 :key="day.weekday"
-                                class="grid grid-cols-1 items-center gap-3 p-4 sm:grid-cols-[8rem,1fr,1fr]"
+                                class="space-y-2 p-4"
                             >
-                                <span class="font-medium text-gray-700">
-                                    {{ weekdayNames[day.weekday] }}
-                                </span>
+                                <div class="grid grid-cols-1 items-center gap-3 sm:grid-cols-[8rem,1fr,1fr]">
+                                    <span class="font-medium text-gray-700">
+                                        {{ weekdayNames[day.weekday] }}
+                                    </span>
 
-                                <div>
-                                    <InputLabel
-                                        :for="`time-${day.weekday}`"
-                                        value="Uhrzeit"
-                                        class="sr-only"
-                                    />
-                                    <TextInput
-                                        :id="`time-${day.weekday}`"
-                                        v-model="day.planned_time"
-                                        type="time"
-                                        class="block w-full"
-                                    />
-                                </div>
+                                    <div>
+                                        <InputLabel
+                                            :for="`time-${day.weekday}`"
+                                            value="Uhrzeit"
+                                            class="sr-only"
+                                        />
+                                        <TextInput
+                                            :id="`time-${day.weekday}`"
+                                            v-model="day.planned_time"
+                                            type="time"
+                                            class="block w-full"
+                                        />
+                                    </div>
 
-                                <div>
-                                    <InputLabel
-                                        :for="`method-${day.weekday}`"
-                                        value="Art"
-                                        class="sr-only"
-                                    />
-                                    <select
-                                        :id="`method-${day.weekday}`"
-                                        v-model="day.method"
-                                        :disabled="!day.planned_time"
-                                        class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 disabled:bg-gray-100 disabled:text-gray-400"
-                                    >
-                                        <option value="">— bitte wählen —</option>
-                                        <option
-                                            v-for="option in methodOptions"
-                                            :key="option.value"
-                                            :value="option.value"
+                                    <div>
+                                        <InputLabel
+                                            :for="`method-${day.weekday}`"
+                                            value="Art"
+                                            class="sr-only"
+                                        />
+                                        <select
+                                            :id="`method-${day.weekday}`"
+                                            v-model="day.method"
+                                            :disabled="!day.planned_time"
+                                            class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 disabled:bg-gray-100 disabled:text-gray-400"
                                         >
-                                            {{ option.label }}
-                                        </option>
-                                    </select>
+                                            <option value="">— bitte wählen —</option>
+                                            <option
+                                                v-for="option in methodOptions"
+                                                :key="option.value"
+                                                :value="option.value"
+                                            >
+                                                {{ option.label }}
+                                            </option>
+                                        </select>
+                                    </div>
                                 </div>
+
+                                <input
+                                    v-if="day.planned_time"
+                                    v-model="day.comment"
+                                    type="text"
+                                    maxlength="255"
+                                    placeholder="Kommentar (optional), z. B. wegen Fußball"
+                                    class="block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-hort-teal focus:ring-hort-teal sm:ml-[8rem] sm:w-[calc(100%-8rem)]"
+                                />
                             </div>
                         </div>
                     </section>

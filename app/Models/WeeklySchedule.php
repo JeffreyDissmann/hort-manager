@@ -18,6 +18,7 @@ class WeeklySchedule extends Model
         'weekday',
         'planned_time',
         'method',
+        'comment',
     ];
 
     protected function casts(): array

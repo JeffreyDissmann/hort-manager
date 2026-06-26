@@ -60,6 +60,10 @@ class DatabaseSeeder extends Seeder
             }
         }
 
+        // A couple of Stammplan comments explaining the time.
+        $children['Liam']->weeklySchedules()->where('weekday', 1)->update(['comment' => 'Fußballtraining']);
+        $children['Emma']->weeklySchedules()->where('weekday', 3)->update(['comment' => 'früher wegen Schwimmkurs']);
+
         // Link the demo parent to two of the children.
         $parent->children()->sync([
             $children['Emma']->id,

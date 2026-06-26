@@ -66,6 +66,7 @@ class ChildController extends Controller
             'weekday' => $weekday,
             'planned_time' => $byWeekday->get($weekday)?->planned_time,
             'method' => $byWeekday->get($weekday)?->method?->value,
+            'comment' => $byWeekday->get($weekday)?->comment,
         ])->all();
 
         $canManageGuardians = $request->user()->can('manageGuardians', $child);
@@ -98,6 +99,7 @@ class ChildController extends Controller
             'schedule.*.weekday' => ['required', 'integer', 'between:1,5'],
             'schedule.*.planned_time' => ['nullable', 'date_format:H:i'],
             'schedule.*.method' => ['nullable', Rule::enum(DepartureMethod::class)],
+            'schedule.*.comment' => ['nullable', 'string', 'max:255'],
         ]);
 
         foreach ($validated['schedule'] ?? [] as $row) {
@@ -110,7 +112,11 @@ class ChildController extends Controller
 
             $child->weeklySchedules()->updateOrCreate(
                 ['weekday' => $row['weekday']],
-                ['planned_time' => $row['planned_time'], 'method' => $row['method'] ?? null],
+                [
+                    'planned_time' => $row['planned_time'],
+                    'method' => $row['method'] ?? null,
+                    'comment' => $row['comment'] ?? null,
+                ],
             );
         }
 

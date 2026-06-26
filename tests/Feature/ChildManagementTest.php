@@ -129,6 +129,31 @@ class ChildManagementTest extends TestCase
         $this->assertSame(2, $child->weeklySchedules()->count());
     }
 
+    public function test_a_weekday_can_carry_a_comment(): void
+    {
+        $child = Child::factory()->create();
+
+        $this->actingAs($this->staff())
+            ->patch(route('children.update', $child), [
+                'name' => $child->name,
+                'schedule' => [
+                    [
+                        'weekday' => 1,
+                        'planned_time' => '14:00',
+                        'method' => DepartureMethod::PickedUp->value,
+                        'comment' => 'wegen Fußball',
+                    ],
+                ],
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('weekly_schedules', [
+            'child_id' => $child->id,
+            'weekday' => 1,
+            'comment' => 'wegen Fußball',
+        ]);
+    }
+
     public function test_a_parent_can_edit_their_own_childs_stammplan(): void
     {
         $parent = $this->parent();
