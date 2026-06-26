@@ -12,7 +12,7 @@ const isStaff = computed(() => user.value?.role === 'staff');
 
 // Primary navigation — shown as top links on desktop and as a bottom tab bar on mobile.
 const navItems = computed(() => [
-    { label: 'Start', route: 'dashboard', pattern: 'dashboard', icon: 'home' },
+    { label: 'Heute', route: 'board', pattern: 'board', icon: 'sun' },
     { label: 'Wochenplan', route: 'weekly-plan', pattern: 'weekly-plan', icon: 'calendar' },
     {
         label: isStaff.value ? 'Kinder' : 'Meine Kinder',
@@ -24,6 +24,7 @@ const navItems = computed(() => [
 
 // Heroicons (outline) path data, keyed by the nav item's icon name.
 const icons = {
+    sun: 'M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z',
     home: 'M2.25 12l8.954-8.955a1.5 1.5 0 012.121 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75',
     calendar:
         'M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5',

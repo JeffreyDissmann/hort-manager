@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ChildController;
+use App\Http\Controllers\DailyBoardController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\WeeklyOverviewController;
 use Illuminate\Foundation\Application;
@@ -28,6 +29,10 @@ Route::middleware('auth')->group(function () {
     Route::resource('children', ChildController::class)->except('show');
 
     Route::get('/wochenplan', WeeklyOverviewController::class)->name('weekly-plan');
+
+    Route::get('/tagesboard', [DailyBoardController::class, 'index'])->name('board');
+    Route::patch('/tagesboard/{departure}/status', [DailyBoardController::class, 'mark'])->name('board.mark');
+    Route::patch('/tagesboard/{departure}/plan', [DailyBoardController::class, 'override'])->name('board.override');
 });
 
 require __DIR__.'/auth.php';
