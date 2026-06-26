@@ -10,6 +10,11 @@ import {
     MapIcon,
     ClipboardDocumentListIcon,
 } from '@heroicons/vue/24/outline';
+import { board, weeklyPlan, program, logout, dashboard } from '@/routes';
+import { index as childrenIndex } from '@/routes/children';
+import { index as excursionsIndex } from '@/routes/excursions';
+import { index as pollsIndex } from '@/routes/polls';
+import { edit as profileEdit } from '@/routes/profile';
 import { Link, usePage } from '@inertiajs/vue3';
 
 const appName = computed(() => usePage().props.appName ?? 'Hort-Manager');
@@ -23,19 +28,19 @@ const navItems = computed(() => {
     if (isStaff.value) {
         // Kinder last — it's the thing that changes least often.
         return [
-            { label: 'Heute', route: 'board', pattern: 'board', icon: 'sun' },
-            { label: 'Ausflüge', route: 'excursions.index', pattern: 'excursions.*', icon: 'map' },
-            { label: 'Abholplan', route: 'weekly-plan', pattern: 'weekly-plan', icon: 'calendar' },
-            { label: 'Programm', route: 'program', pattern: 'program', icon: 'food' },
-            { label: 'Kinder', route: 'children.index', pattern: 'children.*', icon: 'children' },
+            { label: 'Heute', href: board().url, pattern: 'board', icon: 'sun' },
+            { label: 'Ausflüge', href: excursionsIndex().url, pattern: 'excursions.*', icon: 'map' },
+            { label: 'Abholplan', href: weeklyPlan().url, pattern: 'weekly-plan', icon: 'calendar' },
+            { label: 'Programm', href: program().url, pattern: 'program', icon: 'food' },
+            { label: 'Kinder', href: childrenIndex().url, pattern: 'children.*', icon: 'children' },
         ];
     }
 
     // Parents: Heute, Ausflüge (poll badge), Abholplan; „Meine Kinder" lives in the user menu.
     return [
-        { label: 'Heute', route: 'board', pattern: 'board', icon: 'sun' },
-        { label: 'Ausflüge', route: 'polls.index', pattern: 'polls.*', icon: 'map', badge: pendingPolls.value },
-        { label: 'Abholplan', route: 'weekly-plan', pattern: 'weekly-plan', icon: 'calendar' },
+        { label: 'Heute', href: board().url, pattern: 'board', icon: 'sun' },
+        { label: 'Ausflüge', href: pollsIndex().url, pattern: 'polls.*', icon: 'map', badge: pendingPolls.value },
+        { label: 'Abholplan', href: weeklyPlan().url, pattern: 'weekly-plan', icon: 'calendar' },
     ];
 });
 
@@ -63,7 +68,7 @@ function isActive(pattern) {
                 class="mx-auto flex h-16 max-w-5xl items-center justify-between px-4 sm:px-6"
             >
                 <Link
-                    :href="route('dashboard')"
+                    :href="dashboard().url"
                     class="flex items-center gap-2"
                 >
                     <ApplicationLogo class="h-9 w-9" />
@@ -76,8 +81,8 @@ function isActive(pattern) {
                 <nav class="hidden items-center gap-1 sm:flex">
                     <Link
                         v-for="item in navItems"
-                        :key="item.route"
-                        :href="route(item.route)"
+                        :key="item.label"
+                        :href="item.href"
                         :class="[
                             'rounded-lg px-3 py-2 text-sm font-medium transition',
                             isActive(item.pattern)
@@ -109,15 +114,15 @@ function isActive(pattern) {
                     <template #content>
                         <DropdownLink
                             v-if="!isStaff"
-                            :href="route('children.index')"
+                            :href="childrenIndex().url"
                         >
                             Meine Kinder
                         </DropdownLink>
-                        <DropdownLink :href="route('profile.edit')">
+                        <DropdownLink :href="profileEdit().url">
                             Profil
                         </DropdownLink>
                         <DropdownLink
-                            :href="route('logout')"
+                            :href="logout().url"
                             method="post"
                             as="button"
                         >
@@ -131,7 +136,7 @@ function isActive(pattern) {
         <!-- Pending poll notification (parents) -->
         <Link
             v-if="!isStaff && pendingPolls > 0"
-            :href="route('polls.index')"
+            :href="pollsIndex().url"
             class="block bg-amber-400 text-hort-navy"
         >
             <div
@@ -167,8 +172,8 @@ function isActive(pattern) {
             <div class="mx-auto flex max-w-md items-stretch justify-around">
                 <Link
                     v-for="item in navItems"
-                    :key="item.route"
-                    :href="route(item.route)"
+                    :key="item.label"
+                    :href="item.href"
                     :class="[
                         'flex flex-1 flex-col items-center gap-1 py-2.5 text-xs font-medium transition',
                         isActive(item.pattern)

@@ -1,4 +1,6 @@
 <script setup>
+import { update as profileUpdate } from '@/routes/profile';
+import { send as verificationSend } from '@/routes/verification';
 import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
@@ -35,7 +37,7 @@ const form = useForm({
         </header>
 
         <form
-            @submit.prevent="form.patch(route('profile.update'))"
+            @submit.prevent="form.patch(profileUpdate().url)"
             class="mt-6 space-y-6"
         >
             <div>
@@ -73,7 +75,7 @@ const form = useForm({
                 <p class="mt-2 text-sm text-gray-800">
                     Deine E-Mail-Adresse ist nicht bestÃ¤tigt.
                     <Link
-                        :href="route('verification.send')"
+                        :href="verificationSend().url"
                         method="post"
                         as="button"
                         class="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-hort-teal focus:ring-offset-2"

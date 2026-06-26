@@ -28,3 +28,8 @@ Thumbs.db
 
 # Stray SQLite test database (tests now run in-memory)
 /testing
+
+# Wayfinder generates these on build (Vite plugin) / via `artisan wayfinder:generate`
+/resources/js/actions
+/resources/js/routes
+/resources/js/wayfinder

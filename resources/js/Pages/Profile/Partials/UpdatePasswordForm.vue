@@ -1,4 +1,5 @@
 <script setup>
+import { update as passwordUpdate } from '@/routes/password';
 import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
@@ -16,7 +17,7 @@ const form = useForm({
 });
 
 const updatePassword = () => {
-    form.put(route('password.update'), {
+    form.put(passwordUpdate().url, {
         preserveScroll: true,
         onSuccess: () => form.reset(),
         onError: () => {

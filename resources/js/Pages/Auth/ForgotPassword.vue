@@ -1,4 +1,5 @@
 <script setup>
+import { email as passwordEmail } from '@/routes/password';
 import GuestLayout from '@/Layouts/GuestLayout.vue';
 import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
@@ -17,7 +18,7 @@ const form = useForm({
 });
 
 const submit = () => {
-    form.post(route('password.email'));
+    form.post(passwordEmail().url);
 };
 </script>
 

@@ -1,4 +1,6 @@
 <script setup>
+import { login } from '@/routes';
+import { request as passwordRequest } from '@/routes/password';
 import Checkbox from '@/Components/Checkbox.vue';
 import GuestLayout from '@/Layouts/GuestLayout.vue';
 import InputError from '@/Components/InputError.vue';
@@ -23,7 +25,7 @@ const form = useForm({
 });
 
 const submit = () => {
-    form.post(route('login'), {
+    form.post(login().url, {
         onFinish: () => form.reset('password'),
     });
 };
@@ -81,7 +83,7 @@ const submit = () => {
             <div class="mt-4 flex items-center justify-end">
                 <Link
                     v-if="canResetPassword"
-                    :href="route('password.request')"
+                    :href="passwordRequest().url"
                     class="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-hort-teal focus:ring-offset-2"
                 >
                     Passwort vergessen?

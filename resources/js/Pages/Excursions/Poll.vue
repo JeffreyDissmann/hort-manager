@@ -1,4 +1,5 @@
 <script setup>
+import { update as pollsUpdate } from '@/routes/polls';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, router, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
@@ -67,7 +68,7 @@ function timeRange(e) {
 
 function answer(excursion, child, response) {
     router.patch(
-        route('polls.update', excursion.id),
+        pollsUpdate(excursion.id).url,
         { child_id: child.id, response },
         { preserveScroll: true },
     );

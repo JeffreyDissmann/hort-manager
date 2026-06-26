@@ -1,4 +1,5 @@
 <script setup>
+import { register, login } from '@/routes';
 import GuestLayout from '@/Layouts/GuestLayout.vue';
 import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
@@ -14,7 +15,7 @@ const form = useForm({
 });
 
 const submit = () => {
-    form.post(route('register'), {
+    form.post(register().url, {
         onFinish: () => form.reset('password', 'password_confirmation'),
     });
 };
@@ -94,7 +95,7 @@ const submit = () => {
 
             <div class="mt-4 flex items-center justify-end">
                 <Link
-                    :href="route('login')"
+                    :href="login().url"
                     class="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-hort-teal focus:ring-offset-2"
                 >
                     Schon registriert?

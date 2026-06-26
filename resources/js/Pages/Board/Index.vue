@@ -1,4 +1,6 @@
 <script setup>
+import { mark as boardMark, override as boardOverride } from '@/routes/board';
+import { live as excursionLive } from '@/routes/excursions';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import TimeSelect from '@/Components/TimeSelect.vue';
 import { PencilSquareIcon } from '@heroicons/vue/24/outline';
@@ -83,7 +85,7 @@ function excursionConflict(row) {
 
 function mark(row, status) {
     router.patch(
-        route('board.mark', row.id),
+        boardMark(row.id).url,
         { status },
         { preserveScroll: true },
     );
@@ -91,7 +93,7 @@ function mark(row, status) {
 
 function liveEvent(excursion, event) {
     router.patch(
-        route('excursions.live', excursion.id),
+        excursionLive(excursion.id).url,
         { event },
         { preserveScroll: true },
     );
@@ -116,7 +118,7 @@ function cancelEdit() {
 
 function saveEdit(row) {
     router.patch(
-        route('board.override', row.id),
+        boardOverride(row.id).url,
         {
             planned_time: editTime.value,
             planned_method: editMethod.value || null,

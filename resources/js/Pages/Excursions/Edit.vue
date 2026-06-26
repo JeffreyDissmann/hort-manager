@@ -1,4 +1,6 @@
 <script setup>
+import { update as excursionsUpdate, index as excursionsIndex } from '@/routes/excursions';
+import { update as pollsUpdate } from '@/routes/polls';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import ExcursionFields from './Partials/ExcursionFields.vue';
@@ -24,12 +26,12 @@ const canSubmit = computed(
 );
 
 function submit() {
-    form.put(route('excursions.update', props.excursion.id));
+    form.put(excursionsUpdate(props.excursion.id).url);
 }
 
 function setResponse(childId, response) {
     router.patch(
-        route('polls.update', props.excursion.id),
+        pollsUpdate(props.excursion.id).url,
         { child_id: childId, response },
         { preserveScroll: true },
     );
@@ -55,7 +57,7 @@ function setResponse(childId, response) {
 
                 <div class="flex items-center justify-end gap-4">
                     <Link
-                        :href="route('excursions.index')"
+                        :href="excursionsIndex().url"
                         class="text-sm text-gray-600 hover:text-gray-900"
                     >
                         Abbrechen

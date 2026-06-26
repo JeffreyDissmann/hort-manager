@@ -1,4 +1,6 @@
 <script setup>
+import { program as programRoute } from '@/routes';
+import { update as programUpdate, defaults as programDefaults } from '@/routes/program';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import TextInput from '@/Components/TextInput.vue';
@@ -37,7 +39,7 @@ watch(
 function save() {
     saving.value = true;
     router.patch(
-        route('program.update'),
+        programUpdate().url,
         {
             days: days.value.map((d) => ({
                 date: d.date,
@@ -58,7 +60,7 @@ function save() {
 function saveDefaults() {
     savingDefaults.value = true;
     router.patch(
-        route('program.defaults'),
+        programDefaults().url,
         {
             defaults: defaults.value.map((d) => ({
                 weekday: d.weekday,
@@ -76,7 +78,7 @@ function saveDefaults() {
 
 function goWeek(date) {
     router.get(
-        route('program', date ? { week: date } : {}),
+        programRoute(date ? { query: { week: date } } : {}).url,
         {},
         { preserveScroll: true },
     );

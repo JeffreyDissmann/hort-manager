@@ -1,4 +1,5 @@
 <script setup>
+import { store as excursionsStore, index as excursionsIndex } from '@/routes/excursions';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import ExcursionFields from './Partials/ExcursionFields.vue';
@@ -23,7 +24,7 @@ const canSubmit = computed(
 );
 
 function submit() {
-    form.post(route('excursions.store'));
+    form.post(excursionsStore().url);
 }
 </script>
 
@@ -44,7 +45,7 @@ function submit() {
 
                 <div class="flex items-center justify-end gap-4">
                     <Link
-                        :href="route('excursions.index')"
+                        :href="excursionsIndex().url"
                         class="text-sm text-gray-600 hover:text-gray-900"
                     >
                         Abbrechen

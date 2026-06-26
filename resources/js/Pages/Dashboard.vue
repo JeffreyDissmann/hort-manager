@@ -1,5 +1,9 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import { board, weeklyPlan, program } from '@/routes';
+import { index as childrenIndex } from '@/routes/children';
+import { index as excursionsIndex } from '@/routes/excursions';
+import { index as pollsIndex } from '@/routes/polls';
 import { Head, Link, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
 
@@ -14,19 +18,19 @@ const tiles = computed(() => {
             text: isStaff.value
                 ? 'Wer geht heute wann? Abholungen abhaken.'
                 : 'Wer geht heute wann?',
-            route: 'board',
+            href: board().url,
         },
         {
             title: 'Ausflüge',
             text: isStaff.value
                 ? 'Ausflüge planen und Rückmeldungen sehen.'
                 : 'Für Ausflüge deines Kindes abstimmen.',
-            route: isStaff.value ? 'excursions.index' : 'polls.index',
+            href: isStaff.value ? excursionsIndex().url : pollsIndex().url,
         },
         {
             title: 'Abholplan',
             text: 'Abholzeiten, Essen und Aktivitäten der Woche.',
-            route: 'weekly-plan',
+            href: weeklyPlan().url,
         },
     ];
 
@@ -34,7 +38,7 @@ const tiles = computed(() => {
         items.push({
             title: 'Programm',
             text: 'Mittagessen, Aktivität und Hausaufgaben eintragen.',
-            route: 'program',
+            href: program().url,
         });
     }
 
@@ -43,7 +47,7 @@ const tiles = computed(() => {
         text: isStaff.value
             ? 'Kinder und Stammpläne verwalten.'
             : 'Stammplan deines Kindes pflegen.',
-        route: 'children.index',
+        href: childrenIndex().url,
     });
 
     return items;
@@ -63,8 +67,8 @@ const tiles = computed(() => {
         <div class="space-y-3">
             <Link
                 v-for="tile in tiles"
-                :key="tile.route"
-                :href="route(tile.route)"
+                :key="tile.title"
+                :href="tile.href"
                 class="flex items-center justify-between rounded-2xl bg-white p-5 shadow-sm transition hover:shadow active:scale-[0.99]"
             >
                 <div>

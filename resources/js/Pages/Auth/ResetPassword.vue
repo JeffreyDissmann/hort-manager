@@ -1,4 +1,5 @@
 <script setup>
+import { store as passwordStore } from '@/routes/password';
 import GuestLayout from '@/Layouts/GuestLayout.vue';
 import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
@@ -25,7 +26,7 @@ const form = useForm({
 });
 
 const submit = () => {
-    form.post(route('password.store'), {
+    form.post(passwordStore().url, {
         onFinish: () => form.reset('password', 'password_confirmation'),
     });
 };

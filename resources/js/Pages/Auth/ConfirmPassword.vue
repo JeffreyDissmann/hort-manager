@@ -1,4 +1,5 @@
 <script setup>
+import { confirm as passwordConfirm } from '@/routes/password';
 import GuestLayout from '@/Layouts/GuestLayout.vue';
 import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
@@ -11,7 +12,7 @@ const form = useForm({
 });
 
 const submit = () => {
-    form.post(route('password.confirm'), {
+    form.post(passwordConfirm().url, {
         onFinish: () => form.reset(),
     });
 };

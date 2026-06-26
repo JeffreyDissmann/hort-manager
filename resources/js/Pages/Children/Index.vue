@@ -1,4 +1,5 @@
 <script setup>
+import { create as childrenCreate, edit as childrenEdit, destroy as childrenDestroy } from '@/routes/children';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { TrashIcon } from '@heroicons/vue/24/outline';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
@@ -29,7 +30,7 @@ function destroy(child) {
     if (
         confirm(`„${child.name}“ wirklich löschen? Der Stammplan geht verloren.`)
     ) {
-        router.delete(route('children.destroy', child.id));
+        router.delete(childrenDestroy(child.id).url);
     }
 }
 </script>
@@ -54,7 +55,7 @@ function destroy(child) {
 
             <Link
                 v-if="canManage"
-                :href="route('children.create')"
+                :href="childrenCreate().url"
                 class="flex w-full items-center justify-center gap-2 rounded-2xl bg-hort-teal px-6 py-4 text-base font-semibold text-hort-navy shadow-sm transition hover:bg-hort-teal-dark active:scale-[0.99]"
             >
                 <span class="text-xl leading-none">+</span> Kind hinzufügen
@@ -96,7 +97,7 @@ function destroy(child) {
                     </div>
 
                     <Link
-                        :href="route('children.edit', child.id)"
+                        :href="childrenEdit(child.id).url"
                         class="mt-3 flex items-center justify-center gap-1 rounded-xl border-2 border-hort-navy/10 py-2.5 text-sm font-semibold text-hort-navy transition hover:border-hort-teal hover:bg-hort-teal/10"
                     >
                         Stammplan bearbeiten

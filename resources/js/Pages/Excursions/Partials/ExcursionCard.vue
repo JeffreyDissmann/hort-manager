@@ -1,4 +1,5 @@
 <script setup>
+import { edit as excursionsEdit, destroy as excursionsDestroy } from '@/routes/excursions';
 import { TrashIcon } from '@heroicons/vue/24/outline';
 import { Link, router } from '@inertiajs/vue3';
 
@@ -24,7 +25,7 @@ function timeRange(e) {
 
 function destroy() {
     if (confirm(`Ausflug „${props.excursion.name}“ wirklich löschen?`)) {
-        router.delete(route('excursions.destroy', props.excursion.id));
+        router.delete(excursionsDestroy(props.excursion.id).url);
     }
 }
 </script>
@@ -93,7 +94,7 @@ function destroy() {
         </div>
 
         <Link
-            :href="route('excursions.edit', excursion.id)"
+            :href="excursionsEdit(excursion.id).url"
             class="mt-3 flex items-center justify-center gap-1 rounded-xl border-2 border-hort-navy/10 py-2.5 text-sm font-semibold text-hort-navy transition hover:border-hort-teal hover:bg-hort-teal/10"
         >
             {{ past ? 'Ansehen' : 'Bearbeiten' }}

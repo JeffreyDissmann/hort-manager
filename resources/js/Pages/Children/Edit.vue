@@ -1,4 +1,5 @@
 <script setup>
+import { update as childrenUpdate, index as childrenIndex } from '@/routes/children';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import TextInput from '@/Components/TextInput.vue';
@@ -62,7 +63,7 @@ function submit() {
             ...day,
             method: day.method || null,
         })),
-    })).patch(route('children.update', props.child.id));
+    })).patch(childrenUpdate(props.child.id).url);
 }
 </script>
 
@@ -242,7 +243,7 @@ function submit() {
 
                     <div class="flex items-center justify-end gap-4">
                         <Link
-                            :href="route('children.index')"
+                            :href="childrenIndex().url"
                             class="text-sm text-gray-600 hover:text-gray-900"
                         >
                             Abbrechen

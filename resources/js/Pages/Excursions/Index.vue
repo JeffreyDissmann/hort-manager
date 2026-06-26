@@ -1,4 +1,5 @@
 <script setup>
+import { create as excursionsCreate } from '@/routes/excursions';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import ExcursionCard from './Partials/ExcursionCard.vue';
 import { Head, Link, usePage } from '@inertiajs/vue3';
@@ -36,7 +37,7 @@ const flash = computed(() => usePage().props.flash?.status);
             </p>
 
             <Link
-                :href="route('excursions.create')"
+                :href="excursionsCreate().url"
                 class="flex w-full items-center justify-center gap-2 rounded-2xl bg-hort-teal px-6 py-4 text-base font-semibold text-hort-navy shadow-sm transition hover:bg-hort-teal-dark active:scale-[0.99]"
             >
                 <span class="text-xl leading-none">+</span> Ausflug planen

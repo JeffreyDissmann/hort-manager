@@ -1,4 +1,5 @@
 <script setup>
+import { dashboard, login, register } from '@/routes';
 import ApplicationLogo from '@/Components/ApplicationLogo.vue';
 import { Head, Link, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
@@ -47,7 +48,7 @@ const user = computed(() => usePage().props.auth?.user);
             <div class="mt-10 w-full space-y-3">
                 <template v-if="user">
                     <Link
-                        :href="route('dashboard')"
+                        :href="dashboard().url"
                         class="block w-full rounded-2xl bg-hort-teal px-6 py-4 text-lg font-semibold text-hort-navy shadow-sm transition hover:bg-hort-teal-dark active:scale-[0.99]"
                     >
                         Zur App
@@ -56,14 +57,14 @@ const user = computed(() => usePage().props.auth?.user);
 
                 <template v-else-if="canLogin">
                     <Link
-                        :href="route('login')"
+                        :href="login().url"
                         class="block w-full rounded-2xl bg-hort-teal px-6 py-4 text-lg font-semibold text-hort-navy shadow-sm transition hover:bg-hort-teal-dark active:scale-[0.99]"
                     >
                         Anmelden
                     </Link>
                     <Link
                         v-if="canRegister"
-                        :href="route('register')"
+                        :href="register().url"
                         class="block w-full rounded-2xl border-2 border-hort-navy/15 bg-white px-6 py-4 text-lg font-semibold text-hort-navy shadow-sm transition hover:border-hort-navy/30 active:scale-[0.99]"
                     >
                         Registrieren

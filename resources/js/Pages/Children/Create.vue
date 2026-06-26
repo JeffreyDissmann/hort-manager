@@ -1,4 +1,5 @@
 <script setup>
+import { store as childrenStore, index as childrenIndex } from '@/routes/children';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import TextInput from '@/Components/TextInput.vue';
@@ -13,7 +14,7 @@ const form = useForm({
 });
 
 function submit() {
-    form.post(route('children.store'));
+    form.post(childrenStore().url);
 }
 </script>
 
@@ -72,7 +73,7 @@ function submit() {
 
                     <div class="flex items-center justify-end gap-4">
                         <Link
-                            :href="route('children.index')"
+                            :href="childrenIndex().url"
                             class="text-sm text-gray-600 hover:text-gray-900"
                         >
                             Abbrechen

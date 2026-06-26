@@ -1,4 +1,7 @@
 <script setup>
+import { weeklyPlan } from '@/routes';
+import { adjust as weeklyPlanAdjust, reset as weeklyPlanReset } from '@/routes/weekly-plan';
+import { index as childrenIndex } from '@/routes/children';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import Modal from '@/Components/Modal.vue';
 import InputLabel from '@/Components/InputLabel.vue';
@@ -22,7 +25,7 @@ const props = defineProps({
 
 function goWeek(date) {
     router.get(
-        route('weekly-plan', date ? { week: date } : {}),
+        weeklyPlan(date ? { query: { week: date } } : {}).url,
         {},
         { preserveScroll: true },
     );
@@ -98,7 +101,7 @@ function closeEditor() {
 
 function save() {
     router.patch(
-        route('weekly-plan.adjust'),
+        weeklyPlanAdjust().url,
         {
             child_id: editing.value.childId,
             date: editing.value.date,
@@ -112,7 +115,7 @@ function save() {
 
 function resetDay() {
     router.patch(
-        route('weekly-plan.reset'),
+        weeklyPlanReset().url,
         { child_id: editing.value.childId, date: editing.value.date },
         { preserveScroll: true, onSuccess: closeEditor },
     );
@@ -367,7 +370,7 @@ function resetDay() {
                     Der reguläre Wochen-Stammplan aller Kinder – die normalen
                     Abholzeiten ohne Änderungen.
                     <Link
-                        :href="route('children.index')"
+                        :href="childrenIndex().url"
                         class="font-medium text-hort-teal-dark underline-offset-2 hover:underline"
                     >
                         {{
