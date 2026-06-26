@@ -119,7 +119,7 @@ function submit() {
                                 v-model="form.note"
                                 rows="3"
                                 placeholder="z. B. Abholberechtigte, Aktivitäten oder Hinweise zur Abholung …"
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-hort-teal focus:ring-hort-teal"
                             ></textarea>
                             <InputError :message="form.errors.note" class="mt-2" />
                         </div>
@@ -172,7 +172,7 @@ function submit() {
                                             :id="`method-${day.weekday}`"
                                             v-model="day.method"
                                             :disabled="!day.planned_time"
-                                            class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 disabled:bg-gray-100 disabled:text-gray-400"
+                                            class="block w-full rounded-md border-gray-300 shadow-sm focus:border-hort-teal focus:ring-hort-teal disabled:bg-gray-100 disabled:text-gray-400"
                                         >
                                             <option value="">— bitte wählen —</option>
                                             <option

@@ -220,7 +220,7 @@ function saveEdit(row) {
                 </div>
             </div>
 
-            <!-- Today's excursions: staff flip the live state (losgefahren / zurück) -->
+            <!-- Today's excursions: staff flip the live state (losgegangen / zurück) -->
             <div v-if="excursions.length" class="space-y-2">
                 <div
                     v-for="ex in excursions"
@@ -263,7 +263,7 @@ function saveEdit(row) {
                                 class="rounded-xl bg-hort-purple px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 active:scale-[0.98]"
                                 @click="liveEvent(ex, 'depart')"
                             >
-                                Losgefahren
+                                Losgegangen
                             </button>
                             <button
                                 v-else-if="ex.state === 'away'"
