@@ -6,6 +6,7 @@ use App\Enums\DepartureMethod;
 use App\Enums\DepartureStatus;
 use App\Models\Child;
 use App\Models\DailyDeparture;
+use App\Models\Excursion;
 use App\Models\WeeklySchedule;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -69,12 +70,43 @@ class WeeklyOverviewController extends Controller
             ->keyBy(fn (DailyDeparture $d) => $d->child_id.'|'.$d->date->toDateString());
 
         $todayString = $today->toDateString();
+        $toMinutes = fn (string $time): int => ((int) substr($time, 0, 2)) * 60 + (int) substr($time, 3, 2);
+        $shortTime = fn (?string $time): ?string => $time ? substr($time, 0, 5) : null;
 
-        $currentWeek = $weekChildren->map(function (Child $child) use ($weekDays, $departures, $todayString) {
+        // Excursions in this week: a per-weekday list for the activities row, plus a
+        // per-(child, date) map of the trips a child actually takes part in.
+        $weekExcursions = Excursion::query()
+            ->with('participants:id')
+            ->whereIn('date', $weekDates)
+            ->orderBy('depart_at')
+            ->get();
+
+        $activities = $weekDays->values()->map(fn (array $day) => $weekExcursions
+            ->filter(fn (Excursion $e) => $e->date->toDateString() === $day['date'])
+            ->map(fn (Excursion $e) => [
+                'name' => $e->name,
+                'depart_at' => $shortTime($e->depart_at),
+                'return_at' => $shortTime($e->return_at),
+            ])
+            ->values())
+            ->all();
+
+        $excursionByChildDate = [];
+        foreach ($weekExcursions as $excursion) {
+            foreach ($excursion->participants as $participant) {
+                $excursionByChildDate[$participant->id.'|'.$excursion->date->toDateString()] = [
+                    'name' => $excursion->name,
+                    'depart_at' => $shortTime($excursion->depart_at),
+                    'return_at' => $shortTime($excursion->return_at),
+                ];
+            }
+        }
+
+        $currentWeek = $weekChildren->map(function (Child $child) use ($weekDays, $departures, $todayString, $excursionByChildDate, $toMinutes) {
             $byWeekday = $child->weeklySchedules->keyBy('weekday');
             $canManage = true;
 
-            $days = $weekDays->values()->map(function (array $day, int $i) use ($child, $byWeekday, $departures, $todayString, $canManage) {
+            $days = $weekDays->values()->map(function (array $day, int $i) use ($child, $byWeekday, $departures, $todayString, $canManage, $excursionByChildDate, $toMinutes) {
                 $schedule = $byWeekday->get($i + 1);
                 $stdTime = $schedule && $schedule->planned_time ? substr((string) $schedule->planned_time, 0, 5) : null;
                 $stdMethod = $schedule?->method?->value;
@@ -90,6 +122,15 @@ class WeeklyOverviewController extends Controller
 
                 $adjusted = $departure !== null && ($time !== $stdTime || $method !== $stdMethod);
 
+                // Is the child on a trip this day, and does the pickup fall inside it?
+                $excursion = $excursionByChildDate[$child->id.'|'.$day['date']] ?? null;
+                $conflict = false;
+                if ($excursion && $time && $excursion['return_at']) {
+                    $pickup = $toMinutes($time);
+                    $departAt = $excursion['depart_at'] ? $toMinutes($excursion['depart_at']) : 0;
+                    $conflict = $pickup >= $departAt && $pickup < $toMinutes($excursion['return_at']);
+                }
+
                 return [
                     'date' => $day['date'],
                     'time' => $time,
@@ -101,6 +142,8 @@ class WeeklyOverviewController extends Controller
                     'adjusted' => $adjusted,
                     'past' => $day['date'] < $todayString,
                     'editable' => $canManage && $day['date'] >= $todayString && ! $departed,
+                    'excursion' => $excursion,
+                    'conflict' => $conflict,
                 ];
             });
 
@@ -116,6 +159,7 @@ class WeeklyOverviewController extends Controller
             'week' => $week,
             'weekDays' => $weekDays,
             'currentWeek' => $currentWeek,
+            'activities' => $activities,
             'standard' => $this->standardTimetable(),
             'methodOptions' => collect(DepartureMethod::cases())
                 ->map(fn (DepartureMethod $m) => ['value' => $m->value, 'label' => $m->label()])

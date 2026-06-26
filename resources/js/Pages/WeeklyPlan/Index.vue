@@ -13,6 +13,7 @@ const props = defineProps({
     week: { type: Object, default: () => ({}) },
     weekDays: { type: Array, default: () => [] },
     currentWeek: { type: Array, default: () => [] },
+    activities: { type: Array, default: () => [] },
     standard: { type: Array, default: () => [] },
     methodOptions: { type: Array, default: () => [] },
 });
@@ -196,7 +197,11 @@ function resetDay() {
                                     class="relative mt-1 w-full rounded-lg py-2 text-xs font-semibold"
                                     :class="[
                                         cellClass(day),
-                                        day.adjusted ? 'ring-2 ring-amber-400' : '',
+                                        day.conflict
+                                            ? 'ring-2 ring-red-400'
+                                            : day.adjusted
+                                              ? 'ring-2 ring-amber-400'
+                                              : '',
                                         day.editable ? 'cursor-pointer hover:brightness-95 active:scale-[0.97]' : '',
                                     ]"
                                     :title="day.comment || undefined"
@@ -204,13 +209,53 @@ function resetDay() {
                                 >
                                     {{ day.time ?? 'frei' }}
                                     <span
-                                        v-if="day.comment"
+                                        v-if="day.excursion"
+                                        class="mt-0.5 block text-[10px] leading-none"
+                                        :title="day.excursion.name"
+                                    >
+                                        🚌
+                                    </span>
+                                    <span
+                                        v-else-if="day.comment"
                                         class="mt-0.5 block truncate text-[9px] font-normal leading-tight opacity-70"
                                     >
                                         {{ day.comment }}
                                     </span>
                                 </component>
                             </div>
+                        </div>
+
+                        <!-- Trips this week + pickup conflicts -->
+                        <div
+                            v-if="child.days.some((d) => d.excursion)"
+                            class="mt-2 space-y-1"
+                        >
+                            <template v-for="(day, i) in child.days" :key="day.date">
+                                <p
+                                    v-if="day.conflict"
+                                    class="rounded-lg bg-red-50 px-2 py-1 text-xs font-medium text-red-700"
+                                >
+                                    ⚠️ {{ weekDays[i].label }}: Abholung
+                                    {{ day.time }} liegt im {{ day.excursion.name }}<span
+                                        v-if="day.excursion.return_at"
+                                    >
+                                        (zurück {{ day.excursion.return_at }})</span
+                                    >
+                                </p>
+                                <p
+                                    v-else-if="day.excursion"
+                                    class="rounded-lg bg-hort-purple/10 px-2 py-1 text-xs font-medium text-hort-purple"
+                                >
+                                    🚌 {{ weekDays[i].label }}:
+                                    {{ day.excursion.name }}<span
+                                        v-if="day.excursion.depart_at"
+                                    >
+                                        ({{ day.excursion.depart_at }}–{{
+                                            day.excursion.return_at
+                                        }})</span
+                                    >
+                                </p>
+                            </template>
                         </div>
                     </li>
                 </ul>
@@ -225,6 +270,46 @@ function resetDay() {
                             : 'Dir ist noch kein Kind zugeordnet.'
                     }}
                 </p>
+
+                <!-- Weekly activities (Ausflüge) row -->
+                <div class="rounded-2xl bg-hort-purple/5 p-4 shadow-sm">
+                    <p class="mb-2 text-sm font-semibold text-hort-purple">
+                        🚌 Ausflüge diese Woche
+                    </p>
+                    <div class="grid grid-cols-5 gap-1.5">
+                        <div
+                            v-for="(acts, i) in activities"
+                            :key="i"
+                            class="text-center"
+                        >
+                            <div class="text-[11px] font-medium text-hort-navy/40">
+                                {{ weekDays[i].label }}
+                            </div>
+                            <div class="mt-1 space-y-1">
+                                <div
+                                    v-for="(activity, j) in acts"
+                                    :key="j"
+                                    class="rounded-lg bg-hort-purple/15 px-1 py-1 text-[10px] font-semibold leading-tight text-hort-purple"
+                                    :title="activity.name"
+                                >
+                                    <span class="block truncate">{{ activity.name }}</span>
+                                    <span
+                                        v-if="activity.depart_at"
+                                        class="block font-normal opacity-80"
+                                    >
+                                        {{ activity.depart_at }}–{{ activity.return_at }}
+                                    </span>
+                                </div>
+                                <div
+                                    v-if="!acts.length"
+                                    class="py-1 text-[10px] text-hort-navy/20"
+                                >
+                                    –
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
                 <div
                     v-if="currentWeek.length"

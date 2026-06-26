@@ -7,6 +7,7 @@ use App\Enums\DepartureStatus;
 use App\Enums\UserRole;
 use App\Models\Child;
 use App\Models\DailyDeparture;
+use App\Models\Excursion;
 use App\Models\User;
 use App\Models\WeeklySchedule;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -74,6 +75,36 @@ class WeeklyOverviewTest extends TestCase
                 ->where('weekDays.4.date', '2026-07-03') // Friday
                 ->where('week.prev', '2026-06-22')
                 ->where('week.next', '2026-07-06')
+            );
+    }
+
+    public function test_current_week_flags_an_excursion_pickup_conflict(): void
+    {
+        $this->travelTo(Carbon::parse('2026-06-24')); // Wednesday (week day index 2)
+
+        $parent = User::factory()->create(['role' => UserRole::Parent]);
+        $child = Child::factory()->create();
+        $parent->children()->attach($child);
+        WeeklySchedule::create([
+            'child_id' => $child->id,
+            'weekday' => 3, // Mittwoch
+            'planned_time' => '14:30',
+            'method' => DepartureMethod::PickedUp,
+        ]);
+
+        $excursion = Excursion::factory()->create([
+            'date' => '2026-06-24',
+            'depart_at' => '13:30',
+            'return_at' => '15:30', // pickup 14:30 falls inside → conflict
+        ]);
+        $excursion->children()->attach($child->id, ['response' => true]);
+
+        $this->actingAs($parent)
+            ->get(route('weekly-plan'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('currentWeek.0.days.2.excursion.name', $excursion->name)
+                ->where('currentWeek.0.days.2.conflict', true)
+                ->where('activities.2.0.name', $excursion->name)
             );
     }
 
