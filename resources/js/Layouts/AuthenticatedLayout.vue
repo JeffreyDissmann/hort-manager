@@ -3,6 +3,13 @@ import { computed } from 'vue';
 import ApplicationLogo from '@/Components/ApplicationLogo.vue';
 import Dropdown from '@/Components/Dropdown.vue';
 import DropdownLink from '@/Components/DropdownLink.vue';
+import {
+    SunIcon,
+    CalendarDaysIcon,
+    UserGroupIcon,
+    MapIcon,
+    ClipboardDocumentListIcon,
+} from '@heroicons/vue/24/outline';
 import { Link, usePage } from '@inertiajs/vue3';
 
 const appName = computed(() => usePage().props.appName ?? 'Hort-Manager');
@@ -32,16 +39,13 @@ const navItems = computed(() => {
     ];
 });
 
-// Heroicons (outline) path data, keyed by the nav item's icon name.
+// Heroicon components keyed by the nav item's icon name.
 const icons = {
-    sun: 'M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z',
-    home: 'M2.25 12l8.954-8.955a1.5 1.5 0 012.121 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75',
-    calendar:
-        'M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5',
-    children:
-        'M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z',
-    map: 'M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.159.69.159 1.006 0z',
-    food: 'M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21',
+    sun: SunIcon,
+    calendar: CalendarDaysIcon,
+    children: UserGroupIcon,
+    map: MapIcon,
+    food: ClipboardDocumentListIcon,
 };
 
 function isActive(pattern) {
@@ -173,19 +177,7 @@ function isActive(pattern) {
                     ]"
                 >
                     <span class="relative">
-                        <svg
-                            class="h-6 w-6"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke-width="1.8"
-                            stroke="currentColor"
-                        >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                :d="icons[item.icon]"
-                            />
-                        </svg>
+                        <component :is="icons[item.icon]" class="h-6 w-6" />
                         <span
                             v-if="item.badge"
                             class="absolute -right-2 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-bold text-white"

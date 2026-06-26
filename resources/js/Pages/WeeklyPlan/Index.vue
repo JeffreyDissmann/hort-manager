@@ -6,6 +6,7 @@ import TextInput from '@/Components/TextInput.vue';
 import TimeSelect from '@/Components/TimeSelect.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
+import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/vue/24/outline';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { computed, reactive, ref } from 'vue';
 
@@ -143,9 +144,7 @@ function resetDay() {
                         aria-label="Vorige Woche"
                         @click="goWeek(week.prev)"
                     >
-                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
-                        </svg>
+                        <ChevronLeftIcon class="h-5 w-5" />
                     </button>
 
                     <div class="text-center">
@@ -169,9 +168,7 @@ function resetDay() {
                         aria-label="Nächste Woche"
                         @click="goWeek(week.next)"
                     >
-                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-                        </svg>
+                        <ChevronRightIcon class="h-5 w-5" />
                     </button>
                 </div>
 

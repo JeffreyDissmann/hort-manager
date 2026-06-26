@@ -1,6 +1,7 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import TimeSelect from '@/Components/TimeSelect.vue';
+import { PencilSquareIcon } from '@heroicons/vue/24/outline';
 import { Head, router, usePage } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
 
@@ -445,19 +446,7 @@ function saveEdit(row) {
                                 class="inline-flex items-center gap-1.5 rounded-xl border-2 border-hort-navy/10 px-3 py-2 text-sm font-semibold text-hort-navy transition hover:border-hort-teal hover:bg-hort-teal/10 active:scale-[0.98]"
                                 @click="openEdit(row)"
                             >
-                                <svg
-                                    class="h-4 w-4"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    stroke-width="1.8"
-                                    stroke="currentColor"
-                                >
-                                    <path
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zM19.5 7.125L16.875 4.5"
-                                    />
-                                </svg>
+                                <PencilSquareIcon class="h-4 w-4" />
                                 Abholzeit ändern
                             </button>
                         </div>
