@@ -7,27 +7,47 @@ const user = computed(() => usePage().props.auth?.user);
 const userName = computed(() => user.value?.name ?? '');
 const isStaff = computed(() => user.value?.role === 'staff');
 
-const tiles = computed(() => [
-    {
-        title: 'Heute',
-        text: isStaff.value
-            ? 'Wer geht heute wann? Abholungen abhaken.'
-            : 'Wer geht heute wann?',
-        route: 'board',
-    },
-    {
-        title: 'Abholplan',
-        text: 'Die Abholzeiten aller Kinder im Überblick.',
-        route: 'weekly-plan',
-    },
-    {
+const tiles = computed(() => {
+    const items = [
+        {
+            title: 'Heute',
+            text: isStaff.value
+                ? 'Wer geht heute wann? Abholungen abhaken.'
+                : 'Wer geht heute wann?',
+            route: 'board',
+        },
+        {
+            title: 'Ausflüge',
+            text: isStaff.value
+                ? 'Ausflüge planen und Rückmeldungen sehen.'
+                : 'Für Ausflüge deines Kindes abstimmen.',
+            route: isStaff.value ? 'excursions.index' : 'polls.index',
+        },
+        {
+            title: 'Abholplan',
+            text: 'Abholzeiten, Essen und Aktivitäten der Woche.',
+            route: 'weekly-plan',
+        },
+    ];
+
+    if (isStaff.value) {
+        items.push({
+            title: 'Programm',
+            text: 'Mittagessen, Aktivität und Hausaufgaben eintragen.',
+            route: 'program',
+        });
+    }
+
+    items.push({
         title: isStaff.value ? 'Kinder' : 'Meine Kinder',
         text: isStaff.value
             ? 'Kinder und Stammpläne verwalten.'
             : 'Stammplan deines Kindes pflegen.',
         route: 'children.index',
-    },
-]);
+    });
+
+    return items;
+});
 </script>
 
 <template>
