@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\ResolvesWeek;
+use App\Models\Child;
 use App\Models\DailyProgram;
 use App\Models\HomeworkDefault;
 use Illuminate\Http\RedirectResponse;
@@ -28,8 +29,9 @@ class DailyProgramController extends Controller
             ->keyBy(fn (DailyProgram $p) => $p->date->toDateString());
 
         $defaults = HomeworkDefault::all()->keyBy('weekday');
+        $children = Child::query()->whereNotNull('date_of_birth')->get(['id', 'name', 'date_of_birth']);
 
-        $days = $weekDays->map(function (array $day) use ($programs, $defaults) {
+        $days = $weekDays->map(function (array $day) use ($programs, $defaults, $children) {
             $weekday = Carbon::parse($day['date'])->dayOfWeekIso;
             $default = $defaults->get($weekday);
             $program = $programs->get($day['date']);
@@ -43,6 +45,14 @@ class DailyProgramController extends Controller
                 // Effective homework slot = per-date override, otherwise the weekday default.
                 'homework_start' => $this->short($program?->homework_start ?? $default?->start_time),
                 'homework_end' => $this->short($program?->homework_end ?? $default?->end_time),
+                // Children with a birthday on this day, so staff see it while filling out.
+                'birthdays' => $children
+                    ->filter(fn (Child $c) => $c->date_of_birth->format('m-d') === substr($day['date'], 5))
+                    ->map(fn (Child $c) => [
+                        'name' => $c->name,
+                        'turns' => ((int) substr($day['date'], 0, 4)) - $c->date_of_birth->year,
+                    ])
+                    ->values(),
             ];
         });
 

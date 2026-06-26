@@ -126,13 +126,23 @@ function onTouchEnd(e) {
                 :key="day.date"
                 class="rounded-2xl bg-white p-4 shadow-sm"
             >
-                <p class="mb-2 font-semibold text-hort-navy">
+                <p class="font-semibold text-hort-navy">
                     {{ day.label }}
                     <span class="font-normal text-hort-navy/40">
                         · {{ day.date_label }}
                     </span>
                 </p>
-                <div class="space-y-3">
+                <p
+                    v-if="day.birthdays && day.birthdays.length"
+                    class="mt-1 rounded-lg bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700"
+                >
+                    🎂
+                    <span v-for="(b, j) in day.birthdays" :key="b.name">
+                        <template v-if="j > 0">, </template>{{ b.name }} (wird
+                        {{ b.turns }})
+                    </span>
+                </p>
+                <div class="mt-2 space-y-3">
                     <div>
                         <InputLabel :for="`lunch-${day.date}`" value="Mittagessen" />
                         <TextInput

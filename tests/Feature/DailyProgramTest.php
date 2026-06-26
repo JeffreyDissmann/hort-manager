@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Enums\UserRole;
+use App\Models\Child;
 use App\Models\DailyProgram;
 use App\Models\HomeworkDefault;
 use App\Models\User;
@@ -55,6 +56,20 @@ class DailyProgramTest extends TestCase
             ]);
 
         $this->assertDatabaseMissing('daily_programs', ['date' => '2026-06-22']);
+    }
+
+    public function test_program_index_lists_birthdays_per_day(): void
+    {
+        $this->travelTo(Carbon::parse('2026-06-22')); // week Mo 06-22 … Fr 06-26
+        Child::factory()->create(['name' => 'Emma', 'date_of_birth' => '2018-06-24']); // Wednesday
+
+        $this->actingAs($this->staff())
+            ->get(route('program'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('days.2.birthdays.0.name', 'Emma')
+                ->where('days.2.birthdays.0.turns', 8)
+                ->where('days.0.birthdays', [])
+            );
     }
 
     public function test_parents_cannot_manage_the_program(): void
