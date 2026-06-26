@@ -54,11 +54,13 @@ function liveEvent(excursion, event) {
 const editingId = ref(null);
 const editTime = ref('');
 const editMethod = ref('');
+const editNote = ref('');
 
 function openEdit(row) {
     editingId.value = row.id;
     editTime.value = row.planned_time ?? '';
     editMethod.value = row.planned_method ?? '';
+    editNote.value = row.note ?? '';
 }
 
 function cancelEdit() {
@@ -68,7 +70,11 @@ function cancelEdit() {
 function saveEdit(row) {
     router.patch(
         route('board.override', row.id),
-        { planned_time: editTime.value, planned_method: editMethod.value || null },
+        {
+            planned_time: editTime.value,
+            planned_method: editMethod.value || null,
+            note: editNote.value || null,
+        },
         { preserveScroll: true, onSuccess: () => (editingId.value = null) },
     );
 }
@@ -191,6 +197,9 @@ function saveEdit(row) {
                             <p class="font-semibold text-hort-navy">{{ row.name }}</p>
                             <p class="mt-0.5 text-sm text-hort-navy/60">
                                 {{ planLabel(row) }}
+                                <span v-if="row.comment" class="text-hort-navy/45">
+                                    · {{ row.comment }}
+                                </span>
                                 <span
                                     v-if="row.is_overridden"
                                     class="ml-1 rounded bg-amber-100 px-1.5 py-0.5 text-[11px] font-medium text-amber-700"
@@ -265,6 +274,13 @@ function saveEdit(row) {
                                 </option>
                             </select>
                         </div>
+                        <input
+                            v-model="editNote"
+                            type="text"
+                            maxlength="255"
+                            placeholder="Kommentar, z. B. wegen Arzttermin"
+                            class="block w-full rounded-lg border-gray-300 text-sm focus:border-hort-teal focus:ring-hort-teal"
+                        />
                         <div class="flex justify-end gap-3 text-sm">
                             <button
                                 type="button"

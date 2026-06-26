@@ -40,6 +40,7 @@ class DailyBoardController extends Controller
             $standard[$child->id] = [
                 'time' => substr((string) $schedule->planned_time, 0, 5),
                 'method' => $schedule->method?->value,
+                'comment' => $schedule->comment,
             ];
 
             DailyDeparture::firstOrCreate(
@@ -103,6 +104,9 @@ class DailyBoardController extends Controller
             $plannedTime = $d->planned_time ? substr((string) $d->planned_time, 0, 5) : null;
             $plannedMethod = $d->planned_method?->value;
             $std = $standard[$d->child_id] ?? null;
+            $overridden = $std === null
+                || $std['time'] !== $plannedTime
+                || $std['method'] !== $plannedMethod;
 
             return [
                 'id' => $d->id,
@@ -114,10 +118,11 @@ class DailyBoardController extends Controller
                 'status_label' => $d->status->label(),
                 'left_at' => $d->left_at?->format('H:i'),
                 'marked_by' => $d->markedBy?->name,
-                'note' => $d->note,
-                'is_overridden' => $std === null
-                    || $std['time'] !== $plannedTime
-                    || $std['method'] !== $plannedMethod,
+                // Shown on the plan line: the override's own note, or the Stammplan comment.
+                'comment' => $overridden ? $d->note : ($std['comment'] ?? null),
+                // Pre-fills the override editor; defaults to the standard comment.
+                'note' => $d->note ?? ($std['comment'] ?? null),
+                'is_overridden' => $overridden,
                 'can_override' => $user->isStaff() || ($myChildIds?->contains($d->child_id) ?? false),
                 'excursion' => $excursionByChild[$d->child_id] ?? null,
             ];
@@ -168,11 +173,13 @@ class DailyBoardController extends Controller
         $validated = $request->validate([
             'planned_time' => ['required', 'date_format:H:i'],
             'planned_method' => ['nullable', Rule::enum(DepartureMethod::class)],
+            'note' => ['nullable', 'string', 'max:255'],
         ]);
 
         $departure->update([
             'planned_time' => $validated['planned_time'],
             'planned_method' => $validated['planned_method'] ?? null,
+            'note' => $validated['note'] ?? null,
         ]);
 
         return back()->with('status', "Plan für {$departure->child->name} aktualisiert.");
