@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\DepartureMethod;
 use App\Enums\DepartureStatus;
+use App\Http\Controllers\Concerns\ResolvesWeek;
 use App\Models\Child;
 use App\Models\DailyDeparture;
 use App\Models\DailyProgram;
@@ -17,7 +18,7 @@ use Inertia\Response;
 
 class WeeklyOverviewController extends Controller
 {
-    private const WEEKDAY_LABELS = ['Mo', 'Di', 'Mi', 'Do', 'Fr'];
+    use ResolvesWeek;
 
     /**
      * The Wochenplan: this week's effective plan (Stammplan + same-day overrides)
@@ -29,33 +30,7 @@ class WeeklyOverviewController extends Controller
         $user = $request->user();
         $today = Carbon::today();
 
-        // Which week to show (?week=YYYY-MM-DD); defaults to the current week.
-        $weekStart = $today->copy()->startOfWeek(Carbon::MONDAY);
-        if ($request->filled('week')) {
-            try {
-                $weekStart = Carbon::parse($request->query('week'))->startOfWeek(Carbon::MONDAY);
-            } catch (\Throwable) {
-                // Fall back to the current week on an invalid value.
-            }
-        }
-
-        $week = [
-            'label' => 'KW '.$weekStart->isoWeek().' · '
-                .$weekStart->format('d.m.').'–'.$weekStart->copy()->addDays(4)->format('d.m.'),
-            'prev' => $weekStart->copy()->subWeek()->toDateString(),
-            'next' => $weekStart->copy()->addWeek()->toDateString(),
-            'is_current' => $weekStart->equalTo($today->copy()->startOfWeek(Carbon::MONDAY)),
-        ];
-
-        $weekDays = collect(range(0, 4))->map(function (int $i) use ($weekStart) {
-            $date = $weekStart->copy()->addDays($i);
-
-            return [
-                'date' => $date->toDateString(),
-                'label' => self::WEEKDAY_LABELS[$i],
-                'date_label' => $date->format('d.m.'),
-            ];
-        });
+        [$week, $weekDays] = $this->resolveWeek($request);
 
         // "Diese Woche" is the user's editable view: a parent sees only their own
         // children, staff see all. The standard timetable below always shows everyone.

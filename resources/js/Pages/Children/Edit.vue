@@ -83,7 +83,7 @@ function submit() {
             >
                     <!-- Stammdaten -->
                     <section class="space-y-6">
-                        <h3 class="text-lg font-medium text-gray-900">
+                        <h3 class="text-lg font-medium text-hort-navy">
                             Stammdaten
                         </h3>
 
@@ -128,7 +128,7 @@ function submit() {
                     <!-- Stammplan -->
                     <section class="space-y-4">
                         <div>
-                            <h3 class="text-lg font-medium text-gray-900">
+                            <h3 class="text-lg font-medium text-hort-navy">
                                 Stammplan (Mo–Fr)
                             </h3>
                             <p class="mt-1 text-sm text-gray-500">

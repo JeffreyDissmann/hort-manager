@@ -2,18 +2,18 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\ResolvesWeek;
 use App\Models\DailyProgram;
 use App\Models\HomeworkDefault;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Collection;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class DailyProgramController extends Controller
 {
-    private const WEEKDAY_LABELS = ['Mo', 'Di', 'Mi', 'Do', 'Fr'];
+    use ResolvesWeek;
 
     /** Staff weekly editor for the day program (lunch, activity, homework). */
     public function index(Request $request): Response
@@ -149,42 +149,5 @@ class DailyProgramController extends Controller
     private function short(?string $time): ?string
     {
         return $time ? substr($time, 0, 5) : null;
-    }
-
-    /**
-     * @return array{0: array<string, mixed>, 1: Collection<int, array<string, string>>}
-     */
-    private function resolveWeek(Request $request): array
-    {
-        $today = Carbon::today();
-        $weekStart = $today->copy()->startOfWeek(Carbon::MONDAY);
-
-        if ($request->filled('week')) {
-            try {
-                $weekStart = Carbon::parse($request->query('week'))->startOfWeek(Carbon::MONDAY);
-            } catch (\Throwable) {
-                // keep current week
-            }
-        }
-
-        $week = [
-            'label' => 'KW '.$weekStart->isoWeek().' · '
-                .$weekStart->format('d.m.').'–'.$weekStart->copy()->addDays(4)->format('d.m.'),
-            'prev' => $weekStart->copy()->subWeek()->toDateString(),
-            'next' => $weekStart->copy()->addWeek()->toDateString(),
-            'is_current' => $weekStart->equalTo($today->copy()->startOfWeek(Carbon::MONDAY)),
-        ];
-
-        $weekDays = collect(range(0, 4))->map(function (int $i) use ($weekStart) {
-            $date = $weekStart->copy()->addDays($i);
-
-            return [
-                'date' => $date->toDateString(),
-                'label' => self::WEEKDAY_LABELS[$i],
-                'date_label' => $date->format('d.m.'),
-            ];
-        });
-
-        return [$week, $weekDays];
     }
 }
