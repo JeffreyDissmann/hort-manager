@@ -35,7 +35,7 @@ class WeeklyOverviewController extends Controller
         // "Diese Woche" is the user's editable view: a parent sees only their own
         // children, staff see all. The standard timetable below always shows everyone.
         $weekChildren = $user->isStaff()
-            ? Child::query()->with('weeklySchedules')->orderBy('name')->get(['id', 'name'])
+            ? Child::query()->with('weeklySchedules')->orderBy('name')->get(['id', 'name', 'date_of_birth'])
             : $user->children()->with('weeklySchedules')->orderBy('name')->get();
 
         $weekDates = $weekDays->pluck('date')->all();
@@ -129,6 +129,12 @@ class WeeklyOverviewController extends Controller
                     $conflict = $pickup >= $departAt && $pickup < $toMinutes($excursion['return_at']);
                 }
 
+                // Age the child turns this day, or null if it's not their birthday.
+                $dob = $child->date_of_birth;
+                $birthday = $dob && $dob->format('m-d') === substr($day['date'], 5)
+                    ? ((int) substr($day['date'], 0, 4)) - $dob->year
+                    : null;
+
                 return [
                     'date' => $day['date'],
                     'time' => $time,
@@ -142,6 +148,7 @@ class WeeklyOverviewController extends Controller
                     'editable' => $canManage && $day['date'] >= $todayString && ! $departed,
                     'excursion' => $excursion,
                     'conflict' => $conflict,
+                    'birthday' => $birthday,
                 ];
             });
 

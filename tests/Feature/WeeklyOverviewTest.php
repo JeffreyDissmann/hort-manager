@@ -108,6 +108,19 @@ class WeeklyOverviewTest extends TestCase
             );
     }
 
+    public function test_current_week_flags_a_birthday(): void
+    {
+        $this->travelTo(Carbon::parse('2026-06-22')); // week Mo 06-22 … Fr 06-26
+        $child = Child::factory()->create(['date_of_birth' => '2018-06-24']); // Wednesday → index 2
+
+        $this->actingAs(User::factory()->create(['role' => UserRole::Staff]))
+            ->get(route('weekly-plan'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('currentWeek.0.days.2.birthday', 8)
+                ->where('currentWeek.0.days.0.birthday', null)
+            );
+    }
+
     public function test_current_week_reflects_a_same_day_override(): void
     {
         $this->travelTo(Carbon::parse('2026-06-24')); // a Wednesday

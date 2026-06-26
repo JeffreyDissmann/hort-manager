@@ -66,6 +66,12 @@ class DatabaseSeeder extends Seeder
         $children['Liam']->weeklySchedules()->where('weekday', 1)->update(['comment' => 'Fußballtraining']);
         $children['Emma']->weeklySchedules()->where('weekday', 3)->update(['comment' => 'früher wegen Schwimmkurs']);
 
+        // Demo birthdays: Emma turns today, Noah on a weekday of the current week.
+        $children['Emma']->update(['date_of_birth' => now()->subYears(7)->toDateString()]);
+        $children['Noah']->update([
+            'date_of_birth' => now()->startOfWeek()->addDays(2)->subYears(8)->toDateString(),
+        ]);
+
         // Link the demo parent to two of the children.
         $parent->children()->sync([
             $children['Emma']->id,

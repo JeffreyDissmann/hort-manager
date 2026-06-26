@@ -84,6 +84,17 @@ class DailyBoardTest extends TestCase
             );
     }
 
+    public function test_board_flags_a_childs_birthday(): void
+    {
+        $this->travelTo(Carbon::parse('2026-06-22')); // Monday
+        $child = $this->scheduledChild(weekday: 1);
+        $child->update(['date_of_birth' => '2019-06-22']); // same month-day → turns 7
+
+        $this->actingAs($this->staff())
+            ->get(route('board'))
+            ->assertInertia(fn (Assert $page) => $page->where('rows.0.birthday', 7));
+    }
+
     public function test_children_not_scheduled_that_day_are_not_on_the_board(): void
     {
         $this->travelTo(Carbon::parse('2026-06-22')); // Monday

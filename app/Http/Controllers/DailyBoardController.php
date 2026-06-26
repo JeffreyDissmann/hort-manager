@@ -96,13 +96,17 @@ class DailyBoardController extends Controller
             : $user->children()->pluck('children.id');
 
         $departures = DailyDeparture::query()
-            ->with(['child:id,name', 'markedBy:id,name'])
+            ->with(['child:id,name,date_of_birth', 'markedBy:id,name'])
             ->where('date', $date->toDateString())
             ->get()
             ->sortBy(fn (DailyDeparture $d) => [$d->planned_time ?? '99:99', $d->child->name])
             ->values();
 
-        $rows = $departures->map(function (DailyDeparture $d) use ($standard, $user, $myChildIds, $excursionByChild) {
+        $rows = $departures->map(function (DailyDeparture $d) use ($standard, $user, $myChildIds, $excursionByChild, $date) {
+            $dob = $d->child->date_of_birth;
+            $birthday = $dob && $dob->format('m-d') === $date->format('m-d')
+                ? $date->year - $dob->year
+                : null;
             $plannedTime = $d->planned_time ? substr((string) $d->planned_time, 0, 5) : null;
             $plannedMethod = $d->planned_method?->value;
             $std = $standard[$d->child_id] ?? null;
@@ -128,6 +132,8 @@ class DailyBoardController extends Controller
                 'can_override' => $user->isStaff() || ($myChildIds?->contains($d->child_id) ?? false),
                 'is_own' => $myChildIds?->contains($d->child_id) ?? false,
                 'excursion' => $excursionByChild[$d->child_id] ?? null,
+                // Age the child turns today, or null if it's not their birthday.
+                'birthday' => $birthday,
             ];
         });
 

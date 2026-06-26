@@ -184,6 +184,13 @@ function resetDay() {
                                 >
                                     {{ day.time ?? 'frei' }}
                                     <span
+                                        v-if="day.birthday !== null"
+                                        class="mt-0.5 block text-[10px] leading-none"
+                                        title="Geburtstag"
+                                    >
+                                        🎂
+                                    </span>
+                                    <span
                                         v-if="day.excursion"
                                         class="mt-0.5 block text-[10px] leading-none"
                                         :title="day.excursion.name"
@@ -200,12 +207,19 @@ function resetDay() {
                             </div>
                         </div>
 
-                        <!-- Trips this week + pickup conflicts -->
+                        <!-- Birthdays, trips and pickup conflicts this week -->
                         <div
-                            v-if="child.days.some((d, idx) => d.excursion || homeworkConflict(d, idx))"
+                            v-if="child.days.some((d, idx) => d.excursion || d.birthday !== null || homeworkConflict(d, idx))"
                             class="mt-2 space-y-1"
                         >
                             <template v-for="(day, i) in child.days" :key="day.date">
+                                <p
+                                    v-if="day.birthday !== null"
+                                    class="rounded-lg bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700"
+                                >
+                                    🎂 {{ weekDays[i].label }}: Geburtstag · wird
+                                    {{ day.birthday }}
+                                </p>
                                 <p
                                     v-if="day.conflict"
                                     class="rounded-lg bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700"

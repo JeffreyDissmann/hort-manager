@@ -298,7 +298,15 @@ function saveEdit(row) {
                 >
                     <div class="flex items-start justify-between gap-3">
                         <div class="min-w-0">
-                            <p class="font-semibold text-hort-navy">{{ row.name }}</p>
+                            <p class="font-semibold text-hort-navy">
+                                {{ row.name }}
+                                <span
+                                    v-if="row.birthday !== null"
+                                    class="ml-1 rounded-md bg-amber-100 px-1.5 py-0.5 text-xs font-semibold text-amber-700"
+                                >
+                                    🎂 wird {{ row.birthday }}
+                                </span>
+                            </p>
                             <p class="mt-0.5 text-sm text-hort-navy/60">
                                 {{ planLabel(row) }}
                                 <span v-if="row.comment" class="text-hort-navy/45">
