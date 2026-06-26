@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ChildController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\WeeklyOverviewController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -25,6 +26,8 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     Route::resource('children', ChildController::class)->except('show');
+
+    Route::get('/wochenplan', WeeklyOverviewController::class)->name('weekly-plan');
 });
 
 require __DIR__.'/auth.php';
