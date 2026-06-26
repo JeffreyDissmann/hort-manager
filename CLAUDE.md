@@ -54,6 +54,9 @@ Creating an excursion invites **every** child (a pending `child_excursion` row).
 - **Tagesboard:** marking departures = **staff only**; same-day plan override (`board.override`) = staff _or_ the child's parent.
 - **Ausflug:** managing trips = staff only (ExcursionController guards with `ensureStaff()`); answering the **poll** = the child's parent (while open) or staff (anytime), via ExcursionRsvpController.
 
+### Wochenplan
+Two parts: **Diese Woche** = each child's effective plan for the current week (Stammplan merged with any `DailyDeparture` overrides, adjusted days flagged), editable per day by staff / the child's parent via `weekly-plan.adjust` (+ `weekly-plan.reset`, current-week weekdays from today on, not-yet-departed); below it the read-only **Standard** Stammplan timetable.
+
 ### Tagesboard mechanics
 `DailyBoardController` targets **today, or the next weekday on weekends**. It lazily `firstOrCreate`s a `DailyDeparture` per scheduled child from the Stammplan. A row is "overridden" when its plan differs from the Stammplan (shown as „heute geändert"). Excursions are an **overlay** (`rows[].excursion`), not a status swap — a child on a trip still gets marked picked up after returning.
 

@@ -5,6 +5,7 @@ use App\Http\Controllers\DailyBoardController;
 use App\Http\Controllers\ExcursionController;
 use App\Http\Controllers\ExcursionRsvpController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\WeeklyAdjustmentController;
 use App\Http\Controllers\WeeklyOverviewController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -31,6 +32,8 @@ Route::middleware('auth')->group(function () {
     Route::resource('children', ChildController::class)->except('show');
 
     Route::get('/wochenplan', WeeklyOverviewController::class)->name('weekly-plan');
+    Route::patch('/wochenplan/anpassung', [WeeklyAdjustmentController::class, 'update'])->name('weekly-plan.adjust');
+    Route::patch('/wochenplan/zuruecksetzen', [WeeklyAdjustmentController::class, 'reset'])->name('weekly-plan.reset');
 
     Route::get('/tagesboard', [DailyBoardController::class, 'index'])->name('board');
     Route::patch('/tagesboard/{departure}/status', [DailyBoardController::class, 'mark'])->name('board.mark');
