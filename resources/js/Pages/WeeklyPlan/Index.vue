@@ -43,6 +43,20 @@ const flash = computed(() => usePage().props.flash?.status);
 const isStaff = computed(() => usePage().props.auth?.user?.role === 'staff');
 const standardWeekdays = ['Mo', 'Di', 'Mi', 'Do', 'Fr'];
 
+function toMinutes(time) {
+    return parseInt(time.slice(0, 2), 10) * 60 + parseInt(time.slice(3, 5), 10);
+}
+
+// Pickup falls inside that day's homework slot.
+function homeworkConflict(day, i) {
+    const hw = props.program[i];
+    if (!day.time || !hw || !hw.homework_start || !hw.homework_end) {
+        return false;
+    }
+    const pickup = toMinutes(day.time);
+    return pickup >= toMinutes(hw.homework_start) && pickup < toMinutes(hw.homework_end);
+}
+
 function cellClass(day) {
     if (!day.time) {
         return 'bg-hort-navy/5 text-hort-navy/30';
@@ -198,11 +212,7 @@ function resetDay() {
                                     class="relative mt-1 w-full rounded-lg py-2 text-xs font-semibold"
                                     :class="[
                                         cellClass(day),
-                                        day.conflict
-                                            ? 'ring-2 ring-red-400'
-                                            : day.adjusted
-                                              ? 'ring-2 ring-amber-400'
-                                              : '',
+                                        day.adjusted ? 'ring-2 ring-amber-400' : '',
                                         day.editable ? 'cursor-pointer hover:brightness-95 active:scale-[0.97]' : '',
                                     ]"
                                     :title="day.comment || undefined"
@@ -228,15 +238,15 @@ function resetDay() {
 
                         <!-- Trips this week + pickup conflicts -->
                         <div
-                            v-if="child.days.some((d) => d.excursion)"
+                            v-if="child.days.some((d, idx) => d.excursion || homeworkConflict(d, idx))"
                             class="mt-2 space-y-1"
                         >
                             <template v-for="(day, i) in child.days" :key="day.date">
                                 <p
                                     v-if="day.conflict"
-                                    class="rounded-lg bg-red-50 px-2 py-1 text-xs font-medium text-red-700"
+                                    class="rounded-lg bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700"
                                 >
-                                    ⚠️ {{ weekDays[i].label }}: Abholung
+                                    {{ weekDays[i].label }}: Abholung
                                     {{ day.time }} liegt im {{ day.excursion.name }}<span
                                         v-if="day.excursion.return_at"
                                     >
@@ -255,6 +265,13 @@ function resetDay() {
                                             day.excursion.return_at
                                         }})</span
                                     >
+                                </p>
+                                <p
+                                    v-if="homeworkConflict(day, i)"
+                                    class="rounded-lg bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700"
+                                >
+                                    {{ weekDays[i].label }}: Abholung {{ day.time }}
+                                    liegt in der Hausaufgabenzeit
                                 </p>
                             </template>
                         </div>
@@ -301,6 +318,15 @@ function resetDay() {
                             >
                                 {{ program[i].activity }}
                             </div>
+                            <div
+                                v-if="program[i] && program[i].homework_start"
+                                class="text-[10px] leading-tight text-hort-navy/50"
+                            >
+                                HA {{ program[i].homework_start }}<span
+                                    v-if="program[i].homework_end"
+                                    >–{{ program[i].homework_end }}</span
+                                >
+                            </div>
 
                             <div
                                 v-for="(activity, j) in activities[i]"
@@ -320,7 +346,12 @@ function resetDay() {
                             <div
                                 v-if="
                                     !activities[i]?.length &&
-                                    !(program[i] && (program[i].lunch || program[i].activity))
+                                    !(
+                                        program[i] &&
+                                        (program[i].lunch ||
+                                            program[i].activity ||
+                                            program[i].homework_start)
+                                    )
                                 "
                                 class="text-[10px] text-hort-navy/20"
                             >

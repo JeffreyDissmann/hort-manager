@@ -8,6 +8,7 @@ use App\Models\Child;
 use App\Models\DailyDeparture;
 use App\Models\DailyProgram;
 use App\Models\Excursion;
+use App\Models\HomeworkDefault;
 use App\Models\WeeklySchedule;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -92,16 +93,26 @@ class WeeklyOverviewController extends Controller
             ->values())
             ->all();
 
-        // Day program (lunch + activity) per weekday for the program row.
+        // Day program (lunch + activity + effective homework) per weekday.
         $programs = DailyProgram::query()
             ->whereIn('date', $weekDates)
             ->get()
             ->keyBy(fn (DailyProgram $p) => $p->date->toDateString());
+        $homeworkDefaults = HomeworkDefault::all()->keyBy('weekday');
 
-        $program = $weekDays->values()->map(fn (array $day) => [
-            'lunch' => $programs->get($day['date'])?->lunch,
-            'activity' => $programs->get($day['date'])?->activity,
-        ])->all();
+        $program = $weekDays->values()->map(function (array $day, int $i) use ($programs, $homeworkDefaults) {
+            $p = $programs->get($day['date']);
+            $default = $homeworkDefaults->get($i + 1);
+            $hwStart = $p?->homework_start ?? $default?->start_time;
+            $hwEnd = $p?->homework_end ?? $default?->end_time;
+
+            return [
+                'lunch' => $p?->lunch,
+                'activity' => $p?->activity,
+                'homework_start' => $hwStart ? substr((string) $hwStart, 0, 5) : null,
+                'homework_end' => $hwEnd ? substr((string) $hwEnd, 0, 5) : null,
+            ];
+        })->all();
 
         $excursionByChildDate = [];
         foreach ($weekExcursions as $excursion) {

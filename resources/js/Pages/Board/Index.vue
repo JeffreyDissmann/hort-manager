@@ -55,6 +55,31 @@ function planLabel(row) {
     return method ? `${row.planned_time} · ${method}` : row.planned_time;
 }
 
+function toMinutes(time) {
+    return parseInt(time.slice(0, 2), 10) * 60 + parseInt(time.slice(3, 5), 10);
+}
+
+// Pickup falls inside today's homework slot.
+function homeworkConflict(row) {
+    const hw = props.program;
+    if (!row.planned_time || !hw || !hw.homework_start || !hw.homework_end) {
+        return false;
+    }
+    const pickup = toMinutes(row.planned_time);
+    return pickup >= toMinutes(hw.homework_start) && pickup < toMinutes(hw.homework_end);
+}
+
+// Pickup falls inside the child's excursion window.
+function excursionConflict(row) {
+    const ex = row.excursion;
+    if (!ex || !row.planned_time || !ex.return_at) {
+        return false;
+    }
+    const pickup = toMinutes(row.planned_time);
+    const depart = ex.depart_at ? toMinutes(ex.depart_at) : 0;
+    return pickup >= depart && pickup < toMinutes(ex.return_at);
+}
+
 function mark(row, status) {
     router.patch(
         route('board.mark', row.id),
@@ -138,6 +163,17 @@ function saveEdit(row) {
                 >
                     <span class="font-semibold">Aktivität:</span>
                     {{ program.activity }}
+                </p>
+                <p
+                    v-if="program.homework_start"
+                    class="text-sm text-hort-navy"
+                    :class="program.lunch || program.activity ? 'mt-1' : ''"
+                >
+                    <span class="font-semibold">Hausaufgaben:</span>
+                    {{ program.homework_start }}<span v-if="program.homework_end"
+                        >–{{ program.homework_end }}</span
+                    >
+                    Uhr
                 </p>
             </div>
 
@@ -296,6 +332,18 @@ function saveEdit(row) {
                                         · zurück {{ row.excursion.return_at }}
                                     </span>
                                 </template>
+                            </p>
+                            <p
+                                v-if="row.status === 'present' && excursionConflict(row)"
+                                class="mt-1 inline-block rounded-lg bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700"
+                            >
+                                Abholung liegt im Ausflug
+                            </p>
+                            <p
+                                v-if="row.status === 'present' && homeworkConflict(row)"
+                                class="mt-1 inline-block rounded-lg bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700"
+                            >
+                                Abholung liegt in der Hausaufgabenzeit
                             </p>
                         </div>
 

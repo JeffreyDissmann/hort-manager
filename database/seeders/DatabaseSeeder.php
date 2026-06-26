@@ -7,6 +7,7 @@ use App\Enums\UserRole;
 use App\Models\Child;
 use App\Models\DailyProgram;
 use App\Models\Excursion;
+use App\Models\HomeworkDefault;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -135,6 +136,15 @@ class DatabaseSeeder extends Seeder
                 'date' => $weekStart->copy()->addDays($i)->toDateString(),
                 'lunch' => $lunch,
                 'activity' => $activity,
+            ]);
+        }
+
+        // Default homework slot: 14:00–15:00 Mon–Thu, shorter on Friday.
+        foreach (range(1, 5) as $weekday) {
+            HomeworkDefault::create([
+                'weekday' => $weekday,
+                'start_time' => '14:00',
+                'end_time' => $weekday === 5 ? '14:30' : '15:00',
             ]);
         }
     }

@@ -15,6 +15,8 @@ class DailyProgram extends Model
         'date',
         'lunch',
         'activity',
+        'homework_start',
+        'homework_end',
     ];
 
     protected function casts(): array

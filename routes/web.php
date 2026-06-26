@@ -38,6 +38,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/programm', [DailyProgramController::class, 'index'])->name('program');
     Route::patch('/programm', [DailyProgramController::class, 'update'])->name('program.update');
+    Route::patch('/programm/standard', [DailyProgramController::class, 'updateDefaults'])->name('program.defaults');
 
     Route::get('/tagesboard', [DailyBoardController::class, 'index'])->name('board');
     Route::patch('/tagesboard/{departure}/status', [DailyBoardController::class, 'mark'])->name('board.mark');

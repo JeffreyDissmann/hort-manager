@@ -8,6 +8,7 @@ use App\Models\Child;
 use App\Models\DailyDeparture;
 use App\Models\DailyProgram;
 use App\Models\Excursion;
+use App\Models\HomeworkDefault;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -131,6 +132,11 @@ class DailyBoardController extends Controller
         });
 
         $program = DailyProgram::where('date', $date->toDateString())->first();
+        $homeworkDefault = HomeworkDefault::where('weekday', $weekday)->first();
+        $homeworkStart = $program?->homework_start ?? $homeworkDefault?->start_time;
+        $homeworkEnd = $program?->homework_end ?? $homeworkDefault?->end_time;
+
+        $hasProgram = $program?->lunch || $program?->activity || $homeworkStart;
 
         return Inertia::render('Board/Index', [
             'date' => [
@@ -140,9 +146,12 @@ class DailyBoardController extends Controller
             ],
             'rows' => $rows,
             'excursions' => $excursionList,
-            'program' => $program && ($program->lunch || $program->activity)
-                ? ['lunch' => $program->lunch, 'activity' => $program->activity]
-                : null,
+            'program' => $hasProgram ? [
+                'lunch' => $program?->lunch,
+                'activity' => $program?->activity,
+                'homework_start' => $homeworkStart ? substr((string) $homeworkStart, 0, 5) : null,
+                'homework_end' => $homeworkEnd ? substr((string) $homeworkEnd, 0, 5) : null,
+            ] : null,
             'canMark' => $user->isStaff(),
             'methodOptions' => collect(DepartureMethod::cases())
                 ->map(fn (DepartureMethod $m) => ['value' => $m->value, 'label' => $m->label()])

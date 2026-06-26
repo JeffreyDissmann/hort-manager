@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\UserRole;
 use App\Models\DailyProgram;
+use App\Models\HomeworkDefault;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -80,6 +81,89 @@ class DailyProgramTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->where('program.lunch', 'Kartoffelsuppe')
                 ->where('program.activity', 'Turnhalle')
+            );
+    }
+
+    public function test_staff_can_set_default_homework_times(): void
+    {
+        $this->actingAs($this->staff())
+            ->patch(route('program.defaults'), [
+                'defaults' => [
+                    ['weekday' => 1, 'start' => '14:00', 'end' => '15:00'],
+                    ['weekday' => 2, 'start' => null, 'end' => null],
+                ],
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('homework_defaults', [
+            'weekday' => 1,
+            'start_time' => '14:00',
+            'end_time' => '15:00',
+        ]);
+        $this->assertDatabaseMissing('homework_defaults', ['weekday' => 2]);
+    }
+
+    public function test_index_falls_back_to_the_weekday_homework_default(): void
+    {
+        $this->travelTo(Carbon::parse('2026-06-22')); // Monday → day index 0
+        HomeworkDefault::create(['weekday' => 1, 'start_time' => '14:00', 'end_time' => '15:00']);
+
+        $this->actingAs($this->staff())
+            ->get(route('program'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('days.0.homework_start', '14:00')
+                ->where('days.0.homework_end', '15:00')
+                ->where('homeworkDefaults.0.start', '14:00')
+            );
+    }
+
+    public function test_homework_equal_to_default_is_not_stored_as_override(): void
+    {
+        HomeworkDefault::create(['weekday' => 1, 'start_time' => '14:00', 'end_time' => '15:00']);
+
+        $this->actingAs($this->staff())
+            ->patch(route('program.update'), [
+                'days' => [[
+                    'date' => '2026-06-22', // Monday
+                    'homework_start' => '14:00',
+                    'homework_end' => '15:00',
+                ]],
+            ]);
+
+        // Equal to the default → no override row stored.
+        $this->assertDatabaseMissing('daily_programs', ['date' => '2026-06-22']);
+    }
+
+    public function test_homework_override_is_stored_when_it_differs(): void
+    {
+        HomeworkDefault::create(['weekday' => 1, 'start_time' => '14:00', 'end_time' => '15:00']);
+
+        $this->actingAs($this->staff())
+            ->patch(route('program.update'), [
+                'days' => [[
+                    'date' => '2026-06-22', // Monday
+                    'homework_start' => '15:00',
+                    'homework_end' => '16:00',
+                ]],
+            ]);
+
+        $this->assertDatabaseHas('daily_programs', [
+            'date' => '2026-06-22',
+            'homework_start' => '15:00',
+            'homework_end' => '16:00',
+        ]);
+    }
+
+    public function test_homework_shows_on_the_board(): void
+    {
+        $this->travelTo(Carbon::parse('2026-06-22')); // Monday
+        HomeworkDefault::create(['weekday' => 1, 'start_time' => '14:00', 'end_time' => '15:00']);
+
+        $this->actingAs($this->parent())
+            ->get(route('board'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('program.homework_start', '14:00')
+                ->where('program.homework_end', '15:00')
             );
     }
 

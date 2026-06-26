@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue';
 
 const model = defineModel({ type: String, default: '' });
+const emit = defineEmits(['change']);
 
 const props = defineProps({
     from: { type: String, default: '06:00' },
@@ -36,15 +37,18 @@ const minutes = computed(() => {
     return list;
 });
 
+// Fired only on user interaction (not on programmatic model changes).
 function update() {
     if (!hour.value) {
         model.value = '';
+        emit('change', '');
         return;
     }
     if (!minute.value) {
         minute.value = '00';
     }
     model.value = `${hour.value}:${minute.value}`;
+    emit('change', model.value);
 }
 
 const selectClass =
