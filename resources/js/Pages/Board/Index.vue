@@ -1,5 +1,6 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import TimeSelect from '@/Components/TimeSelect.vue';
 import { Head, router, usePage } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 
@@ -254,26 +255,20 @@ function saveEdit(row) {
                         v-if="editingId === row.id"
                         class="mt-3 space-y-3 rounded-xl bg-hort-sand p-3"
                     >
-                        <div class="flex gap-2">
-                            <input
-                                v-model="editTime"
-                                type="time"
-                                class="w-32 rounded-lg border-gray-300 text-sm focus:border-hort-teal focus:ring-hort-teal"
-                            />
-                            <select
-                                v-model="editMethod"
-                                class="flex-1 rounded-lg border-gray-300 text-sm focus:border-hort-teal focus:ring-hort-teal"
+                        <TimeSelect v-model="editTime" class="text-sm" />
+                        <select
+                            v-model="editMethod"
+                            class="block w-full rounded-lg border-gray-300 text-sm focus:border-hort-teal focus:ring-hort-teal"
+                        >
+                            <option value="">— offen —</option>
+                            <option
+                                v-for="o in methodOptions"
+                                :key="o.value"
+                                :value="o.value"
                             >
-                                <option value="">— offen —</option>
-                                <option
-                                    v-for="o in methodOptions"
-                                    :key="o.value"
-                                    :value="o.value"
-                                >
-                                    {{ o.label }}
-                                </option>
-                            </select>
-                        </div>
+                                {{ o.label }}
+                            </option>
+                        </select>
                         <input
                             v-model="editNote"
                             type="text"

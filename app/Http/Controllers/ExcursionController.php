@@ -6,6 +6,7 @@ use App\Models\Child;
 use App\Models\Excursion;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -51,7 +52,16 @@ class ExcursionController extends Controller
     {
         $this->ensureStaff();
 
-        return Inertia::render('Excursions/Create');
+        // Suggest the next Friday, skipping any Friday that already has a trip.
+        $friday = Carbon::today()->next(Carbon::FRIDAY);
+        $taken = Excursion::get(['date'])->map(fn (Excursion $e) => $e->date->toDateString())->all();
+        while (in_array($friday->toDateString(), $taken, true)) {
+            $friday->addWeek();
+        }
+
+        return Inertia::render('Excursions/Create', [
+            'suggestedDate' => $friday->toDateString(),
+        ]);
     }
 
     public function store(Request $request): RedirectResponse

@@ -27,6 +27,25 @@ class ExcursionManagementTest extends TestCase
         return User::factory()->create(['role' => UserRole::Parent]);
     }
 
+    public function test_create_suggests_the_next_free_friday(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-06-24')); // Wednesday
+
+        $this->actingAs($this->staff())
+            ->get(route('excursions.create'))
+            ->assertInertia(fn (Assert $page) => $page->where('suggestedDate', '2026-06-26'));
+    }
+
+    public function test_create_skips_a_friday_that_already_has_an_excursion(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-06-24')); // Wednesday
+        Excursion::factory()->create(['date' => '2026-06-26']); // next Friday is taken
+
+        $this->actingAs($this->staff())
+            ->get(route('excursions.create'))
+            ->assertInertia(fn (Assert $page) => $page->where('suggestedDate', '2026-07-03'));
+    }
+
     public function test_creating_an_excursion_invites_every_child_as_an_open_poll(): void
     {
         Child::factory()->count(3)->create();

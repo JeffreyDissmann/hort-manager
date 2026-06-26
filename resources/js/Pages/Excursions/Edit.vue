@@ -3,6 +3,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import ExcursionFields from './Partials/ExcursionFields.vue';
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
+import { computed } from 'vue';
 
 const props = defineProps({
     excursion: { type: Object, required: true },
@@ -17,6 +18,10 @@ const form = useForm({
     rsvp_deadline: props.excursion.rsvp_deadline ?? '',
     note: props.excursion.note ?? '',
 });
+
+const canSubmit = computed(
+    () => form.name && form.date && form.rsvp_deadline,
+);
 
 function submit() {
     form.put(route('excursions.update', props.excursion.id));
@@ -55,7 +60,7 @@ function setResponse(childId, response) {
                     >
                         Abbrechen
                     </Link>
-                    <PrimaryButton :disabled="form.processing">
+                    <PrimaryButton :disabled="form.processing || !canSubmit">
                         Speichern
                     </PrimaryButton>
                 </div>

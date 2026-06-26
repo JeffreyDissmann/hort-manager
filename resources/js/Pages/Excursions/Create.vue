@@ -3,15 +3,24 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import ExcursionFields from './Partials/ExcursionFields.vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
+import { computed } from 'vue';
+
+const props = defineProps({
+    suggestedDate: { type: String, default: '' },
+});
 
 const form = useForm({
     name: '',
-    date: '',
-    depart_at: '',
-    return_at: '',
+    date: props.suggestedDate || '',
+    depart_at: '14:30',
+    return_at: '17:00',
     rsvp_deadline: '',
     note: '',
 });
+
+const canSubmit = computed(
+    () => form.name && form.date && form.rsvp_deadline,
+);
 
 function submit() {
     form.post(route('excursions.store'));
@@ -31,7 +40,7 @@ function submit() {
                 @submit.prevent="submit"
                 class="space-y-6 rounded-2xl bg-white p-6 shadow-sm"
             >
-                <ExcursionFields :form="form" />
+                <ExcursionFields :form="form" :suggested-date="suggestedDate" />
 
                 <div class="flex items-center justify-end gap-4">
                     <Link
@@ -40,7 +49,7 @@ function submit() {
                     >
                         Abbrechen
                     </Link>
-                    <PrimaryButton :disabled="form.processing">
+                    <PrimaryButton :disabled="form.processing || !canSubmit">
                         Speichern
                     </PrimaryButton>
                 </div>

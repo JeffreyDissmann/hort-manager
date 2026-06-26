@@ -2,6 +2,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import TextInput from '@/Components/TextInput.vue';
+import TimeSelect from '@/Components/TimeSelect.vue';
 import InputError from '@/Components/InputError.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
@@ -154,10 +155,9 @@ function submit() {
                                             value="Uhrzeit"
                                             class="sr-only"
                                         />
-                                        <TextInput
+                                        <TimeSelect
                                             :id="`time-${day.weekday}`"
                                             v-model="day.planned_time"
-                                            type="time"
                                             class="block w-full"
                                         />
                                     </div>
