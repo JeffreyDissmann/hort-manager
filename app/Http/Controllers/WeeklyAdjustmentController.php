@@ -21,6 +21,7 @@ class WeeklyAdjustmentController extends Controller
             'date' => ['required', 'date'],
             'planned_time' => ['nullable', 'date_format:H:i'],
             'planned_method' => ['nullable', Rule::enum(DepartureMethod::class)],
+            'note' => ['nullable', 'string', 'max:255'],
         ]);
 
         $child = Child::findOrFail($validated['child_id']);
@@ -29,6 +30,7 @@ class WeeklyAdjustmentController extends Controller
         $departure->fill([
             'planned_time' => $validated['planned_time'] ?? null,
             'planned_method' => $validated['planned_method'] ?? null,
+            'note' => $validated['note'] ?? null,
         ]);
 
         if (! $departure->exists) {
@@ -69,13 +71,10 @@ class WeeklyAdjustmentController extends Controller
         abort_unless($user->isStaff() || $child->isGuardedBy($user), 403);
 
         $day = Carbon::parse($date)->startOfDay();
-        $weekStart = Carbon::today()->startOfWeek(Carbon::MONDAY);
 
-        // Only Mo–Fr of the current week, today or later.
+        // Any weekday from today on (this week or a later week); never the past.
         abort_unless(
-            $day->betweenIncluded($weekStart, $weekStart->copy()->addDays(4))
-                && $day->greaterThanOrEqualTo(Carbon::today())
-                && $day->isWeekday(),
+            $day->greaterThanOrEqualTo(Carbon::today()) && $day->isWeekday(),
             403,
         );
 

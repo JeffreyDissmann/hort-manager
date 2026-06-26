@@ -34,8 +34,9 @@ This project runs in Docker via Sail. **Never run `php`/`composer`/`npm`/`artisa
 User            role: staff | parent  (App\Enums\UserRole)   — isStaff() helper
   ⇄ children    child_user pivot (guardians)                  User::children / Child::guardians
 Child           name, date_of_birth?, note   (flat list — NO groups)
-WeeklySchedule  (Stammplan)  child + weekday 1–5 → planned_time + method
+WeeklySchedule  (Stammplan)  child + weekday 1–5 → planned_time + method + comment?
                 method = App\Enums\DepartureMethod: picked_up | sent_home
+                comment = optional reason, e.g. „wegen Fußball" (shown on Wochenplan + board when not overridden)
 DailyDeparture  (Tagesboard) one row per child+date (unique):
                 status (App\Enums\DepartureStatus: present|picked_up|sent_home|excursion),
                 planned_time/planned_method (seeded from Stammplan, same-day overridable),
@@ -55,7 +56,7 @@ Creating an excursion invites **every** child (a pending `child_excursion` row).
 - **Ausflug:** managing trips = staff only (ExcursionController guards with `ensureStaff()`); answering the **poll** = the child's parent (while open) or staff (anytime), via ExcursionRsvpController.
 
 ### Wochenplan
-Two parts: **Diese Woche** = each child's effective plan for the current week (Stammplan merged with any `DailyDeparture` overrides, adjusted days flagged), editable per day by staff / the child's parent via `weekly-plan.adjust` (+ `weekly-plan.reset`, current-week weekdays from today on, not-yet-departed); below it the read-only **Standard** Stammplan timetable.
+Two parts: **Diese Woche** = effective plan per child for the selected week (Stammplan merged with any `DailyDeparture` overrides; adjusted days flagged, past days greyed), scoped to the user's **own** children (staff see all); week navigation via `?week=YYYY-MM-DD` (arrows + swipe). Editable per day by staff / the child's parent via `weekly-plan.adjust` (+ `weekly-plan.reset`) — any weekday from today on, not-yet-departed. An override comment lives on `DailyDeparture.note` and defaults to the day's Stammplan comment. Below: the read-only **Standard** Stammplan timetable (all children).
 
 ### Tagesboard mechanics
 `DailyBoardController` targets **today, or the next weekday on weekends**. It lazily `firstOrCreate`s a `DailyDeparture` per scheduled child from the Stammplan. A row is "overridden" when its plan differs from the Stammplan (shown as „heute geändert"). Excursions are an **overlay** (`rows[].excursion`), not a status swap — a child on a trip still gets marked picked up after returning.

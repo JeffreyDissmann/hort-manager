@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\DepartureMethod;
 use App\Enums\DepartureStatus;
+use App\Enums\UserRole;
 use App\Models\Child;
 use App\Models\DailyDeparture;
 use App\Models\User;
@@ -17,12 +18,12 @@ class WeeklyAdjustmentTest extends TestCase
 
     private function staff(): User
     {
-        return User::factory()->create(['role' => \App\Enums\UserRole::Staff]);
+        return User::factory()->create(['role' => UserRole::Staff]);
     }
 
     private function parent(): User
     {
-        return User::factory()->create(['role' => \App\Enums\UserRole::Parent]);
+        return User::factory()->create(['role' => UserRole::Parent]);
     }
 
     /** A current-week weekday that is today or later. */
@@ -54,6 +55,29 @@ class WeeklyAdjustmentTest extends TestCase
             'child_id' => $child->id,
             'date' => $date,
             'planned_time' => '14:30',
+        ]);
+    }
+
+    public function test_an_adjustment_can_carry_a_comment(): void
+    {
+        $date = $this->upcomingWeekday();
+        $parent = $this->parent();
+        $child = Child::factory()->create();
+        $parent->children()->attach($child);
+
+        $this->actingAs($parent)
+            ->patch(route('weekly-plan.adjust'), [
+                'child_id' => $child->id,
+                'date' => $date,
+                'planned_time' => '14:30',
+                'note' => 'wegen Arzttermin',
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('daily_departures', [
+            'child_id' => $child->id,
+            'date' => $date,
+            'note' => 'wegen Arzttermin',
         ]);
     }
 
@@ -127,6 +151,26 @@ class WeeklyAdjustmentTest extends TestCase
         $this->assertDatabaseHas('daily_departures', [
             'child_id' => $child->id,
             'date' => $date,
+            'planned_time' => '15:00',
+        ]);
+    }
+
+    public function test_a_day_in_a_future_week_can_be_adjusted(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-06-24')); // Wednesday
+        $child = Child::factory()->create();
+
+        $this->actingAs($this->staff())
+            ->patch(route('weekly-plan.adjust'), [
+                'child_id' => $child->id,
+                'date' => '2026-07-01', // a Wednesday next week
+                'planned_time' => '15:00',
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('daily_departures', [
+            'child_id' => $child->id,
+            'date' => '2026-07-01',
             'planned_time' => '15:00',
         ]);
     }

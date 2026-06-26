@@ -25,7 +25,24 @@ class WeeklyOverviewController extends Controller
     {
         $user = $request->user();
         $today = Carbon::today();
+
+        // Which week to show (?week=YYYY-MM-DD); defaults to the current week.
         $weekStart = $today->copy()->startOfWeek(Carbon::MONDAY);
+        if ($request->filled('week')) {
+            try {
+                $weekStart = Carbon::parse($request->query('week'))->startOfWeek(Carbon::MONDAY);
+            } catch (\Throwable) {
+                // Fall back to the current week on an invalid value.
+            }
+        }
+
+        $week = [
+            'label' => 'KW '.$weekStart->isoWeek().' · '
+                .$weekStart->format('d.m.').'–'.$weekStart->copy()->addDays(4)->format('d.m.'),
+            'prev' => $weekStart->copy()->subWeek()->toDateString(),
+            'next' => $weekStart->copy()->addWeek()->toDateString(),
+            'is_current' => $weekStart->equalTo($today->copy()->startOfWeek(Carbon::MONDAY)),
+        ];
 
         $weekDays = collect(range(0, 4))->map(function (int $i) use ($weekStart) {
             $date = $weekStart->copy()->addDays($i);
@@ -37,21 +54,25 @@ class WeeklyOverviewController extends Controller
             ];
         });
 
-        $children = Child::query()->with('weeklySchedules')->orderBy('name')->get(['id', 'name']);
+        // "Diese Woche" is the user's editable view: a parent sees only their own
+        // children, staff see all. The standard timetable below always shows everyone.
+        $weekChildren = $user->isStaff()
+            ? Child::query()->with('weeklySchedules')->orderBy('name')->get(['id', 'name'])
+            : $user->children()->with('weeklySchedules')->orderBy('name')->get();
+
         $weekDates = $weekDays->pluck('date')->all();
 
         $departures = DailyDeparture::query()
-            ->whereIn('child_id', $children->pluck('id'))
+            ->whereIn('child_id', $weekChildren->pluck('id'))
             ->whereIn('date', $weekDates)
             ->get()
             ->keyBy(fn (DailyDeparture $d) => $d->child_id.'|'.$d->date->toDateString());
 
-        $myChildIds = $user->isStaff() ? null : $user->children()->pluck('children.id');
         $todayString = $today->toDateString();
 
-        $currentWeek = $children->map(function (Child $child) use ($weekDays, $departures, $todayString, $user, $myChildIds) {
+        $currentWeek = $weekChildren->map(function (Child $child) use ($weekDays, $departures, $todayString) {
             $byWeekday = $child->weeklySchedules->keyBy('weekday');
-            $canManage = $user->isStaff() || ($myChildIds?->contains($child->id) ?? false);
+            $canManage = true;
 
             $days = $weekDays->values()->map(function (array $day, int $i) use ($child, $byWeekday, $departures, $todayString, $canManage) {
                 $schedule = $byWeekday->get($i + 1);
@@ -67,11 +88,18 @@ class WeeklyOverviewController extends Controller
 
                 $departed = $status !== null && $status !== DepartureStatus::Present;
 
+                $adjusted = $departure !== null && ($time !== $stdTime || $method !== $stdMethod);
+
                 return [
                     'date' => $day['date'],
                     'time' => $time,
                     'method' => $method,
-                    'adjusted' => $departure !== null && ($time !== $stdTime || $method !== $stdMethod),
+                    // Shown on the cell: the override's own note, or the Stammplan comment.
+                    'comment' => $adjusted ? $departure?->note : $schedule?->comment,
+                    // Pre-fills the editor; an override defaults to the standard comment.
+                    'note' => $departure?->note ?? $schedule?->comment,
+                    'adjusted' => $adjusted,
+                    'past' => $day['date'] < $todayString,
                     'editable' => $canManage && $day['date'] >= $todayString && ! $departed,
                 ];
             });
@@ -85,6 +113,7 @@ class WeeklyOverviewController extends Controller
         });
 
         return Inertia::render('WeeklyPlan/Index', [
+            'week' => $week,
             'weekDays' => $weekDays,
             'currentWeek' => $currentWeek,
             'standard' => $this->standardTimetable(),
@@ -128,6 +157,7 @@ class WeeklyOverviewController extends Controller
                         'id' => $s->child->id,
                         'name' => $s->child->name,
                         'method' => $s->method?->value,
+                        'comment' => $s->comment,
                     ])
                     ->values();
             }

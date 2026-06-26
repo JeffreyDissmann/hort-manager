@@ -39,22 +39,41 @@ class WeeklyOverviewTest extends TestCase
             'method' => DepartureMethod::SentHome,
         ]);
 
-        // A parent (open information policy) sees every child, not just their own.
+        // The standard timetable shows every child (open information policy),
+        // but "Diese Woche" is scoped to the parent's own children.
         $parent = User::factory()->create(['role' => UserRole::Parent]);
+        $parent->children()->attach($emma);
 
         $this->actingAs($parent)
             ->get(route('weekly-plan'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('WeeklyPlan/Index')
-                ->has('currentWeek', 2)
-                // Standard timetable slots run 14:00, 14:30, 15:00 → three rows.
+                // Only Emma (their own child) in the editable current week.
+                ->has('currentWeek', 1)
+                ->where('currentWeek.0.name', 'Emma')
+                // Standard timetable still lists everyone: slots 14:00, 14:30, 15:00.
                 ->has('standard', 3)
                 ->where('standard.0.time', '14:00')
                 ->where('standard.0.days.0.0.name', 'Emma')
                 ->where('standard.2.time', '15:00')
                 ->where('standard.2.days.0.0.name', 'Mia')
                 ->where('standard.0.days.1', [])
+            );
+    }
+
+    public function test_the_week_parameter_navigates_to_another_week(): void
+    {
+        $this->travelTo(Carbon::parse('2026-06-24')); // current week starts Mo 2026-06-22
+
+        $this->actingAs(User::factory()->create(['role' => UserRole::Staff]))
+            ->get(route('weekly-plan', ['week' => '2026-06-29'])) // next week
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('week.is_current', false)
+                ->where('weekDays.0.date', '2026-06-29') // Monday
+                ->where('weekDays.4.date', '2026-07-03') // Friday
+                ->where('week.prev', '2026-06-22')
+                ->where('week.next', '2026-07-06')
             );
     }
 
@@ -79,7 +98,10 @@ class WeeklyOverviewTest extends TestCase
             'status' => DepartureStatus::Present,
         ]);
 
-        $this->actingAs(User::factory()->create(['role' => UserRole::Parent]))
+        $parent = User::factory()->create(['role' => UserRole::Parent]);
+        $parent->children()->attach($child);
+
+        $this->actingAs($parent)
             ->get(route('weekly-plan'))
             ->assertInertia(fn (Assert $page) => $page
                 // Wednesday is index 2 (Mo, Di, Mi).

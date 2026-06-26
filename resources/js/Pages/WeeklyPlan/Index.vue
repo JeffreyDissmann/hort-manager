@@ -5,17 +5,39 @@ import InputLabel from '@/Components/InputLabel.vue';
 import TextInput from '@/Components/TextInput.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
-import { Head, router, usePage } from '@inertiajs/vue3';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { computed, reactive, ref } from 'vue';
 
 const props = defineProps({
+    week: { type: Object, default: () => ({}) },
     weekDays: { type: Array, default: () => [] },
     currentWeek: { type: Array, default: () => [] },
     standard: { type: Array, default: () => [] },
     methodOptions: { type: Array, default: () => [] },
 });
 
+function goWeek(date) {
+    router.get(
+        route('weekly-plan', date ? { week: date } : {}),
+        {},
+        { preserveScroll: true },
+    );
+}
+
+// Swipe left/right to move between weeks.
+let touchStartX = 0;
+function onTouchStart(e) {
+    touchStartX = e.changedTouches[0].clientX;
+}
+function onTouchEnd(e) {
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    if (Math.abs(dx) > 60) {
+        goWeek(dx < 0 ? props.week.next : props.week.prev);
+    }
+}
+
 const flash = computed(() => usePage().props.flash?.status);
+const isStaff = computed(() => usePage().props.auth?.user?.role === 'staff');
 const standardWeekdays = ['Mo', 'Di', 'Mi', 'Do', 'Fr'];
 
 function cellClass(day) {
@@ -35,7 +57,7 @@ function chipClass(method) {
 
 // --- Inline editor (modal) ---
 const editing = ref(null); // { childId, childName, date, label }
-const form = reactive({ planned_time: '', planned_method: '' });
+const form = reactive({ planned_time: '', planned_method: '', note: '' });
 
 function openCell(child, day, dayMeta) {
     if (!day.editable) {
@@ -49,6 +71,7 @@ function openCell(child, day, dayMeta) {
     };
     form.planned_time = day.time ?? '';
     form.planned_method = day.method ?? '';
+    form.note = day.note ?? '';
 }
 
 function closeEditor() {
@@ -63,6 +86,7 @@ function save() {
             date: editing.value.date,
             planned_time: form.planned_time || null,
             planned_method: form.planned_method || null,
+            note: form.note || null,
         },
         { preserveScroll: true, onSuccess: closeEditor },
     );
@@ -94,10 +118,45 @@ function resetDay() {
             </div>
 
             <!-- Current week (effective plan, editable) -->
-            <section class="space-y-3">
-                <h3 class="text-sm font-semibold uppercase tracking-wide text-hort-navy/50">
-                    Diese Woche
-                </h3>
+            <section class="space-y-3" @touchstart="onTouchStart" @touchend="onTouchEnd">
+                <div class="flex items-center justify-between gap-2">
+                    <button
+                        type="button"
+                        class="rounded-lg p-2 text-hort-navy/60 transition hover:bg-hort-navy/5 active:scale-95"
+                        aria-label="Vorige Woche"
+                        @click="goWeek(week.prev)"
+                    >
+                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+                        </svg>
+                    </button>
+
+                    <div class="text-center">
+                        <p class="text-sm font-semibold text-hort-navy">
+                            {{ week.is_current ? 'Diese Woche' : 'Woche' }}
+                        </p>
+                        <p class="text-xs text-hort-navy/50">{{ week.label }}</p>
+                        <button
+                            v-if="!week.is_current"
+                            type="button"
+                            class="mt-0.5 text-xs font-medium text-hort-teal-dark underline-offset-2 hover:underline"
+                            @click="goWeek(null)"
+                        >
+                            Zur aktuellen Woche
+                        </button>
+                    </div>
+
+                    <button
+                        type="button"
+                        class="rounded-lg p-2 text-hort-navy/60 transition hover:bg-hort-navy/5 active:scale-95"
+                        aria-label="Nächste Woche"
+                        @click="goWeek(week.next)"
+                    >
+                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                        </svg>
+                    </button>
+                </div>
 
                 <ul v-if="currentWeek.length" class="space-y-3">
                     <li
@@ -122,6 +181,7 @@ function resetDay() {
                                 v-for="(day, i) in child.days"
                                 :key="day.date"
                                 class="text-center"
+                                :class="day.past ? 'opacity-40' : ''"
                             >
                                 <div class="text-[11px] font-medium text-hort-navy/40">
                                     {{ weekDays[i].label }}
@@ -138,9 +198,16 @@ function resetDay() {
                                         day.adjusted ? 'ring-2 ring-amber-400' : '',
                                         day.editable ? 'cursor-pointer hover:brightness-95 active:scale-[0.97]' : '',
                                     ]"
+                                    :title="day.comment || undefined"
                                     @click="openCell(child, day, weekDays[i])"
                                 >
                                     {{ day.time ?? 'frei' }}
+                                    <span
+                                        v-if="day.comment"
+                                        class="mt-0.5 block truncate text-[9px] font-normal leading-tight opacity-70"
+                                    >
+                                        {{ day.comment }}
+                                    </span>
                                 </component>
                             </div>
                         </div>
@@ -151,10 +218,17 @@ function resetDay() {
                     v-else
                     class="rounded-2xl border-2 border-dashed border-hort-navy/15 p-6 text-center text-sm text-hort-navy/50"
                 >
-                    Noch keine Kinder angelegt.
+                    {{
+                        isStaff
+                            ? 'Noch keine Kinder angelegt.'
+                            : 'Dir ist noch kein Kind zugeordnet.'
+                    }}
                 </p>
 
-                <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs font-medium text-hort-navy/60">
+                <div
+                    v-if="currentWeek.length"
+                    class="flex flex-wrap gap-x-4 gap-y-1 text-xs font-medium text-hort-navy/60"
+                >
                     <span class="flex items-center gap-1.5">
                         <span class="h-3 w-3 rounded-full bg-hort-teal/60" />
                         wird abgeholt
@@ -175,6 +249,20 @@ function resetDay() {
                 <h3 class="text-sm font-semibold uppercase tracking-wide text-hort-navy/50">
                     Standard-Plan
                 </h3>
+                <p class="text-sm text-hort-navy/60">
+                    Der reguläre Wochen-Stammplan aller Kinder – die normalen
+                    Abholzeiten ohne Änderungen.
+                    <Link
+                        :href="route('children.index')"
+                        class="font-medium text-hort-teal-dark underline-offset-2 hover:underline"
+                    >
+                        {{
+                            isStaff
+                                ? 'Stammplan unter „Kinder“ bearbeiten'
+                                : 'Stammplan unter „Meine Kinder“ ändern'
+                        }}
+                    </Link>
+                </p>
 
                 <div
                     v-if="standard.length"
@@ -208,10 +296,17 @@ function resetDay() {
                                 <div
                                     v-for="kid in kids"
                                     :key="kid.id"
-                                    class="truncate rounded-md px-1.5 py-1 text-center text-[11px] font-semibold leading-tight"
+                                    class="rounded-md px-1.5 py-1 text-center text-[11px] font-semibold leading-tight"
                                     :class="chipClass(kid.method)"
+                                    :title="kid.comment || undefined"
                                 >
-                                    {{ kid.name }}
+                                    <span class="block truncate">{{ kid.name }}</span>
+                                    <span
+                                        v-if="kid.comment"
+                                        class="block truncate text-[9px] font-normal opacity-70"
+                                    >
+                                        {{ kid.comment }}
+                                    </span>
                                 </div>
                             </div>
                         </div>
@@ -266,6 +361,18 @@ function resetDay() {
                             {{ o.label }}
                         </option>
                     </select>
+                </div>
+
+                <div>
+                    <InputLabel for="note" value="Kommentar" />
+                    <TextInput
+                        id="note"
+                        v-model="form.note"
+                        type="text"
+                        maxlength="255"
+                        class="mt-1 block w-full"
+                        placeholder="z. B. wegen Arzttermin"
+                    />
                 </div>
 
                 <div class="flex items-center justify-between gap-3 pt-2">
