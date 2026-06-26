@@ -22,10 +22,10 @@ const navItems = computed(() => {
         ];
     }
 
-    // Parents: Ausflüge first (poll badge); „Meine Kinder" lives in the user menu.
+    // Parents: Heute, Ausflüge (poll badge), Abholplan; „Meine Kinder" lives in the user menu.
     return [
-        { label: 'Ausflüge', route: 'polls.index', pattern: 'polls.*', icon: 'map', badge: pendingPolls.value },
         { label: 'Heute', route: 'board', pattern: 'board', icon: 'sun' },
+        { label: 'Ausflüge', route: 'polls.index', pattern: 'polls.*', icon: 'map', badge: pendingPolls.value },
         { label: 'Abholplan', route: 'weekly-plan', pattern: 'weekly-plan', icon: 'calendar' },
     ];
 });
