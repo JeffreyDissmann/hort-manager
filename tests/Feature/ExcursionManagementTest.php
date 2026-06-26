@@ -182,27 +182,27 @@ class ExcursionManagementTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Excursions/Poll')
                 ->where('pendingPolls', 1)
-                ->has('open', 1)
+                ->has('upcoming', 1)
             );
     }
 
-    public function test_poll_page_separates_open_and_past_excursions(): void
+    public function test_poll_page_separates_upcoming_and_past_excursions(): void
     {
         $parent = $this->parent();
         $child = Child::factory()->create();
         $parent->children()->attach($child);
 
-        $open = Excursion::factory()->create(['rsvp_deadline' => Carbon::tomorrow()]);
-        $open->children()->attach($child->id);
+        $upcoming = Excursion::factory()->create(['date' => Carbon::tomorrow()->toDateString()]);
+        $upcoming->children()->attach($child->id);
 
-        $past = Excursion::factory()->create(['rsvp_deadline' => Carbon::yesterday()]);
+        $past = Excursion::factory()->create(['date' => Carbon::yesterday()->toDateString()]);
         $past->children()->attach($child->id, ['response' => true]);
 
         $this->actingAs($parent)
             ->get(route('polls.index'))
             ->assertInertia(fn (Assert $page) => $page
-                ->has('open', 1)
-                ->where('open.0.id', $open->id)
+                ->has('upcoming', 1)
+                ->where('upcoming.0.id', $upcoming->id)
                 ->has('past', 1)
                 ->where('past.0.id', $past->id)
             );

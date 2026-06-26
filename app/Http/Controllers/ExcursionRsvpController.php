@@ -38,9 +38,12 @@ class ExcursionRsvpController extends Controller
                 ]),
             ]);
 
+        $today = now()->toDateString();
+
         return Inertia::render('Excursions/Poll', [
-            'open' => $excursions->filter(fn ($e) => $e['poll_open'])->values(),
-            'past' => $excursions->reject(fn ($e) => $e['poll_open'])->sortByDesc('date')->values(),
+            // Split by date (like the staff view); answering is gated on poll_open.
+            'upcoming' => $excursions->filter(fn ($e) => $e['date'] >= $today)->values(),
+            'past' => $excursions->filter(fn ($e) => $e['date'] < $today)->sortByDesc('date')->values(),
         ]);
     }
 

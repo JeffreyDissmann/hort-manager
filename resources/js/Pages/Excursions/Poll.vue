@@ -4,7 +4,7 @@ import { Head, router, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
 
 defineProps({
-    open: { type: Array, default: () => [] },
+    upcoming: { type: Array, default: () => [] },
     past: { type: Array, default: () => [] },
 });
 
@@ -90,15 +90,15 @@ function answer(excursion, child, response) {
                 {{ flash }}
             </div>
 
-            <!-- Open polls -->
+            <!-- Upcoming excursions (answerable while the poll is open) -->
             <section class="space-y-3">
                 <h3 class="text-sm font-semibold uppercase tracking-wide text-hort-navy/50">
-                    Offene Abstimmungen
+                    Anstehende Ausflüge
                 </h3>
 
-                <ul v-if="open.length" class="space-y-3">
+                <ul v-if="upcoming.length" class="space-y-3">
                     <li
-                        v-for="excursion in open"
+                        v-for="excursion in upcoming"
                         :key="excursion.id"
                         class="rounded-2xl bg-white p-4 shadow-sm"
                     >
@@ -135,10 +135,16 @@ function answer(excursion, child, response) {
                         </p>
 
                         <p
-                            v-if="excursion.rsvp_deadline"
+                            v-if="excursion.poll_open && excursion.rsvp_deadline"
                             class="mt-2 text-xs font-semibold text-amber-600"
                         >
                             ⏰ {{ deadlineHint(excursion.rsvp_deadline) }}
+                        </p>
+                        <p
+                            v-else-if="!excursion.poll_open"
+                            class="mt-2 text-xs font-medium text-hort-navy/40"
+                        >
+                            Abstimmung beendet
                         </p>
 
                         <div class="mt-3 space-y-2">
@@ -170,7 +176,10 @@ function answer(excursion, child, response) {
                                         – abgesagt
                                     </span>
                                 </div>
-                                <div class="flex shrink-0 gap-2">
+                                <div
+                                    v-if="excursion.poll_open"
+                                    class="flex shrink-0 gap-2"
+                                >
                                     <button
                                         type="button"
                                         class="rounded-lg px-4 py-2 text-sm font-semibold transition active:scale-[0.97]"
@@ -201,7 +210,7 @@ function answer(excursion, child, response) {
                     v-else
                     class="rounded-2xl border-2 border-dashed border-hort-navy/15 p-6 text-center text-sm text-hort-navy/50"
                 >
-                    Aktuell gibt es keine offenen Abstimmungen. 🎉
+                    Aktuell sind keine Ausflüge geplant.
                 </p>
             </section>
 
