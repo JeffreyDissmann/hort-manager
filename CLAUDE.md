@@ -41,6 +41,8 @@ DailyDeparture  (Tagesboard) one row per child+date (unique):
                 status (App\Enums\DepartureStatus: present|picked_up|sent_home|excursion),
                 planned_time/planned_method (seeded from Stammplan, same-day overridable),
                 left_at + marked_by (set when staff marks them off), note
+DailyProgram    (Tagesprogramm) one row per date: lunch + activity (Hort-wide)
+                staff edit weekly at /programm; read-only on board + Abholplan
 Excursion       (Ausflug)  name, date, depart_at, return_at, rsvp_deadline,
                 departed_at/returned_at (live state) + child_excursion pivot
                 pivot carries the parent RSVP: response (null=offen|true|false) + answered_by/answered_at

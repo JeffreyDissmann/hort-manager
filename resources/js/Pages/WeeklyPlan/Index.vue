@@ -14,6 +14,7 @@ const props = defineProps({
     weekDays: { type: Array, default: () => [] },
     currentWeek: { type: Array, default: () => [] },
     activities: { type: Array, default: () => [] },
+    program: { type: Array, default: () => [] },
     standard: { type: Array, default: () => [] },
     methodOptions: { type: Array, default: () => [] },
 });
@@ -271,41 +272,59 @@ function resetDay() {
                     }}
                 </p>
 
-                <!-- Weekly activities (Ausflüge) row -->
-                <div class="rounded-2xl bg-hort-purple/5 p-4 shadow-sm">
-                    <p class="mb-2 text-sm font-semibold text-hort-purple">
-                        🚌 Ausflüge diese Woche
+                <!-- Week overview: program (lunch + activity) and excursions per day -->
+                <div class="rounded-2xl bg-white p-4 shadow-sm">
+                    <p class="mb-2 text-sm font-semibold text-hort-navy/70">
+                        Essen, Aktivität & Ausflüge
                     </p>
                     <div class="grid grid-cols-5 gap-1.5">
                         <div
-                            v-for="(acts, i) in activities"
-                            :key="i"
-                            class="text-center"
+                            v-for="(day, i) in weekDays"
+                            :key="day.date"
+                            class="space-y-1 rounded-lg bg-hort-sand p-1.5 text-center"
                         >
                             <div class="text-[11px] font-medium text-hort-navy/40">
-                                {{ weekDays[i].label }}
+                                {{ day.label }}
                             </div>
-                            <div class="mt-1 space-y-1">
-                                <div
-                                    v-for="(activity, j) in acts"
-                                    :key="j"
-                                    class="rounded-lg bg-hort-purple/15 px-1 py-1 text-[10px] font-semibold leading-tight text-hort-purple"
-                                    :title="activity.name"
+
+                            <div
+                                v-if="program[i] && program[i].lunch"
+                                class="text-[10px] leading-tight text-hort-navy/80"
+                                :title="program[i].lunch"
+                            >
+                                {{ program[i].lunch }}
+                            </div>
+                            <div
+                                v-if="program[i] && program[i].activity"
+                                class="text-[10px] leading-tight text-hort-purple"
+                                :title="program[i].activity"
+                            >
+                                {{ program[i].activity }}
+                            </div>
+
+                            <div
+                                v-for="(activity, j) in activities[i]"
+                                :key="'ex-' + j"
+                                class="rounded-md bg-hort-purple/15 px-1 py-0.5 text-[10px] font-semibold leading-tight text-hort-purple"
+                                :title="activity.name"
+                            >
+                                <span class="block truncate">🚌 {{ activity.name }}</span>
+                                <span
+                                    v-if="activity.depart_at"
+                                    class="block font-normal opacity-80"
                                 >
-                                    <span class="block truncate">{{ activity.name }}</span>
-                                    <span
-                                        v-if="activity.depart_at"
-                                        class="block font-normal opacity-80"
-                                    >
-                                        {{ activity.depart_at }}–{{ activity.return_at }}
-                                    </span>
-                                </div>
-                                <div
-                                    v-if="!acts.length"
-                                    class="py-1 text-[10px] text-hort-navy/20"
-                                >
-                                    –
-                                </div>
+                                    {{ activity.depart_at }}–{{ activity.return_at }}
+                                </span>
+                            </div>
+
+                            <div
+                                v-if="
+                                    !activities[i]?.length &&
+                                    !(program[i] && (program[i].lunch || program[i].activity))
+                                "
+                                class="text-[10px] text-hort-navy/20"
+                            >
+                                –
                             </div>
                         </div>
                     </div>

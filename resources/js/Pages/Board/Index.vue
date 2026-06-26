@@ -8,6 +8,7 @@ const props = defineProps({
     date: { type: Object, required: true },
     rows: { type: Array, default: () => [] },
     excursions: { type: Array, default: () => [] },
+    program: { type: Object, default: null },
     canMark: { type: Boolean, default: false },
     methodOptions: { type: Array, default: () => [] },
 });
@@ -119,6 +120,25 @@ function saveEdit(row) {
                 class="rounded-2xl bg-hort-teal/20 px-4 py-3 text-sm font-medium text-hort-navy"
             >
                 {{ flash }}
+            </div>
+
+            <!-- Today's program (lunch + activity) -->
+            <div
+                v-if="program"
+                class="rounded-2xl bg-white p-4 shadow-sm"
+            >
+                <p v-if="program.lunch" class="text-sm text-hort-navy">
+                    <span class="font-semibold">Mittagessen:</span>
+                    {{ program.lunch }}
+                </p>
+                <p
+                    v-if="program.activity"
+                    class="text-sm text-hort-navy"
+                    :class="program.lunch ? 'mt-1' : ''"
+                >
+                    <span class="font-semibold">Aktivität:</span>
+                    {{ program.activity }}
+                </p>
             </div>
 
             <!-- Summary (left) + parent filter (right), one line -->

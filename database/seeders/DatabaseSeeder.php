@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Enums\DepartureMethod;
 use App\Enums\UserRole;
 use App\Models\Child;
+use App\Models\DailyProgram;
 use App\Models\Excursion;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
@@ -119,5 +120,22 @@ class DatabaseSeeder extends Seeder
             $children['Noah']->id => ['response' => true, 'answered_at' => now()->subDays(10)],
             $children['Sophia']->id => ['response' => false, 'answered_at' => now()->subDays(10)],
         ]);
+
+        // Day program for the current Mon–Fri week.
+        $menus = [
+            ['Nudeln mit Tomatensoße', 'Basteln mit Naturmaterialien'],
+            ['Kartoffelsuppe', 'Turnhalle'],
+            ['Reis mit Gemüsecurry', 'Ausflug zum Spielplatz'],
+            ['Pfannkuchen', 'Freispiel im Garten'],
+            ['Fischstäbchen mit Kartoffeln', 'Vorlesestunde'],
+        ];
+        $weekStart = now()->startOfWeek();
+        foreach ($menus as $i => [$lunch, $activity]) {
+            DailyProgram::create([
+                'date' => $weekStart->copy()->addDays($i)->toDateString(),
+                'lunch' => $lunch,
+                'activity' => $activity,
+            ]);
+        }
     }
 }

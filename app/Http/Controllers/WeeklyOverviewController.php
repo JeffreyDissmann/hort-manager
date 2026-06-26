@@ -6,6 +6,7 @@ use App\Enums\DepartureMethod;
 use App\Enums\DepartureStatus;
 use App\Models\Child;
 use App\Models\DailyDeparture;
+use App\Models\DailyProgram;
 use App\Models\Excursion;
 use App\Models\WeeklySchedule;
 use Illuminate\Http\Request;
@@ -91,6 +92,17 @@ class WeeklyOverviewController extends Controller
             ->values())
             ->all();
 
+        // Day program (lunch + activity) per weekday for the program row.
+        $programs = DailyProgram::query()
+            ->whereIn('date', $weekDates)
+            ->get()
+            ->keyBy(fn (DailyProgram $p) => $p->date->toDateString());
+
+        $program = $weekDays->values()->map(fn (array $day) => [
+            'lunch' => $programs->get($day['date'])?->lunch,
+            'activity' => $programs->get($day['date'])?->activity,
+        ])->all();
+
         $excursionByChildDate = [];
         foreach ($weekExcursions as $excursion) {
             foreach ($excursion->participants as $participant) {
@@ -160,6 +172,7 @@ class WeeklyOverviewController extends Controller
             'weekDays' => $weekDays,
             'currentWeek' => $currentWeek,
             'activities' => $activities,
+            'program' => $program,
             'standard' => $this->standardTimetable(),
             'methodOptions' => collect(DepartureMethod::cases())
                 ->map(fn (DepartureMethod $m) => ['value' => $m->value, 'label' => $m->label()])

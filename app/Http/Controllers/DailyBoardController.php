@@ -6,6 +6,7 @@ use App\Enums\DepartureMethod;
 use App\Enums\DepartureStatus;
 use App\Models\Child;
 use App\Models\DailyDeparture;
+use App\Models\DailyProgram;
 use App\Models\Excursion;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -129,6 +130,8 @@ class DailyBoardController extends Controller
             ];
         });
 
+        $program = DailyProgram::where('date', $date->toDateString())->first();
+
         return Inertia::render('Board/Index', [
             'date' => [
                 'iso' => $date->toDateString(),
@@ -137,6 +140,9 @@ class DailyBoardController extends Controller
             ],
             'rows' => $rows,
             'excursions' => $excursionList,
+            'program' => $program && ($program->lunch || $program->activity)
+                ? ['lunch' => $program->lunch, 'activity' => $program->activity]
+                : null,
             'canMark' => $user->isStaff(),
             'methodOptions' => collect(DepartureMethod::cases())
                 ->map(fn (DepartureMethod $m) => ['value' => $m->value, 'label' => $m->label()])
