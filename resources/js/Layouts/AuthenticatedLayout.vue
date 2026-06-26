@@ -14,11 +14,12 @@ const pendingPolls = computed(() => usePage().props.pendingPolls ?? 0);
 // Primary navigation — shown as top links on desktop and as a bottom tab bar on mobile.
 const navItems = computed(() => {
     if (isStaff.value) {
+        // Kinder last — it's the thing that changes least often.
         return [
             { label: 'Heute', route: 'board', pattern: 'board', icon: 'sun' },
+            { label: 'Ausflüge', route: 'excursions.index', pattern: 'excursions.*', icon: 'map' },
             { label: 'Abholplan', route: 'weekly-plan', pattern: 'weekly-plan', icon: 'calendar' },
             { label: 'Kinder', route: 'children.index', pattern: 'children.*', icon: 'children' },
-            { label: 'Ausflüge', route: 'excursions.index', pattern: 'excursions.*', icon: 'map' },
         ];
     }
 
