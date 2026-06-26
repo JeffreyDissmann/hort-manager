@@ -6,6 +6,7 @@ import { computed, ref } from 'vue';
 const props = defineProps({
     date: { type: Object, required: true },
     rows: { type: Array, default: () => [] },
+    excursions: { type: Array, default: () => [] },
     canMark: { type: Boolean, default: false },
     methodOptions: { type: Array, default: () => [] },
 });
@@ -22,8 +23,8 @@ const counts = computed(() => {
     let excursion = 0;
     for (const r of props.rows) {
         if (r.status === 'present') present++;
-        else if (r.status === 'excursion') excursion++;
         else left++;
+        if (r.excursion) excursion++;
     }
     return { present, left, excursion };
 });
@@ -37,6 +38,14 @@ function mark(row, status) {
     router.patch(
         route('board.mark', row.id),
         { status },
+        { preserveScroll: true },
+    );
+}
+
+function liveEvent(excursion, event) {
+    router.patch(
+        route('excursions.live', excursion.id),
+        { event },
         { preserveScroll: true },
     );
 }
@@ -102,6 +111,74 @@ function saveEdit(row) {
                 </span>
             </div>
 
+            <!-- Today's excursions: staff flip the live state (losgefahren / zurück) -->
+            <div v-if="excursions.length" class="space-y-2">
+                <div
+                    v-for="ex in excursions"
+                    :key="ex.id"
+                    class="rounded-2xl bg-hort-purple/10 p-4"
+                >
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="min-w-0">
+                            <p class="font-semibold text-hort-purple">
+                                🚌 {{ ex.name }}
+                            </p>
+                            <p class="mt-0.5 text-sm text-hort-navy/60">
+                                {{ ex.child_count }} Kinder<span
+                                    v-if="ex.depart_at"
+                                >
+                                    · {{ ex.depart_at }}<span v-if="ex.return_at"
+                                        >–{{ ex.return_at }}</span
+                                    >
+                                    Uhr</span
+                                >
+                            </p>
+                            <p
+                                v-if="ex.state === 'away'"
+                                class="mt-1 text-sm font-medium text-hort-purple"
+                            >
+                                Unterwegs seit {{ ex.departed_at }}
+                            </p>
+                            <p
+                                v-else-if="ex.state === 'back'"
+                                class="mt-1 text-sm font-medium text-hort-teal-dark"
+                            >
+                                ✓ Zurück um {{ ex.returned_at }}
+                            </p>
+                        </div>
+
+                        <div v-if="canMark" class="shrink-0">
+                            <button
+                                v-if="ex.state === 'planned'"
+                                type="button"
+                                class="rounded-xl bg-hort-purple px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 active:scale-[0.98]"
+                                @click="liveEvent(ex, 'depart')"
+                            >
+                                Losgefahren
+                            </button>
+                            <button
+                                v-else-if="ex.state === 'away'"
+                                type="button"
+                                class="rounded-xl bg-hort-teal px-4 py-2 text-sm font-semibold text-hort-navy transition hover:bg-hort-teal-dark active:scale-[0.98]"
+                                @click="liveEvent(ex, 'return')"
+                            >
+                                Zurück
+                            </button>
+                        </div>
+                    </div>
+
+                    <div v-if="canMark && ex.state !== 'planned'" class="mt-2 text-right">
+                        <button
+                            type="button"
+                            class="text-xs font-medium text-hort-navy/40 underline-offset-2 hover:underline"
+                            @click="liveEvent(ex, ex.state === 'back' ? 'undo_return' : 'undo_depart')"
+                        >
+                            Rückgängig
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <ul v-if="rows.length" class="space-y-3">
                 <li
                     v-for="row in rows"
@@ -121,6 +198,29 @@ function saveEdit(row) {
                                     heute geändert
                                 </span>
                             </p>
+                            <p
+                                v-if="row.excursion"
+                                class="mt-1 inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold"
+                                :class="row.excursion.state === 'back'
+                                    ? 'bg-hort-teal/20 text-hort-teal-dark'
+                                    : 'bg-hort-purple/15 text-hort-purple'"
+                            >
+                                <template v-if="row.excursion.state === 'away'">
+                                    🚌 Unterwegs: {{ row.excursion.name }}
+                                    <span v-if="row.excursion.return_at" class="font-medium">
+                                        · zurück ~{{ row.excursion.return_at }}
+                                    </span>
+                                </template>
+                                <template v-else-if="row.excursion.state === 'back'">
+                                    ✓ Zurück vom {{ row.excursion.name }}
+                                </template>
+                                <template v-else>
+                                    🚌 Ausflug: {{ row.excursion.name }}
+                                    <span v-if="row.excursion.return_at" class="font-medium">
+                                        · zurück {{ row.excursion.return_at }}
+                                    </span>
+                                </template>
+                            </p>
                         </div>
 
                         <!-- Status badge once the child has left -->
@@ -138,12 +238,6 @@ function saveEdit(row) {
                                 {{ row.left_at }}<span v-if="row.marked_by"> · {{ row.marked_by }}</span>
                             </p>
                         </div>
-                        <span
-                            v-else-if="row.status === 'excursion'"
-                            class="shrink-0 rounded-lg bg-hort-purple/15 px-2 py-1 text-xs font-semibold text-hort-purple"
-                        >
-                            Ausflug
-                        </span>
                     </div>
 
                     <!-- Inline same-day override editor -->
@@ -195,7 +289,16 @@ function saveEdit(row) {
                             v-if="row.status === 'present'"
                             class="mt-3 space-y-2"
                         >
-                            <div v-if="canMark" class="grid grid-cols-2 gap-2">
+                            <p
+                                v-if="row.excursion?.state === 'away'"
+                                class="rounded-xl bg-hort-purple/10 py-2.5 text-center text-sm font-medium text-hort-purple"
+                            >
+                                Auf Ausflug – Abholung erst nach der Rückkehr
+                            </p>
+                            <div
+                                v-else-if="canMark"
+                                class="grid grid-cols-2 gap-2"
+                            >
                                 <button
                                     type="button"
                                     class="rounded-xl bg-hort-teal py-3 font-semibold text-hort-navy transition hover:bg-hort-teal-dark active:scale-[0.98]"
@@ -212,7 +315,7 @@ function saveEdit(row) {
                                 </button>
                             </div>
                             <button
-                                v-if="row.can_override"
+                                v-if="row.can_override && row.excursion?.state !== 'away'"
                                 type="button"
                                 class="text-sm font-medium text-hort-navy/50 underline-offset-2 hover:underline"
                                 @click="openEdit(row)"
@@ -221,7 +324,7 @@ function saveEdit(row) {
                             </button>
                         </div>
 
-                        <div v-else-if="row.status !== 'excursion' && canMark" class="mt-3">
+                        <div v-else-if="canMark" class="mt-3">
                             <button
                                 type="button"
                                 class="text-sm font-medium text-hort-navy/50 underline-offset-2 hover:underline"

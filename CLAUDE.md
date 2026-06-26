@@ -28,37 +28,38 @@ This project runs in Docker via Sail. **Never run `php`/`composer`/`npm`/`artisa
 
 ## Domain model
 
+**All identifiers/enum values are English; only rendered text is German** (enums expose a `label()`).
+
 ```
-User            role: erzieher | elternteil          (Breeze auth on the users table)
-  └─ children   parent ↔ child link (which kids are a given Elternteil's)
-Child           Name, Geburtsdatum?, Notiz           (flat list — NO groups)
+User            role: staff | parent  (App\Enums\UserRole)   — isStaff() helper
+  ⇄ children    child_user pivot (guardians)                  User::children / Child::guardians
+Child           name, date_of_birth?, note   (flat list — NO groups)
 WeeklySchedule  (Stammplan)  child + weekday 1–5 → planned_time + method
-DailyDeparture  (Tagesboard) one row per child per day:
-                status, planned_time/planned_method (seeded from Stammplan, overridable),
+                method = App\Enums\DepartureMethod: picked_up | sent_home
+DailyDeparture  (Tagesboard) one row per child+date (unique):
+                status (App\Enums\DepartureStatus: present|picked_up|sent_home|excursion),
+                planned_time/planned_method (seeded from Stammplan, same-day overridable),
                 left_at + marked_by (set when staff marks them off), note
-Excursion       (Ausflug)  name, date, depart_at, return_at, [children]
+Excursion       (Ausflug)  name, date, depart_at, return_at + child_excursion pivot
 ```
 
-**Departure states are a fixed set** — do not make them configurable:
-`noch_da` · `abgeholt` (picked up) · `nach_hause` (sent home / goes alone) · `ausflug` (on a trip).
+### Authorization (ChildPolicy + inline checks)
+- **Reads are open to everyone** (open information policy) — never scope read queries per-parent. The parent↔child link only identifies whose kid is whose.
+- **Children:** create/delete = staff; **edit (incl. Stammplan) = staff _or_ the child's own parent**; guardian links = staff only.
+- **Tagesboard:** marking departures = **staff only**; same-day plan override (`board.override`) = staff _or_ the child's parent.
+- **Ausflug:** staff only (ExcursionController guards with `ensureStaff()`).
 
-### Two rules that shape the architecture
-- **Open information policy:** any logged-in user (incl. every parent) may *read* the full schedule and board of *all* children. The parent↔child link identifies whose kid is whose — it is **not** a read-access boundary. Don't scope read queries per-parent.
-- **Parents submit, staff sees:** a parent's same-day change writes directly onto today's `DailyDeparture` row and shows on the staff board immediately — **no approval step**.
+### Tagesboard mechanics
+`DailyBoardController` targets **today, or the next weekday on weekends**. It lazily `firstOrCreate`s a `DailyDeparture` per scheduled child from the Stammplan. A row is "overridden" when its plan differs from the Stammplan (shown as „heute geändert"). Excursions are an **overlay** (`rows[].excursion`), not a status swap — a child on a trip still gets marked picked up after returning.
 
-### Daily flow
-Each morning, today's `DailyDeparture` rows are seeded from each child's `WeeklySchedule` for that weekday. Staff/parents may override today's planned time/method. When a child leaves, staff marks the row `abgeholt` or `nach_hause` with a timestamp. The staff **Tagesboard** is the central live view.
+## Routes / nav (German URLs, English route names)
+`board` (/tagesboard, "Heute") · `weekly-plan` (/wochenplan) · `children` (/children) · `excursions` (/ausfluege, staff only). Nav lives in `AuthenticatedLayout.vue` (role-aware; bottom tab bar on mobile). Demo logins: `erzieher@hort.test` / `eltern@hort.test`, both `password`.
 
-## Build order (vertical slices)
+## Status
 
-1. **Kinder + Stammplan** — manage children and their weekly default plan (current).
-2. **Tagesboard** — live staff board; mark Abgeholt / Nach Hause.
-3. **Eltern-Portal** — parent login, view child, submit same-day change.
-4. **Ausflug** — trips with depart/return times feeding the board.
+Built & tested: Kinder+Stammplan, parent↔child roles, Wochenplan timetable, Tagesboard, Ausflug.
 
-## Planned (not yet built)
-
-Slack integration with the Hort's free-tier Slack: SSO + posting announcements/departures to channels. Deferred until the core app works.
+**Planned (not built):** Slack integration with the Hort's free-tier Slack (SSO + posting departures/announcements). German validation messages (currently English; `APP_LOCALE=en`).
 
 ---
 

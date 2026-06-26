@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ChildController;
 use App\Http\Controllers\DailyBoardController;
+use App\Http\Controllers\ExcursionController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\WeeklyOverviewController;
 use Illuminate\Foundation\Application;
@@ -33,6 +34,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/tagesboard', [DailyBoardController::class, 'index'])->name('board');
     Route::patch('/tagesboard/{departure}/status', [DailyBoardController::class, 'mark'])->name('board.mark');
     Route::patch('/tagesboard/{departure}/plan', [DailyBoardController::class, 'override'])->name('board.override');
+
+    Route::resource('ausfluege', ExcursionController::class)
+        ->parameters(['ausfluege' => 'excursion'])
+        ->names('excursions')
+        ->except('show');
+    Route::patch('ausfluege/{excursion}/live', [ExcursionController::class, 'live'])->name('excursions.live');
 });
 
 require __DIR__.'/auth.php';

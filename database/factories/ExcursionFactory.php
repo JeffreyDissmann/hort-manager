@@ -1,0 +1,28 @@
+<?php
+
+namespace Database\Factories;
+
+use App\Models\Excursion;
+use Illuminate\Database\Eloquent\Factories\Factory;
+
+/**
+ * @extends Factory<Excursion>
+ */
+class ExcursionFactory extends Factory
+{
+    /**
+     * Define the model's default state.
+     *
+     * @return array<string, mixed>
+     */
+    public function definition(): array
+    {
+        return [
+            'name' => fake()->randomElement(['Zoo-Ausflug', 'Schwimmbad', 'Waldtag', 'Museum', 'Spielplatz']),
+            'date' => now()->toDateString(),
+            'depart_at' => '09:00',
+            'return_at' => '15:00',
+            'note' => null,
+        ];
+    }
+}

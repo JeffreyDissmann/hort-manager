@@ -6,6 +6,7 @@ use App\Enums\DepartureMethod;
 use App\Enums\DepartureStatus;
 use App\Models\Child;
 use App\Models\DailyDeparture;
+use App\Models\Excursion;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -51,6 +52,42 @@ class DailyBoardController extends Controller
             );
         }
 
+        // Excursions today: a group list (with live state) plus a per-child overlay.
+        $excursionByChild = [];
+        $excursionList = [];
+        $excursions = Excursion::query()
+            ->with('children:id')
+            ->whereDate('date', $date->toDateString())
+            ->orderBy('depart_at')
+            ->get();
+        foreach ($excursions as $excursion) {
+            $state = $excursion->state();
+            $departAt = $excursion->depart_at ? substr((string) $excursion->depart_at, 0, 5) : null;
+            $returnAt = $excursion->return_at ? substr((string) $excursion->return_at, 0, 5) : null;
+
+            $excursionList[] = [
+                'id' => $excursion->id,
+                'name' => $excursion->name,
+                'depart_at' => $departAt,
+                'return_at' => $returnAt,
+                'departed_at' => $excursion->departed_at?->format('H:i'),
+                'returned_at' => $excursion->returned_at?->format('H:i'),
+                'child_count' => $excursion->children->count(),
+                'state' => $state,
+            ];
+
+            foreach ($excursion->children as $child) {
+                $excursionByChild[$child->id] = [
+                    'name' => $excursion->name,
+                    'depart_at' => $departAt,
+                    'return_at' => $returnAt,
+                    'departed_at' => $excursion->departed_at?->format('H:i'),
+                    'returned_at' => $excursion->returned_at?->format('H:i'),
+                    'state' => $state,
+                ];
+            }
+        }
+
         $myChildIds = $user->isStaff()
             ? null
             : $user->children()->pluck('children.id');
@@ -62,7 +99,7 @@ class DailyBoardController extends Controller
             ->sortBy(fn (DailyDeparture $d) => [$d->planned_time ?? '99:99', $d->child->name])
             ->values();
 
-        $rows = $departures->map(function (DailyDeparture $d) use ($standard, $user, $myChildIds) {
+        $rows = $departures->map(function (DailyDeparture $d) use ($standard, $user, $myChildIds, $excursionByChild) {
             $plannedTime = $d->planned_time ? substr((string) $d->planned_time, 0, 5) : null;
             $plannedMethod = $d->planned_method?->value;
             $std = $standard[$d->child_id] ?? null;
@@ -82,6 +119,7 @@ class DailyBoardController extends Controller
                     || $std['time'] !== $plannedTime
                     || $std['method'] !== $plannedMethod,
                 'can_override' => $user->isStaff() || ($myChildIds?->contains($d->child_id) ?? false),
+                'excursion' => $excursionByChild[$d->child_id] ?? null,
             ];
         });
 
@@ -92,6 +130,7 @@ class DailyBoardController extends Controller
                 'is_today' => $date->isToday(),
             ],
             'rows' => $rows,
+            'excursions' => $excursionList,
             'canMark' => $user->isStaff(),
             'methodOptions' => collect(DepartureMethod::cases())
                 ->map(fn (DepartureMethod $m) => ['value' => $m->value, 'label' => $m->label()])

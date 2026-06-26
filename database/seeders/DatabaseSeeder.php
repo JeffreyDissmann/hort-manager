@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Enums\DepartureMethod;
 use App\Enums\UserRole;
 use App\Models\Child;
+use App\Models\Excursion;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -63,6 +64,24 @@ class DatabaseSeeder extends Seeder
         $parent->children()->sync([
             $children['Emma']->id,
             $children['Mia']->id,
+        ]);
+
+        // A demo excursion on the next Hort day (so it shows on the Tagesboard).
+        $excursionDate = now();
+        while ($excursionDate->isWeekend()) {
+            $excursionDate->addDay();
+        }
+
+        $excursion = Excursion::create([
+            'name' => 'Zoo-Ausflug',
+            'date' => $excursionDate->toDateString(),
+            'depart_at' => '13:30',
+            'return_at' => '15:30',
+            'note' => 'Brotzeit und feste Schuhe mitbringen.',
+        ]);
+        $excursion->children()->sync([
+            $children['Mia']->id,
+            $children['Liam']->id,
         ]);
     }
 }

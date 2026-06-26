@@ -51,4 +51,12 @@ class Child extends Model
     {
         return $this->guardians()->whereKey($user->getKey())->exists();
     }
+
+    /**
+     * @return BelongsToMany<Excursion, $this>
+     */
+    public function excursions(): BelongsToMany
+    {
+        return $this->belongsToMany(Excursion::class);
+    }
 }
