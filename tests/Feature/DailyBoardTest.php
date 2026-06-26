@@ -67,6 +67,23 @@ class DailyBoardTest extends TestCase
         ]);
     }
 
+    public function test_board_rows_flag_a_parents_own_children(): void
+    {
+        $this->travelTo(Carbon::parse('2026-06-22')); // Monday
+        $mine = $this->scheduledChild(weekday: 1);
+        $other = $this->scheduledChild(weekday: 1);
+
+        $parent = $this->parent();
+        $parent->children()->attach($mine);
+
+        $this->actingAs($parent)
+            ->get(route('board'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('rows', fn ($rows) => collect($rows)->firstWhere('child_id', $mine->id)['is_own'] === true
+                    && collect($rows)->firstWhere('child_id', $other->id)['is_own'] === false)
+            );
+    }
+
     public function test_children_not_scheduled_that_day_are_not_on_the_board(): void
     {
         $this->travelTo(Carbon::parse('2026-06-22')); // Monday

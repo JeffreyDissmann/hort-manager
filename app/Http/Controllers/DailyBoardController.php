@@ -124,6 +124,7 @@ class DailyBoardController extends Controller
                 'note' => $d->note ?? ($std['comment'] ?? null),
                 'is_overridden' => $overridden,
                 'can_override' => $user->isStaff() || ($myChildIds?->contains($d->child_id) ?? false),
+                'is_own' => $myChildIds?->contains($d->child_id) ?? false,
                 'excursion' => $excursionByChild[$d->child_id] ?? null,
             ];
         });

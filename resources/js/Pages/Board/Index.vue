@@ -2,7 +2,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import TimeSelect from '@/Components/TimeSelect.vue';
 import { Head, router, usePage } from '@inertiajs/vue3';
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 
 const props = defineProps({
     date: { type: Object, required: true },
@@ -13,11 +13,30 @@ const props = defineProps({
 });
 
 const flash = computed(() => usePage().props.flash?.status);
+const isParent = computed(() => usePage().props.auth?.user?.role === 'parent');
+
+// Personal view preference (parents): show all children or only my own.
+// Persisted per device in localStorage; defaults to showing all.
+const showAll = ref(
+    typeof localStorage === 'undefined' ||
+        localStorage.getItem('board.showAll') !== 'false',
+);
+watch(showAll, (value) => {
+    localStorage.setItem('board.showAll', value ? 'true' : 'false');
+});
+
+const visibleRows = computed(() => {
+    if (!isParent.value || showAll.value) {
+        return props.rows;
+    }
+    return props.rows.filter((r) => r.is_own);
+});
 
 const methodLabels = computed(() =>
     Object.fromEntries(props.methodOptions.map((o) => [o.value, o.label])),
 );
 
+// Counts always reflect the whole Hort, regardless of the "only mine" filter.
 const counts = computed(() => {
     let present = 0;
     let left = 0;
@@ -102,20 +121,47 @@ function saveEdit(row) {
                 {{ flash }}
             </div>
 
-            <!-- Summary -->
-            <div v-if="rows.length" class="flex gap-2 text-sm font-semibold">
-                <span class="rounded-xl bg-white px-3 py-2 text-hort-navy shadow-sm">
-                    {{ counts.present }} noch da
-                </span>
-                <span class="rounded-xl bg-white px-3 py-2 text-hort-navy/50 shadow-sm">
-                    {{ counts.left }} weg
-                </span>
-                <span
-                    v-if="counts.excursion"
-                    class="rounded-xl bg-white px-3 py-2 text-hort-purple shadow-sm"
+            <!-- Summary (left) + parent filter (right), one line -->
+            <div class="flex flex-wrap items-center gap-2">
+                <div
+                    v-if="rows.length"
+                    class="flex gap-2 text-sm font-semibold"
                 >
-                    {{ counts.excursion }} Ausflug
-                </span>
+                    <span class="rounded-xl bg-white px-3 py-2 text-hort-navy shadow-sm">
+                        {{ counts.present }} noch da
+                    </span>
+                    <span class="rounded-xl bg-white px-3 py-2 text-hort-navy/50 shadow-sm">
+                        {{ counts.left }} weg
+                    </span>
+                    <span
+                        v-if="counts.excursion"
+                        class="rounded-xl bg-white px-3 py-2 text-hort-purple shadow-sm"
+                    >
+                        {{ counts.excursion }} Ausflug
+                    </span>
+                </div>
+
+                <div
+                    v-if="isParent"
+                    class="ml-auto inline-flex rounded-lg bg-white p-0.5 text-xs font-semibold shadow-sm"
+                >
+                    <button
+                        type="button"
+                        class="rounded-md px-2 py-1 transition"
+                        :class="showAll ? 'bg-hort-teal text-hort-navy' : 'text-hort-navy/50'"
+                        @click="showAll = true"
+                    >
+                        Alle
+                    </button>
+                    <button
+                        type="button"
+                        class="rounded-md px-2 py-1 transition"
+                        :class="!showAll ? 'bg-hort-teal text-hort-navy' : 'text-hort-navy/50'"
+                        @click="showAll = false"
+                    >
+                        Nur meine
+                    </button>
+                </div>
             </div>
 
             <!-- Today's excursions: staff flip the live state (losgefahren / zurück) -->
@@ -186,9 +232,9 @@ function saveEdit(row) {
                 </div>
             </div>
 
-            <ul v-if="rows.length" class="space-y-3">
+            <ul v-if="visibleRows.length" class="space-y-3">
                 <li
-                    v-for="row in rows"
+                    v-for="row in visibleRows"
                     :key="row.id"
                     class="rounded-2xl bg-white p-4 shadow-sm transition"
                     :class="{ 'opacity-60': row.status === 'picked_up' || row.status === 'sent_home' }"
@@ -365,7 +411,12 @@ function saveEdit(row) {
                 v-else
                 class="rounded-2xl border-2 border-dashed border-hort-navy/15 p-6 text-center text-sm text-hort-navy/50"
             >
-                Für diesen Tag sind keine Kinder im Hort.
+                <template v-if="rows.length && isParent && !showAll">
+                    Heute ist keins deiner Kinder im Hort.
+                </template>
+                <template v-else>
+                    Für diesen Tag sind keine Kinder im Hort.
+                </template>
             </p>
         </div>
     </AuthenticatedLayout>
