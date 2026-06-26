@@ -22,7 +22,7 @@ class ExcursionController extends Controller
                 'children as pending_count' => fn ($q) => $q->wherePivotNull('response'),
             ])
             ->with('participants:id,name')
-            ->orderByDesc('date')
+            ->orderBy('date')
             ->get()
             ->map(fn (Excursion $e) => [
                 'id' => $e->id,
@@ -38,8 +38,12 @@ class ExcursionController extends Controller
                 'participants' => $e->participants->pluck('name'),
             ]);
 
+        $today = now()->toDateString();
+
         return Inertia::render('Excursions/Index', [
-            'excursions' => $excursions,
+            // Soonest first for upcoming, most-recent first for the history.
+            'upcoming' => $excursions->filter(fn ($e) => $e['date'] >= $today)->values(),
+            'past' => $excursions->filter(fn ($e) => $e['date'] < $today)->sortByDesc('date')->values(),
         ]);
     }
 

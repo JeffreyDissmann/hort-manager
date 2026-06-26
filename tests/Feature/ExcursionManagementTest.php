@@ -49,6 +49,23 @@ class ExcursionManagementTest extends TestCase
         $this->assertDatabaseCount('child_excursion', 3);
     }
 
+    public function test_index_separates_upcoming_and_past_excursions(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-06-24'));
+        $upcoming = Excursion::factory()->create(['date' => '2026-07-01']);
+        $past = Excursion::factory()->create(['date' => '2026-06-01']);
+
+        $this->actingAs($this->staff())
+            ->get(route('excursions.index'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Excursions/Index')
+                ->has('upcoming', 1)
+                ->where('upcoming.0.id', $upcoming->id)
+                ->has('past', 1)
+                ->where('past.0.id', $past->id)
+            );
+    }
+
     public function test_planning_requires_name_date_and_deadline(): void
     {
         $this->actingAs($this->staff())

@@ -103,5 +103,21 @@ class DatabaseSeeder extends Seeder
             'note' => 'Schwimmsachen und Handtuch mitbringen.',
         ]);
         $schwimmbad->children()->attach($allChildIds);
+
+        // A past excursion for the history section.
+        $waldtag = Excursion::create([
+            'name' => 'Waldtag',
+            'date' => now()->subDays(7)->toDateString(),
+            'depart_at' => '13:00',
+            'return_at' => '15:00',
+            'rsvp_deadline' => now()->subDays(9)->toDateString(),
+            'note' => 'Wetterfeste Kleidung.',
+        ]);
+        $waldtag->children()->attach($allChildIds);
+        $waldtag->children()->syncWithoutDetaching([
+            $children['Emma']->id => ['response' => true, 'answered_at' => now()->subDays(10)],
+            $children['Noah']->id => ['response' => true, 'answered_at' => now()->subDays(10)],
+            $children['Sophia']->id => ['response' => false, 'answered_at' => now()->subDays(10)],
+        ]);
     }
 }
