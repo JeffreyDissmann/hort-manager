@@ -40,14 +40,19 @@ DailyDeparture  (Tagesboard) one row per child+date (unique):
                 status (App\Enums\DepartureStatus: present|picked_up|sent_home|excursion),
                 planned_time/planned_method (seeded from Stammplan, same-day overridable),
                 left_at + marked_by (set when staff marks them off), note
-Excursion       (Ausflug)  name, date, depart_at, return_at + child_excursion pivot
+Excursion       (Ausflug)  name, date, depart_at, return_at, rsvp_deadline,
+                departed_at/returned_at (live state) + child_excursion pivot
+                pivot carries the parent RSVP: response (null=offen|true|false) + answered_by/answered_at
 ```
+
+### Ausflug participation poll
+Creating an excursion invites **every** child (a pending `child_excursion` row). Parents answer per child via `polls.update` (staff may answer too, even after the deadline). The answer lives on the child, so once either guardian answers it's resolved for both. `Excursion::participants()` = response `true` — that's who shows on the board. `pendingPolls` (shared Inertia prop) drives a parent notification banner until answered or the `rsvp_deadline` passes.
 
 ### Authorization (ChildPolicy + inline checks)
 - **Reads are open to everyone** (open information policy) — never scope read queries per-parent. The parent↔child link only identifies whose kid is whose.
 - **Children:** create/delete = staff; **edit (incl. Stammplan) = staff _or_ the child's own parent**; guardian links = staff only.
 - **Tagesboard:** marking departures = **staff only**; same-day plan override (`board.override`) = staff _or_ the child's parent.
-- **Ausflug:** staff only (ExcursionController guards with `ensureStaff()`).
+- **Ausflug:** managing trips = staff only (ExcursionController guards with `ensureStaff()`); answering the **poll** = the child's parent (while open) or staff (anytime), via ExcursionRsvpController.
 
 ### Tagesboard mechanics
 `DailyBoardController` targets **today, or the next weekday on weekends**. It lazily `firstOrCreate`s a `DailyDeparture` per scheduled child from the Stammplan. A row is "overridden" when its plan differs from the Stammplan (shown as „heute geändert"). Excursions are an **overlay** (`rows[].excursion`), not a status swap — a child on a trip still gets marked picked up after returning.

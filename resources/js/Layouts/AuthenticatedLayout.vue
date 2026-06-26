@@ -9,25 +9,25 @@ const appName = computed(() => usePage().props.appName ?? 'Hort-Manager');
 const user = computed(() => usePage().props.auth?.user);
 const userName = computed(() => user.value?.name ?? '');
 const isStaff = computed(() => user.value?.role === 'staff');
+const pendingPolls = computed(() => usePage().props.pendingPolls ?? 0);
 
 // Primary navigation — shown as top links on desktop and as a bottom tab bar on mobile.
 const navItems = computed(() => {
-    const items = [
-        { label: 'Heute', route: 'board', pattern: 'board', icon: 'sun' },
-        { label: 'Wochenplan', route: 'weekly-plan', pattern: 'weekly-plan', icon: 'calendar' },
-        {
-            label: isStaff.value ? 'Kinder' : 'Meine Kinder',
-            route: 'children.index',
-            pattern: 'children.*',
-            icon: 'children',
-        },
-    ];
-
     if (isStaff.value) {
-        items.push({ label: 'Ausflüge', route: 'excursions.index', pattern: 'excursions.*', icon: 'map' });
+        return [
+            { label: 'Heute', route: 'board', pattern: 'board', icon: 'sun' },
+            { label: 'Wochenplan', route: 'weekly-plan', pattern: 'weekly-plan', icon: 'calendar' },
+            { label: 'Kinder', route: 'children.index', pattern: 'children.*', icon: 'children' },
+            { label: 'Ausflüge', route: 'excursions.index', pattern: 'excursions.*', icon: 'map' },
+        ];
     }
 
-    return items;
+    // Parents: Ausflüge first (poll badge); „Meine Kinder" lives in the user menu.
+    return [
+        { label: 'Ausflüge', route: 'polls.index', pattern: 'polls.*', icon: 'map', badge: pendingPolls.value },
+        { label: 'Heute', route: 'board', pattern: 'board', icon: 'sun' },
+        { label: 'Wochenplan', route: 'weekly-plan', pattern: 'weekly-plan', icon: 'calendar' },
+    ];
 });
 
 // Heroicons (outline) path data, keyed by the nav item's icon name.
@@ -100,6 +100,12 @@ function isActive(pattern) {
                         </button>
                     </template>
                     <template #content>
+                        <DropdownLink
+                            v-if="!isStaff"
+                            :href="route('children.index')"
+                        >
+                            Meine Kinder
+                        </DropdownLink>
                         <DropdownLink :href="route('profile.edit')">
                             Profil
                         </DropdownLink>
@@ -114,6 +120,26 @@ function isActive(pattern) {
                 </Dropdown>
             </div>
         </header>
+
+        <!-- Pending poll notification (parents) -->
+        <Link
+            v-if="!isStaff && pendingPolls > 0"
+            :href="route('polls.index')"
+            class="block bg-amber-400 text-hort-navy"
+        >
+            <div
+                class="mx-auto flex max-w-5xl items-center gap-2 px-4 py-2.5 text-sm font-semibold sm:px-6"
+            >
+                <span class="text-lg">📣</span>
+                <span>
+                    {{ pendingPolls }} offene Ausflug-Abstimmung{{
+                        pendingPolls > 1 ? 'en' : ''
+                    }}
+                    – bitte antworten
+                </span>
+                <span class="ml-auto">→</span>
+            </div>
+        </Link>
 
         <!-- Page heading -->
         <header v-if="$slots.header" class="bg-white">
@@ -143,19 +169,27 @@ function isActive(pattern) {
                             : 'text-hort-navy/50',
                     ]"
                 >
-                    <svg
-                        class="h-6 w-6"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke-width="1.8"
-                        stroke="currentColor"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            :d="icons[item.icon]"
-                        />
-                    </svg>
+                    <span class="relative">
+                        <svg
+                            class="h-6 w-6"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke-width="1.8"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                :d="icons[item.icon]"
+                            />
+                        </svg>
+                        <span
+                            v-if="item.badge"
+                            class="absolute -right-2 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-bold text-white"
+                        >
+                            {{ item.badge }}
+                        </span>
+                    </span>
                     {{ item.label }}
                 </Link>
             </div>

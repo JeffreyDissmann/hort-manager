@@ -97,21 +97,38 @@ function destroy(excursion) {
                         </button>
                     </div>
 
+                    <!-- Poll status -->
+                    <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-semibold">
+                        <span class="text-hort-teal-dark">
+                            ✓ {{ excursion.joining_count }} dabei
+                        </span>
+                        <span class="text-amber-600">
+                            offen {{ excursion.pending_count }}
+                        </span>
+                        <span v-if="excursion.declined_count" class="text-hort-purple">
+                            ✗ {{ excursion.declined_count }}
+                        </span>
+                        <span class="font-medium text-hort-navy/40">
+                            ·
+                            <template v-if="excursion.poll_open">
+                                Abstimmung bis {{ formatDate(excursion.rsvp_deadline) }}
+                            </template>
+                            <template v-else>Abstimmung beendet</template>
+                        </span>
+                    </div>
+
                     <div
-                        v-if="excursion.children.length"
+                        v-if="excursion.participants.length"
                         class="mt-2 flex flex-wrap gap-1.5"
                     >
                         <span
-                            v-for="name in excursion.children"
+                            v-for="name in excursion.participants"
                             :key="name"
-                            class="rounded-md bg-hort-purple/10 px-2 py-0.5 text-xs font-medium text-hort-purple"
+                            class="rounded-md bg-hort-teal/15 px-2 py-0.5 text-xs font-medium text-hort-teal-dark"
                         >
                             {{ name }}
                         </span>
                     </div>
-                    <p v-else class="mt-2 text-xs text-hort-navy/40">
-                        Noch keine Kinder zugeordnet.
-                    </p>
 
                     <Link
                         :href="route('excursions.edit', excursion.id)"

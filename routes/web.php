@@ -3,6 +3,7 @@
 use App\Http\Controllers\ChildController;
 use App\Http\Controllers\DailyBoardController;
 use App\Http\Controllers\ExcursionController;
+use App\Http\Controllers\ExcursionRsvpController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\WeeklyOverviewController;
 use Illuminate\Foundation\Application;
@@ -40,6 +41,10 @@ Route::middleware('auth')->group(function () {
         ->names('excursions')
         ->except('show');
     Route::patch('ausfluege/{excursion}/live', [ExcursionController::class, 'live'])->name('excursions.live');
+
+    // Parent participation poll.
+    Route::get('umfragen', [ExcursionRsvpController::class, 'index'])->name('polls.index');
+    Route::patch('ausfluege/{excursion}/rsvp', [ExcursionRsvpController::class, 'update'])->name('polls.update');
 });
 
 require __DIR__.'/auth.php';

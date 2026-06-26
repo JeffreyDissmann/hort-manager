@@ -66,22 +66,38 @@ class DatabaseSeeder extends Seeder
             $children['Mia']->id,
         ]);
 
+        $allChildIds = collect($children)->map->id->values()->all();
+
         // A demo excursion on the next Hort day (so it shows on the Tagesboard).
+        // Poll already closed; Mia and Liam confirmed, so they are the participants.
         $excursionDate = now();
         while ($excursionDate->isWeekend()) {
             $excursionDate->addDay();
         }
 
-        $excursion = Excursion::create([
+        $zoo = Excursion::create([
             'name' => 'Zoo-Ausflug',
             'date' => $excursionDate->toDateString(),
             'depart_at' => '13:30',
             'return_at' => '15:30',
+            'rsvp_deadline' => now()->subDay()->toDateString(),
             'note' => 'Brotzeit und feste Schuhe mitbringen.',
         ]);
-        $excursion->children()->sync([
-            $children['Mia']->id,
-            $children['Liam']->id,
+        $zoo->children()->attach($allChildIds); // everyone invited (open)
+        $zoo->children()->syncWithoutDetaching([
+            $children['Mia']->id => ['response' => true, 'answered_at' => now()],
+            $children['Liam']->id => ['response' => true, 'answered_at' => now()],
         ]);
+
+        // An upcoming excursion whose poll is still open — parents get a notification.
+        $schwimmbad = Excursion::create([
+            'name' => 'Schwimmbad',
+            'date' => now()->addDays(10)->toDateString(),
+            'depart_at' => '13:00',
+            'return_at' => '16:00',
+            'rsvp_deadline' => now()->addDays(5)->toDateString(),
+            'note' => 'Schwimmsachen und Handtuch mitbringen.',
+        ]);
+        $schwimmbad->children()->attach($allChildIds);
     }
 }

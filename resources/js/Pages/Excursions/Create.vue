@@ -4,17 +4,13 @@ import PrimaryButton from '@/Components/PrimaryButton.vue';
 import ExcursionFields from './Partials/ExcursionFields.vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 
-defineProps({
-    allChildren: { type: Array, default: () => [] },
-});
-
 const form = useForm({
     name: '',
     date: '',
     depart_at: '',
     return_at: '',
+    rsvp_deadline: '',
     note: '',
-    children: [],
 });
 
 function submit() {
@@ -35,7 +31,7 @@ function submit() {
                 @submit.prevent="submit"
                 class="space-y-6 rounded-2xl bg-white p-6 shadow-sm"
             >
-                <ExcursionFields :form="form" :all-children="allChildren" />
+                <ExcursionFields :form="form" />
 
                 <div class="flex items-center justify-end gap-4">
                     <Link

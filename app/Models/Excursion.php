@@ -18,6 +18,7 @@ class Excursion extends Model
         'depart_at',
         'return_at',
         'note',
+        'rsvp_deadline',
         'departed_at',
         'returned_at',
     ];
@@ -26,6 +27,7 @@ class Excursion extends Model
     {
         return [
             'date' => 'date:Y-m-d',
+            'rsvp_deadline' => 'date:Y-m-d',
             'departed_at' => 'datetime',
             'returned_at' => 'datetime',
         ];
@@ -42,10 +44,30 @@ class Excursion extends Model
     }
 
     /**
+     * Every invited child plus their poll answer (response/answered_by/answered_at).
+     *
      * @return BelongsToMany<Child, $this>
      */
     public function children(): BelongsToMany
     {
-        return $this->belongsToMany(Child::class);
+        return $this->belongsToMany(Child::class)
+            ->withPivot(['response', 'answered_by', 'answered_at']);
+    }
+
+    /**
+     * Children whose parents said yes — the actual trip participants.
+     *
+     * @return BelongsToMany<Child, $this>
+     */
+    public function participants(): BelongsToMany
+    {
+        return $this->children()->wherePivot('response', true);
+    }
+
+    /** Whether parents can still answer the poll (deadline inclusive, or no deadline). */
+    public function pollIsOpen(): bool
+    {
+        return $this->rsvp_deadline === null
+            || $this->rsvp_deadline->endOfDay()->isFuture();
     }
 }

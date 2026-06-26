@@ -16,8 +16,12 @@ class ExcursionController extends Controller
         $this->ensureStaff();
 
         $excursions = Excursion::query()
-            ->withCount('children')
-            ->with('children:id,name')
+            ->withCount([
+                'children as joining_count' => fn ($q) => $q->wherePivot('response', true),
+                'children as declined_count' => fn ($q) => $q->wherePivot('response', false),
+                'children as pending_count' => fn ($q) => $q->wherePivotNull('response'),
+            ])
+            ->with('participants:id,name')
             ->orderByDesc('date')
             ->get()
             ->map(fn (Excursion $e) => [
@@ -26,8 +30,12 @@ class ExcursionController extends Controller
                 'date' => $e->date->toDateString(),
                 'depart_at' => $this->time($e->depart_at),
                 'return_at' => $this->time($e->return_at),
-                'child_count' => $e->children_count,
-                'children' => $e->children->pluck('name'),
+                'rsvp_deadline' => $e->rsvp_deadline?->toDateString(),
+                'poll_open' => $e->pollIsOpen(),
+                'joining_count' => $e->joining_count,
+                'declined_count' => $e->declined_count,
+                'pending_count' => $e->pending_count,
+                'participants' => $e->participants->pluck('name'),
             ]);
 
         return Inertia::render('Excursions/Index', [
@@ -39,23 +47,21 @@ class ExcursionController extends Controller
     {
         $this->ensureStaff();
 
-        return Inertia::render('Excursions/Create', [
-            'allChildren' => Child::orderBy('name')->get(['id', 'name']),
-        ]);
+        return Inertia::render('Excursions/Create');
     }
 
     public function store(Request $request): RedirectResponse
     {
         $this->ensureStaff();
 
-        $data = $this->validateExcursion($request);
+        $excursion = Excursion::create($this->validateExcursion($request));
 
-        $excursion = Excursion::create($data['attributes']);
-        $excursion->children()->sync($data['children']);
+        // Invite every child — each starts as an open poll entry for the parents.
+        $excursion->children()->attach(Child::pluck('id')->all());
 
         return redirect()
             ->route('excursions.index')
-            ->with('status', "Ausflug „{$excursion->name}\" angelegt.");
+            ->with('status', "Ausflug „{$excursion->name}\" angelegt. Die Eltern wurden zur Abstimmung eingeladen.");
     }
 
     public function edit(Excursion $excursion): Response
@@ -69,10 +75,17 @@ class ExcursionController extends Controller
                 'date' => $excursion->date->toDateString(),
                 'depart_at' => $this->time($excursion->depart_at),
                 'return_at' => $this->time($excursion->return_at),
+                'rsvp_deadline' => $excursion->rsvp_deadline?->toDateString(),
                 'note' => $excursion->note,
             ],
-            'childIds' => $excursion->children()->pluck('children.id'),
-            'allChildren' => Child::orderBy('name')->get(['id', 'name']),
+            'children' => $excursion->children()
+                ->orderBy('name')
+                ->get()
+                ->map(fn (Child $c) => [
+                    'id' => $c->id,
+                    'name' => $c->name,
+                    'response' => $c->pivot->response === null ? null : (bool) $c->pivot->response,
+                ]),
         ]);
     }
 
@@ -80,10 +93,11 @@ class ExcursionController extends Controller
     {
         $this->ensureStaff();
 
-        $data = $this->validateExcursion($request);
+        $excursion->update($this->validateExcursion($request));
 
-        $excursion->update($data['attributes']);
-        $excursion->children()->sync($data['children']);
+        // Keep the poll complete if children were added after the excursion was created.
+        $missing = Child::whereNotIn('id', $excursion->children()->pluck('children.id'))->pluck('id');
+        $excursion->children()->attach($missing->all());
 
         return redirect()
             ->route('excursions.index')
@@ -133,23 +147,17 @@ class ExcursionController extends Controller
     }
 
     /**
-     * @return array{attributes: array<string, mixed>, children: array<int>}
+     * @return array<string, mixed>
      */
     private function validateExcursion(Request $request): array
     {
-        $validated = $request->validate([
+        return $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'date' => ['required', 'date'],
             'depart_at' => ['nullable', 'date_format:H:i'],
             'return_at' => ['nullable', 'date_format:H:i'],
+            'rsvp_deadline' => ['required', 'date'],
             'note' => ['nullable', 'string', 'max:1000'],
-            'children' => ['array'],
-            'children.*' => ['integer', 'exists:children,id'],
         ]);
-
-        return [
-            'attributes' => collect($validated)->only(['name', 'date', 'depart_at', 'return_at', 'note'])->all(),
-            'children' => $validated['children'] ?? [],
-        ];
     }
 }

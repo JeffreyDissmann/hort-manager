@@ -56,7 +56,7 @@ class DailyBoardController extends Controller
         $excursionByChild = [];
         $excursionList = [];
         $excursions = Excursion::query()
-            ->with('children:id')
+            ->with('participants:id')
             ->whereDate('date', $date->toDateString())
             ->orderBy('depart_at')
             ->get();
@@ -72,11 +72,11 @@ class DailyBoardController extends Controller
                 'return_at' => $returnAt,
                 'departed_at' => $excursion->departed_at?->format('H:i'),
                 'returned_at' => $excursion->returned_at?->format('H:i'),
-                'child_count' => $excursion->children->count(),
+                'child_count' => $excursion->participants->count(),
                 'state' => $state,
             ];
 
-            foreach ($excursion->children as $child) {
+            foreach ($excursion->participants as $child) {
                 $excursionByChild[$child->id] = [
                     'name' => $excursion->name,
                     'depart_at' => $departAt,

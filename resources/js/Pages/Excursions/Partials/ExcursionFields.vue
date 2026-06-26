@@ -6,7 +6,6 @@ import InputError from '@/Components/InputError.vue';
 // The parent's useForm instance is passed in and bound directly.
 defineProps({
     form: { type: Object, required: true },
-    allChildren: { type: Array, default: () => [] },
 });
 </script>
 
@@ -60,6 +59,21 @@ defineProps({
         </div>
 
         <div>
+            <InputLabel for="rsvp_deadline" value="Rückmeldung bis" />
+            <TextInput
+                id="rsvp_deadline"
+                v-model="form.rsvp_deadline"
+                type="date"
+                class="mt-1 block w-full"
+            />
+            <p class="mt-1 text-sm text-gray-500">
+                Bis zu diesem Tag können die Eltern abstimmen, ob ihr Kind
+                mitkommt.
+            </p>
+            <InputError :message="form.errors.rsvp_deadline" class="mt-2" />
+        </div>
+
+        <div>
             <InputLabel for="note" value="Notiz (optional)" />
             <textarea
                 id="note"
@@ -71,35 +85,9 @@ defineProps({
             <InputError :message="form.errors.note" class="mt-2" />
         </div>
 
-        <div>
-            <InputLabel value="Wer kommt mit?" />
-            <p class="mb-2 mt-1 text-sm text-gray-500">
-                Diese Kinder erscheinen am Ausflugstag im Tagesboard als
-                „unterwegs“.
-            </p>
-            <div
-                v-if="allChildren.length"
-                class="grid grid-cols-2 gap-1 rounded-md border border-gray-200 p-2 sm:grid-cols-3"
-            >
-                <label
-                    v-for="child in allChildren"
-                    :key="child.id"
-                    class="flex cursor-pointer items-center gap-2 rounded-lg p-2 hover:bg-hort-sand"
-                >
-                    <input
-                        type="checkbox"
-                        :value="child.id"
-                        v-model="form.children"
-                        class="rounded border-gray-300 text-hort-teal-dark focus:ring-hort-teal"
-                    />
-                    <span class="truncate text-sm font-medium text-hort-navy">
-                        {{ child.name }}
-                    </span>
-                </label>
-            </div>
-            <p v-else class="text-sm text-gray-500">
-                Noch keine Kinder angelegt.
-            </p>
-        </div>
+        <p class="rounded-xl bg-hort-teal/10 p-3 text-sm text-hort-navy/70">
+            Nach dem Speichern werden <strong>alle Eltern</strong> gefragt, ob ihr
+            Kind mitkommt.
+        </p>
     </div>
 </template>

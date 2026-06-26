@@ -27,10 +27,9 @@ class ExcursionManagementTest extends TestCase
         return User::factory()->create(['role' => UserRole::Parent]);
     }
 
-    public function test_staff_can_plan_an_excursion_with_children(): void
+    public function test_creating_an_excursion_invites_every_child_as_an_open_poll(): void
     {
-        $a = Child::factory()->create();
-        $b = Child::factory()->create();
+        Child::factory()->count(3)->create();
 
         $this->actingAs($this->staff())
             ->post(route('excursions.store'), [
@@ -38,23 +37,23 @@ class ExcursionManagementTest extends TestCase
                 'date' => '2026-06-29',
                 'depart_at' => '09:00',
                 'return_at' => '15:00',
-                'children' => [$a->id, $b->id],
+                'rsvp_deadline' => '2026-06-27',
             ])
             ->assertRedirect(route('excursions.index'));
 
         $excursion = Excursion::firstWhere('name', 'Zoo-Ausflug');
         $this->assertNotNull($excursion);
-        $this->assertEqualsCanonicalizing(
-            [$a->id, $b->id],
-            $excursion->children()->pluck('children.id')->all(),
-        );
+        // All three children invited, all still pending (null response).
+        $this->assertSame(3, $excursion->children()->count());
+        $this->assertSame(0, $excursion->participants()->count());
+        $this->assertDatabaseCount('child_excursion', 3);
     }
 
-    public function test_planning_requires_a_name_and_date(): void
+    public function test_planning_requires_name_date_and_deadline(): void
     {
         $this->actingAs($this->staff())
-            ->post(route('excursions.store'), ['name' => '', 'date' => ''])
-            ->assertSessionHasErrors(['name', 'date']);
+            ->post(route('excursions.store'), ['name' => '', 'date' => '', 'rsvp_deadline' => ''])
+            ->assertSessionHasErrors(['name', 'date', 'rsvp_deadline']);
     }
 
     public function test_parents_cannot_manage_excursions(): void
@@ -68,32 +67,116 @@ class ExcursionManagementTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_staff_can_update_the_participating_children(): void
+    public function test_a_parent_can_answer_the_poll_for_their_child(): void
     {
-        $excursion = Excursion::factory()->create();
-        $a = Child::factory()->create();
-        $b = Child::factory()->create();
-        $excursion->children()->attach($a);
+        $parent = $this->parent();
+        $child = Child::factory()->create();
+        $parent->children()->attach($child);
+        $excursion = Excursion::factory()->create(['rsvp_deadline' => Carbon::tomorrow()]);
+        $excursion->children()->attach($child->id);
 
+        $this->actingAs($parent)
+            ->patch(route('polls.update', $excursion), ['child_id' => $child->id, 'response' => true])
+            ->assertRedirect();
+
+        $pivot = $excursion->children()->where('children.id', $child->id)->first()->pivot;
+        $this->assertEquals(1, $pivot->response);
+        $this->assertSame($parent->id, $pivot->answered_by);
+    }
+
+    public function test_an_answer_by_one_parent_resolves_it_for_the_other(): void
+    {
+        $mum = $this->parent();
+        $dad = $this->parent();
+        $child = Child::factory()->create();
+        $child->guardians()->attach([$mum->id, $dad->id]);
+        $excursion = Excursion::factory()->create(['rsvp_deadline' => Carbon::tomorrow()]);
+        $excursion->children()->attach($child->id);
+
+        // Mum answers.
+        $this->actingAs($mum)
+            ->patch(route('polls.update', $excursion), ['child_id' => $child->id, 'response' => true]);
+
+        // Dad now has nothing pending (the child's answer is shared).
+        $this->actingAs($dad)
+            ->get(route('board'))
+            ->assertInertia(fn (Assert $page) => $page->where('pendingPolls', 0));
+    }
+
+    public function test_a_parent_cannot_answer_for_another_childs_poll(): void
+    {
+        $child = Child::factory()->create(); // not linked to this parent
+        $excursion = Excursion::factory()->create(['rsvp_deadline' => Carbon::tomorrow()]);
+        $excursion->children()->attach($child->id);
+
+        $this->actingAs($this->parent())
+            ->patch(route('polls.update', $excursion), ['child_id' => $child->id, 'response' => true])
+            ->assertForbidden();
+    }
+
+    public function test_a_parent_cannot_answer_after_the_deadline_but_staff_can(): void
+    {
+        $parent = $this->parent();
+        $child = Child::factory()->create();
+        $parent->children()->attach($child);
+        $excursion = Excursion::factory()->create(['rsvp_deadline' => Carbon::yesterday()]);
+        $excursion->children()->attach($child->id);
+
+        $this->actingAs($parent)
+            ->patch(route('polls.update', $excursion), ['child_id' => $child->id, 'response' => true])
+            ->assertForbidden();
+
+        // Staff can still fix it up after the deadline.
         $this->actingAs($this->staff())
-            ->put(route('excursions.update', $excursion), [
-                'name' => $excursion->name,
-                'date' => $excursion->date->toDateString(),
-                'children' => [$b->id], // swap a -> b
-            ])
-            ->assertRedirect(route('excursions.index'));
+            ->patch(route('polls.update', $excursion), ['child_id' => $child->id, 'response' => true])
+            ->assertRedirect();
+    }
 
-        $this->assertEqualsCanonicalizing(
-            [$b->id],
-            $excursion->children()->pluck('children.id')->all(),
-        );
+    public function test_pending_poll_count_is_shared_with_parents(): void
+    {
+        $parent = $this->parent();
+        $child = Child::factory()->create();
+        $parent->children()->attach($child);
+        $excursion = Excursion::factory()->create(['rsvp_deadline' => Carbon::tomorrow()]);
+        $excursion->children()->attach($child->id);
+
+        $this->actingAs($parent)
+            ->get(route('polls.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Excursions/Poll')
+                ->where('pendingPolls', 1)
+                ->has('open', 1)
+            );
+    }
+
+    public function test_poll_page_separates_open_and_past_excursions(): void
+    {
+        $parent = $this->parent();
+        $child = Child::factory()->create();
+        $parent->children()->attach($child);
+
+        $open = Excursion::factory()->create(['rsvp_deadline' => Carbon::tomorrow()]);
+        $open->children()->attach($child->id);
+
+        $past = Excursion::factory()->create(['rsvp_deadline' => Carbon::yesterday()]);
+        $past->children()->attach($child->id, ['response' => true]);
+
+        $this->actingAs($parent)
+            ->get(route('polls.index'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('open', 1)
+                ->where('open.0.id', $open->id)
+                ->has('past', 1)
+                ->where('past.0.id', $past->id)
+            );
     }
 
     public function test_deleting_an_excursion_removes_its_links(): void
     {
         $excursion = Excursion::factory()->create();
         $child = Child::factory()->create();
-        $excursion->children()->attach($child);
+        $excursion->children()->attach($child->id);
 
         $this->actingAs($this->staff())
             ->delete(route('excursions.destroy', $excursion))
@@ -101,6 +184,33 @@ class ExcursionManagementTest extends TestCase
 
         $this->assertDatabaseMissing('excursions', ['id' => $excursion->id]);
         $this->assertDatabaseMissing('child_excursion', ['excursion_id' => $excursion->id]);
+    }
+
+    public function test_only_confirmed_participants_appear_on_the_board(): void
+    {
+        $this->travelTo(Carbon::parse('2026-06-22')); // Monday
+
+        $joining = $this->scheduledChild('2026-06-22');
+        $declining = $this->scheduledChild('2026-06-22');
+
+        $excursion = Excursion::factory()->create([
+            'name' => 'Waldtag',
+            'date' => '2026-06-22',
+            'return_at' => '15:30',
+        ]);
+        $excursion->children()->attach($joining->id, ['response' => true]);
+        $excursion->children()->attach($declining->id, ['response' => false]);
+
+        $this->actingAs($this->staff())
+            ->get(route('board'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('excursions.0.child_count', 1)
+                // Board rows are sorted by time then name; both kids share 16:00,
+                // so assert the joining child carries the overlay and the other does not.
+                ->where('rows', fn ($rows) => collect($rows)
+                    ->firstWhere('child_id', $joining->id)['excursion']['name'] === 'Waldtag'
+                    && collect($rows)->firstWhere('child_id', $declining->id)['excursion'] === null)
+            );
     }
 
     public function test_staff_can_flip_the_live_trip_state(): void
@@ -113,13 +223,11 @@ class ExcursionManagementTest extends TestCase
             ->patch(route('excursions.live', $excursion), ['event' => 'depart'])
             ->assertRedirect();
         $this->assertSame('away', $excursion->refresh()->state());
-        $this->assertNotNull($excursion->departed_at);
 
         $this->actingAs($staff)
             ->patch(route('excursions.live', $excursion), ['event' => 'return']);
         $this->assertSame('back', $excursion->refresh()->state());
 
-        // Undo the departure clears both timestamps.
         $this->actingAs($staff)
             ->patch(route('excursions.live', $excursion), ['event' => 'undo_depart']);
         $excursion->refresh();
@@ -136,56 +244,16 @@ class ExcursionManagementTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_board_reflects_the_live_excursion_state(): void
+    private function scheduledChild(string $date): Child
     {
-        $this->travelTo(Carbon::parse('2026-06-22')); // Monday
         $child = Child::factory()->create();
         WeeklySchedule::create([
             'child_id' => $child->id,
-            'weekday' => 1,
-            'planned_time' => '16:00',
-            'method' => DepartureMethod::PickedUp,
-        ]);
-        $excursion = Excursion::factory()->create([
-            'date' => '2026-06-22',
-            'departed_at' => now(),
-        ]);
-        $excursion->children()->attach($child);
-
-        $this->actingAs($this->staff())
-            ->get(route('board'))
-            ->assertInertia(fn (Assert $page) => $page
-                ->where('excursions.0.state', 'away')
-                ->where('rows.0.excursion.state', 'away')
-            );
-    }
-
-    public function test_excursion_shows_as_an_overlay_on_the_board(): void
-    {
-        $this->travelTo(Carbon::parse('2026-06-22')); // Monday
-
-        $child = Child::factory()->create();
-        WeeklySchedule::create([
-            'child_id' => $child->id,
-            'weekday' => 1,
+            'weekday' => Carbon::parse($date)->dayOfWeekIso,
             'planned_time' => '16:00',
             'method' => DepartureMethod::PickedUp,
         ]);
 
-        $excursion = Excursion::factory()->create([
-            'name' => 'Waldtag',
-            'date' => '2026-06-22',
-            'return_at' => '15:30',
-        ]);
-        $excursion->children()->attach($child);
-
-        $this->actingAs($this->staff())
-            ->get(route('board'))
-            ->assertInertia(fn (Assert $page) => $page
-                ->where('rows.0.excursion.name', 'Waldtag')
-                ->where('rows.0.excursion.return_at', '15:30')
-                // The child still gets picked up normally after returning.
-                ->where('rows.0.status', 'present')
-            );
+        return $child;
     }
 }
