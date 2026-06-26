@@ -16,7 +16,7 @@ const navItems = computed(() => {
     if (isStaff.value) {
         return [
             { label: 'Heute', route: 'board', pattern: 'board', icon: 'sun' },
-            { label: 'Wochenplan', route: 'weekly-plan', pattern: 'weekly-plan', icon: 'calendar' },
+            { label: 'Abholplan', route: 'weekly-plan', pattern: 'weekly-plan', icon: 'calendar' },
             { label: 'Kinder', route: 'children.index', pattern: 'children.*', icon: 'children' },
             { label: 'Ausflüge', route: 'excursions.index', pattern: 'excursions.*', icon: 'map' },
         ];
@@ -26,7 +26,7 @@ const navItems = computed(() => {
     return [
         { label: 'Ausflüge', route: 'polls.index', pattern: 'polls.*', icon: 'map', badge: pendingPolls.value },
         { label: 'Heute', route: 'board', pattern: 'board', icon: 'sun' },
-        { label: 'Wochenplan', route: 'weekly-plan', pattern: 'weekly-plan', icon: 'calendar' },
+        { label: 'Abholplan', route: 'weekly-plan', pattern: 'weekly-plan', icon: 'calendar' },
     ];
 });
 

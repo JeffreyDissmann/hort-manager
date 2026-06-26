@@ -16,7 +16,7 @@ const tiles = computed(() => [
         route: 'board',
     },
     {
-        title: 'Wochenplan',
+        title: 'Abholplan',
         text: 'Die Abholzeiten aller Kinder im Überblick.',
         route: 'weekly-plan',
     },

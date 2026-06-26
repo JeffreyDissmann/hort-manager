@@ -102,11 +102,11 @@ function resetDay() {
 </script>
 
 <template>
-    <Head title="Wochenplan" />
+    <Head title="Abholplan" />
 
     <AuthenticatedLayout>
         <template #header>
-            <h2 class="text-xl font-semibold text-hort-navy">Wochenplan</h2>
+            <h2 class="text-xl font-semibold text-hort-navy">Abholplan</h2>
         </template>
 
         <div class="space-y-8">
