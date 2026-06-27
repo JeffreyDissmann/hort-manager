@@ -7,6 +7,14 @@ import TextInput from '@/Components/TextInput.vue';
 import { useForm } from '@inertiajs/vue3';
 import { ref } from 'vue';
 
+const props = defineProps({
+    // Slack-only users have no password yet, so the form just sets one.
+    hasPassword: {
+        type: Boolean,
+        default: true,
+    },
+});
+
 const passwordInput = ref(null);
 const currentPasswordInput = ref(null);
 
@@ -38,16 +46,23 @@ const updatePassword = () => {
     <section>
         <header>
             <h2 class="text-lg font-medium text-hort-navy">
-                Passwort ändern
+                {{ hasPassword ? 'Passwort ändern' : 'Passwort festlegen' }}
             </h2>
 
             <p class="mt-1 text-sm text-gray-600">
-                Verwende ein langes, zufälliges Passwort, um dein Konto zu schützen.
+                <template v-if="hasPassword">
+                    Verwende ein langes, zufälliges Passwort, um dein Konto zu
+                    schützen.
+                </template>
+                <template v-else>
+                    Du bist mit Slack angemeldet. Lege ein Passwort fest, um dich
+                    auch mit deiner E-Mail-Adresse anmelden zu können.
+                </template>
             </p>
         </header>
 
         <form @submit.prevent="updatePassword" class="mt-6 space-y-6">
-            <div>
+            <div v-if="hasPassword">
                 <InputLabel for="current_password" value="Aktuelles Passwort" />
 
                 <TextInput

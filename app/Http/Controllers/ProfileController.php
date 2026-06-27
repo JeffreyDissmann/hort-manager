@@ -21,6 +21,8 @@ class ProfileController extends Controller
         return Inertia::render('Profile/Edit', [
             'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
             'status' => session('status'),
+            // Slack-only users have no password yet — the form becomes "set password".
+            'hasPassword' => $request->user()->password !== null,
         ]);
     }
 

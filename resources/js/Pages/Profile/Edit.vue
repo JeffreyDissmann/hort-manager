@@ -12,6 +12,10 @@ defineProps({
     status: {
         type: String,
     },
+    hasPassword: {
+        type: Boolean,
+        default: true,
+    },
 });
 </script>
 
@@ -42,7 +46,10 @@ defineProps({
                 <div
                     class="bg-white p-4 shadow sm:rounded-lg sm:p-8"
                 >
-                    <UpdatePasswordForm class="max-w-xl" />
+                    <UpdatePasswordForm
+                        :has-password="hasPassword"
+                        class="max-w-xl"
+                    />
                 </div>
 
                 <div
