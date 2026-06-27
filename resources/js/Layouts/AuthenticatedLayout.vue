@@ -28,19 +28,19 @@ const navItems = computed(() => {
     if (isStaff.value) {
         // Kinder last — it's the thing that changes least often.
         return [
-            { label: 'Heute', href: board().url, pattern: 'board', icon: 'sun' },
-            { label: 'Ausflüge', href: excursionsIndex().url, pattern: 'excursions.*', icon: 'map' },
-            { label: 'Abholplan', href: weeklyPlan().url, pattern: 'weekly-plan', icon: 'calendar' },
-            { label: 'Programm', href: program().url, pattern: 'program', icon: 'food' },
-            { label: 'Kinder', href: childrenIndex().url, pattern: 'children.*', icon: 'children' },
+            { label: 'Heute', href: board().url, icon: 'sun' },
+            { label: 'Ausflüge', href: excursionsIndex().url, icon: 'map' },
+            { label: 'Abholplan', href: weeklyPlan().url, icon: 'calendar' },
+            { label: 'Programm', href: program().url, icon: 'food' },
+            { label: 'Kinder', href: childrenIndex().url, icon: 'children' },
         ];
     }
 
     // Parents: Heute, Ausflüge (poll badge), Abholplan; „Meine Kinder" lives in the user menu.
     return [
-        { label: 'Heute', href: board().url, pattern: 'board', icon: 'sun' },
-        { label: 'Ausflüge', href: pollsIndex().url, pattern: 'polls.*', icon: 'map', badge: pendingPolls.value },
-        { label: 'Abholplan', href: weeklyPlan().url, pattern: 'weekly-plan', icon: 'calendar' },
+        { label: 'Heute', href: board().url, icon: 'sun' },
+        { label: 'Ausflüge', href: pollsIndex().url, icon: 'map', badge: pendingPolls.value },
+        { label: 'Abholplan', href: weeklyPlan().url, icon: 'calendar' },
     ];
 });
 
@@ -53,8 +53,10 @@ const icons = {
     food: ClipboardDocumentListIcon,
 };
 
-function isActive(pattern) {
-    return route().current(pattern);
+// Active tab = current path equals the item's href or is a sub-path of it.
+const currentPath = computed(() => usePage().url.split('?')[0]);
+function isActive(href) {
+    return currentPath.value === href || currentPath.value.startsWith(href + '/');
 }
 </script>
 
@@ -85,7 +87,7 @@ function isActive(pattern) {
                         :href="item.href"
                         :class="[
                             'rounded-lg px-3 py-2 text-sm font-medium transition',
-                            isActive(item.pattern)
+                            isActive(item.href)
                                 ? 'bg-hort-teal/20 text-hort-navy'
                                 : 'text-hort-navy/60 hover:bg-hort-navy/5 hover:text-hort-navy',
                         ]"
@@ -176,7 +178,7 @@ function isActive(pattern) {
                     :href="item.href"
                     :class="[
                         'flex flex-1 flex-col items-center gap-1 py-2.5 text-xs font-medium transition',
-                        isActive(item.pattern)
+                        isActive(item.href)
                             ? 'text-hort-teal-dark'
                             : 'text-hort-navy/50',
                     ]"
