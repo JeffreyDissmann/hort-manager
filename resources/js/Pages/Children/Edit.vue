@@ -1,12 +1,12 @@
 <script setup>
-import { update as childrenUpdate, index as childrenIndex } from '@/routes/children';
+import { update as childrenUpdate, index as childrenIndex, destroy as childrenDestroy } from '@/routes/children';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import TextInput from '@/Components/TextInput.vue';
 import TimeSelect from '@/Components/TimeSelect.vue';
 import InputError from '@/Components/InputError.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
-import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 
 const currentUserId = usePage().props.auth?.user?.id;
 
@@ -22,6 +22,10 @@ const props = defineProps({
     methodOptions: {
         type: Array,
         default: () => [],
+    },
+    canDelete: {
+        type: Boolean,
+        default: false,
     },
     canManageGuardians: {
         type: Boolean,
@@ -66,6 +70,16 @@ function submit() {
             method: day.method || null,
         })),
     })).patch(childrenUpdate(props.child.id).url);
+}
+
+function destroy() {
+    if (
+        confirm(
+            `„${props.child.name}“ wirklich löschen? Der Stammplan geht verloren.`,
+        )
+    ) {
+        router.delete(childrenDestroy(props.child.id).url);
+    }
 }
 </script>
 
@@ -258,16 +272,28 @@ function submit() {
                         </p>
                     </section>
 
-                    <div class="flex items-center justify-end gap-4">
-                        <Link
-                            :href="childrenIndex().url"
-                            class="text-sm text-gray-600 hover:text-gray-900"
+                    <div class="flex items-center justify-between gap-4">
+                        <button
+                            v-if="canDelete"
+                            type="button"
+                            @click="destroy"
+                            class="text-sm font-medium text-red-600 transition hover:text-red-700"
                         >
-                            Abbrechen
-                        </Link>
-                        <PrimaryButton :disabled="form.processing">
-                            Speichern
-                        </PrimaryButton>
+                            Kind löschen
+                        </button>
+                        <span v-else></span>
+
+                        <div class="flex items-center gap-4">
+                            <Link
+                                :href="childrenIndex().url"
+                                class="text-sm text-gray-600 hover:text-gray-900"
+                            >
+                                Abbrechen
+                            </Link>
+                            <PrimaryButton :disabled="form.processing">
+                                Speichern
+                            </PrimaryButton>
+                        </div>
                     </div>
                 </form>
             </div>

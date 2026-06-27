@@ -90,7 +90,7 @@ function destroy(child) {
                             </p>
                         </div>
                         <button
-                            v-if="canManage"
+                            v-if="child.can_delete"
                             type="button"
                             @click="destroy(child)"
                             class="shrink-0 rounded-lg p-2 text-hort-navy/30 transition hover:bg-red-50 hover:text-red-600"

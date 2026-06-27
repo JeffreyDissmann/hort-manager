@@ -99,7 +99,7 @@ class ChildManagementTest extends TestCase
         $this->assertTrue($child->guardians()->whereKey($parent->id)->exists());
     }
 
-    public function test_parents_cannot_delete_children(): void
+    public function test_a_guardian_can_delete_their_own_child(): void
     {
         $parent = $this->parent();
         $child = Child::factory()->create();
@@ -107,9 +107,21 @@ class ChildManagementTest extends TestCase
 
         $this->actingAs($parent)
             ->delete(route('children.destroy', $child))
+            ->assertRedirect(route('children.index'));
+
+        $this->assertDatabaseMissing('children', ['id' => $child->id]);
+    }
+
+    public function test_a_parent_cannot_delete_a_child_they_do_not_guard(): void
+    {
+        $parent = $this->parent();
+        $other = Child::factory()->create(); // not linked
+
+        $this->actingAs($parent)
+            ->delete(route('children.destroy', $other))
             ->assertForbidden();
 
-        $this->assertDatabaseHas('children', ['id' => $child->id]);
+        $this->assertDatabaseHas('children', ['id' => $other->id]);
     }
 
     public function test_edit_passes_the_birthday_as_a_plain_date(): void

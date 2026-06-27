@@ -30,10 +30,10 @@ class ChildPolicy
         return $user->isStaff() || $child->isGuardedBy($user);
     }
 
-    /** Only staff delete children. */
+    /** Staff, or a guardian of the child, may delete it. */
     public function delete(User $user, Child $child): bool
     {
-        return $user->isStaff();
+        return $user->isStaff() || $child->isGuardedBy($user);
     }
 
     /** Staff, or a guardian of the child, manage which parents are linked to it. */

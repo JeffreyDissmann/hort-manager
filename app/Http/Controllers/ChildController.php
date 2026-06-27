@@ -29,8 +29,14 @@ class ChildController extends Controller
         return Inertia::render('Children/Index', [
             'children' => $query
                 ->orderBy('name')
-                ->get(['children.id', 'name', 'date_of_birth', 'note']),
-            // Delete stays staff-only; anyone may add a child.
+                ->get(['children.id', 'name', 'date_of_birth', 'note'])
+                ->map(fn (Child $child) => [
+                    'id' => $child->id,
+                    'name' => $child->name,
+                    'date_of_birth' => $child->date_of_birth?->format('Y-m-d'),
+                    'note' => $child->note,
+                    'can_delete' => $user->can('delete', $child),
+                ]),
             'canManage' => $user->isStaff(),
             'canCreate' => $user->can('create', Child::class),
         ]);
@@ -90,6 +96,7 @@ class ChildController extends Controller
             'methodOptions' => collect(DepartureMethod::cases())
                 ->map(fn (DepartureMethod $m) => ['value' => $m->value, 'label' => $m->label()])
                 ->all(),
+            'canDelete' => $request->user()->can('delete', $child),
             'canManageGuardians' => $canManageGuardians,
             // Staff and the child's guardians get the parent picker + current links.
             'allParents' => $canManageGuardians
