@@ -79,7 +79,13 @@ class ChildController extends Controller
         $canManageGuardians = $request->user()->can('manageGuardians', $child);
 
         return Inertia::render('Children/Edit', [
-            'child' => $child->only(['id', 'name', 'date_of_birth', 'note']),
+            'child' => [
+                'id' => $child->id,
+                'name' => $child->name,
+                // Plain Y-m-d so the <input type="date"> can display it.
+                'date_of_birth' => $child->date_of_birth?->format('Y-m-d'),
+                'note' => $child->note,
+            ],
             'schedule' => $schedule,
             'methodOptions' => collect(DepartureMethod::cases())
                 ->map(fn (DepartureMethod $m) => ['value' => $m->value, 'label' => $m->label()])

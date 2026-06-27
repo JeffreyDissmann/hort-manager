@@ -112,6 +112,17 @@ class ChildManagementTest extends TestCase
         $this->assertDatabaseHas('children', ['id' => $child->id]);
     }
 
+    public function test_edit_passes_the_birthday_as_a_plain_date(): void
+    {
+        $child = Child::factory()->create(['date_of_birth' => '2019-11-03']);
+
+        $this->actingAs($this->staff())
+            ->get(route('children.edit', $child))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('child.date_of_birth', '2019-11-03')
+            );
+    }
+
     public function test_staff_updating_a_child_upserts_the_weekly_schedule(): void
     {
         $child = Child::factory()->create();
