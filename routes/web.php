@@ -8,6 +8,7 @@ use App\Http\Controllers\ExcursionController;
 use App\Http\Controllers\ExcursionRsvpController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SlackCommandController;
+use App\Http\Controllers\SlackEventController;
 use App\Http\Controllers\SlackInteractionController;
 use App\Http\Controllers\WeeklyAdjustmentController;
 use App\Http\Controllers\WeeklyOverviewController;
@@ -43,6 +44,9 @@ Route::post('/slack/interactions', [SlackInteractionController::class, 'handle']
 Route::post('/slack/commands', [SlackCommandController::class, 'handle'])
     ->middleware(VerifySlackSignature::class)
     ->name('slack.commands');
+Route::post('/slack/events', [SlackEventController::class, 'handle'])
+    ->middleware(VerifySlackSignature::class)
+    ->name('slack.events');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
