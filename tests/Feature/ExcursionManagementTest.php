@@ -8,10 +8,10 @@ use App\Models\Child;
 use App\Models\Excursion;
 use App\Models\User;
 use App\Models\WeeklySchedule;
-use App\Notifications\ExcursionAnnounced;
 use App\Notifications\ExcursionRsvpReminder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
@@ -73,14 +73,14 @@ class ExcursionManagementTest extends TestCase
 
     public function test_creating_an_excursion_dms_slack_connected_guardians(): void
     {
-        Notification::fake();
+        Http::fake(['slack.com/api/chat.postMessage' => Http::response(['ok' => true, 'channel' => 'D1', 'ts' => '1.1'])]);
 
         $child = Child::factory()->create();
         $withSlack = User::factory()->create(['role' => UserRole::Parent, 'slack_id' => 'U1']);
         $noSlack = User::factory()->create(['role' => UserRole::Parent, 'slack_id' => null]);
         $child->guardians()->attach([$withSlack->id, $noSlack->id]);
         // A Slack user without any child must not be pestered.
-        $childless = User::factory()->create(['role' => UserRole::Parent, 'slack_id' => 'U2']);
+        User::factory()->create(['role' => UserRole::Parent, 'slack_id' => 'U2']);
 
         $this->actingAs($this->staff())
             ->post(route('excursions.store'), [
@@ -89,9 +89,64 @@ class ExcursionManagementTest extends TestCase
                 'rsvp_deadline' => '2026-06-27',
             ]);
 
-        Notification::assertSentTo($withSlack, ExcursionAnnounced::class);
-        Notification::assertNotSentTo($noSlack, ExcursionAnnounced::class);
-        Notification::assertNotSentTo($childless, ExcursionAnnounced::class);
+        // Posted only to the Slack-connected guardian (channel = their Slack id), and remembered.
+        Http::assertSent(fn ($request) => $request->url() === 'https://slack.com/api/chat.postMessage' && $request['channel'] === 'U1');
+        Http::assertSentCount(1);
+        $this->assertDatabaseHas('excursion_slack_messages', ['user_id' => $withSlack->id, 'ts' => '1.1']);
+    }
+
+    public function test_an_answer_updates_every_guardians_slack_message(): void
+    {
+        Http::fake([
+            'slack.com/api/chat.postMessage' => Http::sequence()
+                ->push(['ok' => true, 'channel' => 'D1', 'ts' => 'ts1'])
+                ->push(['ok' => true, 'channel' => 'D2', 'ts' => 'ts2']),
+            'slack.com/api/chat.update' => Http::response(['ok' => true]),
+        ]);
+
+        $child = Child::factory()->create();
+        $mum = User::factory()->create(['role' => UserRole::Parent, 'slack_id' => 'U1']);
+        $dad = User::factory()->create(['role' => UserRole::Parent, 'slack_id' => 'U2']);
+        $child->guardians()->attach([$mum->id, $dad->id]);
+
+        // Creating the excursion DMs both guardians (two tracked messages).
+        $this->actingAs($this->staff())->post(route('excursions.store'), [
+            'name' => 'Zoo', 'date' => '2026-07-01', 'rsvp_deadline' => '2026-06-30',
+        ]);
+        $excursion = Excursion::firstWhere('name', 'Zoo');
+        $this->assertDatabaseCount('excursion_slack_messages', 2);
+
+        // Mum answers in the app → BOTH guardians' DMs are chat.update'd.
+        $this->actingAs($mum)->patch(route('polls.update', $excursion), [
+            'child_id' => $child->id,
+            'response' => true,
+        ]);
+
+        Http::assertSent(fn ($r) => $r->url() === 'https://slack.com/api/chat.update' && $r['ts'] === 'ts1');
+        Http::assertSent(fn ($r) => $r->url() === 'https://slack.com/api/chat.update' && $r['ts'] === 'ts2');
+    }
+
+    public function test_deleting_an_excursion_marks_the_slack_messages_cancelled(): void
+    {
+        Http::fake([
+            'slack.com/api/chat.postMessage' => Http::response(['ok' => true, 'channel' => 'D1', 'ts' => 'ts1']),
+            'slack.com/api/chat.update' => Http::response(['ok' => true]),
+        ]);
+
+        $child = Child::factory()->create();
+        $guardian = User::factory()->create(['role' => UserRole::Parent, 'slack_id' => 'U1']);
+        $child->guardians()->attach($guardian);
+
+        $this->actingAs($this->staff())->post(route('excursions.store'), [
+            'name' => 'Zoo', 'date' => '2026-07-01', 'rsvp_deadline' => '2026-06-30',
+        ]);
+        $excursion = Excursion::firstWhere('name', 'Zoo');
+
+        $this->actingAs($this->staff())->delete(route('excursions.destroy', $excursion));
+
+        Http::assertSent(fn ($r) => $r->url() === 'https://slack.com/api/chat.update'
+            && $r['ts'] === 'ts1'
+            && str_contains($r['text'], 'abgesagt'));
     }
 
     public function test_rsvp_reminder_dms_only_pending_slack_guardians(): void

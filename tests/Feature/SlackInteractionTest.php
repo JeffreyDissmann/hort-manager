@@ -8,7 +8,6 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Notification;
 use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
@@ -40,8 +39,7 @@ class SlackInteractionTest extends TestCase
 
     private function pendingExcursionFor(User $guardian): array
     {
-        Notification::fake(); // suppress the ExcursionObserver's announcement DM
-
+        // Callers fake Http first, so the ExcursionObserver's announcement DM is a no-op here.
         $child = Child::factory()->create();
         $child->guardians()->attach($guardian);
 
@@ -65,7 +63,6 @@ class SlackInteractionTest extends TestCase
 
         $this->assertTrue((bool) $excursion->children()->find($child->id)->pivot->response);
         $this->assertSame($guardian->id, $excursion->children()->find($child->id)->pivot->answered_by);
-        Http::assertSent(fn ($request) => $request->url() === 'https://hooks.slack.test/confirm');
     }
 
     public function test_a_signed_no_click_records_a_decline(): void
@@ -85,6 +82,7 @@ class SlackInteractionTest extends TestCase
 
     public function test_an_invalid_signature_is_rejected(): void
     {
+        Http::fake();
         $guardian = User::factory()->create(['slack_id' => 'U1']);
         [$excursion, $child] = $this->pendingExcursionFor($guardian);
 

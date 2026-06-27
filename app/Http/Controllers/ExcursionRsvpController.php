@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Child;
 use App\Models\Excursion;
+use App\Services\SlackRsvp;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -72,6 +73,9 @@ class ExcursionRsvpController extends Controller
                 'answered_at' => now(),
             ],
         ]);
+
+        // Keep the Slack DMs in sync (buttons → result) for both guardians.
+        app(SlackRsvp::class)->syncForChild($excursion, $child);
 
         return back()->with('status', "Antwort für {$child->name} gespeichert.");
     }

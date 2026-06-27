@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Child;
 use App\Models\Excursion;
 use App\Models\User;
+use App\Services\SlackRsvp;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Http;
@@ -46,8 +47,8 @@ class SlackInteractionController extends Controller
             ],
         ]);
 
-        $verb = $answer ? 'zugesagt ✅' : 'abgesagt ❌';
-        $this->reply($responseUrl, "Danke! Du hast für *{$child->name}* {$verb}.");
+        // Re-render every guardian's DM: this child's row now shows the result.
+        app(SlackRsvp::class)->syncForChild($excursion, $child);
 
         return response()->noContent();
     }
