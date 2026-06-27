@@ -14,6 +14,10 @@ const props = defineProps({
         type: Boolean,
         default: false,
     },
+    canCreate: {
+        type: Boolean,
+        default: false,
+    },
 });
 
 const flash = computed(() => usePage().props.flash?.status);
@@ -54,7 +58,7 @@ function destroy(child) {
             </div>
 
             <Link
-                v-if="canManage"
+                v-if="canCreate"
                 :href="childrenCreate().url"
                 class="flex w-full items-center justify-center gap-2 rounded-2xl bg-hort-teal px-6 py-4 text-base font-semibold text-hort-navy shadow-sm transition hover:bg-hort-teal-dark active:scale-[0.99]"
             >
@@ -114,8 +118,8 @@ function destroy(child) {
                     Stammplan festzulegen.
                 </template>
                 <template v-else>
-                    Dir ist noch kein Kind zugeordnet. Bitte wende dich an das
-                    Hort-Team.
+                    Dir ist noch kein Kind zugeordnet. Lege dein Kind an oder bitte
+                    den anderen Elternteil, dich als Elternteil hinzuzufügen.
                 </template>
             </p>
         </div>

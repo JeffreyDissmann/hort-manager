@@ -30,7 +30,9 @@ class ChildController extends Controller
             'children' => $query
                 ->orderBy('name')
                 ->get(['children.id', 'name', 'date_of_birth', 'note']),
+            // Delete stays staff-only; anyone may add a child.
             'canManage' => $user->isStaff(),
+            'canCreate' => $user->can('create', Child::class),
         ]);
     }
 
@@ -46,6 +48,11 @@ class ChildController extends Controller
         $this->authorize('create', Child::class);
 
         $child = Child::create($this->validateChild($request));
+
+        // A parent who creates a child becomes its guardian.
+        if (! $request->user()->isStaff()) {
+            $child->guardians()->attach($request->user());
+        }
 
         return redirect()
             ->route('children.edit', $child)
@@ -78,7 +85,7 @@ class ChildController extends Controller
                 ->map(fn (DepartureMethod $m) => ['value' => $m->value, 'label' => $m->label()])
                 ->all(),
             'canManageGuardians' => $canManageGuardians,
-            // Only staff get the parent picker and current links.
+            // Staff and the child's guardians get the parent picker + current links.
             'allParents' => $canManageGuardians
                 ? User::where('role', UserRole::Parent)->orderBy('name')->get(['id', 'name', 'email'])
                 : [],
@@ -120,14 +127,21 @@ class ChildController extends Controller
             );
         }
 
-        // Guardian links are staff-only.
+        // Staff or a guardian may set which parents are linked to the child.
         if ($request->user()->can('manageGuardians', $child)) {
             $guardians = $request->validate([
                 'guardians' => ['array'],
                 'guardians.*' => [Rule::exists('users', 'id')->where('role', UserRole::Parent->value)],
             ]);
 
-            $child->guardians()->sync($guardians['guardians'] ?? []);
+            $ids = $guardians['guardians'] ?? [];
+
+            // A parent can't drop themselves as guardian (they'd lose access).
+            if (! $request->user()->isStaff()) {
+                $ids[] = $request->user()->id;
+            }
+
+            $child->guardians()->sync(array_unique($ids));
         }
 
         return redirect()

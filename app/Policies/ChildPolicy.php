@@ -18,10 +18,10 @@ class ChildPolicy
         return true;
     }
 
-    /** Only staff add new children. */
+    /** Anyone may add a child (parents self-serve; the creator becomes a guardian). */
     public function create(User $user): bool
     {
-        return $user->isStaff();
+        return true;
     }
 
     /** Staff may edit any child; a parent may edit their own child(ren). */
@@ -36,9 +36,9 @@ class ChildPolicy
         return $user->isStaff();
     }
 
-    /** Only staff manage which parents are linked to a child. */
+    /** Staff, or a guardian of the child, manage which parents are linked to it. */
     public function manageGuardians(User $user, Child $child): bool
     {
-        return $user->isStaff();
+        return $user->isStaff() || $child->isGuardedBy($user);
     }
 }

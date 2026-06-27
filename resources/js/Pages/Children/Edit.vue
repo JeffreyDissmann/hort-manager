@@ -6,7 +6,9 @@ import TextInput from '@/Components/TextInput.vue';
 import TimeSelect from '@/Components/TimeSelect.vue';
 import InputError from '@/Components/InputError.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
+
+const currentUserId = usePage().props.auth?.user?.id;
 
 const props = defineProps({
     child: {
@@ -201,15 +203,16 @@ function submit() {
                         </div>
                     </section>
 
-                    <!-- Eltern-Zuordnung (nur Team) -->
+                    <!-- Eltern-Zuordnung -->
                     <section v-if="canManageGuardians" class="space-y-4">
                         <div>
                             <h3 class="text-lg font-medium text-hort-navy">
                                 Eltern
                             </h3>
                             <p class="mt-1 text-sm text-gray-500">
-                                Wähle die Eltern dieses Kindes. Sie können dann den
-                                Stammplan und kurzfristige Änderungen selbst pflegen.
+                                Wähle die Eltern dieses Kindes – z. B. den anderen
+                                Elternteil, damit ihr beide den Stammplan und
+                                kurzfristige Änderungen pflegen könnt.
                             </p>
                         </div>
 
@@ -220,17 +223,29 @@ function submit() {
                             <label
                                 v-for="parent in allParents"
                                 :key="parent.id"
-                                class="flex cursor-pointer items-center gap-3 rounded-lg p-2 hover:bg-hort-sand"
+                                class="flex items-center gap-3 rounded-lg p-2"
+                                :class="
+                                    parent.id === currentUserId
+                                        ? 'opacity-70'
+                                        : 'cursor-pointer hover:bg-hort-sand'
+                                "
                             >
                                 <input
                                     type="checkbox"
                                     :value="parent.id"
                                     v-model="form.guardians"
-                                    class="rounded border-gray-300 text-hort-teal-dark focus:ring-hort-teal"
+                                    :disabled="parent.id === currentUserId"
+                                    class="rounded border-gray-300 text-hort-teal-dark focus:ring-hort-teal disabled:opacity-60"
                                 />
                                 <span class="text-sm">
                                     <span class="font-medium text-hort-navy">
                                         {{ parent.name }}
+                                    </span>
+                                    <span
+                                        v-if="parent.id === currentUserId"
+                                        class="text-hort-teal-dark"
+                                    >
+                                        · du
                                     </span>
                                     <span class="text-gray-500">
                                         · {{ parent.email }}

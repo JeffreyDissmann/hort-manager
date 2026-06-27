@@ -86,15 +86,24 @@ class ChildManagementTest extends TestCase
         $this->assertDatabaseCount('children', 0);
     }
 
-    public function test_parents_cannot_create_or_delete_children(): void
+    public function test_a_parent_can_create_a_child_and_becomes_its_guardian(): void
+    {
+        $parent = $this->parent();
+
+        $this->actingAs($parent)
+            ->post(route('children.store'), ['name' => 'Neu'])
+            ->assertRedirect();
+
+        $child = Child::firstWhere('name', 'Neu');
+        $this->assertNotNull($child);
+        $this->assertTrue($child->guardians()->whereKey($parent->id)->exists());
+    }
+
+    public function test_parents_cannot_delete_children(): void
     {
         $parent = $this->parent();
         $child = Child::factory()->create();
         $parent->children()->attach($child);
-
-        $this->actingAs($parent)
-            ->post(route('children.store'), ['name' => 'Neu'])
-            ->assertForbidden();
 
         $this->actingAs($parent)
             ->delete(route('children.destroy', $child))
@@ -209,23 +218,24 @@ class ChildManagementTest extends TestCase
         );
     }
 
-    public function test_a_parent_cannot_change_guardian_links(): void
+    public function test_a_guardian_can_add_a_co_guardian_but_not_drop_themselves(): void
     {
         $parent = $this->parent();
-        $intruder = $this->parent();
+        $coParent = $this->parent();
         $child = Child::factory()->create();
         $parent->children()->attach($child);
 
+        // Adds the co-parent, and omits themselves on purpose.
         $this->actingAs($parent)
             ->patch(route('children.update', $child), [
                 'name' => $child->name,
-                'guardians' => [$intruder->id], // should be ignored
+                'guardians' => [$coParent->id],
             ])
             ->assertRedirect();
 
-        // Guardian list is unchanged: still just the original parent.
+        // Co-parent is added, and the acting parent is kept (can't lock themselves out).
         $this->assertEqualsCanonicalizing(
-            [$parent->id],
+            [$parent->id, $coParent->id],
             $child->guardians()->pluck('users.id')->all(),
         );
     }
