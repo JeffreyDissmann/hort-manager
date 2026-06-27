@@ -1,9 +1,10 @@
 <script setup>
-import { update as usersUpdate } from '@/routes/users';
+import { update as usersUpdate, sync as usersSync, destroy as usersDestroy } from '@/routes/users';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import Avatar from '@/Components/Avatar.vue';
+import { ArrowPathIcon, TrashIcon } from '@heroicons/vue/24/outline';
 import { Head, router, usePage } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 
 const props = defineProps({
     users: {
@@ -17,6 +18,26 @@ const props = defineProps({
 });
 
 const flash = computed(() => usePage().props.flash?.status);
+
+const syncing = ref(false);
+
+function syncFromSlack() {
+    router.post(
+        usersSync().url,
+        {},
+        {
+            preserveScroll: true,
+            onStart: () => (syncing.value = true),
+            onFinish: () => (syncing.value = false),
+        },
+    );
+}
+
+function destroy(user) {
+    if (confirm(`„${user.name}“ wirklich löschen?`)) {
+        router.delete(usersDestroy(user.id).url, { preserveScroll: true });
+    }
+}
 
 // Role and admin are independent — patch whichever changed, keep the other.
 function save(user, changes) {
@@ -47,10 +68,21 @@ function save(user, changes) {
                 {{ flash }}
             </div>
 
-            <p class="text-sm text-hort-navy/60">
-                Rolle = Zugriff in der App (Erzieher:in oder Elternteil).
-                Admin = darf Benutzer verwalten. Beides ist unabhängig.
-            </p>
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <p class="text-sm text-hort-navy/60">
+                    Rolle = Zugriff in der App (Erzieher:in oder Elternteil).
+                    Admin = darf Benutzer verwalten. Beides ist unabhängig.
+                </p>
+                <button
+                    type="button"
+                    @click="syncFromSlack"
+                    :disabled="syncing"
+                    class="flex shrink-0 items-center gap-2 rounded-xl bg-hort-navy px-4 py-2 text-sm font-semibold text-white transition hover:bg-hort-navy/90 disabled:opacity-60"
+                >
+                    <ArrowPathIcon class="h-4 w-4" :class="{ 'animate-spin': syncing }" />
+                    Aus Slack importieren
+                </button>
+            </div>
 
             <ul class="space-y-3">
                 <li
@@ -93,6 +125,16 @@ function save(user, changes) {
                         />
                         Admin
                     </label>
+
+                    <button
+                        v-if="!user.is_self"
+                        type="button"
+                        @click="destroy(user)"
+                        class="shrink-0 rounded-lg p-2 text-hort-navy/30 transition hover:bg-red-50 hover:text-red-600"
+                        aria-label="Benutzer löschen"
+                    >
+                        <TrashIcon class="h-5 w-5" />
+                    </button>
                 </li>
             </ul>
         </div>

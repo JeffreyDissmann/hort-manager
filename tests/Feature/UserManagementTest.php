@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Enums\UserRole;
+use App\Models\Child;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -80,6 +81,37 @@ class UserManagementTest extends TestCase
             ->patch(route('users.update', $admin), ['role' => 'staff', 'is_admin' => false]);
 
         $this->assertFalse($admin->refresh()->is_admin);
+    }
+
+    public function test_admin_can_delete_a_user_and_their_guardian_links(): void
+    {
+        $admin = $this->admin();
+        $parent = User::factory()->create(['role' => UserRole::Parent]);
+        $child = Child::factory()->create();
+        $child->guardians()->attach($parent);
+
+        $this->actingAs($admin)->delete(route('users.destroy', $parent));
+
+        $this->assertModelMissing($parent);
+        $this->assertDatabaseMissing('child_user', ['user_id' => $parent->id]);
+    }
+
+    public function test_an_admin_cannot_delete_themselves(): void
+    {
+        $admin = $this->admin();
+
+        $this->actingAs($admin)->delete(route('users.destroy', $admin));
+
+        $this->assertModelExists($admin);
+    }
+
+    public function test_non_admins_cannot_delete_users(): void
+    {
+        $parent = User::factory()->create(['role' => UserRole::Parent]);
+        $victim = User::factory()->create(['role' => UserRole::Parent]);
+
+        $this->actingAs($parent)->delete(route('users.destroy', $victim))->assertForbidden();
+        $this->assertModelExists($victim);
     }
 
     public function test_make_admin_command_grants_admin_keeping_role(): void

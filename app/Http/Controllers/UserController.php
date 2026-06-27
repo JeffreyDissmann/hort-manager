@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\UserRole;
 use App\Models\User;
+use App\Services\SlackUserImporter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -57,6 +58,34 @@ class UserController extends Controller
         $user->forceFill(['role' => $role, 'is_admin' => $isAdmin])->save();
 
         return back()->with('status', "{$user->name} aktualisiert.");
+    }
+
+    /** Admin-only: delete a user (guardian links cascade; board/poll references null out). */
+    public function destroy(Request $request, User $user): RedirectResponse
+    {
+        $this->ensureAdmin($request);
+
+        if ($user->is($request->user())) {
+            return back()->with('status', 'Du kannst dich nicht selbst löschen.');
+        }
+
+        if ($user->is_admin && User::where('is_admin', true)->count() <= 1) {
+            return back()->with('status', 'Es muss mindestens eine:n Administrator:in geben.');
+        }
+
+        $user->delete();
+
+        return back()->with('status', "{$user->name} wurde gelöscht.");
+    }
+
+    /** Admin-only: import/refresh all Slack workspace members. */
+    public function sync(Request $request, SlackUserImporter $importer): RedirectResponse
+    {
+        $this->ensureAdmin($request);
+
+        $count = $importer->run();
+
+        return back()->with('status', "{$count} Benutzer aus Slack synchronisiert.");
     }
 
     private function ensureAdmin(Request $request): void

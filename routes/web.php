@@ -58,7 +58,9 @@ Route::middleware('auth')->group(function () {
 
     // User management (admin only — the controller guards every action).
     Route::get('/benutzer', [UserController::class, 'index'])->name('users.index');
+    Route::post('/benutzer/sync', [UserController::class, 'sync'])->name('users.sync');
     Route::patch('/benutzer/{user}', [UserController::class, 'update'])->name('users.update');
+    Route::delete('/benutzer/{user}', [UserController::class, 'destroy'])->name('users.destroy');
 
     Route::get('/wochenplan', WeeklyOverviewController::class)->name('weekly-plan');
     Route::patch('/wochenplan/anpassung', [WeeklyAdjustmentController::class, 'update'])->name('weekly-plan.adjust');

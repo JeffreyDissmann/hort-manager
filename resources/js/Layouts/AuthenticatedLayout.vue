@@ -121,14 +121,17 @@ function isActive(href) {
                         </button>
                     </template>
                     <template #content>
+                        <template v-if="isAdmin">
+                            <DropdownLink :href="usersIndex().url">
+                                Benutzer
+                            </DropdownLink>
+                            <hr class="my-1 border-hort-navy/10" />
+                        </template>
                         <DropdownLink
                             v-if="!isStaff"
                             :href="childrenIndex().url"
                         >
                             Meine Kinder
-                        </DropdownLink>
-                        <DropdownLink v-if="isAdmin" :href="usersIndex().url">
-                            Benutzer
                         </DropdownLink>
                         <DropdownLink :href="profileEdit().url">
                             Profil

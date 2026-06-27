@@ -31,6 +31,7 @@ All callback URLs below must be **public HTTPS** on your real domain. Locally we
 - **OAuth & Permissions → Bot Token Scopes**: add
   - `chat:write` — send & update DMs (departures, RSVP, reminders, cancellations)
   - `commands` — the `/hort` slash command
+  - `users:read` + `users:read.email` — import workspace members (Benutzer → „Aus Slack importieren", or `php artisan hort:sync-slack-users`)
 - **Install to Workspace** → copy the **Bot User OAuth Token** (`xoxb-…`) → `SLACK_BOT_USER_OAUTH_TOKEN`.
 - Reinstall whenever you change scopes.
 
