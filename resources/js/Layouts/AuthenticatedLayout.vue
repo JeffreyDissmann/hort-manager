@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue';
 import ApplicationLogo from '@/Components/ApplicationLogo.vue';
+import Avatar from '@/Components/Avatar.vue';
 import Dropdown from '@/Components/Dropdown.vue';
 import DropdownLink from '@/Components/DropdownLink.vue';
 import {
@@ -27,6 +28,7 @@ const contentMax = computed(() => (props.wide ? 'max-w-7xl' : 'max-w-5xl'));
 const appName = computed(() => usePage().props.appName ?? 'Hort-Manager');
 const user = computed(() => usePage().props.auth?.user);
 const userName = computed(() => user.value?.name ?? '');
+const userAvatar = computed(() => user.value?.avatar ?? null);
 const isStaff = computed(() => user.value?.role === 'staff');
 const pendingPolls = computed(() => usePage().props.pendingPolls ?? 0);
 
@@ -111,11 +113,7 @@ function isActive(href) {
                             type="button"
                             class="flex items-center gap-2 rounded-full bg-hort-navy/5 py-1.5 pl-1.5 pr-3 text-sm font-medium text-hort-navy transition hover:bg-hort-navy/10"
                         >
-                            <span
-                                class="flex h-8 w-8 items-center justify-center rounded-full bg-hort-teal text-sm font-semibold text-hort-navy"
-                            >
-                                {{ userName.charAt(0).toUpperCase() }}
-                            </span>
+                            <Avatar :src="userAvatar" :name="userName" />
                             <span class="hidden max-w-[8rem] truncate sm:inline">
                                 {{ userName }}
                             </span>

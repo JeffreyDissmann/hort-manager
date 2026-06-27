@@ -100,7 +100,7 @@ class ChildController extends Controller
             'canManageGuardians' => $canManageGuardians,
             // Staff and the child's guardians get the parent picker + current links.
             'allParents' => $canManageGuardians
-                ? User::where('role', UserRole::Parent)->orderBy('name')->get(['id', 'name', 'email'])
+                ? User::where('role', UserRole::Parent)->orderBy('name')->get(['id', 'name', 'email', 'avatar'])
                 : [],
             'guardianIds' => $canManageGuardians
                 ? $child->guardians()->pluck('users.id')

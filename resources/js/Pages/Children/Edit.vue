@@ -1,6 +1,7 @@
 <script setup>
 import { update as childrenUpdate, index as childrenIndex, destroy as childrenDestroy } from '@/routes/children';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import Avatar from '@/Components/Avatar.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import TextInput from '@/Components/TextInput.vue';
 import TimeSelect from '@/Components/TimeSelect.vue';
@@ -250,6 +251,11 @@ function destroy() {
                                     v-model="form.guardians"
                                     :disabled="parent.id === currentUserId"
                                     class="rounded border-gray-300 text-hort-teal-dark focus:ring-hort-teal disabled:opacity-60"
+                                />
+                                <Avatar
+                                    :src="parent.avatar"
+                                    :name="parent.name"
+                                    size-class="h-7 w-7 text-xs"
                                 />
                                 <span class="text-sm">
                                     <span class="font-medium text-hort-navy">
