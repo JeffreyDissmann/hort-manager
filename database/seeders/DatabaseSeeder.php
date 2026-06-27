@@ -25,6 +25,7 @@ class DatabaseSeeder extends Seeder
             'name' => 'Frau Müller',
             'email' => 'erzieher@hort.test',
             'role' => UserRole::Staff,
+            'is_admin' => true,
         ]);
 
         $parent = User::factory()->create([

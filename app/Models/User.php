@@ -14,7 +14,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Notifications\Notification;
 
-#[Fillable(['name', 'email', 'password', 'role', 'slack_id', 'avatar'])]
+#[Fillable(['name', 'email', 'password', 'role', 'is_admin', 'slack_id', 'avatar'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -32,6 +32,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'role' => UserRole::class,
+            'is_admin' => 'boolean',
         ];
     }
 
@@ -39,6 +40,12 @@ class User extends Authenticatable
     public function isStaff(): bool
     {
         return $this->role === UserRole::Staff;
+    }
+
+    /** Admin — a staff member who may also manage users (roles + other admins). */
+    public function isAdmin(): bool
+    {
+        return (bool) $this->is_admin;
     }
 
     /**

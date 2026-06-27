@@ -10,6 +10,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SlackCommandController;
 use App\Http\Controllers\SlackEventController;
 use App\Http\Controllers\SlackInteractionController;
+use App\Http\Controllers\UserController;
 use App\Http\Controllers\WeeklyAdjustmentController;
 use App\Http\Controllers\WeeklyOverviewController;
 use App\Http\Middleware\VerifySlackSignature;
@@ -54,6 +55,10 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     Route::resource('children', ChildController::class)->except('show');
+
+    // User management (admin only — the controller guards every action).
+    Route::get('/benutzer', [UserController::class, 'index'])->name('users.index');
+    Route::patch('/benutzer/{user}', [UserController::class, 'update'])->name('users.update');
 
     Route::get('/wochenplan', WeeklyOverviewController::class)->name('weekly-plan');
     Route::patch('/wochenplan/anpassung', [WeeklyAdjustmentController::class, 'update'])->name('weekly-plan.adjust');

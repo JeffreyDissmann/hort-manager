@@ -14,6 +14,7 @@ import {
 import { board, weeklyPlan, program, logout, dashboard } from '@/routes';
 import { index as childrenIndex } from '@/routes/children';
 import { index as excursionsIndex } from '@/routes/excursions';
+import { index as usersIndex } from '@/routes/users';
 import { index as pollsIndex } from '@/routes/polls';
 import { edit as profileEdit } from '@/routes/profile';
 import { Link, usePage } from '@inertiajs/vue3';
@@ -30,27 +31,27 @@ const user = computed(() => usePage().props.auth?.user);
 const userName = computed(() => user.value?.name ?? '');
 const userAvatar = computed(() => user.value?.avatar ?? null);
 const isStaff = computed(() => user.value?.role === 'staff');
+const isAdmin = computed(() => user.value?.is_admin ?? false);
 const pendingPolls = computed(() => usePage().props.pendingPolls ?? 0);
 
 // Primary navigation — shown as top links on desktop and as a bottom tab bar on mobile.
 const navItems = computed(() => {
-    if (isStaff.value) {
-        // Kinder last — it's the thing that changes least often.
-        return [
-            { label: 'Heute', href: board().url, icon: 'sun' },
-            { label: 'Ausflüge', href: excursionsIndex().url, icon: 'map' },
-            { label: 'Abholplan', href: weeklyPlan().url, icon: 'calendar' },
-            { label: 'Programm', href: program().url, icon: 'food' },
-            { label: 'Kinder', href: childrenIndex().url, icon: 'children' },
-        ];
-    }
+    // Staff: full nav (Kinder last — changes least). Parents: Heute, Ausflüge, Abholplan.
+    const items = isStaff.value
+        ? [
+              { label: 'Heute', href: board().url, icon: 'sun' },
+              { label: 'Ausflüge', href: excursionsIndex().url, icon: 'map' },
+              { label: 'Abholplan', href: weeklyPlan().url, icon: 'calendar' },
+              { label: 'Programm', href: program().url, icon: 'food' },
+              { label: 'Kinder', href: childrenIndex().url, icon: 'children' },
+          ]
+        : [
+              { label: 'Heute', href: board().url, icon: 'sun' },
+              { label: 'Ausflüge', href: pollsIndex().url, icon: 'map', badge: pendingPolls.value },
+              { label: 'Abholplan', href: weeklyPlan().url, icon: 'calendar' },
+          ];
 
-    // Parents: Heute, Ausflüge (poll badge), Abholplan; „Meine Kinder" lives in the user menu.
-    return [
-        { label: 'Heute', href: board().url, icon: 'sun' },
-        { label: 'Ausflüge', href: pollsIndex().url, icon: 'map', badge: pendingPolls.value },
-        { label: 'Abholplan', href: weeklyPlan().url, icon: 'calendar' },
-    ];
+    return items;
 });
 
 // Heroicon components keyed by the nav item's icon name.
@@ -125,6 +126,9 @@ function isActive(href) {
                             :href="childrenIndex().url"
                         >
                             Meine Kinder
+                        </DropdownLink>
+                        <DropdownLink v-if="isAdmin" :href="usersIndex().url">
+                            Benutzer
                         </DropdownLink>
                         <DropdownLink :href="profileEdit().url">
                             Profil
