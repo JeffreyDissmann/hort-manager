@@ -32,6 +32,7 @@
         <env name="SLACK_TEAM_ID" value=""/>
         <env name="SLACK_WORKSPACE" value=""/>
         <env name="SLACK_BOT_USER_OAUTH_TOKEN" value="xoxb-test"/>
+        <env name="SLACK_SIGNING_SECRET" value=""/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>

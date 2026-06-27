@@ -33,6 +33,8 @@ return [
         'client_id' => env('SLACK_CLIENT_ID'),
         'client_secret' => env('SLACK_CLIENT_SECRET'),
         'redirect' => env('SLACK_REDIRECT_URI'),
+        // Verifies interactive button callbacks (Slack signs each request with it).
+        'signing_secret' => env('SLACK_SIGNING_SECRET'),
         // Pre-selects the Hort's workspace so users skip the "which workspace" step.
         // `team` is the team id (T…); `workspace` is the subdomain in <workspace>.slack.com
         // and is what actually skips Slack's workspace picker.

@@ -7,8 +7,10 @@ use App\Http\Controllers\DailyProgramController;
 use App\Http\Controllers\ExcursionController;
 use App\Http\Controllers\ExcursionRsvpController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\SlackInteractionController;
 use App\Http\Controllers\WeeklyAdjustmentController;
 use App\Http\Controllers\WeeklyOverviewController;
+use App\Http\Middleware\VerifySlackSignature;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -29,6 +31,11 @@ Route::get('/dashboard', function () {
 // "Sign in with Slack" SSO (guest-accessible — this is how parents log in).
 Route::get('/auth/slack/redirect', [SlackController::class, 'redirect'])->name('slack.redirect');
 Route::get('/auth/slack/callback', [SlackController::class, 'callback'])->name('slack.callback');
+
+// Slack interactive buttons (RSVP from a DM); authenticated by signature, not a session.
+Route::post('/slack/interactions', [SlackInteractionController::class, 'handle'])
+    ->middleware(VerifySlackSignature::class)
+    ->name('slack.interactions');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
