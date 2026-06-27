@@ -145,10 +145,11 @@ class SlackRsvp
             ? "✅ *{$child->name}* kommt mit."
             : "❌ *{$child->name}* kommt nicht mit.";
 
-        // Answered — changing it only works in the app, so offer a link there.
+        // Answered — changing it only works in the app, so offer a link there
+        // (slack.enter signs the user in via Slack first if needed).
         return [$this->section(
             $status.($by ? " _(von {$by})_" : ''),
-            $this->linkButton('Ändern', route('polls.index')),
+            $this->linkButton('Ändern', route('slack.enter', ['to' => 'polls'])),
         )];
     }
 

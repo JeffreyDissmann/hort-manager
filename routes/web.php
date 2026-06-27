@@ -7,6 +7,7 @@ use App\Http\Controllers\DailyProgramController;
 use App\Http\Controllers\ExcursionController;
 use App\Http\Controllers\ExcursionRsvpController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\SlackCommandController;
 use App\Http\Controllers\SlackInteractionController;
 use App\Http\Controllers\WeeklyAdjustmentController;
 use App\Http\Controllers\WeeklyOverviewController;
@@ -32,10 +33,16 @@ Route::get('/dashboard', function () {
 Route::get('/auth/slack/redirect', [SlackController::class, 'redirect'])->name('slack.redirect');
 Route::get('/auth/slack/callback', [SlackController::class, 'callback'])->name('slack.callback');
 
-// Slack interactive buttons (RSVP from a DM); authenticated by signature, not a session.
+// Deep-link from a Slack message into the app, signing in via Slack if needed.
+Route::get('/slack/enter', [SlackController::class, 'enter'])->name('slack.enter');
+
+// Slack interactive buttons + slash command; authenticated by signature, not a session.
 Route::post('/slack/interactions', [SlackInteractionController::class, 'handle'])
     ->middleware(VerifySlackSignature::class)
     ->name('slack.interactions');
+Route::post('/slack/commands', [SlackCommandController::class, 'handle'])
+    ->middleware(VerifySlackSignature::class)
+    ->name('slack.commands');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

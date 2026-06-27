@@ -22,6 +22,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // Slack posts interaction payloads without a CSRF token (verified by signature instead).
         $middleware->preventRequestForgery(except: [
             'slack/interactions',
+            'slack/commands',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

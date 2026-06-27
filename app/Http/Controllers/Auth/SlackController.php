@@ -6,11 +6,19 @@ use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Socialite\Facades\Socialite;
 
 class SlackController extends Controller
 {
+    /** Deep-link targets the Slack messages may link to (avoids open redirects). */
+    private const TARGETS = [
+        'board' => 'board',
+        'polls' => 'polls.index',
+        'children' => 'children.index',
+    ];
+
     /**
      * "Sign in with Slack" via OpenID Connect. The provider switches to the
      * OIDC endpoints automatically when given these scopes.
@@ -18,6 +26,24 @@ class SlackController extends Controller
      * @var list<string>
      */
     private const SCOPES = ['openid', 'email', 'profile'];
+
+    /**
+     * Entry point from a Slack link: deep-link into the app, signing the user
+     * in via Slack first (which auto-provisions first-timers) when there's no
+     * session yet — so it feels like one tap from Slack into the right page.
+     */
+    public function enter(Request $request): RedirectResponse
+    {
+        $url = route(self::TARGETS[$request->query('to')] ?? 'dashboard');
+
+        if (Auth::check()) {
+            return redirect($url);
+        }
+
+        $request->session()->put('url.intended', $url);
+
+        return $this->redirect();
+    }
 
     /** Send the user to Slack's "Sign in with Slack" consent screen. */
     public function redirect(): RedirectResponse
