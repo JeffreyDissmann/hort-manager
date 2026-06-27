@@ -29,6 +29,16 @@ return [
     ],
 
     'slack' => [
+        // "Sign in with Slack" SSO (Socialite).
+        'client_id' => env('SLACK_CLIENT_ID'),
+        'client_secret' => env('SLACK_CLIENT_SECRET'),
+        'redirect' => env('SLACK_REDIRECT_URI'),
+        // Pre-selects the Hort's workspace so users skip the "which workspace" step.
+        // `team` is the team id (T…); `workspace` is the subdomain in <workspace>.slack.com
+        // and is what actually skips Slack's workspace picker.
+        'team' => env('SLACK_TEAM_ID'),
+        'workspace' => env('SLACK_WORKSPACE'),
+
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),
             'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),

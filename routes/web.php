@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Auth\SlackController;
 use App\Http\Controllers\ChildController;
 use App\Http\Controllers\DailyBoardController;
 use App\Http\Controllers\DailyProgramController;
@@ -24,6 +25,10 @@ Route::get('/', function () {
 Route::get('/dashboard', function () {
     return Inertia::render('Dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
+
+// "Sign in with Slack" SSO (guest-accessible — this is how parents log in).
+Route::get('/auth/slack/redirect', [SlackController::class, 'redirect'])->name('slack.redirect');
+Route::get('/auth/slack/callback', [SlackController::class, 'callback'])->name('slack.callback');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
