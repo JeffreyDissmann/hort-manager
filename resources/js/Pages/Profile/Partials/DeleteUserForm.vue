@@ -42,27 +42,27 @@ const closeModal = () => {
 <template>
     <section class="space-y-6">
         <header>
-            <h2 class="text-lg font-medium text-gray-900">
-                Konto lÃ¶schen
+            <h2 class="text-lg font-medium text-hort-navy">
+                Konto löschen
             </h2>
 
             <p class="mt-1 text-sm text-gray-600">
-                Wenn dein Konto gelÃ¶scht wird, werden alle zugehÃ¶rigen Daten dauerhaft entfernt. Bitte sichere vorher alle Daten, die du behalten mÃ¶chtest.
+                Wenn dein Konto gelöscht wird, werden alle zugehörigen Daten dauerhaft entfernt. Bitte sichere vorher alle Daten, die du behalten möchtest.
             </p>
         </header>
 
-        <DangerButton @click="confirmUserDeletion">Konto lÃ¶schen</DangerButton>
+        <DangerButton @click="confirmUserDeletion">Konto löschen</DangerButton>
 
         <Modal :show="confirmingUserDeletion" @close="closeModal">
             <div class="p-6">
                 <h2
-                    class="text-lg font-medium text-gray-900"
+                    class="text-lg font-medium text-hort-navy"
                 >
-                    MÃ¶chtest du dein Konto wirklich lÃ¶schen?
+                    Möchtest du dein Konto wirklich löschen?
                 </h2>
 
                 <p class="mt-1 text-sm text-gray-600">
-                    Wenn dein Konto gelÃ¶scht wird, werden alle zugehÃ¶rigen Daten dauerhaft entfernt. Bitte gib dein Passwort ein, um die LÃ¶schung zu bestÃ¤tigen.
+                    Wenn dein Konto gelöscht wird, werden alle zugehörigen Daten dauerhaft entfernt. Bitte gib dein Passwort ein, um die Löschung zu bestätigen.
                 </p>
 
                 <div class="mt-6">
@@ -96,7 +96,7 @@ const closeModal = () => {
                         :disabled="form.processing"
                         @click="deleteUser"
                     >
-                        Konto lÃ¶schen
+                        Konto löschen
                     </DangerButton>
                 </div>
             </div>

@@ -37,12 +37,12 @@ const updatePassword = () => {
 <template>
     <section>
         <header>
-            <h2 class="text-lg font-medium text-gray-900">
-                Passwort Ã¤ndern
+            <h2 class="text-lg font-medium text-hort-navy">
+                Passwort ändern
             </h2>
 
             <p class="mt-1 text-sm text-gray-600">
-                Verwende ein langes, zufÃ¤lliges Passwort, um dein Konto zu schÃ¼tzen.
+                Verwende ein langes, zufälliges Passwort, um dein Konto zu schützen.
             </p>
         </header>
 
@@ -83,7 +83,7 @@ const updatePassword = () => {
             <div>
                 <InputLabel
                     for="password_confirmation"
-                    value="Passwort bestÃ¤tigen"
+                    value="Passwort bestätigen"
                 />
 
                 <TextInput

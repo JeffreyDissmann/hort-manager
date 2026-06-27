@@ -20,7 +20,7 @@ const submit = () => {
 
 <template>
     <GuestLayout>
-        <Head title="Passwort bestÃ¤tigen" />
+        <Head title="Passwort bestätigen" />
 
         <div class="mb-4 text-sm text-gray-600">
             Dies ist ein geschützter Bereich. Bitte bestätige dein Passwort, um
@@ -48,7 +48,7 @@ const submit = () => {
                     :class="{ 'opacity-25': form.processing }"
                     :disabled="form.processing"
                 >
-                    BestÃ¤tigen                </PrimaryButton>
+                    Bestätigen                </PrimaryButton>
             </div>
         </form>
     </GuestLayout>

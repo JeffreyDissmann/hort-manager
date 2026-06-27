@@ -27,7 +27,7 @@ const form = useForm({
 <template>
     <section>
         <header>
-            <h2 class="text-lg font-medium text-gray-900">
+            <h2 class="text-lg font-medium text-hort-navy">
                 Profil-Informationen
             </h2>
 
@@ -73,14 +73,14 @@ const form = useForm({
 
             <div v-if="mustVerifyEmail && user.email_verified_at === null">
                 <p class="mt-2 text-sm text-gray-800">
-                    Deine E-Mail-Adresse ist nicht bestÃ¤tigt.
+                    Deine E-Mail-Adresse ist nicht bestätigt.
                     <Link
                         :href="verificationSend().url"
                         method="post"
                         as="button"
                         class="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-hort-teal focus:ring-offset-2"
                     >
-                        Klicke hier, um die BestÃ¤tigungs-E-Mail erneut zu senden.
+                        Klicke hier, um die Bestätigungs-E-Mail erneut zu senden.
                     </Link>
                 </p>
 
@@ -88,7 +88,7 @@ const form = useForm({
                     v-show="status === 'verification-link-sent'"
                     class="mt-2 text-sm font-medium text-green-600"
                 >
-                    Ein neuer BestÃ¤tigungslink wurde an deine E-Mail-Adresse gesendet.
+                    Ein neuer Bestätigungslink wurde an deine E-Mail-Adresse gesendet.
                 </div>
             </div>
 

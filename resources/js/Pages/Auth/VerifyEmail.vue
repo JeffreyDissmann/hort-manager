@@ -25,7 +25,7 @@ const verificationLinkSent = computed(
 
 <template>
     <GuestLayout>
-        <Head title="E-Mail-BestÃ¤tigung" />
+        <Head title="E-Mail-Bestätigung" />
 
         <div class="mb-4 text-sm text-gray-600">
             Danke für deine Registrierung! Bitte bestätige deine E-Mail-Adresse
@@ -46,7 +46,7 @@ const verificationLinkSent = computed(
                     :class="{ 'opacity-25': form.processing }"
                     :disabled="form.processing"
                 >
-                    BestÃ¤tigungs-E-Mail erneut senden
+                    Bestätigungs-E-Mail erneut senden
                 </PrimaryButton>
 
                 <Link

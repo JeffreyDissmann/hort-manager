@@ -61,7 +61,7 @@ const submit = () => {
                     :class="{ 'opacity-25': form.processing }"
                     :disabled="form.processing"
                 >
-                    Link zum ZurÃ¼cksetzen senden
+                    Link zum Zurücksetzen senden
                 </PrimaryButton>
             </div>
         </form>

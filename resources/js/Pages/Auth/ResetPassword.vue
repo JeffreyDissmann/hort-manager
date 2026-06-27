@@ -34,7 +34,7 @@ const submit = () => {
 
 <template>
     <GuestLayout>
-        <Head title="Passwort zurÃ¼cksetzen" />
+        <Head title="Passwort zurücksetzen" />
 
         <form @submit.prevent="submit">
             <div>
@@ -71,7 +71,7 @@ const submit = () => {
             <div class="mt-4">
                 <InputLabel
                     for="password_confirmation"
-                    value="Passwort bestÃ¤tigen"
+                    value="Passwort bestätigen"
                 />
 
                 <TextInput
@@ -94,7 +94,7 @@ const submit = () => {
                     :class="{ 'opacity-25': form.processing }"
                     :disabled="form.processing"
                 >
-                    Passwort zurÃ¼cksetzen                </PrimaryButton>
+                    Passwort zurücksetzen                </PrimaryButton>
             </div>
         </form>
     </GuestLayout>
