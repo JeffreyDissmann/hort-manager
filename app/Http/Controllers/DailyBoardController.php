@@ -180,6 +180,7 @@ class DailyBoardController extends Controller
 
         $status = DepartureStatus::from($validated['status']);
 
+        // Marking off (left_at) triggers the guardian Slack DM via the observer.
         $departure->update($status->hasLeft()
             ? ['status' => $status, 'left_at' => now(), 'marked_by' => $request->user()->id]
             : ['status' => $status, 'left_at' => null, 'marked_by' => null]);

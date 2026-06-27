@@ -9,8 +9,10 @@ use App\Models\Child;
 use App\Models\DailyDeparture;
 use App\Models\User;
 use App\Models\WeeklySchedule;
+use App\Notifications\ChildDeparted;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Notification;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -201,5 +203,55 @@ class DailyBoardTest extends TestCase
                 ->where('rows.0.planned_time', '14:30')
                 ->where('rows.0.is_overridden', true)
             );
+    }
+
+    public function test_marking_a_child_off_dms_their_slack_guardians(): void
+    {
+        Notification::fake();
+        $this->travelTo(Carbon::parse('2026-06-22'));
+
+        $child = $this->scheduledChild(weekday: 1);
+        $withSlack = User::factory()->create(['role' => UserRole::Parent, 'slack_id' => 'U1']);
+        $noSlack = User::factory()->create(['role' => UserRole::Parent, 'slack_id' => null]);
+        $child->guardians()->attach([$withSlack->id, $noSlack->id]);
+
+        $departure = DailyDeparture::create([
+            'child_id' => $child->id,
+            'date' => '2026-06-22',
+            'planned_time' => '16:00',
+            'planned_method' => DepartureMethod::PickedUp,
+            'status' => DepartureStatus::Present,
+        ]);
+
+        $this->actingAs($this->staff())
+            ->patch(route('board.mark', $departure), ['status' => DepartureStatus::PickedUp->value])
+            ->assertRedirect();
+
+        Notification::assertSentTo($withSlack, ChildDeparted::class);
+        Notification::assertNotSentTo($noSlack, ChildDeparted::class);
+    }
+
+    public function test_marking_a_child_present_again_sends_nothing(): void
+    {
+        Notification::fake();
+        $this->travelTo(Carbon::parse('2026-06-22'));
+
+        $child = $this->scheduledChild(weekday: 1);
+        $guardian = User::factory()->create(['role' => UserRole::Parent, 'slack_id' => 'U1']);
+        $child->guardians()->attach($guardian);
+
+        $departure = DailyDeparture::create([
+            'child_id' => $child->id,
+            'date' => '2026-06-22',
+            'planned_time' => '16:00',
+            'planned_method' => DepartureMethod::PickedUp,
+            'status' => DepartureStatus::PickedUp,
+            'left_at' => now(),
+        ]);
+
+        $this->actingAs($this->staff())
+            ->patch(route('board.mark', $departure), ['status' => DepartureStatus::Present->value]);
+
+        Notification::assertNothingSent();
     }
 }
