@@ -99,7 +99,7 @@ function onTouchEnd(e) {
 <template>
     <Head title="Programm" />
 
-    <AuthenticatedLayout>
+    <AuthenticatedLayout :wide="true">
         <template #header>
             <h2 class="text-xl font-semibold text-hort-navy">Tagesprogramm</h2>
         </template>
@@ -118,34 +118,45 @@ function onTouchEnd(e) {
                 Abholplan.
             </p>
 
-            <!-- Week navigation -->
-            <div @touchstart="onTouchStart" @touchend="onTouchEnd">
+            <!-- Week navigation (kept compact so it doesn't spread on wide screens) -->
+            <div
+                class="mx-auto max-w-md"
+                @touchstart="onTouchStart"
+                @touchend="onTouchEnd"
+            >
                 <WeekNav :week="week" @navigate="goWeek" />
             </div>
 
+            <!--
+                One row per weekday. Stacked on mobile; on wide screens the
+                fields line up horizontally (weekday · lunch · activity · homework).
+            -->
             <div
                 v-for="day in days"
                 :key="day.date"
                 class="rounded-2xl bg-white p-4 shadow-sm"
             >
-                <p class="font-semibold text-hort-navy">
-                    {{ day.label }}
-                    <span class="font-normal text-hort-navy/40">
-                        · {{ day.date_label }}
-                    </span>
-                </p>
-                <p
-                    v-if="day.birthdays && day.birthdays.length"
-                    class="mt-1 rounded-lg bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700"
-                >
-                    🎂
-                    <span v-for="(b, j) in day.birthdays" :key="b.name">
-                        <template v-if="j > 0">, </template>{{ b.name }} (wird
-                        {{ b.turns }})
-                    </span>
-                </p>
-                <div class="mt-2 space-y-3">
+                <div class="lg:grid lg:grid-cols-[7rem,minmax(0,18rem),minmax(0,18rem),auto] lg:items-start lg:gap-5">
                     <div>
+                        <p class="font-semibold text-hort-navy">
+                            {{ day.label }}
+                            <span class="font-normal text-hort-navy/40">
+                                · {{ day.date_label }}
+                            </span>
+                        </p>
+                        <p
+                            v-if="day.birthdays && day.birthdays.length"
+                            class="mt-1 rounded-lg bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700"
+                        >
+                            🎂
+                            <span v-for="(b, j) in day.birthdays" :key="b.name">
+                                <template v-if="j > 0">, </template>{{ b.name }}
+                                (wird {{ b.turns }})
+                            </span>
+                        </p>
+                    </div>
+
+                    <div class="mt-3 lg:mt-0">
                         <InputLabel :for="`lunch-${day.date}`" value="Mittagessen" />
                         <TextInput
                             :id="`lunch-${day.date}`"
@@ -156,7 +167,8 @@ function onTouchEnd(e) {
                             placeholder="z. B. Nudeln mit Tomatensoße"
                         />
                     </div>
-                    <div>
+
+                    <div class="mt-3 lg:mt-0">
                         <InputLabel :for="`activity-${day.date}`" value="Aktivität" />
                         <TextInput
                             :id="`activity-${day.date}`"
@@ -167,7 +179,8 @@ function onTouchEnd(e) {
                             placeholder="z. B. Basteln, Ausflug in den Park"
                         />
                     </div>
-                    <div>
+
+                    <div class="mt-3 lg:mt-0">
                         <InputLabel value="Hausaufgaben" />
                         <TimeRange
                             v-model:start="day.homework_start"
@@ -193,7 +206,7 @@ function onTouchEnd(e) {
                     Gilt an jedem Tag, sofern oben für den Tag nichts anderes
                     eingetragen ist.
                 </p>
-                <div class="space-y-2">
+                <div class="space-y-2 lg:max-w-2xl">
                     <div
                         v-for="d in defaults"
                         :key="d.weekday"

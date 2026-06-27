@@ -70,14 +70,14 @@ function submit() {
 <template>
     <Head :title="`${child.name} – Stammplan`" />
 
-    <AuthenticatedLayout>
+    <AuthenticatedLayout :wide="true">
         <template #header>
             <h2 class="text-xl font-semibold leading-tight text-hort-navy">
                 {{ child.name }} – Stammplan
             </h2>
         </template>
 
-        <div class="mx-auto max-w-3xl">
+        <div class="mx-auto max-w-3xl lg:max-w-none">
             <form
                 @submit.prevent="submit"
                 class="space-y-8 rounded-2xl bg-white p-6 shadow-sm"
@@ -139,52 +139,54 @@ function submit() {
                             </p>
                         </div>
 
-                        <div class="divide-y divide-gray-100 rounded-md border border-gray-200">
+                        <!--
+                            One card per weekday: stacked on mobile, a horizontal
+                            Mo–Fr row (table-like) once there's room (lg).
+                        -->
+                        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
                             <div
                                 v-for="day in form.schedule"
                                 :key="day.weekday"
-                                class="space-y-2 p-4"
+                                class="space-y-2 rounded-lg border border-gray-200 p-3"
                             >
-                                <div class="grid grid-cols-1 items-center gap-3 sm:grid-cols-[8rem,1fr,1fr]">
-                                    <span class="font-medium text-gray-700">
-                                        {{ weekdayNames[day.weekday] }}
-                                    </span>
+                                <div class="font-medium text-hort-navy lg:text-center">
+                                    {{ weekdayNames[day.weekday] }}
+                                </div>
 
-                                    <div>
-                                        <InputLabel
-                                            :for="`time-${day.weekday}`"
-                                            value="Uhrzeit"
-                                            class="sr-only"
-                                        />
-                                        <TimeSelect
-                                            :id="`time-${day.weekday}`"
-                                            v-model="day.planned_time"
-                                            class="block w-full"
-                                        />
-                                    </div>
+                                <div>
+                                    <InputLabel
+                                        :for="`time-${day.weekday}`"
+                                        value="Uhrzeit"
+                                        class="sr-only"
+                                    />
+                                    <TimeSelect
+                                        :id="`time-${day.weekday}`"
+                                        v-model="day.planned_time"
+                                        class="block w-full"
+                                    />
+                                </div>
 
-                                    <div>
-                                        <InputLabel
-                                            :for="`method-${day.weekday}`"
-                                            value="Art"
-                                            class="sr-only"
-                                        />
-                                        <select
-                                            :id="`method-${day.weekday}`"
-                                            v-model="day.method"
-                                            :disabled="!day.planned_time"
-                                            class="block w-full rounded-md border-gray-300 shadow-sm focus:border-hort-teal focus:ring-hort-teal disabled:bg-gray-100 disabled:text-gray-400"
+                                <div>
+                                    <InputLabel
+                                        :for="`method-${day.weekday}`"
+                                        value="Art"
+                                        class="sr-only"
+                                    />
+                                    <select
+                                        :id="`method-${day.weekday}`"
+                                        v-model="day.method"
+                                        :disabled="!day.planned_time"
+                                        class="block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-hort-teal focus:ring-hort-teal disabled:bg-gray-100 disabled:text-gray-400"
+                                    >
+                                        <option value="">— bitte wählen —</option>
+                                        <option
+                                            v-for="option in methodOptions"
+                                            :key="option.value"
+                                            :value="option.value"
                                         >
-                                            <option value="">— bitte wählen —</option>
-                                            <option
-                                                v-for="option in methodOptions"
-                                                :key="option.value"
-                                                :value="option.value"
-                                            >
-                                                {{ option.label }}
-                                            </option>
-                                        </select>
-                                    </div>
+                                            {{ option.label }}
+                                        </option>
+                                    </select>
                                 </div>
 
                                 <input
@@ -192,8 +194,8 @@ function submit() {
                                     v-model="day.comment"
                                     type="text"
                                     maxlength="255"
-                                    placeholder="Kommentar (optional), z. B. wegen Fußball"
-                                    class="block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-hort-teal focus:ring-hort-teal sm:ml-[8rem] sm:w-[calc(100%-8rem)]"
+                                    placeholder="Kommentar, z. B. wegen Fußball"
+                                    class="block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-hort-teal focus:ring-hort-teal"
                                 />
                             </div>
                         </div>

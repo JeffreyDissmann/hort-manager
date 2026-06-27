@@ -17,6 +17,13 @@ import { index as pollsIndex } from '@/routes/polls';
 import { edit as profileEdit } from '@/routes/profile';
 import { Link, usePage } from '@inertiajs/vue3';
 
+// Pages with wide weekly editors (Stammplan, Programm) opt into a roomier
+// content column on large screens; everything else stays at max-w-5xl.
+const props = defineProps({
+    wide: { type: Boolean, default: false },
+});
+const contentMax = computed(() => (props.wide ? 'max-w-7xl' : 'max-w-5xl'));
+
 const appName = computed(() => usePage().props.appName ?? 'Hort-Manager');
 const user = computed(() => usePage().props.auth?.user);
 const userName = computed(() => user.value?.name ?? '');
@@ -67,7 +74,8 @@ function isActive(href) {
             class="sticky top-0 z-20 border-b border-hort-navy/10 bg-white/90 backdrop-blur"
         >
             <div
-                class="mx-auto flex h-16 max-w-5xl items-center justify-between px-4 sm:px-6"
+                :class="contentMax"
+                class="mx-auto flex h-16 items-center justify-between px-4 sm:px-6"
             >
                 <Link
                     :href="dashboard().url"
@@ -142,7 +150,8 @@ function isActive(href) {
             class="block bg-amber-400 text-hort-navy"
         >
             <div
-                class="mx-auto flex max-w-5xl items-center gap-2 px-4 py-2.5 text-sm font-semibold sm:px-6"
+                :class="contentMax"
+                class="mx-auto flex items-center gap-2 px-4 py-2.5 text-sm font-semibold sm:px-6"
             >
                 <span class="text-lg">📣</span>
                 <span>
@@ -157,13 +166,16 @@ function isActive(href) {
 
         <!-- Page heading -->
         <header v-if="$slots.header" class="bg-white">
-            <div class="mx-auto max-w-5xl px-4 py-6 sm:px-6">
+            <div :class="contentMax" class="mx-auto px-4 py-6 sm:px-6">
                 <slot name="header" />
             </div>
         </header>
 
         <!-- Page content (extra bottom padding so the mobile tab bar never covers it) -->
-        <main class="mx-auto max-w-5xl px-4 pb-28 pt-6 sm:px-6 sm:pb-12">
+        <main
+            :class="contentMax"
+            class="mx-auto px-4 pb-28 pt-6 sm:px-6 sm:pb-12"
+        >
             <slot />
         </main>
 
