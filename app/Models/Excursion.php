@@ -2,15 +2,29 @@
 
 namespace App\Models;
 
+use App\Observers\ExcursionObserver;
 use Database\Factories\ExcursionFactory;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
+#[ObservedBy([ExcursionObserver::class])]
 class Excursion extends Model
 {
     /** @use HasFactory<ExcursionFactory> */
     use HasFactory;
+
+    /**
+     * Excursions whose RSVP deadline falls today.
+     *
+     * @param  Builder<Excursion>  $query
+     */
+    public function scopeDueToday(Builder $query): void
+    {
+        $query->whereDate('rsvp_deadline', today());
+    }
 
     protected $fillable = [
         'name',

@@ -8,8 +8,11 @@ use App\Models\Child;
 use App\Models\Excursion;
 use App\Models\User;
 use App\Models\WeeklySchedule;
+use App\Notifications\ExcursionAnnounced;
+use App\Notifications\ExcursionRsvpReminder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Notification;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -66,6 +69,55 @@ class ExcursionManagementTest extends TestCase
         $this->assertSame(3, $excursion->children()->count());
         $this->assertSame(0, $excursion->participants()->count());
         $this->assertDatabaseCount('child_excursion', 3);
+    }
+
+    public function test_creating_an_excursion_dms_slack_connected_guardians(): void
+    {
+        Notification::fake();
+
+        $child = Child::factory()->create();
+        $withSlack = User::factory()->create(['role' => UserRole::Parent, 'slack_id' => 'U1']);
+        $noSlack = User::factory()->create(['role' => UserRole::Parent, 'slack_id' => null]);
+        $child->guardians()->attach([$withSlack->id, $noSlack->id]);
+        // A Slack user without any child must not be pestered.
+        $childless = User::factory()->create(['role' => UserRole::Parent, 'slack_id' => 'U2']);
+
+        $this->actingAs($this->staff())
+            ->post(route('excursions.store'), [
+                'name' => 'Zoo-Ausflug',
+                'date' => '2026-06-29',
+                'rsvp_deadline' => '2026-06-27',
+            ]);
+
+        Notification::assertSentTo($withSlack, ExcursionAnnounced::class);
+        Notification::assertNotSentTo($noSlack, ExcursionAnnounced::class);
+        Notification::assertNotSentTo($childless, ExcursionAnnounced::class);
+    }
+
+    public function test_rsvp_reminder_dms_only_pending_slack_guardians(): void
+    {
+        Notification::fake();
+        Carbon::setTestNow(Carbon::parse('2026-06-27'));
+
+        $excursion = Excursion::factory()->create([
+            'date' => '2026-06-29',
+            'rsvp_deadline' => '2026-06-27', // due today
+        ]);
+
+        $pendingChild = Child::factory()->create();
+        $pendingGuardian = User::factory()->create(['role' => UserRole::Parent, 'slack_id' => 'U1']);
+        $pendingChild->guardians()->attach($pendingGuardian);
+        $excursion->children()->attach($pendingChild->id); // response stays null
+
+        $answeredChild = Child::factory()->create();
+        $answeredGuardian = User::factory()->create(['role' => UserRole::Parent, 'slack_id' => 'U2']);
+        $answeredChild->guardians()->attach($answeredGuardian);
+        $excursion->children()->attach($answeredChild->id, ['response' => true]);
+
+        $this->artisan('excursions:remind-rsvps')->assertSuccessful();
+
+        Notification::assertSentTo($pendingGuardian, ExcursionRsvpReminder::class);
+        Notification::assertNotSentTo($answeredGuardian, ExcursionRsvpReminder::class);
     }
 
     public function test_index_separates_upcoming_and_past_excursions(): void

@@ -69,4 +69,14 @@ class User extends Authenticatable
     {
         $query->whereNotNull('slack_id');
     }
+
+    /**
+     * Limit to users who are a guardian of at least one child.
+     *
+     * @param  Builder<User>  $query
+     */
+    public function scopeGuardians(Builder $query): void
+    {
+        $query->whereHas('children');
+    }
 }

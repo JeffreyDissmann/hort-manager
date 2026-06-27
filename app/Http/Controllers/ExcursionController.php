@@ -71,6 +71,7 @@ class ExcursionController extends Controller
         $excursion = Excursion::create($this->validateExcursion($request));
 
         // Invite every child — each starts as an open poll entry for the parents.
+        // (Creating the excursion fires the ExcursionObserver, which DMs guardians.)
         $excursion->children()->attach(Child::pluck('id')->all());
 
         return redirect()
