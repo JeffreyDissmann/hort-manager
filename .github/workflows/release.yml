@@ -62,7 +62,8 @@ jobs:
         if: github.event_name == 'push'
         run: |
           mkdir -p /tmp/digests
-          touch "/tmp/digests/${{ steps.build.outputs.digest }}"
+          digest="${{ steps.build.outputs.digest }}"
+          touch "/tmp/digests/${digest#sha256:}"   # no ':' — illegal in artifact filenames
 
       - name: Upload digest
         if: github.event_name == 'push'
@@ -105,7 +106,7 @@ jobs:
           docker buildx imagetools create \
             -t ${{ steps.img.outputs.name }}:${{ github.ref_name }} \
             -t ${{ steps.img.outputs.name }}:latest \
-            $(printf '${{ steps.img.outputs.name }}@%s ' *)
+            $(printf '${{ steps.img.outputs.name }}@sha256:%s ' *)
 
       - name: Inspect
         run: docker buildx imagetools inspect ${{ steps.img.outputs.name }}:${{ github.ref_name }}
