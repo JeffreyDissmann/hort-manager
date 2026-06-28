@@ -54,12 +54,24 @@ All callback URLs below must be **public HTTPS** on your real domain. Locally we
 - `SLACK_TEAM_ID` — the workspace/team id (`T…`); the SSO callback rejects logins from any other workspace.
 - `SLACK_WORKSPACE` — the workspace subdomain (e.g. `hort-manager`), so the sign-in screen skips the "which workspace" picker.
 
-## 9. Scheduler (RSVP reminders)
-The daily reminder (`excursions:remind-rsvps`, 08:00) needs Laravel's scheduler running. Add one cron on the server:
+## 9. Scheduler + queue worker
+All Slack DMs (departures, RSVP announce/sync, reminders, App Home) are **queued**,
+and `QUEUE_CONNECTION=database` in production — so a worker must be running, or
+nothing gets sent:
+
+```
+php artisan queue:work        # keep alive via supervisor / Horizon
+```
+
+The daily reminder (`excursions:remind-rsvps`, 08:00) needs the scheduler. Add one cron:
 
 ```
 * * * * * cd /path/to/app && php artisan schedule:run >> /dev/null 2>&1
 ```
+
+> Excursion **cancellation** DMs and the **Aus Slack importieren** action run
+> synchronously (the former must read the tracked messages before they cascade
+> away on delete; the latter returns an immediate count) — no worker needed for those.
 
 ## Environment variables
 

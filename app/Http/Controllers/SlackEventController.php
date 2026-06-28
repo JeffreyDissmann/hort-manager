@@ -4,14 +4,12 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\Services\SlackHome;
+use App\Jobs\PublishSlackHome;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 
 class SlackEventController extends Controller
 {
-    public function __construct(private SlackHome $home) {}
-
     /**
      * Slack Events API endpoint (signature-verified). Answers the one-time URL
      * verification challenge and (re)publishes the App Home tab when opened.
@@ -23,7 +21,7 @@ class SlackEventController extends Controller
         }
 
         if ($request->input('event.type') === 'app_home_opened') {
-            $this->home->publish($request->input('event.user'));
+            PublishSlackHome::dispatch($request->input('event.user'));
         }
 
         return response()->noContent();

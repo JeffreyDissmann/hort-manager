@@ -4,18 +4,16 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Jobs\SyncExcursionRsvp;
 use App\Models\Child;
 use App\Models\Excursion;
 use App\Models\User;
-use App\Services\SlackRsvp;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Http;
 
 class SlackInteractionController extends Controller
 {
-    public function __construct(private SlackRsvp $slack) {}
-
     /**
      * Handle a Slack interactive button click. Buttons carry a value of
      * "rsvp|{excursionId}|{childId}|{1|0}". The request is already signature-verified.
@@ -51,8 +49,8 @@ class SlackInteractionController extends Controller
             ],
         ]);
 
-        // Re-render every guardian's DM: this child's row now shows the result.
-        $this->slack->syncForChild($excursion, $child);
+        // Re-render every guardian's DM (queued) so Slack gets a fast ack.
+        SyncExcursionRsvp::dispatch($excursion, $child);
 
         return response()->noContent();
     }
