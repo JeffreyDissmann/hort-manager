@@ -19,27 +19,31 @@ class ExcursionController extends Controller
         $this->authorize('viewAny', Excursion::class);
 
         $excursions = Excursion::query()
-            ->withCount([
-                'children as joining_count' => fn ($q) => $q->wherePivot('response', true),
-                'children as declined_count' => fn ($q) => $q->wherePivot('response', false),
-                'children as pending_count' => fn ($q) => $q->wherePivotNull('response'),
-            ])
-            ->with('participants:id,name')
+            ->with('children:id,name')
             ->orderBy('date')
             ->get()
-            ->map(fn (Excursion $e) => [
-                'id' => $e->id,
-                'name' => $e->name,
-                'date' => $e->date->toDateString(),
-                'depart_at' => $this->time($e->depart_at),
-                'return_at' => $this->time($e->return_at),
-                'rsvp_deadline' => $e->rsvp_deadline?->toDateString(),
-                'poll_open' => $e->pollIsOpen(),
-                'joining_count' => $e->joining_count,
-                'declined_count' => $e->declined_count,
-                'pending_count' => $e->pending_count,
-                'participants' => $e->participants->pluck('name'),
-            ]);
+            ->map(function (Excursion $e) {
+                // Pivot constraints inside withCount subqueries are unreliable, so
+                // derive the counts from the loaded answers directly.
+                $children = $e->children;
+                $joining = $children->filter(fn ($c) => $c->pivot->response !== null && (bool) $c->pivot->response);
+                $declined = $children->filter(fn ($c) => $c->pivot->response !== null && ! (bool) $c->pivot->response);
+                $pending = $children->filter(fn ($c) => $c->pivot->response === null);
+
+                return [
+                    'id' => $e->id,
+                    'name' => $e->name,
+                    'date' => $e->date->toDateString(),
+                    'depart_at' => $this->time($e->depart_at),
+                    'return_at' => $this->time($e->return_at),
+                    'rsvp_deadline' => $e->rsvp_deadline?->toDateString(),
+                    'poll_open' => $e->pollIsOpen(),
+                    'joining_count' => $joining->count(),
+                    'declined_count' => $declined->count(),
+                    'pending_count' => $pending->count(),
+                    'participants' => $joining->pluck('name')->values(),
+                ];
+            });
 
         $today = now()->toDateString();
 
