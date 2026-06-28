@@ -30,10 +30,13 @@ class AppServiceProvider extends ServiceProvider
     {
         Vite::prefetch(concurrency: 3);
 
-        // Generate links from APP_URL, not the request host — so URLs built while
-        // handling Slack requests (through the share tunnel) point at the app,
-        // not the proxy host (e.g. host.docker.internal).
-        URL::forceRootUrl(config('app.url'));
+        // At runtime, generate server-side links from APP_URL (so Slack messages and
+        // proxied requests point at the app, not the proxy host). NOT in console:
+        // Wayfinder reads this forced root during `wayfinder:generate` and would bake
+        // the absolute domain into the JS bundle — we want relative, domain-agnostic URLs.
+        if (! $this->app->runningInConsole()) {
+            URL::forceRootUrl(config('app.url'));
+        }
 
         // Register the "Sign in with Slack" Socialite driver.
         Event::listen(function (SocialiteWasCalled $event) {
