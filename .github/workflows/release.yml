@@ -53,6 +53,7 @@ jobs:
           build-args: |
             APP_VERSION=${{ github.ref_name }}
             APP_COMMIT=${{ github.sha }}
+            APP_URL=${{ vars.APP_URL }}
           cache-from: type=gha,scope=${{ matrix.arch }}
           cache-to: type=gha,mode=max,scope=${{ matrix.arch }}
           # Tag push → push by digest. Manual dispatch → build only (validate).

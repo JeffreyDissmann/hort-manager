@@ -23,6 +23,11 @@ RUN npm ci
 # Now the source, then finalize the autoloader and build the front-end.
 COPY . .
 RUN composer dump-autoload --optimize --no-dev --classmap-authoritative
+
+# Wayfinder bakes absolute route URLs from APP_URL at generation time (like Ziggy),
+# so the build must know the production domain or every in-app link points at localhost.
+ARG APP_URL=http://localhost
+ENV APP_URL=${APP_URL}
 RUN npm run build   # runs `php artisan wayfinder:generate` (php + vendor available) then `vite build`
 
 # ─────────────────────────────────────────────────────────────────────────────
