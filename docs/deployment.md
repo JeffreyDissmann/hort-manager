@@ -134,3 +134,15 @@ docker compose -f docker-compose.prod.yml exec app php artisan tinker
 | `queue` | `queue:work` | sends the Slack DMs/RSVP/Home off-request |
 | `scheduler` | `schedule:work` | daily RSVP reminders + nightly data prune |
 | `cloudflared` | tunnel | terminates TLS, forwards to `app:8080` |
+
+## Releasing a new image
+
+Pushing a CalVer tag (`git tag YYYY.MM.DD && git push origin YYYY.MM.DD`) runs the
+release pipeline → multi-arch image on GHCR (`:tag` + `:latest`).
+
+> **The image is built for one domain.** Wayfinder bakes absolute in-app link URLs
+> from `APP_URL` at build time (like Ziggy), so the build reads the **`APP_URL`
+> repository variable** (`gh variable set APP_URL --body https://your-domain`). If
+> the domain ever changes, update that variable and cut a new tag — otherwise every
+> in-app link points at the old host.
+
