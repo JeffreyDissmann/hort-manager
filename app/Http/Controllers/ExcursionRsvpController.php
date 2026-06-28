@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Jobs\SyncExcursionRsvp;
 use App\Models\Child;
 use App\Models\Excursion;
-use App\Services\SlackRsvp;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -14,8 +14,6 @@ use Inertia\Response;
 
 class ExcursionRsvpController extends Controller
 {
-    public function __construct(private SlackRsvp $slack) {}
-
     /** The parent's poll page: open excursions with their children to answer for. */
     public function index(Request $request): Response
     {
@@ -63,7 +61,8 @@ class ExcursionRsvpController extends Controller
         $child = Child::findOrFail($validated['child_id']);
         $user = $request->user();
 
-        abort_unless($user->isStaff() || $child->isGuardedBy($user), 403);
+        // Answering is staff-or-guardian, same as editing the child.
+        $this->authorize('update', $child);
 
         // Parents can only answer while the poll is open; staff may fix it up anytime.
         if (! $user->isStaff()) {
@@ -78,8 +77,8 @@ class ExcursionRsvpController extends Controller
             ],
         ]);
 
-        // Keep the Slack DMs in sync (buttons → result) for both guardians.
-        $this->slack->syncForChild($excursion, $child);
+        // Keep the Slack DMs in sync (buttons → result) for both guardians, queued.
+        SyncExcursionRsvp::dispatch($excursion, $child);
 
         return back()->with('status', "Antwort für {$child->name} gespeichert.");
     }

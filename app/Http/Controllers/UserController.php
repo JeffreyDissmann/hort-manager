@@ -18,7 +18,7 @@ class UserController extends Controller
     /** Admin-only: list every user with their role + admin status. */
     public function index(Request $request): Response
     {
-        $this->ensureAdmin($request);
+        $this->authorize('viewAny', User::class);
 
         return Inertia::render('Users/Index', [
             'users' => User::orderBy('name')
@@ -41,7 +41,7 @@ class UserController extends Controller
     /** Admin-only: change a user's role and/or admin status. */
     public function update(Request $request, User $user): RedirectResponse
     {
-        $this->ensureAdmin($request);
+        $this->authorize('update', $user);
 
         $validated = $request->validate([
             'role' => ['required', Rule::enum(UserRole::class)],
@@ -65,7 +65,7 @@ class UserController extends Controller
     /** Admin-only: delete a user (guardian links cascade; board/poll references null out). */
     public function destroy(Request $request, User $user): RedirectResponse
     {
-        $this->ensureAdmin($request);
+        $this->authorize('delete', $user);
 
         if ($user->is($request->user())) {
             return back()->with('status', 'Du kannst dich nicht selbst löschen.');
@@ -83,15 +83,10 @@ class UserController extends Controller
     /** Admin-only: import/refresh all Slack workspace members. */
     public function sync(Request $request, SlackUserImporter $importer): RedirectResponse
     {
-        $this->ensureAdmin($request);
+        $this->authorize('import', User::class);
 
         $count = $importer->run();
 
         return back()->with('status', "{$count} Benutzer aus Slack synchronisiert.");
-    }
-
-    private function ensureAdmin(Request $request): void
-    {
-        abort_unless($request->user()->isAdmin(), 403);
     }
 }

@@ -170,7 +170,7 @@ class DailyBoardController extends Controller
     /** Staff record (or undo) a child's departure. */
     public function mark(Request $request, DailyDeparture $departure): RedirectResponse
     {
-        abort_unless($request->user()->isStaff(), 403);
+        $this->authorize('mark', $departure);
 
         $validated = $request->validate([
             'status' => ['required', Rule::in([

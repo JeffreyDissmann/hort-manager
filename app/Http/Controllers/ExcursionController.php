@@ -16,7 +16,7 @@ class ExcursionController extends Controller
 {
     public function index(): Response
     {
-        $this->ensureStaff();
+        $this->authorize('viewAny', Excursion::class);
 
         $excursions = Excursion::query()
             ->withCount([
@@ -52,7 +52,7 @@ class ExcursionController extends Controller
 
     public function create(): Response
     {
-        $this->ensureStaff();
+        $this->authorize('create', Excursion::class);
 
         // Suggest the next Friday, skipping any Friday that already has a trip.
         $friday = Carbon::today()->next(Carbon::FRIDAY);
@@ -68,7 +68,7 @@ class ExcursionController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $this->ensureStaff();
+        $this->authorize('create', Excursion::class);
 
         $excursion = Excursion::create($this->validateExcursion($request));
 
@@ -83,7 +83,7 @@ class ExcursionController extends Controller
 
     public function edit(Excursion $excursion): Response
     {
-        $this->ensureStaff();
+        $this->authorize('update', $excursion);
 
         return Inertia::render('Excursions/Edit', [
             'excursion' => [
@@ -108,7 +108,7 @@ class ExcursionController extends Controller
 
     public function update(Request $request, Excursion $excursion): RedirectResponse
     {
-        $this->ensureStaff();
+        $this->authorize('update', $excursion);
 
         $excursion->update($this->validateExcursion($request));
 
@@ -123,7 +123,7 @@ class ExcursionController extends Controller
 
     public function destroy(Excursion $excursion): RedirectResponse
     {
-        $this->ensureStaff();
+        $this->authorize('delete', $excursion);
 
         $name = $excursion->name;
         $excursion->delete();
@@ -136,7 +136,7 @@ class ExcursionController extends Controller
     /** Staff flip the live trip state from the Tagesboard on the day itself. */
     public function live(Request $request, Excursion $excursion): RedirectResponse
     {
-        $this->ensureStaff();
+        $this->authorize('update', $excursion);
 
         $validated = $request->validate([
             'event' => ['required', 'in:depart,return,undo_depart,undo_return'],
@@ -150,12 +150,6 @@ class ExcursionController extends Controller
         };
 
         return back();
-    }
-
-    /** Excursion management is staff-only. */
-    private function ensureStaff(): void
-    {
-        abort_unless(auth()->user()?->isStaff(), 403);
     }
 
     private function time(?string $value): ?string

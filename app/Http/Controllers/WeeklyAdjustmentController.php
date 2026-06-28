@@ -27,7 +27,7 @@ class WeeklyAdjustmentController extends Controller
         ]);
 
         $child = Child::findOrFail($validated['child_id']);
-        $departure = $this->authorizedDeparture($request, $child, $validated['date']);
+        $departure = $this->authorizedDeparture($child, $validated['date']);
 
         $departure->fill([
             'planned_time' => $validated['planned_time'] ?? null,
@@ -53,7 +53,7 @@ class WeeklyAdjustmentController extends Controller
         ]);
 
         $child = Child::findOrFail($validated['child_id']);
-        $departure = $this->authorizedDeparture($request, $child, $validated['date']);
+        $departure = $this->authorizedDeparture($child, $validated['date']);
 
         // Deleting the override row makes the board fall back to the Stammplan.
         if ($departure->exists) {
@@ -67,10 +67,10 @@ class WeeklyAdjustmentController extends Controller
      * Resolve the DailyDeparture for this child/date after checking the user may
      * edit it: staff or the child's parent, a current-week weekday, not yet departed.
      */
-    private function authorizedDeparture(Request $request, Child $child, string $date): DailyDeparture
+    private function authorizedDeparture(Child $child, string $date): DailyDeparture
     {
-        $user = $request->user();
-        abort_unless($user->isStaff() || $child->isGuardedBy($user), 403);
+        // Adjusting a child's week is staff-or-guardian, same as editing the child.
+        $this->authorize('update', $child);
 
         $day = Carbon::parse($date)->startOfDay();
 

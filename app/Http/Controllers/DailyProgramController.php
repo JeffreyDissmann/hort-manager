@@ -21,7 +21,7 @@ class DailyProgramController extends Controller
     /** Staff weekly editor for the day program (lunch, activity, homework). */
     public function index(Request $request): Response
     {
-        $this->ensureStaff();
+        $this->authorize('viewAny', DailyProgram::class);
 
         [$week, $weekDays] = $this->resolveWeek($request);
 
@@ -75,7 +75,7 @@ class DailyProgramController extends Controller
     /** Save the whole week (lunch, activity, homework override). */
     public function update(Request $request): RedirectResponse
     {
-        $this->ensureStaff();
+        $this->authorize('update', DailyProgram::class);
 
         $validated = $request->validate([
             'days' => ['array'],
@@ -128,7 +128,7 @@ class DailyProgramController extends Controller
     /** Save the Hort-wide default homework slots (per weekday). */
     public function updateDefaults(Request $request): RedirectResponse
     {
-        $this->ensureStaff();
+        $this->authorize('update', DailyProgram::class);
 
         $validated = $request->validate([
             'defaults' => ['array'],
@@ -151,11 +151,6 @@ class DailyProgramController extends Controller
         }
 
         return back()->with('status', 'Standard-Hausaufgabenzeiten gespeichert.');
-    }
-
-    private function ensureStaff(): void
-    {
-        abort_unless(auth()->user()?->isStaff(), 403);
     }
 
     private function short(?string $time): ?string
