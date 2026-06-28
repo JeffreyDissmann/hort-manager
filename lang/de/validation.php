@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 return [
     'accepted' => ':attribute muss akzeptiert werden.',
     'active_url' => ':attribute ist keine gültige URL.',

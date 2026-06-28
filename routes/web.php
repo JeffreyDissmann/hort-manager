@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use App\Http\Controllers\Auth\SlackController;
 use App\Http\Controllers\ChildController;
 use App\Http\Controllers\DailyBoardController;
