@@ -1,4 +1,4 @@
-# Slack app manifest for Hort-Manager (production: hort-manager.dissmann.net).
+# Slack app manifest for Hort-Manager (production: your-domain.example).
 #
 # Create the app: https://api.slack.com/apps → Create New App → From a manifest →
 # pick your workspace → paste this YAML.
@@ -7,10 +7,10 @@
 # creation by POSTing a signed challenge, but the app's signing secret isn't in
 # your .env yet. Add it AFTER installing + setting SLACK_SIGNING_SECRET + restart:
 #   Event Subscriptions → Enable → Request URL:
-#     https://hort-manager.dissmann.net/slack/events
+#     https://your-domain.example/slack/events
 #   → Subscribe to bot events → app_home_opened → Save.
 #
-# If your domain differs, replace hort-manager.dissmann.net throughout.
+# If your domain differs, replace your-domain.example throughout.
 
 display_information:
   name: Hort-Manager
@@ -27,13 +27,13 @@ features:
     messages_tab_read_only_enabled: true
   slash_commands:
     - command: /hort
-      url: https://hort-manager.dissmann.net/slack/commands
+      url: https://your-domain.example/slack/commands
       description: Hort-Manager öffnen
       should_escape: false
 
 oauth_config:
   redirect_urls:
-    - https://hort-manager.dissmann.net/auth/slack/callback
+    - https://your-domain.example/auth/slack/callback
   scopes:
     bot:
       - chat:write
@@ -44,7 +44,7 @@ oauth_config:
 settings:
   interactivity:
     is_enabled: true
-    request_url: https://hort-manager.dissmann.net/slack/interactions
+    request_url: https://your-domain.example/slack/interactions
   org_deploy_enabled: false
   socket_mode_enabled: false
   token_rotation_enabled: false
