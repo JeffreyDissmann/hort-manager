@@ -6,7 +6,13 @@
         <meta name="theme-color" content="#223E55">
 
         <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-        <link rel="apple-touch-icon" href="/favicon.svg">
+        <link rel="apple-touch-icon" href="/icons/icon-192.png">
+
+        {{-- PWA: installable home-screen app --}}
+        <link rel="manifest" href="/build/manifest.webmanifest">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="default">
+        <meta name="apple-mobile-web-app-title" content="Hort-Manager">
 
         <title inertia>{{ config('app.name', 'Hort-Manager') }}</title>
 
