@@ -12,3 +12,6 @@ Artisan::command('inspire', function () {
 
 // Each morning, remind guardians who still owe an excursion answer due today.
 Schedule::command('excursions:remind-rsvps')->dailyAt('08:00');
+
+// Nightly cleanup of data older than the retention period (DATA_RETENTION_WEEKS).
+Schedule::command('hort:prune-old-data')->dailyAt('03:00');
