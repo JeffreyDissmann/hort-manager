@@ -43,7 +43,8 @@ case "$ROLE" in
         # migrate, then (re)build caches *late*.
         artisan config:clear
         artisan migrate --force
-        artisan storage:link --force
+        # No `storage:link`: the app serves no files from the public disk (avatars
+        # are external Slack URLs, no uploads), and /app/public is root-owned.
 
         # Optional, idempotent: promote an existing user to admin. They must have
         # signed in via Slack first; never fail the boot if they don't exist yet.
