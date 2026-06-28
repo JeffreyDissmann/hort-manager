@@ -1,6 +1,6 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { board, weeklyPlan, program } from '@/routes';
+import { board, weeklyPlan, program, help } from '@/routes';
 import { index as childrenIndex } from '@/routes/children';
 import { index as excursionsIndex } from '@/routes/excursions';
 import { index as pollsIndex } from '@/routes/polls';
@@ -78,5 +78,12 @@ const tiles = computed(() => {
                 <span class="text-2xl text-hort-teal-dark">→</span>
             </Link>
         </div>
+
+        <p class="mt-6 text-center text-sm text-hort-navy/60">
+            Neu hier oder unsicher?
+            <Link :href="help().url" class="font-medium text-hort-teal-dark underline hover:text-hort-navy">
+                So funktioniert der Hort-Manager
+            </Link>
+        </p>
     </AuthenticatedLayout>
 </template>

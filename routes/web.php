@@ -37,6 +37,9 @@ Route::get('/dashboard', function () {
 Route::get('/auth/slack/redirect', [SlackController::class, 'redirect'])->name('slack.redirect');
 Route::get('/auth/slack/callback', [SlackController::class, 'callback'])->name('slack.callback');
 
+// User-facing help/manual — reachable before login and from inside the app.
+Route::get('/hilfe', fn () => Inertia::render('Help'))->name('help');
+
 // Deep-link from a Slack message into the app, signing in via Slack if needed.
 Route::get('/slack/enter', [SlackController::class, 'enter'])->name('slack.enter');
 

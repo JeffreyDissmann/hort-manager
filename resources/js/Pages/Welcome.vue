@@ -1,5 +1,5 @@
 <script setup>
-import { dashboard, login } from '@/routes';
+import { dashboard, login, help } from '@/routes';
 import ApplicationLogo from '@/Components/ApplicationLogo.vue';
 import { Head, Link, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
@@ -63,6 +63,13 @@ const user = computed(() => usePage().props.auth?.user);
                         Anmelden
                     </Link>
                 </template>
+
+                <Link
+                    :href="help().url"
+                    class="block w-full rounded-2xl px-6 py-3 text-base font-medium text-hort-navy/70 transition hover:bg-hort-navy/5"
+                >
+                    So funktioniert der Hort-Manager
+                </Link>
             </div>
         </main>
 

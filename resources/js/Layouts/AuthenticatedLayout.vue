@@ -11,7 +11,7 @@ import {
     MapIcon,
     ClipboardDocumentListIcon,
 } from '@heroicons/vue/24/outline';
-import { board, weeklyPlan, program, logout, dashboard } from '@/routes';
+import { board, weeklyPlan, program, logout, dashboard, help } from '@/routes';
 import { index as childrenIndex } from '@/routes/children';
 import { index as excursionsIndex } from '@/routes/excursions';
 import { index as usersIndex } from '@/routes/users';
@@ -135,6 +135,9 @@ function isActive(href) {
                         </DropdownLink>
                         <DropdownLink :href="profileEdit().url">
                             Profil
+                        </DropdownLink>
+                        <DropdownLink :href="help().url">
+                            Hilfe
                         </DropdownLink>
                         <DropdownLink
                             :href="logout().url"

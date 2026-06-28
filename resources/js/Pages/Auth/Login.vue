@@ -1,5 +1,5 @@
 <script setup>
-import { login } from '@/routes';
+import { login, help } from '@/routes';
 import { redirect as slackRedirect } from '@/routes/slack';
 import { request as passwordRequest } from '@/routes/password';
 import Checkbox from '@/Components/Checkbox.vue';
@@ -132,5 +132,12 @@ const submit = () => {
                     Anmelden                </PrimaryButton>
             </div>
         </form>
+
+        <p class="mt-6 text-center text-sm text-gray-600">
+            Neu hier?
+            <Link :href="help().url" class="font-medium text-hort-teal-dark underline hover:text-hort-navy">
+                So funktioniert der Hort-Manager
+            </Link>
+        </p>
     </GuestLayout>
 </template>
