@@ -84,7 +84,7 @@ Three directions; **production setup is documented in [`docs/slack-setup.md`](do
 
 ## Status
 
-App is German end-to-end (`APP_LOCALE=de`, `lang/de/*` validation/auth messages; `Europe/Berlin` timezone). Built & tested: Kinder+Stammplan, parent↔child roles, Wochenplan/Abholplan timetable, Tagesboard, Ausflug poll, Tagesprogramm + Hausaufgaben, birthdays surfaced on Heute/Abholplan/Programm, role-aware Start page, **full Slack integration** (SSO, departure/RSVP DMs, interactive RSVP with cross-guardian sync, `/hort` + App Home).
+App is German end-to-end (`APP_LOCALE=de`, `lang/de/*` validation/auth messages; `Europe/Berlin` timezone). Built & tested: Kinder+Stammplan, parent↔child roles, Wochenplan/Abholplan timetable, Tagesboard, Ausflug poll, Tagesprogramm + Hausaufgaben, birthdays surfaced on Heute/Abholplan/Programm, role-aware Start page, **full Slack integration** (SSO, departure/RSVP DMs, interactive RSVP with cross-guardian sync, `/hort` + App Home), **installable PWA + web push** (VAPID via `laravel-notification-channels/webpush`; opt-in toggle + install banner; SW served from `/sw.js`; pushes for departures, RSVP reminders, new excursions).
 
 **Planned (not built):** Richer admin control over users & children (managing which parents belong to which child, user management).
 

@@ -15,6 +15,8 @@ The UI is in German; code, identifiers and docs are in English.
 - **Sign in with Slack (OIDC)** — passwordless login, restricted to the Hort's workspace.
 - **Slack integration** — departure DMs, interactive excursion RSVP (answer in Slack),
   daily reminders, an App Home tab and a `/hort` command. See [`docs/slack-setup.md`](docs/slack-setup.md).
+- **Installable PWA + push** — add to home screen; opt-in web-push for departures,
+  excursion reminders and new excursions (VAPID, no third-party service). See [`docs/deployment.md`](docs/deployment.md).
 - **User & role management** — admins set roles, manage admins and import workspace members.
 - **Data retention** — old day boards, programs and excursions are pruned automatically.
 - A user-facing **help page** at `/hilfe`.

@@ -8,10 +8,20 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Installable PWA + web push notifications**: the app can be added to the home
+  screen (manifest, service worker, install banner) and parents can opt in to push
+  notifications for departures, excursion RSVP reminders and new excursions — via
+  VAPID (`laravel-notification-channels/webpush`), with no third-party service. See
+  [`docs/deployment.md`](docs/deployment.md).
 - **Self-hosted Docker deployment**: a multi-arch (amd64 + arm64) FrankenPHP image
   published to GHCR on a CalVer tag, a `docker-compose.prod.yml` stack (app, queue,
   scheduler, Cloudflare Tunnel) backed by a single SQLite volume, and a deployment
   guide ([`docs/deployment.md`](docs/deployment.md)).
+
+### Fixed
+
+- Wayfinder now generates **relative** route URLs, so the published image is
+  domain-agnostic and no instance domain is baked into the repo or the image.
 
 ## [0.1.0] — 2026-06-28
 

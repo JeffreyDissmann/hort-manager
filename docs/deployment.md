@@ -92,6 +92,37 @@ docker compose -f docker-compose.prod.yml exec app php artisan hort:make-admin y
 (Or set `ADMIN_EMAIL` in `.env` — the entrypoint promotes that user on each boot,
 once they've signed in at least once.)
 
+## 6. Web Push (PWA notifications)
+
+The app is an installable PWA: parents can add it to their home screen and opt in
+to push notifications (child departed, excursion RSVP reminder, new excursion). It
+talks straight to the browser push services via VAPID — no third-party service.
+
+Generate the VAPID keys **once** and put them in `.env`:
+
+```bash
+docker compose -f docker-compose.prod.yml exec app php artisan webpush:vapid
+```
+
+Copy the two printed values into `.env`, and add a subject (a `mailto:`/URL that
+identifies you — **required by Safari/iOS**):
+
+```dotenv
+VAPID_PUBLIC_KEY=…
+VAPID_PRIVATE_KEY=…
+VAPID_SUBJECT="mailto:you@example.com"
+```
+
+Then `up -d`. Notes:
+
+- **Don't rotate the keys** — every existing subscription is tied to the pair that
+  created it. Without keys set, push silently does nothing (no errors).
+- Sending is queued, so the **queue** service must be running (it is, by default).
+- iOS only allows push for an **installed** PWA (Add to Home Screen, iOS 16.4+);
+  Android/Chrome works without installing.
+- The service worker is served from the site root at `/sw.js` (Laravel route) so it
+  controls the whole origin — no web-server header needed.
+
 ## Upgrades
 
 ```bash
