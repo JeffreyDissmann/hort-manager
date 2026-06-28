@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Notifications\Notification;
+use NotificationChannels\WebPush\HasPushSubscriptions;
 
 // role and is_admin are privilege fields — deliberately NOT mass-assignable;
 // they are only ever set via explicit forceFill (SSO, UserController, import).
@@ -23,7 +24,7 @@ use Illuminate\Notifications\Notification;
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable;
+    use HasFactory, HasPushSubscriptions, Notifiable;
 
     /**
      * Default attribute values (mirroring the migration column defaults).
