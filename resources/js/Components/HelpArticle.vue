@@ -140,6 +140,25 @@ const glossary = [
             </ul>
         </section>
 
+        <!-- Install as app / notifications -->
+        <section class="space-y-3">
+            <h3 class="text-lg font-semibold text-hort-navy">Als App installieren & Benachrichtigungen</h3>
+            <p class="text-hort-navy/70">
+                Du kannst den Hort-Manager wie eine echte App auf dein Handy legen – dann
+                startet er im Vollbild und kann dir Benachrichtigungen schicken (z. B.
+                „Kind wurde abgeholt“ oder eine Erinnerung an einen Ausflug).
+            </p>
+            <ul class="space-y-2 text-sm text-hort-navy/70">
+                <li><strong>iPhone (Safari):</strong> Teilen-Symbol antippen → „Zum Home-Bildschirm“.</li>
+                <li><strong>Android (Chrome):</strong> oben auf das Banner „Installieren“ tippen (oder Menü → „App installieren“).</li>
+                <li>Danach im Menü oben rechts auf <strong>🔔 Benachrichtigungen an</strong> tippen und erlauben.</li>
+            </ul>
+            <p class="text-sm text-hort-navy/60">
+                Hinweis: Auf dem iPhone funktionieren Benachrichtigungen nur, wenn die App
+                vorher zum Home-Bildschirm hinzugefügt wurde.
+            </p>
+        </section>
+
         <!-- Roles -->
         <section class="space-y-3">
             <h3 class="text-lg font-semibold text-hort-navy">Wer darf was?</h3>
