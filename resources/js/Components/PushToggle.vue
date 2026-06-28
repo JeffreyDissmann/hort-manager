@@ -1,77 +1,10 @@
 <script setup>
-import { subscribe as pushSubscribe, unsubscribe as pushUnsubscribe } from '@/routes/push';
-import { usePage } from '@inertiajs/vue3';
-import axios from 'axios';
-import { computed, onMounted, ref } from 'vue';
+import { usePush } from '@/composables/usePush';
+import { onMounted } from 'vue';
 
-const supported = ref(false);
-const subscribed = ref(false);
-const busy = ref(false);
+const { supported, subscribed, busy, refresh, enable, disable } = usePush();
 
-const vapidPublicKey = computed(() => usePage().props.vapidPublicKey);
-
-onMounted(async () => {
-    supported.value =
-        'serviceWorker' in navigator &&
-        'PushManager' in window &&
-        'Notification' in window &&
-        !!vapidPublicKey.value;
-
-    if (!supported.value) {
-        return;
-    }
-
-    try {
-        const registration = await navigator.serviceWorker.ready;
-        subscribed.value = !!(await registration.pushManager.getSubscription());
-    } catch {
-        // ignore — leave as not subscribed
-    }
-});
-
-// VAPID public key (URL-safe base64) → Uint8Array for the Push API.
-function urlBase64ToUint8Array(base64String) {
-    const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
-    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-    const raw = atob(base64);
-    return Uint8Array.from([...raw].map((char) => char.charCodeAt(0)));
-}
-
-async function enable() {
-    busy.value = true;
-    try {
-        if ((await Notification.requestPermission()) !== 'granted') {
-            return;
-        }
-        const registration = await navigator.serviceWorker.ready;
-        const subscription = await registration.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(vapidPublicKey.value),
-        });
-        const json = subscription.toJSON();
-        await axios.post(pushSubscribe().url, { endpoint: json.endpoint, keys: json.keys });
-        subscribed.value = true;
-    } catch {
-        // permission denied or subscribe failed
-    } finally {
-        busy.value = false;
-    }
-}
-
-async function disable() {
-    busy.value = true;
-    try {
-        const registration = await navigator.serviceWorker.ready;
-        const subscription = await registration.pushManager.getSubscription();
-        if (subscription) {
-            await axios.delete(pushUnsubscribe().url, { data: { endpoint: subscription.endpoint } });
-            await subscription.unsubscribe();
-        }
-        subscribed.value = false;
-    } finally {
-        busy.value = false;
-    }
-}
+onMounted(refresh);
 </script>
 
 <template>

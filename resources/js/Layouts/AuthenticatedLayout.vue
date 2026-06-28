@@ -2,9 +2,11 @@
 import { computed } from 'vue';
 import ApplicationLogo from '@/Components/ApplicationLogo.vue';
 import Avatar from '@/Components/Avatar.vue';
+import AppBadge from '@/Components/AppBadge.vue';
 import Dropdown from '@/Components/Dropdown.vue';
 import DropdownLink from '@/Components/DropdownLink.vue';
 import InstallBanner from '@/Components/InstallBanner.vue';
+import NotifyPrompt from '@/Components/NotifyPrompt.vue';
 import PushToggle from '@/Components/PushToggle.vue';
 import {
     SunIcon,
@@ -74,7 +76,9 @@ function isActive(href) {
 
 <template>
     <div class="min-h-[100dvh] bg-hort-sand">
+        <AppBadge />
         <InstallBanner />
+        <NotifyPrompt />
 
         <!-- Top bar -->
         <header
