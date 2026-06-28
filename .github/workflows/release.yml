@@ -5,6 +5,8 @@ on:
   push:
     tags:
       - "20[0-9][0-9].[0-1][0-9].*"
+  # Manual build-only run to validate the image on real runners (no push).
+  workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
@@ -53,14 +55,17 @@ jobs:
             APP_COMMIT=${{ github.sha }}
           cache-from: type=gha,scope=${{ matrix.arch }}
           cache-to: type=gha,mode=max,scope=${{ matrix.arch }}
-          outputs: type=image,name=${{ steps.img.outputs.name }},push-by-digest=true,name-canonical=true,push=true
+          # Tag push → push by digest. Manual dispatch → build only (validate).
+          outputs: ${{ github.event_name == 'push' && format('type=image,name={0},push-by-digest=true,name-canonical=true,push=true', steps.img.outputs.name) || '' }}
 
       - name: Export digest
+        if: github.event_name == 'push'
         run: |
           mkdir -p /tmp/digests
           touch "/tmp/digests/${{ steps.build.outputs.digest }}"
 
       - name: Upload digest
+        if: github.event_name == 'push'
         uses: actions/upload-artifact@v4
         with:
           name: digest-${{ matrix.arch }}
@@ -70,6 +75,7 @@ jobs:
 
   merge:
     needs: build
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:
       contents: read
