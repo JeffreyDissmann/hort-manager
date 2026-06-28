@@ -2,6 +2,7 @@ import { defineConfig } from 'vite';
 import laravel from 'laravel-vite-plugin';
 import vue from '@vitejs/plugin-vue';
 import { wayfinder } from '@laravel/vite-plugin-wayfinder';
+import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
     plugins: [
@@ -18,5 +19,40 @@ export default defineConfig({
             },
         }),
         wayfinder(),
+        VitePWA({
+            registerType: 'autoUpdate',
+            scope: '/',
+            // injectManifest so we can add custom push/notificationclick handlers
+            // (resources/js/sw.js) while Workbox still precaches the built assets.
+            strategies: 'injectManifest',
+            srcDir: 'resources/js',
+            filename: 'sw.js',
+            injectManifest: {
+                globPatterns: ['**/*.{js,css,woff2}'],
+            },
+            manifest: {
+                name: 'Hort-Manager',
+                short_name: 'Hort',
+                description:
+                    'Wann und wie geht jedes Kind nach Hause – plus Ausflüge.',
+                lang: 'de',
+                start_url: '/',
+                scope: '/',
+                display: 'standalone',
+                orientation: 'portrait',
+                background_color: '#F7F5F0',
+                theme_color: '#223E55',
+                icons: [
+                    { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+                    { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+                    {
+                        src: '/icons/icon-maskable-512.png',
+                        sizes: '512x512',
+                        type: 'image/png',
+                        purpose: 'maskable',
+                    },
+                ],
+            },
+        }),
     ],
 });
