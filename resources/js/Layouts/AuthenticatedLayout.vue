@@ -7,7 +7,6 @@ import Dropdown from '@/Components/Dropdown.vue';
 import DropdownLink from '@/Components/DropdownLink.vue';
 import InstallBanner from '@/Components/InstallBanner.vue';
 import NotifyPrompt from '@/Components/NotifyPrompt.vue';
-import PushToggle from '@/Components/PushToggle.vue';
 import {
     SunIcon,
     CalendarDaysIcon,
@@ -147,7 +146,6 @@ function isActive(href) {
                         <DropdownLink :href="help().url">
                             Hilfe
                         </DropdownLink>
-                        <PushToggle />
                         <DropdownLink
                             :href="logout().url"
                             method="post"
