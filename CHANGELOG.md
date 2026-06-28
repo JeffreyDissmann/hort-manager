@@ -6,6 +6,13 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **Self-hosted Docker deployment**: a multi-arch (amd64 + arm64) FrankenPHP image
+  published to GHCR on a CalVer tag, a `docker-compose.prod.yml` stack (app, queue,
+  scheduler, Cloudflare Tunnel) backed by a single SQLite volume, and a deployment
+  guide ([`docs/deployment.md`](docs/deployment.md)).
+
 ## [0.1.0] — 2026-06-28
 
 Initial release.

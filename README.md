@@ -54,6 +54,18 @@ Key environment variables (see `.env.example` for the full list):
 - `SLACK_*` — Sign-in-with-Slack, the bot token, signing secret and workspace (`docs/slack-setup.md`).
 - `DATA_RETENTION_WEEKS` — how long to keep operational data (default `4`).
 
+## Deployment
+
+Self-hosted on a NAS via Docker (multi-arch image on GHCR, Cloudflare Tunnel, SQLite).
+Full guide: **[`docs/deployment.md`](docs/deployment.md)**. A CalVer tag (`YYYY.MM.DD`)
+triggers the release pipeline that publishes `ghcr.io/jeffreydissmann/hort-manager`.
+
+```bash
+cp .env.docker.example .env   # edit APP_URL, SLACK_*, CLOUDFLARE_TUNNEL_TOKEN
+docker compose -f docker-compose.prod.yml pull
+docker compose -f docker-compose.prod.yml up -d
+```
+
 ## Production notes
 
 - All Slack sends are **queued** — run a worker (`php artisan queue:work`, e.g. via supervisor/Horizon).
