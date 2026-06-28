@@ -1,0 +1,50 @@
+# Slack app manifest for Hort-Manager (production: hort-manager.dissmann.net).
+#
+# Create the app: https://api.slack.com/apps → Create New App → From a manifest →
+# pick your workspace → paste this YAML.
+#
+# NOTE: Event Subscriptions are intentionally omitted. Slack verifies that URL at
+# creation by POSTing a signed challenge, but the app's signing secret isn't in
+# your .env yet. Add it AFTER installing + setting SLACK_SIGNING_SECRET + restart:
+#   Event Subscriptions → Enable → Request URL:
+#     https://hort-manager.dissmann.net/slack/events
+#   → Subscribe to bot events → app_home_opened → Save.
+#
+# If your domain differs, replace hort-manager.dissmann.net throughout.
+
+display_information:
+  name: Hort-Manager
+  description: Wann und wie geht jedes Kind nach Hause – plus Ausflüge.
+  background_color: "#223e55"
+
+features:
+  bot_user:
+    display_name: Hort-Manager
+    always_online: true
+  app_home:
+    home_tab_enabled: true
+    messages_tab_enabled: false
+    messages_tab_read_only_enabled: true
+  slash_commands:
+    - command: /hort
+      url: https://hort-manager.dissmann.net/slack/commands
+      description: Hort-Manager öffnen
+      should_escape: false
+
+oauth_config:
+  redirect_urls:
+    - https://hort-manager.dissmann.net/auth/slack/callback
+  scopes:
+    bot:
+      - chat:write
+      - commands
+      - users:read
+      - users:read.email
+
+settings:
+  interactivity:
+    is_enabled: true
+    request_url: https://hort-manager.dissmann.net/slack/interactions
+  org_deploy_enabled: false
+  socket_mode_enabled: false
+  token_rotation_enabled: false
