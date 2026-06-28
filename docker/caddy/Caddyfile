@@ -1,0 +1,18 @@
+{
+	# TLS is terminated upstream (Cloudflare Tunnel) — speak plain HTTP only.
+	auto_https off
+	admin off
+	frankenphp
+	order php_server before file_server
+}
+
+# Plain HTTP; Cloudflare Tunnel dials this over the internal Docker network.
+:8080 {
+	root * /app/public
+	encode zstd gzip
+
+	# Trust the upstream proxy so X-Forwarded-* (scheme/IP) are honored.
+	trusted_proxies static private_ranges
+
+	php_server
+}
