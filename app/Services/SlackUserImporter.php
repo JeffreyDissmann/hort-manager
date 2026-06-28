@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services;
 
 use App\Enums\UserRole;
@@ -17,9 +19,7 @@ class SlackUserImporter
     /** @return int the number of members imported/updated */
     public function run(): int
     {
-        $token = config('services.slack.notifications.bot_user_oauth_token');
-
-        if (! $token) {
+        if (! config('services.slack.notifications.bot_user_oauth_token')) {
             return 0;
         }
 
@@ -27,8 +27,8 @@ class SlackUserImporter
         $cursor = null;
 
         do {
-            $response = Http::withToken($token)
-                ->get('https://slack.com/api/users.list', array_filter([
+            $response = Http::slack()
+                ->get('users.list', array_filter([
                     'limit' => 200,
                     'cursor' => $cursor,
                 ]))

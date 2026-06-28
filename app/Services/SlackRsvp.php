@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services;
 
 use App\Models\Child;
@@ -89,9 +91,7 @@ class SlackRsvp
      */
     private function call(string $method, array $payload): array
     {
-        return Http::withToken(config('services.slack.notifications.bot_user_oauth_token'))
-            ->post("https://slack.com/api/{$method}", $payload)
-            ->json() ?? [];
+        return Http::slack()->post($method, $payload)->json() ?? [];
     }
 
     private function fallback(Excursion $excursion): string

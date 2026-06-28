@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
@@ -14,12 +16,24 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Notifications\Notification;
 
-#[Fillable(['name', 'email', 'password', 'role', 'is_admin', 'slack_id', 'avatar'])]
+// role and is_admin are privilege fields — deliberately NOT mass-assignable;
+// they are only ever set via explicit forceFill (SSO, UserController, import).
+#[Fillable(['name', 'email', 'password', 'slack_id', 'avatar'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
+
+    /**
+     * Default attribute values (mirroring the migration column defaults).
+     *
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'role' => UserRole::Parent->value,
+        'is_admin' => false,
+    ];
 
     /**
      * Get the attributes that should be cast.

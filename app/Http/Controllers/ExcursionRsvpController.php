@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers;
 
 use App\Models\Child;
@@ -12,6 +14,8 @@ use Inertia\Response;
 
 class ExcursionRsvpController extends Controller
 {
+    public function __construct(private SlackRsvp $slack) {}
+
     /** The parent's poll page: open excursions with their children to answer for. */
     public function index(Request $request): Response
     {
@@ -75,7 +79,7 @@ class ExcursionRsvpController extends Controller
         ]);
 
         // Keep the Slack DMs in sync (buttons → result) for both guardians.
-        app(SlackRsvp::class)->syncForChild($excursion, $child);
+        $this->slack->syncForChild($excursion, $child);
 
         return back()->with('status', "Antwort für {$child->name} gespeichert.");
     }

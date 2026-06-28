@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Auth;
 
 use App\Enums\UserRole;
@@ -77,38 +79,52 @@ class SlackController extends Controller
             return $this->failed('Die Slack-Anmeldung ist fehlgeschlagen. Bitte versuche es erneut.');
         }
 
-        // Restrict sign-in to the configured Hort workspace (when one is set).
+        // Only members of the configured Hort workspace may sign in. Fail closed:
+        // with no workspace configured we cannot verify membership, so reject.
         $allowedTeam = config('services.slack.team');
-        if ($allowedTeam && ($slackUser->getRaw()['https://slack.com/team_id'] ?? null) !== $allowedTeam) {
+        $signedInTeam = $slackUser->getRaw()['https://slack.com/team_id'] ?? null;
+
+        if (! $allowedTeam || $signedInTeam !== $allowedTeam) {
             return $this->failed('Dieser Slack-Account gehört nicht zum Hort-Workspace.');
         }
 
-        // Existing account by Slack id, or by the email Slack returns.
-        $user = User::firstWhere('slack_id', $slackUser->getId())
-            ?? ($slackUser->getEmail() ? User::firstWhere('email', $slackUser->getEmail()) : null);
+        // Match an existing account by Slack id.
+        $user = User::firstWhere('slack_id', $slackUser->getId());
 
-        if ($user) {
-            $user->forceFill([
-                'slack_id' => $slackUser->getId(),
-                'avatar' => $slackUser->getAvatar(),
-            ])->save();
-        } else {
+        if (! $user) {
             if (! $slackUser->getEmail()) {
                 return $this->failed('Slack hat keine E-Mail-Adresse freigegeben. Bitte erlaube den Zugriff auf deine E-Mail.');
             }
 
-            // New parents self-provision on first Slack sign-in (trust-based).
-            $user = User::create([
+            $existing = User::firstWhere('email', $slackUser->getEmail());
+
+            // An account already tied to a different Slack id must never be taken over.
+            if ($existing && $existing->slack_id !== null) {
+                return $this->failed('Diese E-Mail gehört bereits zu einem anderen Slack-Konto.');
+            }
+
+            // Adopt an as-yet-unlinked account by its Slack-verified email, else create one.
+            $user = $existing ?? new User;
+        }
+
+        // forceFill (never mass assignment) so role/admin can't be set from Slack data.
+
+        $user->forceFill([
+            'slack_id' => $slackUser->getId(),
+            'avatar' => $slackUser->getAvatar(),
+        ]);
+
+        if (! $user->exists) {
+            // New parents self-provision on first sign-in; Slack vouches for the email.
+            $user->forceFill([
                 'name' => $slackUser->getName() ?: 'Elternteil',
                 'email' => $slackUser->getEmail(),
-                'slack_id' => $slackUser->getId(),
-                'avatar' => $slackUser->getAvatar(),
                 'role' => UserRole::Parent,
+                'email_verified_at' => now(),
             ]);
-
-            // Slack vouches for the email, so it counts as verified.
-            $user->forceFill(['email_verified_at' => now()])->save();
         }
+
+        $user->save();
 
         Auth::login($user, remember: true);
 

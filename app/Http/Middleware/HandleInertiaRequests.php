@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Middleware;
 
 use App\Models\User;
@@ -34,8 +36,17 @@ class HandleInertiaRequests extends Middleware
         return [
             ...parent::share($request),
             'appName' => config('app.name'),
+            // Only what the UI needs — not the raw model (keeps slack_id off the client).
             'auth' => [
-                'user' => $request->user(),
+                'user' => fn () => ($user = $request->user()) ? [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'avatar' => $user->avatar,
+                    'role' => $user->role->value,
+                    'is_admin' => $user->is_admin,
+                    'email_verified_at' => $user->email_verified_at,
+                ] : null,
             ],
             'flash' => [
                 'status' => fn () => $request->session()->get('status'),
@@ -52,6 +63,8 @@ class HandleInertiaRequests extends Middleware
             return 0;
         }
 
+        // Pivot constraints inside Eloquent count-subqueries are unreliable for the
+        // pivot-less Child::excursions relation, so count the join directly.
         return DB::table('child_excursion')
             ->join('excursions', 'excursions.id', '=', 'child_excursion.excursion_id')
             ->join('child_user', 'child_user.child_id', '=', 'child_excursion.child_id')

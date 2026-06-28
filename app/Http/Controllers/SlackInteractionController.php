@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers;
 
 use App\Models\Child;
@@ -12,6 +14,8 @@ use Illuminate\Support\Facades\Http;
 
 class SlackInteractionController extends Controller
 {
+    public function __construct(private SlackRsvp $slack) {}
+
     /**
      * Handle a Slack interactive button click. Buttons carry a value of
      * "rsvp|{excursionId}|{childId}|{1|0}". The request is already signature-verified.
@@ -48,7 +52,7 @@ class SlackInteractionController extends Controller
         ]);
 
         // Re-render every guardian's DM: this child's row now shows the result.
-        app(SlackRsvp::class)->syncForChild($excursion, $child);
+        $this->slack->syncForChild($excursion, $child);
 
         return response()->noContent();
     }
@@ -56,7 +60,8 @@ class SlackInteractionController extends Controller
     /** Post a confirmation back into the same Slack DM via the interaction's response_url. */
     private function reply(?string $responseUrl, string $text): void
     {
-        if ($responseUrl) {
+        // Only ever post back to Slack's own webhook host.
+        if ($responseUrl && str_starts_with($responseUrl, 'https://hooks.slack.com/')) {
             Http::post($responseUrl, ['text' => $text]);
         }
     }

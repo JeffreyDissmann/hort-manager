@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services;
 
 use App\Models\User;
@@ -10,16 +12,14 @@ class SlackHome
 {
     public function publish(string $slackUserId): void
     {
-        $token = config('services.slack.notifications.bot_user_oauth_token');
-
-        if (! $token) {
+        if (! config('services.slack.notifications.bot_user_oauth_token')) {
             return;
         }
 
         $user = User::firstWhere('slack_id', $slackUserId);
         $greeting = $user ? "Hallo {$user->name}! 👋" : 'Willkommen beim Hort-Manager! 👋';
 
-        Http::withToken($token)->post('https://slack.com/api/views.publish', [
+        Http::slack()->post('views.publish', [
             'user_id' => $slackUserId,
             'view' => $this->view($greeting),
         ]);

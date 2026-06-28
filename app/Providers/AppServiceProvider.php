@@ -1,8 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Providers;
 
+use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
@@ -35,5 +39,12 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(function (SocialiteWasCalled $event) {
             $event->extendSocialite('slack', Provider::class);
         });
+
+        // One configured Slack Web API client (bot token, timeout, bounded retry)
+        // shared by every outbound Slack service.
+        Http::macro('slack', fn (): PendingRequest => Http::baseUrl('https://slack.com/api')
+            ->withToken(config('services.slack.notifications.bot_user_oauth_token'))
+            ->timeout(10)
+            ->retry(2, 200, throw: false));
     }
 }

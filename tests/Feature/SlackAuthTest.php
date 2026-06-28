@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Tests\Feature;
 
 use App\Enums\UserRole;
@@ -15,8 +17,16 @@ class SlackAuthTest extends TestCase
 {
     use RefreshDatabase;
 
-    /** Make Socialite return a fake Slack identity for the callback. */
-    private function fakeSlackUser(string $id, ?string $email, string $name = 'Papa Schmidt', ?string $teamId = null): void
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Sign-in requires a configured workspace (fail-closed); tests run inside it.
+        config(['services.slack.team' => 'T0HORT']);
+    }
+
+    /** Make Socialite return a fake Slack identity for the callback (in the Hort workspace by default). */
+    private function fakeSlackUser(string $id, ?string $email, string $name = 'Papa Schmidt', ?string $teamId = 'T0HORT'): void
     {
         $slackUser = Mockery::mock(SocialiteUser::class);
         $slackUser->shouldReceive('getId')->andReturn($id);
@@ -95,6 +105,23 @@ class SlackAuthTest extends TestCase
         $this->assertSame('U999', $existing->refresh()->slack_id);
         $this->assertSame(1, User::count()); // no duplicate
         $this->assertAuthenticatedAs($existing);
+    }
+
+    public function test_an_account_already_linked_to_another_slack_id_cannot_be_taken_over(): void
+    {
+        $victim = User::factory()->create([
+            'email' => 'admin@hort.test',
+            'slack_id' => 'Uoriginal',
+            'role' => UserRole::Staff,
+        ]);
+        // A different Slack identity claims the same email.
+        $this->fakeSlackUser('Uattacker', 'admin@hort.test');
+
+        $this->get(route('slack.callback'))->assertRedirect(route('login'));
+
+        $this->assertGuest();
+        $this->assertSame('Uoriginal', $victim->refresh()->slack_id); // untouched
+        $this->assertSame(1, User::count()); // no duplicate created
     }
 
     public function test_a_known_slack_id_logs_the_same_user_in(): void
