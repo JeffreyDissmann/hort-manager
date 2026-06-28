@@ -34,8 +34,9 @@ FROM dunglas/frankenphp:1-php8.4 AS runtime
 
 WORKDIR /app
 
-# Runtime extensions only: SQLite + opcache (intl/zip are harmless base extras).
-RUN install-php-extensions pdo_sqlite opcache intl zip \
+# Runtime extensions: SQLite + opcache; curl + gmp for web-push (VAPID/HTTP),
+# intl/zip are harmless base extras.
+RUN install-php-extensions pdo_sqlite opcache intl zip curl gmp \
     && apt-get update && apt-get install -y --no-install-recommends gosu curl \
     && rm -rf /var/lib/apt/lists/*
 

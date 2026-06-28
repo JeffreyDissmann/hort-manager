@@ -8,6 +8,7 @@ use App\Models\Excursion;
 use Illuminate\Notifications\Slack\BlockKit\Blocks\ActionsBlock;
 use Illuminate\Notifications\Slack\BlockKit\Blocks\SectionBlock;
 use Illuminate\Notifications\Slack\SlackMessage;
+use NotificationChannels\WebPush\WebPushMessage;
 
 /** DMs guardians who still haven't answered an excursion poll due today. */
 class ExcursionRsvpReminder extends SlackNotification
@@ -26,5 +27,15 @@ class ExcursionRsvpReminder extends SlackNotification
             ->actionsBlock(function (ActionsBlock $block) {
                 $block->button('Jetzt abstimmen')->url(route('polls.index'));
             });
+    }
+
+    public function toWebPush(object $notifiable, object $notification): WebPushMessage
+    {
+        return (new WebPushMessage)
+            ->title('Hort-Manager')
+            ->body("⏰ Letzte Chance: Kommt dein Kind beim Ausflug „{$this->excursion->name}“ mit?")
+            ->icon('/icons/icon-192.png')
+            ->badge('/icons/icon-192.png')
+            ->data(['url' => route('polls.index')]);
     }
 }

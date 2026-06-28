@@ -6,16 +6,24 @@ namespace App\Observers;
 
 use App\Jobs\AnnounceExcursionRsvp;
 use App\Models\Excursion;
+use App\Models\User;
+use App\Notifications\NewExcursion;
 use App\Services\SlackRsvp;
+use Illuminate\Support\Facades\Notification;
 
 class ExcursionObserver
 {
     public function __construct(private SlackRsvp $slack) {}
 
-    /** Announce a newly created excursion (RSVP DM) to every Slack-connected guardian. */
+    /** Announce a newly created excursion: interactive Slack DM + a web-push to guardians. */
     public function created(Excursion $excursion): void
     {
         AnnounceExcursionRsvp::dispatch($excursion);
+
+        Notification::send(
+            User::guardians()->whereHas('pushSubscriptions')->get(),
+            new NewExcursion($excursion),
+        );
     }
 
     /**

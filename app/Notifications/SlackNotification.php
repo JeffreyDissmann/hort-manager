@@ -7,8 +7,9 @@ namespace App\Notifications;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Notification;
+use NotificationChannels\WebPush\WebPushChannel;
 
-/** Base for our Slack DMs — queued, and delivered only when a bot token is configured. */
+/** Base for our Slack DMs — queued; also web-push when the subclass supports it. */
 abstract class SlackNotification extends Notification implements ShouldQueue
 {
     use Queueable;
@@ -16,6 +17,19 @@ abstract class SlackNotification extends Notification implements ShouldQueue
     /** @return array<int, string> */
     public function via(object $notifiable): array
     {
-        return config('services.slack.notifications.bot_user_oauth_token') ? ['slack'] : [];
+        $channels = [];
+
+        if (config('services.slack.notifications.bot_user_oauth_token')) {
+            $channels[] = 'slack';
+        }
+
+        // Also web-push if this notification provides a payload and the user opted in.
+        if (method_exists($this, 'toWebPush')
+            && method_exists($notifiable, 'pushSubscriptions')
+            && $notifiable->pushSubscriptions()->exists()) {
+            $channels[] = WebPushChannel::class;
+        }
+
+        return $channels;
     }
 }
