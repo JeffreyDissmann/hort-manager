@@ -30,9 +30,19 @@ GHCR packages are private by default. To pull on the NAS without logging in:
 
 ## 2. Configure the environment
 
+You only need **two files** on the NAS — the app image is pulled from GHCR, so no
+`git clone` is required. Grab them into a folder (e.g. `~/hort-manager`):
+
 ```bash
+mkdir -p ~/hort-manager && cd ~/hort-manager
+curl -fLO https://raw.githubusercontent.com/JeffreyDissmann/hort-manager/main/docker-compose.prod.yml
+curl -fLO https://raw.githubusercontent.com/JeffreyDissmann/hort-manager/main/.env.docker.example
 cp .env.docker.example .env
 ```
+
+(No SSH? Download those two raw files via the NAS file manager and rename the copy
+to `.env`. On Synology you can also use **Container Manager → Project → Create**
+pointed at this folder. Keep `.env` on the NAS only — it holds the tunnel token.)
 
 Edit `.env`:
 
