@@ -21,6 +21,9 @@ return Application::configure(basePath: dirname(__DIR__))
             AddLinkHeadersForPreloadedAssets::class,
         ]);
 
+        // Behind the Cloudflare Tunnel / reverse proxy — honor X-Forwarded-* (scheme, IP).
+        $middleware->trustProxies(at: '*');
+
         // Slack posts interaction payloads without a CSRF token (verified by signature instead).
         $middleware->preventRequestForgery(except: [
             'slack/interactions',

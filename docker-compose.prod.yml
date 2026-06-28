@@ -1,0 +1,62 @@
+# Hort-Manager — production stack (SQLite-only) behind a Cloudflare Tunnel.
+#
+# Quickstart on the NAS:
+#   cp .env.docker.example .env          # then edit APP_URL, SLACK_*, CLOUDFLARE_TUNNEL_TOKEN
+#   docker compose -f docker-compose.prod.yml pull
+#   docker compose -f docker-compose.prod.yml up -d
+#
+# Upgrade (roll forward to a new :latest):
+#   docker compose -f docker-compose.prod.yml pull && \
+#   docker compose -f docker-compose.prod.yml up -d
+#
+# The entrypoint migrates and rebuilds caches on boot. ALL data lives in the
+# named volume `hort_storage` (the SQLite file) — back THAT up; it is the entire
+# disaster-recovery story (e.g. `docker run --rm -v hort_storage:/d alpine \
+# tar czf - /d > backup.tgz`, or `sqlite3 .backup`).
+
+x-app: &app
+  image: ${APP_IMAGE:-ghcr.io/jeffreydissmann/hort-manager:latest}
+  env_file: .env
+  restart: unless-stopped
+  volumes:
+    - hort_storage:/app/storage/app
+
+services:
+  # Web (FrankenPHP). No published ports — only the tunnel reaches it.
+  app:
+    <<: *app
+    environment:
+      APP_ROLE: web
+
+  # Queue worker for the Slack sends.
+  queue:
+    <<: *app
+    environment:
+      APP_ROLE: queue
+    depends_on:
+      app:
+        condition: service_healthy
+
+  # Scheduler (daily RSVP reminders + nightly data prune).
+  scheduler:
+    <<: *app
+    environment:
+      APP_ROLE: scheduler
+    depends_on:
+      app:
+        condition: service_healthy
+
+  # Cloudflare Tunnel — terminates TLS at the edge and forwards to http://app:8080.
+  # Configure the tunnel's public hostname -> http://app:8080 in the Zero Trust dashboard.
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN}
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+
+volumes:
+  hort_storage:
