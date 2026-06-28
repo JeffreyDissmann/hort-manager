@@ -23,7 +23,9 @@ features:
     always_online: true
   app_home:
     home_tab_enabled: true
-    messages_tab_enabled: false
+    # Must be enabled for the bot to DM users (departures, RSVPs); read-only keeps
+    # it outbound-only. With this off, chat.postMessage fails: messages_tab_disabled.
+    messages_tab_enabled: true
     messages_tab_read_only_enabled: true
   slash_commands:
     - command: /hort
