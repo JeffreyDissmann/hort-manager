@@ -51,6 +51,8 @@ class HandleInertiaRequests extends Middleware
             'flash' => [
                 'status' => fn () => $request->session()->get('status'),
             ],
+            // Public VAPID key so the browser can subscribe to web push.
+            'vapidPublicKey' => config('webpush.vapid.public_key'),
             // Open excursion polls still awaiting an answer for this parent's children.
             'pendingPolls' => fn () => $this->pendingPollsCount($request->user()),
         ];

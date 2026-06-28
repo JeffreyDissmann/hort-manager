@@ -22,6 +22,8 @@ export default defineConfig({
         VitePWA({
             registerType: 'autoUpdate',
             scope: '/',
+            // We register the SW ourselves (served from the site root at /sw.js).
+            injectRegister: null,
             // injectManifest so we can add custom push/notificationclick handlers
             // (resources/js/sw.js) while Workbox still precaches the built assets.
             strategies: 'injectManifest',

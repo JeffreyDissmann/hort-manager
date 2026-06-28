@@ -21,6 +21,19 @@ use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
+// Serve the PWA service worker from the site root so it controls the whole origin
+// (scope "/") on any server — no Service-Worker-Allowed header needed.
+Route::get('/sw.js', function () {
+    $path = public_path('build/sw.js');
+    abort_unless(file_exists($path), 404);
+
+    return response()->file($path, [
+        'Content-Type' => 'text/javascript',
+        'Service-Worker-Allowed' => '/',
+        'Cache-Control' => 'no-cache',
+    ]);
+})->name('sw');
+
 Route::get('/', function () {
     return Inertia::render('Welcome', [
         'canLogin' => Route::has('login'),

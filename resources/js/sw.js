@@ -36,3 +36,45 @@ self.addEventListener('fetch', (event) => {
     // (this is a live app — no offline navigation fallback).
     event.respondWith(caches.match(event.request).then((hit) => hit || fetch(event.request)));
 });
+
+// ── Web push ─────────────────────────────────────────────────────────────────
+
+self.addEventListener('push', (event) => {
+    const payload = (() => {
+        try {
+            return event.data ? event.data.json() : {};
+        } catch {
+            return {};
+        }
+    })();
+
+    event.waitUntil(
+        self.registration.showNotification(payload.title || 'Hort-Manager', {
+            body: payload.body || '',
+            icon: payload.icon || '/icons/icon-192.png',
+            badge: payload.badge || '/icons/icon-192.png',
+            data: payload.data || {},
+        }),
+    );
+});
+
+self.addEventListener('notificationclick', (event) => {
+    event.notification.close();
+    const url = event.notification.data?.url || '/';
+
+    event.waitUntil(
+        self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windows) => {
+            // Focus an open window (navigating it), otherwise open a new one.
+            for (const client of windows) {
+                if ('focus' in client) {
+                    client.focus();
+                    if ('navigate' in client) {
+                        client.navigate(url);
+                    }
+                    return undefined;
+                }
+            }
+            return self.clients.openWindow(url);
+        }),
+    );
+});
