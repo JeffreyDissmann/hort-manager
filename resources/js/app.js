@@ -6,10 +6,12 @@ import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createApp, h } from 'vue';
 
 // Register the PWA service worker, served from the site root for "/" scope.
+// Register immediately (not on `load`): this module is deferred, so `load` may
+// already have fired by the time it runs, and the listener would never trigger.
 if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => {});
-    });
+    navigator.serviceWorker
+        .register('/sw.js', { scope: '/' })
+        .catch((error) => console.error('Service worker registration failed:', error));
 }
 
 const appName = import.meta.env.VITE_APP_NAME || 'Hort-Manager';

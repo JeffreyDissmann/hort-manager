@@ -31,6 +31,9 @@ export default defineConfig({
             filename: 'sw.js',
             injectManifest: {
                 globPatterns: ['**/*.{js,css,woff2}'],
+                // Assets are served under /build/, but the SW lives at the root (/sw.js),
+                // so precache URLs need the /build/ prefix to resolve.
+                modifyURLPrefix: { '': '/build/' },
             },
             manifest: {
                 name: 'Hort-Manager',

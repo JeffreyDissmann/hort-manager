@@ -9,7 +9,9 @@ self.addEventListener('install', (event) => {
     event.waitUntil(
         caches
             .open(PRECACHE)
-            .then((cache) => cache.addAll(ASSETS))
+            // Cache what we can; a single un-fetchable asset must not abort the
+            // install (which would stop the worker activating — and break push).
+            .then((cache) => Promise.allSettled(ASSETS.map((url) => cache.add(url))))
             .then(() => self.skipWaiting()),
     );
 });
