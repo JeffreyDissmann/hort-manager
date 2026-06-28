@@ -7,12 +7,9 @@
 }
 
 # Plain HTTP; Cloudflare Tunnel dials this over the internal Docker network.
+# X-Forwarded-* (scheme/IP) are honored by Laravel's trustProxies, not here.
 :8080 {
 	root * /app/public
 	encode zstd gzip
-
-	# Trust the upstream proxy so X-Forwarded-* (scheme/IP) are honored.
-	trusted_proxies static private_ranges
-
 	php_server
 }
