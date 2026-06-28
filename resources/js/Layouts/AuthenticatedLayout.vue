@@ -4,6 +4,8 @@ import ApplicationLogo from '@/Components/ApplicationLogo.vue';
 import Avatar from '@/Components/Avatar.vue';
 import Dropdown from '@/Components/Dropdown.vue';
 import DropdownLink from '@/Components/DropdownLink.vue';
+import InstallBanner from '@/Components/InstallBanner.vue';
+import PushToggle from '@/Components/PushToggle.vue';
 import {
     SunIcon,
     CalendarDaysIcon,
@@ -72,6 +74,8 @@ function isActive(href) {
 
 <template>
     <div class="min-h-[100dvh] bg-hort-sand">
+        <InstallBanner />
+
         <!-- Top bar -->
         <header
             class="sticky top-0 z-20 border-b border-hort-navy/10 bg-white/90 backdrop-blur"
@@ -139,6 +143,7 @@ function isActive(href) {
                         <DropdownLink :href="help().url">
                             Hilfe
                         </DropdownLink>
+                        <PushToggle />
                         <DropdownLink
                             :href="logout().url"
                             method="post"

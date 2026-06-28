@@ -11,10 +11,5 @@
 :8080 {
 	root * /app/public
 	encode zstd gzip
-
-	# Let the service worker (served from /build) control the whole origin (scope "/").
-	@sw path /build/sw.js
-	header @sw Service-Worker-Allowed "/"
-
 	php_server
 }

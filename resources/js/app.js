@@ -1,13 +1,16 @@
 import '../css/app.css';
 import './bootstrap';
 
-import { registerSW } from 'virtual:pwa-register';
 import { createInertiaApp } from '@inertiajs/vue3';
-
-// Register the PWA service worker (no-op in dev). Auto-updates on new releases.
-registerSW({ immediate: true });
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createApp, h } from 'vue';
+
+// Register the PWA service worker, served from the site root for "/" scope.
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => {});
+    });
+}
 
 const appName = import.meta.env.VITE_APP_NAME || 'Hort-Manager';
 
