@@ -99,6 +99,8 @@ class ExcursionManagementTest extends TestCase
 
     public function test_an_answer_updates_every_guardians_slack_message(): void
     {
+        Carbon::setTestNow(Carbon::parse('2026-06-28')); // keep the poll open (deadline in future)
+
         Http::fake([
             'slack.com/api/chat.postMessage' => Http::sequence()
                 ->push(['ok' => true, 'channel' => 'D1', 'ts' => 'ts1'])
@@ -130,6 +132,8 @@ class ExcursionManagementTest extends TestCase
 
     public function test_deleting_an_excursion_marks_the_slack_messages_cancelled(): void
     {
+        Carbon::setTestNow(Carbon::parse('2026-06-28'));
+
         Http::fake([
             'slack.com/api/chat.postMessage' => Http::response(['ok' => true, 'channel' => 'D1', 'ts' => 'ts1']),
             'slack.com/api/chat.update' => Http::response(['ok' => true]),
