@@ -2,7 +2,7 @@
 import { usePush } from '@/composables/usePush';
 import { onMounted } from 'vue';
 
-const { supported, subscribed, busy, refresh, enable, disable } = usePush();
+const { supported, subscribed, busy, error, refresh, enable, disable } = usePush();
 
 onMounted(refresh);
 
@@ -59,6 +59,8 @@ function toggle() {
                 musst du die App dafür zuerst über <strong>Teilen → Zum
                 Home-Bildschirm</strong> installieren und sie von dort öffnen.
             </p>
+
+            <p v-if="error" class="mt-3 text-sm text-red-600">{{ error }}</p>
 
             <p class="mt-4 text-xs text-gray-500">
                 Die Einstellung gilt pro Gerät – aktiviere sie auf jedem Handy oder

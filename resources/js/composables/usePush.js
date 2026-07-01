@@ -24,6 +24,7 @@ export function usePush() {
     );
     const subscribed = ref(false);
     const busy = ref(false);
+    const error = ref('');
 
     async function refresh() {
         if (!supported.value) {
@@ -42,8 +43,14 @@ export function usePush() {
             return false;
         }
         busy.value = true;
+        error.value = '';
         try {
-            if ((await Notification.requestPermission()) !== 'granted') {
+            const permission = await Notification.requestPermission();
+            if (permission !== 'granted') {
+                error.value =
+                    permission === 'denied'
+                        ? 'Benachrichtigungen sind für diese Seite blockiert. Bitte erlaube sie in den Browser-Einstellungen.'
+                        : 'Benachrichtigungen wurden nicht erlaubt.';
                 return false;
             }
             const registration = await navigator.serviceWorker.ready;
@@ -56,6 +63,7 @@ export function usePush() {
             subscribed.value = true;
             return true;
         } catch {
+            error.value = 'Benachrichtigungen konnten nicht aktiviert werden. Bitte versuche es später erneut.';
             return false;
         } finally {
             busy.value = false;
@@ -77,5 +85,5 @@ export function usePush() {
         }
     }
 
-    return { supported, subscribed, busy, refresh, enable, disable };
+    return { supported, subscribed, busy, error, refresh, enable, disable };
 }
