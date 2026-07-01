@@ -10,6 +10,8 @@ import TimeSelect from '@/Components/TimeSelect.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import WeekNav from '@/Components/WeekNav.vue';
+import Timetable from '@/Components/Timetable.vue';
+import WeekTimetable from '@/Components/WeekTimetable.vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { computed, reactive, ref } from 'vue';
 
@@ -19,9 +21,16 @@ const props = defineProps({
     currentWeek: { type: Array, default: () => [] },
     activities: { type: Array, default: () => [] },
     program: { type: Array, default: () => [] },
+    weekTimetable: { type: Array, default: () => [] },
     standard: { type: Array, default: () => [] },
     methodOptions: { type: Array, default: () => [] },
 });
+
+// Column headers: the picked week shows dates; the standard plan is generic Mo–Fr.
+const weekColumns = computed(() =>
+    props.weekDays.map((d) => ({ label: d.label, sublabel: d.date_label })),
+);
+const standardColumns = ['Mo', 'Di', 'Mi', 'Do', 'Fr'].map((label) => ({ label }));
 
 function goWeek(date) {
     router.get(
@@ -45,7 +54,6 @@ function onTouchEnd(e) {
 
 const flash = computed(() => usePage().props.flash?.status);
 const isStaff = computed(() => usePage().props.auth?.user?.role === 'staff');
-const standardWeekdays = ['Mo', 'Di', 'Mi', 'Do', 'Fr'];
 
 function toMinutes(time) {
     return parseInt(time.slice(0, 2), 10) * 60 + parseInt(time.slice(3, 5), 10);
@@ -70,12 +78,6 @@ function cellClass(day) {
         : 'bg-hort-teal/20 text-hort-teal-dark';
 }
 
-function chipClass(method) {
-    return method === 'sent_home'
-        ? 'bg-hort-purple/15 text-hort-purple'
-        : 'bg-hort-teal/25 text-hort-teal-dark';
-}
-
 // --- Inline editor (modal) ---
 const editing = ref(null); // { childId, childName, date, label }
 const form = reactive({ planned_time: '', planned_method: '', note: '' });
@@ -93,6 +95,11 @@ function openCell(child, day, dayMeta) {
     form.planned_time = day.time ?? '';
     form.planned_method = day.method ?? '';
     form.note = day.note ?? '';
+}
+
+// Staff editing a pickup from the Ganze-Woche timeline (kid carries the day data).
+function openFromTimeline(kid, column) {
+    openCell(kid, kid, { label: column.label, date_label: column.sublabel });
 }
 
 function closeEditor() {
@@ -142,7 +149,11 @@ function resetDay() {
             <section class="space-y-3" @touchstart="onTouchStart" @touchend="onTouchEnd">
                 <WeekNav :week="week" @navigate="goWeek" />
 
-                <ul v-if="currentWeek.length" class="space-y-3">
+                <!-- Parents see + edit their own children; staff use the timeline below. -->
+                <template v-if="!isStaff">
+                    <h3 class="text-sm font-semibold text-hort-navy/70">Deine Kinder</h3>
+
+                    <ul v-if="currentWeek.length" class="space-y-3">
                     <li
                         v-for="child in currentWeek"
                         :key="child.id"
@@ -259,87 +270,35 @@ function resetDay() {
                     </li>
                 </ul>
 
-                <p
-                    v-else
-                    class="rounded-2xl border-2 border-dashed border-hort-navy/15 p-6 text-center text-sm text-hort-navy/50"
-                >
-                    {{
-                        isStaff
-                            ? 'Noch keine Kinder angelegt.'
-                            : 'Dir ist noch kein Kind zugeordnet.'
-                    }}
-                </p>
-
-                <!-- Week overview: program (lunch + activity) and excursions per day -->
-                <div class="rounded-2xl bg-white p-4 shadow-sm">
-                    <p class="mb-2 text-sm font-semibold text-hort-navy/70">
-                        Essen, Aktivität & Ausflüge
+                    <p
+                        v-else
+                        class="rounded-2xl border-2 border-dashed border-hort-navy/15 p-6 text-center text-sm text-hort-navy/50"
+                    >
+                        Dir ist noch kein Kind zugeordnet.
                     </p>
-                    <div class="grid grid-cols-5 gap-1.5">
-                        <div
-                            v-for="(day, i) in weekDays"
-                            :key="day.date"
-                            class="space-y-1 rounded-lg bg-hort-sand p-1.5 text-center"
-                        >
-                            <div class="text-[11px] font-medium text-hort-navy/40">
-                                {{ day.label }}
-                            </div>
+                </template>
 
-                            <div
-                                v-if="program[i] && program[i].lunch"
-                                class="text-[10px] leading-tight text-hort-navy/80"
-                                :title="program[i].lunch"
-                            >
-                                {{ program[i].lunch }}
-                            </div>
-                            <div
-                                v-if="program[i] && program[i].activity"
-                                class="text-[10px] leading-tight text-hort-purple"
-                                :title="program[i].activity"
-                            >
-                                {{ program[i].activity }}
-                            </div>
-                            <div
-                                v-if="program[i] && program[i].homework_start"
-                                class="text-[10px] leading-tight text-hort-navy/50"
-                            >
-                                HA {{ program[i].homework_start }}<span
-                                    v-if="program[i].homework_end"
-                                    >–{{ program[i].homework_end }}</span
-                                >
-                            </div>
-
-                            <div
-                                v-for="(activity, j) in activities[i]"
-                                :key="'ex-' + j"
-                                class="rounded-md bg-hort-purple/15 px-1 py-0.5 text-[10px] font-semibold leading-tight text-hort-purple"
-                                :title="activity.name"
-                            >
-                                <span class="block truncate">🚌 {{ activity.name }}</span>
-                                <span
-                                    v-if="activity.depart_at"
-                                    class="block font-normal opacity-80"
-                                >
-                                    {{ activity.depart_at }}–{{ activity.return_at }}
-                                </span>
-                            </div>
-
-                            <div
-                                v-if="
-                                    !activities[i]?.length &&
-                                    !(
-                                        program[i] &&
-                                        (program[i].lunch ||
-                                            program[i].activity ||
-                                            program[i].homework_start)
-                                    )
-                                "
-                                class="text-[10px] text-hort-navy/20"
-                            >
-                                –
-                            </div>
-                        </div>
-                    </div>
+                <!-- Whole week, all children: effective plan + this week's programs -->
+                <div class="space-y-2">
+                    <h3 class="text-sm font-semibold text-hort-navy/70">
+                        Ganze Woche · alle Kinder
+                    </h3>
+                    <WeekTimetable
+                        v-if="weekTimetable.length || program.some((p) => p && (p.lunch || p.activity || p.homework_start))"
+                        :rows="weekTimetable"
+                        :columns="weekColumns"
+                        :program="program"
+                        :activities="activities"
+                        :editable="isStaff"
+                        @edit="openFromTimeline"
+                    />
+                    <p
+                        v-else
+                        class="rounded-2xl border-2 border-dashed border-hort-navy/15 p-6 text-center text-sm text-hort-navy/50"
+                    >
+                        Für diese Woche sind noch keine Abholzeiten oder Programme
+                        hinterlegt.
+                    </p>
                 </div>
 
                 <div
@@ -364,7 +323,7 @@ function resetDay() {
             <!-- Standard Stammplan timetable -->
             <section class="space-y-3">
                 <h3 class="text-sm font-semibold uppercase tracking-wide text-hort-navy/50">
-                    Standard-Plan
+                    Standard-Plan · gilt jede Woche
                 </h3>
                 <p class="text-sm text-hort-navy/60">
                     Der reguläre Wochen-Stammplan aller Kinder – die normalen
@@ -381,54 +340,11 @@ function resetDay() {
                     </Link>
                 </p>
 
-                <div
+                <Timetable
                     v-if="standard.length"
-                    class="overflow-x-auto rounded-2xl bg-white p-2 shadow-sm"
-                >
-                    <div class="min-w-[20rem]">
-                        <div class="grid grid-cols-[2.75rem_repeat(5,minmax(0,1fr))] gap-1 border-b border-hort-navy/10 pb-1">
-                            <div></div>
-                            <div
-                                v-for="day in standardWeekdays"
-                                :key="day"
-                                class="py-1 text-center text-xs font-semibold text-hort-navy/50"
-                            >
-                                {{ day }}
-                            </div>
-                        </div>
-
-                        <div
-                            v-for="row in standard"
-                            :key="row.time"
-                            class="grid grid-cols-[2.75rem_repeat(5,minmax(0,1fr))] items-stretch gap-1 border-b border-hort-navy/5 last:border-0"
-                        >
-                            <div class="flex items-start justify-end pr-1 pt-1.5 text-[11px] font-medium tabular-nums text-hort-navy/40">
-                                {{ row.time }}
-                            </div>
-                            <div
-                                v-for="(kids, i) in row.days"
-                                :key="i"
-                                class="space-y-1 py-1"
-                            >
-                                <div
-                                    v-for="kid in kids"
-                                    :key="kid.id"
-                                    class="rounded-md px-1.5 py-1 text-center text-[11px] font-semibold leading-tight"
-                                    :class="chipClass(kid.method)"
-                                    :title="kid.comment || undefined"
-                                >
-                                    <span class="block truncate">{{ kid.name }}</span>
-                                    <span
-                                        v-if="kid.comment"
-                                        class="block truncate text-[9px] font-normal opacity-70"
-                                    >
-                                        {{ kid.comment }}
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                    :rows="standard"
+                    :columns="standardColumns"
+                />
 
                 <p
                     v-else

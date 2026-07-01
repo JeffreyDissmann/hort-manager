@@ -8,6 +8,14 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Abholplan „Ganze Woche" timeline**: the weekly plan now shows a full timetable of
+  every child's effective pickup times for the picked week, with each day's lunch,
+  activity, homework and excursions folded in — homework/excursion render as bands
+  spanning their time slots, and staff can edit a pickup straight from the timeline.
+- **Homework time on the daily board**: the homework window shows inline in the Heute
+  pickup list (grouped by time), so pickups landing inside it stand out.
+- **"Was ist neu?" in-app release notes**: a curated, parent-facing popup with
+  history arrows, separate from this technical changelog.
 - **Installable PWA + web push notifications**: the app can be added to the home
   screen (manifest, service worker, install banner) and parents can opt in to push
   notifications for departures, excursion RSVP reminders and new excursions — via
