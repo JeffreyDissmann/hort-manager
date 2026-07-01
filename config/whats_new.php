@@ -18,6 +18,15 @@ return [
     [
         'version' => '2026.07.01',
         'date' => '2026-07-01',
+        'title' => 'Hausaufgabenzeit auf der Heute-Seite',
+        'items' => [
+            '📚 Die Hausaufgabenzeit wird jetzt direkt in der Heute-Liste angezeigt – an der richtigen Uhrzeit zwischen den Abholzeiten. So fällt sofort auf, wenn ein Kind mitten in der Hausaufgabenzeit abgeholt wird.',
+            '🙌 Idee und Anstoß dazu von Erik – vielen Dank!',
+        ],
+    ],
+    [
+        'version' => '2026.06.28',
+        'date' => '2026-06-28',
         'title' => 'Der Hort-Manager als App – mit Benachrichtigungen',
         'items' => [
             '📲 Du kannst den Hort-Manager als App installieren – auf dem iPhone über „Teilen → Zum Home-Bildschirm", auf Android über „Installieren".',
