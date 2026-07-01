@@ -10,6 +10,7 @@ use App\Enums\UserRole;
 use App\Models\Child;
 use App\Models\DailyDeparture;
 use App\Models\Excursion;
+use App\Models\HomeworkDefault;
 use App\Models\User;
 use App\Models\WeeklySchedule;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -155,6 +156,65 @@ class WeeklyOverviewTest extends TestCase
                 ->where('currentWeek.0.days.2.adjusted', true)
                 // Monday has no override → falls back to standard (no schedule → frei).
                 ->where('currentWeek.0.days.0.time', null)
+            );
+    }
+
+    public function test_the_week_timetable_shows_all_children_with_effective_times(): void
+    {
+        $this->travelTo(Carbon::parse('2026-06-22')); // Monday = today (editable)
+
+        $child = Child::factory()->create(['name' => 'Emma']);
+        WeeklySchedule::create([
+            'child_id' => $child->id,
+            'weekday' => 1, // Montag
+            'planned_time' => '14:00',
+            'method' => DepartureMethod::PickedUp,
+        ]);
+        // Override this Monday to a later pickup.
+        DailyDeparture::create([
+            'child_id' => $child->id,
+            'date' => '2026-06-22',
+            'planned_time' => '15:00',
+            'planned_method' => DepartureMethod::PickedUp,
+            'status' => DepartureStatus::Present,
+        ]);
+
+        // Staff see the whole-week timetable (all children), with the effective time.
+        $this->actingAs(User::factory()->create(['role' => UserRole::Staff]))
+            ->get(route('weekly-plan'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('weekTimetable', 1)
+                ->where('weekTimetable.0.time', '15:00')
+                ->where('weekTimetable.0.days.0.0.name', 'Emma')
+                ->where('weekTimetable.0.days.0.0.time', '15:00')
+                ->where('weekTimetable.0.days.0.0.adjusted', true)
+                ->where('weekTimetable.0.days.0.0.editable', true) // today, staff can edit
+                ->where('weekTimetable.0.days.1', []) // Tuesday empty
+            );
+    }
+
+    public function test_the_week_timetable_spans_the_homework_window(): void
+    {
+        $this->travelTo(Carbon::parse('2026-06-22')); // Monday
+
+        $child = Child::factory()->create();
+        WeeklySchedule::create([
+            'child_id' => $child->id,
+            'weekday' => 1, // Montag, leaves at 16:00
+            'planned_time' => '16:00',
+            'method' => DepartureMethod::PickedUp,
+        ]);
+        // Homework 14:00–15:00 on Mondays → the timetable must start at 14:00.
+        HomeworkDefault::create(['weekday' => 1, 'start_time' => '14:00', 'end_time' => '15:00']);
+
+        $this->actingAs(User::factory()->create(['role' => UserRole::Staff]))
+            ->get(route('weekly-plan'))
+            ->assertInertia(fn (Assert $page) => $page
+                // 14:00, 14:30, 15:00, 15:30, 16:00 → five rows.
+                ->has('weekTimetable', 5)
+                ->where('weekTimetable.0.time', '14:00')
+                ->where('weekTimetable.4.time', '16:00')
+                ->where('weekTimetable.4.days.0.0.id', $child->id)
             );
     }
 }

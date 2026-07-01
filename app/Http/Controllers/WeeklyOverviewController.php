@@ -14,7 +14,9 @@ use App\Models\Excursion;
 use App\Models\HomeworkDefault;
 use App\Models\WeeklySchedule;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -168,11 +170,119 @@ class WeeklyOverviewController extends Controller
             'currentWeek' => $currentWeek,
             'activities' => $activities,
             'program' => $program,
+            'weekTimetable' => $this->weekTimetable($weekDays, $excursionByChildDate, $program, $activities),
             'standard' => $this->standardTimetable(),
             'methodOptions' => collect(DepartureMethod::cases())
                 ->map(fn (DepartureMethod $m) => ['value' => $m->value, 'label' => $m->label()])
                 ->all(),
         ]);
+    }
+
+    /**
+     * The selected week's *effective* timetable (Stammplan + same-day overrides)
+     * for all children, in the same 30-minute time-slot shape as the standard plan.
+     *
+     * @param  array<string, array>  $excursionByChildDate
+     * @param  array<int, array>  $program
+     * @param  array<int, array>  $activities
+     * @return array<int, array{time: string, days: array}>
+     */
+    private function weekTimetable(Collection $weekDays, array $excursionByChildDate, array $program, array $activities): array
+    {
+        $children = Child::query()->with('weeklySchedules')->orderBy('name')->get(['id', 'name']);
+        $weekDates = $weekDays->pluck('date')->all();
+
+        $departures = DailyDeparture::query()
+            ->whereIn('date', $weekDates)
+            ->get()
+            ->keyBy(fn (DailyDeparture $d) => $d->child_id.'|'.$d->date->toDateString());
+
+        $toMinutes = fn (string $time): int => ((int) substr($time, 0, 2)) * 60 + (int) substr($time, 3, 2);
+        $bucket = fn (int $minutes): int => intdiv($minutes, 30) * 30;
+        $label = fn (int $minutes): string => sprintf('%02d:%02d', intdiv($minutes, 60), $minutes % 60);
+
+        // Per weekday (0=Mo … 4=Fr), each child's effective pickup for that date.
+        $dayLists = array_fill(0, 5, []);
+        $weekdayDays = $weekDays->values();
+        $todayString = Carbon::today()->toDateString();
+
+        foreach ($children as $child) {
+            $byWeekday = $child->weeklySchedules->keyBy('weekday');
+
+            foreach ($weekdayDays as $i => $day) {
+                $schedule = $byWeekday->get($i + 1);
+                $stdTime = $schedule?->planned_time;
+                $departure = $departures->get($child->id.'|'.$day['date']);
+                $time = $departure && $departure->planned_time ? $departure->planned_time : $stdTime;
+
+                if (! $time) {
+                    continue;
+                }
+
+                $short = substr((string) $time, 0, 5);
+                $stdShort = $stdTime ? substr((string) $stdTime, 0, 5) : null;
+                $method = $departure ? $departure->planned_method : $schedule?->method;
+                $adjusted = $departure !== null
+                    && ($short !== $stdShort || $method?->value !== $schedule?->method?->value);
+                $departed = $departure?->status !== null && $departure?->status !== DepartureStatus::Present;
+
+                $dayLists[$i][] = [
+                    'id' => $child->id,
+                    'name' => $child->name,
+                    'time' => $short,
+                    'method' => $method?->value,
+                    'comment' => $adjusted ? $departure?->note : $schedule?->comment,
+                    'note' => $departure?->note ?? $schedule?->comment,
+                    'adjusted' => $adjusted,
+                    'excursion' => isset($excursionByChildDate[$child->id.'|'.$day['date']]),
+                    'date' => $day['date'],
+                    'editable' => $day['date'] >= $todayString && ! $departed,
+                    'minutes' => $toMinutes($short),
+                ];
+            }
+        }
+
+        // Extend the range to cover homework + excursion windows, so their bands
+        // always have slot rows to span even when no child leaves during them.
+        $starts = collect($dayLists)->flatten(1)->pluck('minutes')->all();
+        $ends = $starts;
+        for ($i = 0; $i < 5; $i++) {
+            $hwStart = $program[$i]['homework_start'] ?? null;
+            if ($hwStart) {
+                $starts[] = $toMinutes($hwStart);
+                $ends[] = $toMinutes($program[$i]['homework_end'] ?? $hwStart) - 1;
+            }
+            foreach ($activities[$i] ?? [] as $excursion) {
+                if (! empty($excursion['depart_at'])) {
+                    $starts[] = $toMinutes($excursion['depart_at']);
+                }
+                if (! empty($excursion['return_at'])) {
+                    $ends[] = $toMinutes($excursion['return_at']) - 1;
+                }
+            }
+        }
+
+        if (empty($starts)) {
+            return [];
+        }
+
+        $low = $bucket(min($starts));
+        $high = $bucket(max(max($starts), empty($ends) ? min($starts) : max($ends)));
+
+        $rows = [];
+        for ($minutes = $low; $minutes <= $high; $minutes += 30) {
+            $days = [];
+            for ($i = 0; $i < 5; $i++) {
+                $days[] = collect($dayLists[$i])
+                    ->filter(fn (array $e) => $bucket($e['minutes']) === $minutes)
+                    ->sortBy('name')
+                    ->map(fn (array $e) => Arr::except($e, ['minutes']))
+                    ->values();
+            }
+            $rows[] = ['time' => $label($minutes), 'days' => $days];
+        }
+
+        return $rows;
     }
 
     /**

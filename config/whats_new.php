@@ -18,10 +18,10 @@ return [
     [
         'version' => '2026.07.01',
         'date' => '2026-07-01',
-        'title' => 'Hausaufgabenzeit auf der Heute-Seite',
+        'title' => 'Neuer Wochenplan & Hausaufgaben auf „Heute"',
         'items' => [
-            '📚 Die Hausaufgabenzeit wird jetzt direkt in der Heute-Liste angezeigt – an der richtigen Uhrzeit zwischen den Abholzeiten. So fällt sofort auf, wenn ein Kind mitten in der Hausaufgabenzeit abgeholt wird.',
-            '🙌 Idee und Anstoß dazu von Erik – vielen Dank!',
+            '📅 Der Abholplan zeigt jetzt die ganze Woche auf einen Blick: alle Kinder mit ihren Abholzeiten, und Essen, Aktivität, Hausaufgaben- und Ausflugszeiten erscheinen als farbige Balken genau an der richtigen Uhrzeit.',
+            '📚 Auf „Heute" wird die Hausaufgabenzeit direkt in der Liste angezeigt – so fällt sofort auf, wenn ein Kind mitten in der Hausaufgabenzeit abgeholt wird. 🙌 Idee dazu von Erik – vielen Dank!',
         ],
     ],
     [
