@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import ApplicationLogo from '@/Components/ApplicationLogo.vue';
 import Avatar from '@/Components/Avatar.vue';
 import AppBadge from '@/Components/AppBadge.vue';
@@ -7,6 +7,7 @@ import Dropdown from '@/Components/Dropdown.vue';
 import DropdownLink from '@/Components/DropdownLink.vue';
 import InstallBanner from '@/Components/InstallBanner.vue';
 import NotifyPrompt from '@/Components/NotifyPrompt.vue';
+import WhatsNewModal from '@/Components/WhatsNewModal.vue';
 import {
     SunIcon,
     CalendarDaysIcon,
@@ -28,6 +29,8 @@ const props = defineProps({
     wide: { type: Boolean, default: false },
 });
 const contentMax = computed(() => (props.wide ? 'max-w-7xl' : 'max-w-5xl'));
+
+const whatsNewModal = ref(null);
 
 const appName = computed(() => usePage().props.appName ?? 'Hort-Manager');
 const user = computed(() => usePage().props.auth?.user);
@@ -76,6 +79,7 @@ function isActive(href) {
 <template>
     <div class="min-h-[100dvh] bg-hort-sand">
         <AppBadge />
+        <WhatsNewModal ref="whatsNewModal" />
         <InstallBanner />
         <NotifyPrompt />
 
@@ -146,6 +150,13 @@ function isActive(href) {
                         <DropdownLink :href="help().url">
                             Hilfe
                         </DropdownLink>
+                        <button
+                            type="button"
+                            @click="whatsNewModal?.open()"
+                            class="block w-full px-4 py-2 text-start text-sm leading-5 text-hort-navy transition duration-150 ease-in-out hover:bg-hort-sand focus:bg-hort-sand focus:outline-none"
+                        >
+                            Was ist neu?
+                        </button>
                         <DropdownLink
                             :href="logout().url"
                             method="post"
