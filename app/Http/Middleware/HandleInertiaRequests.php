@@ -53,8 +53,9 @@ class HandleInertiaRequests extends Middleware
             ],
             // Public VAPID key so the browser can subscribe to web push.
             'vapidPublicKey' => config('webpush.vapid.public_key'),
-            // Newest "Was ist neu?" entry (the popup decides if it's unseen).
-            'whatsNew' => config('whats_new.0'),
+            // The latest "Was ist neu?" entries (newest first, max 5); the popup
+            // auto-shows the newest if unseen and lets users page back through them.
+            'whatsNew' => array_slice((array) config('whats_new'), 0, 5),
             // Open excursion polls still awaiting an answer for this parent's children.
             'pendingPolls' => fn () => $this->pendingPollsCount($request->user()),
         ];

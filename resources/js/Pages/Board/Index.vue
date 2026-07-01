@@ -72,6 +72,35 @@ function homeworkConflict(row) {
     return pickup >= toMinutes(hw.homework_start) && pickup < toMinutes(hw.homework_end);
 }
 
+// The board grouped by time: everything happening at the same time — children
+// leaving, and the homework window (at its start time) — shares one time slot.
+const boardBlocks = computed(() => {
+    const byTime = new Map();
+    const slotFor = (time) => {
+        if (!byTime.has(time)) {
+            byTime.set(time, { time, homework: null, rows: [] });
+        }
+        return byTime.get(time);
+    };
+
+    for (const row of visibleRows.value) {
+        slotFor(row.planned_time ?? null).rows.push(row);
+    }
+
+    const hw = props.program;
+    if (hw?.homework_start && hw?.homework_end) {
+        slotFor(hw.homework_start).homework = { start: hw.homework_start, end: hw.homework_end };
+    }
+
+    // Ascending by time; slots without a fixed time (null) sort last.
+    return [...byTime.values()].sort((a, b) => {
+        if (a.time === b.time) return 0;
+        if (a.time === null) return 1;
+        if (b.time === null) return -1;
+        return a.time < b.time ? -1 : 1;
+    });
+});
+
 // Pickup falls inside the child's excursion window.
 function excursionConflict(row) {
     const ex = row.excursion;
@@ -151,8 +180,9 @@ function saveEdit(row) {
             </div>
 
             <!-- Today's program (lunch + activity) -->
+            <!-- Lunch + activity; homework now appears inline in the pickup list. -->
             <div
-                v-if="program"
+                v-if="program && (program.lunch || program.activity)"
                 class="rounded-2xl bg-white p-4 shadow-sm"
             >
                 <p v-if="program.lunch" class="text-sm text-hort-navy">
@@ -166,17 +196,6 @@ function saveEdit(row) {
                 >
                     <span class="font-semibold">Aktivität:</span>
                     {{ program.activity }}
-                </p>
-                <p
-                    v-if="program.homework_start"
-                    class="text-sm text-hort-navy"
-                    :class="program.lunch || program.activity ? 'mt-1' : ''"
-                >
-                    <span class="font-semibold">Hausaufgaben:</span>
-                    {{ program.homework_start }}<span v-if="program.homework_end"
-                        >–{{ program.homework_end }}</span
-                    >
-                    Uhr
                 </p>
             </div>
 
@@ -291,13 +310,28 @@ function saveEdit(row) {
                 </div>
             </div>
 
-            <ul v-if="visibleRows.length" class="space-y-3">
-                <li
-                    v-for="row in visibleRows"
-                    :key="row.id"
-                    class="rounded-2xl bg-white p-4 shadow-sm transition"
-                    :class="{ 'opacity-60': row.status === 'picked_up' || row.status === 'sent_home' }"
-                >
+            <div v-if="visibleRows.length" class="space-y-6">
+                <div v-for="block in boardBlocks" :key="block.time ?? 'none'">
+                    <!-- One time slot: shared by same-time pickups and, at its start, homework -->
+                    <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-hort-navy/40">
+                        {{ block.time ?? 'Ohne feste Zeit' }}<span v-if="block.time"> Uhr</span>
+                    </p>
+                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <div
+                            v-if="block.homework"
+                            class="rounded-2xl border border-dashed border-amber-300 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800 sm:col-span-2"
+                        >
+                            📚 Hausaufgaben · {{ block.homework.start }}<span v-if="block.homework.end">–{{ block.homework.end }}</span> Uhr
+                        </div>
+                            <div
+                                v-for="row in block.rows"
+                                :key="row.id"
+                                class="rounded-2xl bg-white p-4 shadow-sm transition"
+                                :class="[
+                                    { 'opacity-60': row.status === 'picked_up' || row.status === 'sent_home' },
+                                    homeworkConflict(row) ? 'ring-1 ring-amber-300' : '',
+                                ]"
+                            >
                     <div class="flex items-start justify-between gap-3">
                         <div class="min-w-0">
                             <p class="font-semibold text-hort-navy">
@@ -318,7 +352,7 @@ function saveEdit(row) {
                                     v-if="row.is_overridden"
                                     class="ml-1 rounded bg-amber-100 px-1.5 py-0.5 text-[11px] font-medium text-amber-700"
                                 >
-                                    heute geändert
+                                    für heute geändert
                                 </span>
                             </p>
                             <p
@@ -471,8 +505,10 @@ function saveEdit(row) {
                             </button>
                         </div>
                     </template>
-                </li>
-            </ul>
+                            </div>
+                        </div>
+                    </div>
+            </div>
 
             <p
                 v-else

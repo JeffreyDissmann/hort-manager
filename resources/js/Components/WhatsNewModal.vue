@@ -1,29 +1,53 @@
 <script setup>
 import Modal from '@/Components/Modal.vue';
+import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/vue/24/outline';
 import { usePage } from '@inertiajs/vue3';
 import { computed, onMounted, ref } from 'vue';
 
 const SEEN_KEY = 'whats-new-seen';
 
-const entry = computed(() => usePage().props.whatsNew);
+const entries = computed(() => usePage().props.whatsNew ?? []);
 const show = ref(false);
+const index = ref(0); // 0 = newest
+const entry = computed(() => entries.value[index.value] ?? null);
 
 function open() {
-    if (entry.value) {
+    if (entries.value.length) {
+        index.value = 0;
         show.value = true;
     }
 }
 
 function close() {
-    if (entry.value) {
-        localStorage.setItem(SEEN_KEY, entry.value.version);
+    if (entries.value.length) {
+        localStorage.setItem(SEEN_KEY, entries.value[0].version);
     }
     show.value = false;
 }
 
+// Higher index = older entry.
+function older() {
+    if (index.value < entries.value.length - 1) {
+        index.value++;
+    }
+}
+function newer() {
+    if (index.value > 0) {
+        index.value--;
+    }
+}
+
+function formatDate(iso) {
+    if (!iso) {
+        return '';
+    }
+    const [y, m, d] = iso.split('-');
+    return `${d}.${m}.${y}`;
+}
+
 onMounted(() => {
-    // Auto-show once per device when the newest entry hasn't been seen yet.
-    if (entry.value && localStorage.getItem(SEEN_KEY) !== entry.value.version) {
+    // Auto-show the newest entry once per device when it hasn't been seen.
+    if (entries.value.length && localStorage.getItem(SEEN_KEY) !== entries.value[0].version) {
         show.value = true;
     }
 });
@@ -33,11 +57,20 @@ defineExpose({ open });
 
 <template>
     <Modal :show="show" max-width="md" @close="close">
-        <div class="p-6">
-            <h2 class="text-lg font-semibold text-hort-navy">✨ Was ist neu?</h2>
-            <p v-if="entry" class="mt-1 text-sm text-gray-500">{{ entry.title }}</p>
+        <div v-if="entry" class="p-6">
+            <div class="flex items-center justify-between">
+                <h2 class="text-lg font-semibold text-hort-navy">✨ Was ist neu?</h2>
+                <span v-if="entries.length > 1" class="text-xs text-gray-400">
+                    {{ index + 1 }}/{{ entries.length }}
+                </span>
+            </div>
 
-            <ul v-if="entry" class="mt-4 space-y-3">
+            <p class="mt-1 text-sm text-gray-500">
+                {{ entry.title }}
+                <span v-if="entry.date" class="text-gray-400">· {{ formatDate(entry.date) }}</span>
+            </p>
+
+            <ul class="mt-4 space-y-3">
                 <li
                     v-for="(item, i) in entry.items"
                     :key="i"
@@ -47,7 +80,29 @@ defineExpose({ open });
                 </li>
             </ul>
 
-            <div class="mt-6 flex justify-end">
+            <div class="mt-6 flex items-center justify-between">
+                <div v-if="entries.length > 1" class="flex gap-1">
+                    <button
+                        type="button"
+                        :disabled="index >= entries.length - 1"
+                        @click="older"
+                        aria-label="Ältere Neuigkeiten"
+                        class="rounded-lg border border-hort-navy/10 p-1.5 text-hort-navy transition hover:bg-hort-sand disabled:opacity-30"
+                    >
+                        <ChevronLeftIcon class="h-5 w-5" />
+                    </button>
+                    <button
+                        type="button"
+                        :disabled="index <= 0"
+                        @click="newer"
+                        aria-label="Neuere Neuigkeiten"
+                        class="rounded-lg border border-hort-navy/10 p-1.5 text-hort-navy transition hover:bg-hort-sand disabled:opacity-30"
+                    >
+                        <ChevronRightIcon class="h-5 w-5" />
+                    </button>
+                </div>
+                <span v-else></span>
+
                 <button
                     type="button"
                     @click="close"
