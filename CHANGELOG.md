@@ -8,6 +8,11 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **"Keine Hausaufgaben" per day and per weekday**: staff can explicitly mark a day
+  (or a whole weekday default) as having no homework, overriding the weekday default
+  — a `homework_none` state on `DailyProgram`, with the effective slot centralised in
+  `DailyProgram::effectiveHomework`. On Heute the homework window renders as a side
+  bar when a pickup overlaps it, otherwise a horizontal card.
 - **Abholplan „Ganze Woche" timeline**: the weekly plan now shows a full timetable of
   every child's effective pickup times for the picked week, with each day's lunch,
   activity, homework and excursions folded in — homework/excursion render as bands

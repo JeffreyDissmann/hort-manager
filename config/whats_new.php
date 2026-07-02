@@ -16,6 +16,15 @@ declare(strict_types=1);
 
 return [
     [
+        'version' => '2026.07.02',
+        'date' => '2026-07-02',
+        'title' => 'Hausaufgaben: „keine" möglich & klarere Anzeige',
+        'items' => [
+            '✅ Das Hort-Team kann jetzt pro Tag oder pro Wochentag „Keine Hausaufgaben" ankreuzen – auch an Tagen, an denen sonst welche vorgesehen sind.',
+            '📚 Die Hausaufgabenzeit wird auf „Heute" klarer angezeigt: als Balken genau neben den Abholzeiten, die hineinfallen.',
+        ],
+    ],
+    [
         'version' => '2026.07.01',
         'date' => '2026-07-01',
         'title' => 'Neuer Wochenplan & Hausaufgaben auf „Heute"',

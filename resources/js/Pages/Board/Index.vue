@@ -78,7 +78,7 @@ const boardBlocks = computed(() => {
     const byTime = new Map();
     const slotFor = (time) => {
         if (!byTime.has(time)) {
-            byTime.set(time, { time, homework: null, rows: [] });
+            byTime.set(time, { time, rows: [], homeworkOnly: false });
         }
         return byTime.get(time);
     };
@@ -87,19 +87,60 @@ const boardBlocks = computed(() => {
         slotFor(row.planned_time ?? null).rows.push(row);
     }
 
-    const hw = props.program;
-    if (hw?.homework_start && hw?.homework_end) {
-        slotFor(hw.homework_start).homework = { start: hw.homework_start, end: hw.homework_end };
-    }
-
     // Ascending by time; slots without a fixed time (null) sort last.
-    return [...byTime.values()].sort((a, b) => {
+    const blocks = [...byTime.values()].sort((a, b) => {
         if (a.time === b.time) return 0;
         if (a.time === null) return 1;
         if (b.time === null) return -1;
         return a.time < b.time ? -1 : 1;
     });
+
+    // If a pickup overlaps the homework window, a vertical bar covers those rows.
+    // Otherwise show homework as a horizontal card at its start time.
+    const hw = props.program;
+    if (hw?.homework_start && hw?.homework_end) {
+        const overlaps = (b) =>
+            b.rows.length && b.time !== null && b.time >= hw.homework_start && b.time < hw.homework_end;
+        if (!blocks.some(overlaps)) {
+            const card = {
+                time: hw.homework_start,
+                rows: [],
+                homeworkCard: { start: hw.homework_start, end: hw.homework_end },
+            };
+            const at = blocks.findIndex((b) => b.time !== null && b.time >= hw.homework_start);
+            at === -1 ? blocks.push(card) : blocks.splice(at, 0, card);
+        }
+    }
+
+    return blocks;
 });
+
+// The homework bar's grid-row span — only when pickups overlap the window.
+const homeworkSpan = computed(() => {
+    const hw = props.program;
+    if (!hw?.homework_start || !hw?.homework_end) {
+        return null;
+    }
+    const covered = (b) =>
+        b.rows.length && b.time !== null && b.time >= hw.homework_start && b.time < hw.homework_end;
+    const idxs = [];
+    boardBlocks.value.forEach((b, i) => {
+        if (covered(b)) {
+            idxs.push(i);
+        }
+    });
+    if (!idxs.length) {
+        return null;
+    }
+    return { rowStart: idxs[0] + 1, span: idxs[idxs.length - 1] - idxs[0] + 1 };
+});
+
+// A block only shifts right (making room for the homework bar) when it's inside
+// the homework window; otherwise it stays flush left across the full width.
+function blockInHomework(i) {
+    const s = homeworkSpan.value;
+    return !!s && i + 1 >= s.rowStart && i + 1 < s.rowStart + s.span;
+}
 
 // Pickup falls inside the child's excursion window.
 function excursionConflict(row) {
@@ -310,19 +351,42 @@ function saveEdit(row) {
                 </div>
             </div>
 
-            <div v-if="visibleRows.length" class="space-y-6">
-                <div v-for="block in boardBlocks" :key="block.time ?? 'none'">
-                    <!-- One time slot: shared by same-time pickups and, at its start, homework -->
-                    <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-hort-navy/40">
-                        {{ block.time ?? 'Ohne feste Zeit' }}<span v-if="block.time"> Uhr</span>
-                    </p>
-                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div
+                v-if="visibleRows.length"
+                class="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-6"
+                style="grid-auto-rows: max-content"
+            >
+                <!-- Homework as a side bar spanning the time slots it covers -->
+                <div
+                    v-if="homeworkSpan && program"
+                    class="flex flex-col items-center gap-1 rounded-xl border border-dashed border-amber-300 bg-amber-50 px-1.5 py-2 text-amber-700"
+                    :style="{ gridColumn: 1, gridRow: `${homeworkSpan.rowStart} / span ${homeworkSpan.span}` }"
+                    :title="`Hausaufgaben ${program.homework_start}–${program.homework_end || ''}`"
+                >
+                    <span class="text-base leading-none">📚</span>
+                    <span class="text-[10px] font-semibold [writing-mode:vertical-rl]">
+                        {{ program.homework_start }}<span v-if="program.homework_end">–{{ program.homework_end }}</span> Uhr
+                    </span>
+                </div>
+
+                <template v-for="(block, i) in boardBlocks" :key="block.time ?? 'none'">
+                    <div
+                        class="min-w-0"
+                        :style="{ gridColumn: blockInHomework(i) ? 2 : '1 / -1', gridRow: i + 1 }"
+                    >
+                        <!-- No pickup overlaps the window → homework as a horizontal card -->
                         <div
-                            v-if="block.homework"
-                            class="rounded-2xl border border-dashed border-amber-300 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800 sm:col-span-2"
+                            v-if="block.homeworkCard"
+                            class="rounded-2xl border border-dashed border-amber-300 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800"
                         >
-                            📚 Hausaufgaben · {{ block.homework.start }}<span v-if="block.homework.end">–{{ block.homework.end }}</span> Uhr
+                            📚 Hausaufgaben · {{ block.homeworkCard.start }}<span v-if="block.homeworkCard.end">–{{ block.homeworkCard.end }}</span> Uhr
                         </div>
+
+                        <template v-else>
+                        <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-hort-navy/40">
+                            {{ block.time ?? 'Ohne feste Zeit' }}<span v-if="block.time"> Uhr</span>
+                        </p>
+                        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
                             <div
                                 v-for="row in block.rows"
                                 :key="row.id"
@@ -507,7 +571,9 @@ function saveEdit(row) {
                     </template>
                             </div>
                         </div>
+                        </template>
                     </div>
+                </template>
             </div>
 
             <p
