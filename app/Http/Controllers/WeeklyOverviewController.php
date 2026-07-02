@@ -82,8 +82,7 @@ class WeeklyOverviewController extends Controller
         $program = $weekDays->values()->map(function (array $day, int $i) use ($programs, $homeworkDefaults) {
             $p = $programs->get($day['date']);
             $default = $homeworkDefaults->get($i + 1);
-            $hwStart = $p?->homework_start ?? $default?->start_time;
-            $hwEnd = $p?->homework_end ?? $default?->end_time;
+            [$hwStart, $hwEnd] = DailyProgram::effectiveHomework($p, $default);
 
             return [
                 'lunch' => $p?->lunch,

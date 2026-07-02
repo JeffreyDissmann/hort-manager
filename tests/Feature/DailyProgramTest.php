@@ -151,6 +151,34 @@ class DailyProgramTest extends TestCase
         $this->assertDatabaseMissing('daily_programs', ['date' => '2026-06-22']);
     }
 
+    public function test_no_homework_suppresses_the_weekday_default(): void
+    {
+        $this->travelTo(Carbon::parse('2026-06-22')); // Monday
+        HomeworkDefault::create(['weekday' => 1, 'start_time' => '14:00', 'end_time' => '15:00']);
+
+        $this->actingAs($this->staff())
+            ->patch(route('program.update'), [
+                'days' => [[
+                    'date' => '2026-06-22', // Monday
+                    'homework_none' => true,
+                ]],
+            ]);
+
+        // The explicit "keine Hausaufgaben" is recorded to override the default…
+        $this->assertDatabaseHas('daily_programs', [
+            'date' => '2026-06-22',
+            'homework_none' => true,
+        ]);
+
+        // …and the editor shows no homework that day, despite the weekday default.
+        $this->actingAs($this->staff())
+            ->get(route('program'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('days.0.homework_start', null)
+                ->where('days.0.homework_end', null)
+            );
+    }
+
     public function test_homework_override_is_stored_when_it_differs(): void
     {
         HomeworkDefault::create(['weekday' => 1, 'start_time' => '14:00', 'end_time' => '15:00']);

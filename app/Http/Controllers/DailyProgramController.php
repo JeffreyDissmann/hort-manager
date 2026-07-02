@@ -37,6 +37,7 @@ class DailyProgramController extends Controller
             $weekday = Carbon::parse($day['date'])->dayOfWeekIso;
             $default = $defaults->get($weekday);
             $program = $programs->get($day['date']);
+            [$homeworkStart, $homeworkEnd] = DailyProgram::effectiveHomework($program, $default);
 
             return [
                 'date' => $day['date'],
@@ -44,9 +45,12 @@ class DailyProgramController extends Controller
                 'date_label' => $day['date_label'],
                 'lunch' => $program?->lunch,
                 'activity' => $program?->activity,
-                // Effective homework slot = per-date override, otherwise the weekday default.
-                'homework_start' => $this->short($program?->homework_start ?? $default?->start_time),
-                'homework_end' => $this->short($program?->homework_end ?? $default?->end_time),
+                // Effective homework slot (override, else weekday default, else none).
+                'homework_start' => $this->short($homeworkStart),
+                'homework_end' => $this->short($homeworkEnd),
+                // The weekday default, so the editor can restore it when unchecking "keine".
+                'default_start' => $this->short($default?->start_time),
+                'default_end' => $this->short($default?->end_time),
                 // Children with a birthday on this day, so staff see it while filling out.
                 'birthdays' => $children
                     ->filter(fn (Child $c) => $c->date_of_birth->format('m-d') === substr($day['date'], 5))
@@ -84,6 +88,7 @@ class DailyProgramController extends Controller
             'days.*.activity' => ['nullable', 'string', 'max:255'],
             'days.*.homework_start' => ['nullable', 'date_format:H:i'],
             'days.*.homework_end' => ['nullable', 'date_format:H:i'],
+            'days.*.homework_none' => ['boolean'],
         ]);
 
         $defaults = HomeworkDefault::all()->keyBy('weekday');
@@ -92,18 +97,26 @@ class DailyProgramController extends Controller
             $weekday = Carbon::parse($row['date'])->dayOfWeekIso;
             $default = $defaults->get($weekday);
 
-            $homeworkStart = $row['homework_start'] ?? null;
-            $homeworkEnd = $row['homework_end'] ?? null;
-
-            // Equal to the weekday default → no override, so it keeps following the default.
-            if ($homeworkStart === $this->short($default?->start_time)
-                && $homeworkEnd === $this->short($default?->end_time)) {
+            if ($row['homework_none'] ?? false) {
+                // "Keine Hausaufgaben" — only needs storing when it suppresses a default.
+                $homeworkNone = $default !== null;
                 $homeworkStart = null;
                 $homeworkEnd = null;
+            } else {
+                $homeworkNone = false;
+                $homeworkStart = $row['homework_start'] ?? null;
+                $homeworkEnd = $row['homework_end'] ?? null;
+
+                // Equal to the weekday default → no override, so it keeps following it.
+                if ($homeworkStart === $this->short($default?->start_time)
+                    && $homeworkEnd === $this->short($default?->end_time)) {
+                    $homeworkStart = null;
+                    $homeworkEnd = null;
+                }
             }
 
             $hasContent = ! empty($row['lunch']) || ! empty($row['activity'])
-                || $homeworkStart !== null || $homeworkEnd !== null;
+                || $homeworkStart !== null || $homeworkEnd !== null || $homeworkNone;
 
             if (! $hasContent) {
                 DailyProgram::where('date', $row['date'])->delete();
@@ -118,6 +131,7 @@ class DailyProgramController extends Controller
                     'activity' => $row['activity'] ?? null,
                     'homework_start' => $homeworkStart,
                     'homework_end' => $homeworkEnd,
+                    'homework_none' => $homeworkNone,
                 ],
             );
         }

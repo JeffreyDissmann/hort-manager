@@ -2,6 +2,7 @@
 import { program as programRoute } from '@/routes';
 import { update as programUpdate, defaults as programDefaults } from '@/routes/program';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import Checkbox from '@/Components/Checkbox.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import TextInput from '@/Components/TextInput.vue';
 import TimeRange from '@/Components/TimeRange.vue';
@@ -20,21 +21,43 @@ const flash = computed(() => usePage().props.flash?.status);
 const saving = ref(false);
 const savingDefaults = ref(false);
 
-const days = ref(props.days.map((d) => ({ ...d })));
+// `no_homework` drives the "Keine Hausaufgaben" checkbox — on when there's no
+// effective homework for the day (explicit none, or no default/override at all).
+const withHomeworkFlag = (d) => ({ ...d, no_homework: !d.homework_start });
+const days = ref(props.days.map(withHomeworkFlag));
 watch(
     () => props.days,
     (value) => {
-        days.value = value.map((d) => ({ ...d }));
+        days.value = value.map(withHomeworkFlag);
     },
 );
 
-const defaults = ref(props.homeworkDefaults.map((d) => ({ ...d })));
+function toggleNoHomework(day) {
+    if (day.no_homework) {
+        day.homework_start = null;
+        day.homework_end = null;
+    } else if (!day.homework_start && day.default_start) {
+        // Unchecked with nothing set → restore the weekday default to edit from.
+        day.homework_start = day.default_start;
+        day.homework_end = day.default_end;
+    }
+}
+
+const withDefaultFlag = (d) => ({ ...d, no_homework: !d.start });
+const defaults = ref(props.homeworkDefaults.map(withDefaultFlag));
 watch(
     () => props.homeworkDefaults,
     (value) => {
-        defaults.value = value.map((d) => ({ ...d }));
+        defaults.value = value.map(withDefaultFlag);
     },
 );
+
+function toggleDefaultNoHomework(d) {
+    if (d.no_homework) {
+        d.start = null;
+        d.end = null;
+    }
+}
 
 function save() {
     saving.value = true;
@@ -45,8 +68,9 @@ function save() {
                 date: d.date,
                 lunch: d.lunch || null,
                 activity: d.activity || null,
-                homework_start: d.homework_start || null,
-                homework_end: d.homework_end || null,
+                homework_start: d.no_homework ? null : d.homework_start || null,
+                homework_end: d.no_homework ? null : d.homework_end || null,
+                homework_none: d.no_homework,
             })),
         },
         {
@@ -182,10 +206,23 @@ function onTouchEnd(e) {
 
                     <div class="mt-3 lg:mt-0">
                         <InputLabel value="Hausaufgaben" />
+                        <label class="mt-1 flex items-center gap-2 text-sm text-hort-navy/70">
+                            <Checkbox
+                                :checked="day.no_homework"
+                                @update:checked="
+                                    (v) => {
+                                        day.no_homework = v;
+                                        toggleNoHomework(day);
+                                    }
+                                "
+                            />
+                            Keine Hausaufgaben
+                        </label>
                         <TimeRange
+                            v-if="!day.no_homework"
                             v-model:start="day.homework_start"
                             v-model:end="day.homework_end"
-                            class="mt-1"
+                            class="mt-2"
                         />
                     </div>
                 </div>
@@ -210,12 +247,25 @@ function onTouchEnd(e) {
                     <div
                         v-for="d in defaults"
                         :key="d.weekday"
-                        class="flex items-center gap-2"
+                        class="flex flex-wrap items-center gap-2"
                     >
                         <span class="w-8 shrink-0 text-sm font-medium text-hort-navy/60">
                             {{ d.label }}
                         </span>
+                        <label class="flex shrink-0 items-center gap-2 text-sm text-hort-navy/70">
+                            <Checkbox
+                                :checked="d.no_homework"
+                                @update:checked="
+                                    (v) => {
+                                        d.no_homework = v;
+                                        toggleDefaultNoHomework(d);
+                                    }
+                                "
+                            />
+                            Keine
+                        </label>
                         <TimeRange
+                            v-if="!d.no_homework"
                             v-model:start="d.start"
                             v-model:end="d.end"
                             class="flex-1"

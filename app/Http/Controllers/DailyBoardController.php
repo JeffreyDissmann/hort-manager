@@ -141,8 +141,7 @@ class DailyBoardController extends Controller
 
         $program = DailyProgram::where('date', $date->toDateString())->first();
         $homeworkDefault = HomeworkDefault::where('weekday', $weekday)->first();
-        $homeworkStart = $program?->homework_start ?? $homeworkDefault?->start_time;
-        $homeworkEnd = $program?->homework_end ?? $homeworkDefault?->end_time;
+        [$homeworkStart, $homeworkEnd] = DailyProgram::effectiveHomework($program, $homeworkDefault);
 
         $hasProgram = $program?->lunch || $program?->activity || $homeworkStart;
 
