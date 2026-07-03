@@ -21,6 +21,24 @@ class Absence extends Model
         ];
     }
 
+    /**
+     * Record a child as away on a date and drop any not-yet-departed pickup.
+     */
+    public static function report(Child $child, string $date, AbsenceReason $reason, ?int $reportedBy): self
+    {
+        $absence = static::updateOrCreate(
+            ['child_id' => $child->id, 'date' => $date],
+            ['reason' => $reason, 'reported_by' => $reportedBy],
+        );
+
+        DailyDeparture::where('child_id', $child->id)
+            ->where('date', $date)
+            ->whereNull('left_at')
+            ->delete();
+
+        return $absence;
+    }
+
     /** @return BelongsTo<Child, $this> */
     public function child(): BelongsTo
     {

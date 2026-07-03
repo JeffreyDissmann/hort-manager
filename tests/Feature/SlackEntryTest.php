@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Enums\UserRole;
+use App\Models\Child;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
 class SlackEntryTest extends TestCase
@@ -57,6 +60,62 @@ class SlackEntryTest extends TestCase
             ->assertOk()
             ->assertJsonPath('response_type', 'ephemeral')
             ->assertJsonFragment(['url' => route('slack.enter', ['to' => 'polls'])]);
+    }
+
+    public function test_the_hort_krank_command_reports_the_child_absent(): void
+    {
+        Carbon::setTestNow('2026-06-22');
+        config(['services.slack.signing_secret' => 'shh']);
+
+        $parent = User::factory()->create(['role' => UserRole::Parent, 'slack_id' => 'U9']);
+        $child = Child::factory()->create(['name' => 'Tom']);
+        $parent->children()->attach($child);
+
+        $body = 'command='.urlencode('/hort').'&user_id=U9&text='.urlencode('krank Tom');
+        $timestamp = (string) time();
+        $signature = 'v0='.hash_hmac('sha256', "v0:{$timestamp}:{$body}", 'shh');
+
+        $this->call('POST', '/slack/commands',
+            ['command' => '/hort', 'user_id' => 'U9', 'text' => 'krank Tom'], [], [], [
+                'CONTENT_TYPE' => 'application/x-www-form-urlencoded',
+                'HTTP_X-Slack-Request-Timestamp' => $timestamp,
+                'HTTP_X-Slack-Signature' => $signature,
+            ], $body)
+            ->assertOk()
+            ->assertJsonPath('response_type', 'ephemeral')
+            ->assertSee('Tom')
+            ->assertSee('Krank');
+
+        $this->assertDatabaseHas('absences', [
+            'child_id' => $child->id,
+            'date' => '2026-06-22',
+            'reason' => 'sick',
+            'reported_by' => $parent->id,
+        ]);
+    }
+
+    public function test_the_krank_command_only_matches_the_callers_own_children(): void
+    {
+        Carbon::setTestNow('2026-06-22');
+        config(['services.slack.signing_secret' => 'shh']);
+
+        $parent = User::factory()->create(['role' => UserRole::Parent, 'slack_id' => 'U9']);
+        $parent->children()->attach(Child::factory()->create(['name' => 'Tom']));
+        $other = Child::factory()->create(['name' => 'Lena']); // not this parent's child
+
+        $body = 'command='.urlencode('/hort').'&user_id=U9&text='.urlencode('krank Lena');
+        $timestamp = (string) time();
+        $signature = 'v0='.hash_hmac('sha256', "v0:{$timestamp}:{$body}", 'shh');
+
+        $this->call('POST', '/slack/commands',
+            ['command' => '/hort', 'user_id' => 'U9', 'text' => 'krank Lena'], [], [], [
+                'CONTENT_TYPE' => 'application/x-www-form-urlencoded',
+                'HTTP_X-Slack-Request-Timestamp' => $timestamp,
+                'HTTP_X-Slack-Signature' => $signature,
+            ], $body)->assertOk();
+
+        // No absence created for someone else's child.
+        $this->assertDatabaseMissing('absences', ['child_id' => $other->id]);
     }
 
     public function test_the_command_rejects_a_bad_signature(): void

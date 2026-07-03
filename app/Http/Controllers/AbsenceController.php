@@ -7,7 +7,6 @@ namespace App\Http\Controllers;
 use App\Enums\AbsenceReason;
 use App\Models\Absence;
 use App\Models\Child;
-use App\Models\DailyDeparture;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -32,18 +31,7 @@ class AbsenceController extends Controller
         $to = Carbon::parse($validated['to']);
 
         for ($date = Carbon::parse($validated['from']); $date->lte($to); $date->addDay()) {
-            $day = $date->toDateString();
-
-            Absence::updateOrCreate(
-                ['child_id' => $child->id, 'date' => $day],
-                ['reason' => $reason, 'reported_by' => $request->user()->id],
-            );
-
-            // An away child has no pending pickup — drop a not-yet-departed row.
-            DailyDeparture::where('child_id', $child->id)
-                ->where('date', $day)
-                ->whereNull('left_at')
-                ->delete();
+            Absence::report($child, $date->toDateString(), $reason, $request->user()->id);
         }
 
         return back()->with('status', "{$child->name} als „{$reason->label()}“ gemeldet.");
