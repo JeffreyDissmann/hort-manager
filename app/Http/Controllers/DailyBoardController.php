@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\DepartureMethod;
 use App\Enums\DepartureStatus;
+use App\Models\Absence;
 use App\Models\Child;
 use App\Models\DailyDeparture;
 use App\Models\DailyProgram;
@@ -32,6 +33,12 @@ class DailyBoardController extends Controller
         $weekday = $date->dayOfWeekIso;
         $user = $request->user();
 
+        // Children reported away today (krank/abwesend) — no pickup expected.
+        $absences = Absence::with('child:id,name')
+            ->where('date', $date->toDateString())
+            ->get();
+        $absentChildIds = $absences->pluck('child_id')->all();
+
         // Seed a row per scheduled child from the Stammplan (idempotent).
         $scheduled = Child::query()
             ->whereHas('weeklySchedules', fn ($q) => $q->where('weekday', $weekday)->whereNotNull('planned_time'))
@@ -40,6 +47,10 @@ class DailyBoardController extends Controller
 
         $standard = [];
         foreach ($scheduled as $child) {
+            if (in_array($child->id, $absentChildIds, true)) {
+                continue; // away today → not on the pickup board
+            }
+
             $schedule = $child->weeklySchedules->first();
             $standard[$child->id] = [
                 'time' => substr((string) $schedule->planned_time, 0, 5),
@@ -100,6 +111,7 @@ class DailyBoardController extends Controller
         $departures = DailyDeparture::query()
             ->with(['child:id,name,date_of_birth', 'markedBy:id,name'])
             ->where('date', $date->toDateString())
+            ->whereNotIn('child_id', $absentChildIds)
             ->get()
             ->sortBy(fn (DailyDeparture $d) => [$d->planned_time ?? '99:99', $d->child->name])
             ->values();
@@ -152,6 +164,11 @@ class DailyBoardController extends Controller
                 'is_today' => $date->isToday(),
             ],
             'rows' => $rows,
+            'absent' => $absences->map(fn (Absence $a) => [
+                'name' => $a->child->name,
+                'reason' => $a->reason->value,
+                'reason_label' => $a->reason->label(),
+            ])->values(),
             'excursions' => $excursionList,
             'program' => $hasProgram ? [
                 'lunch' => $program?->lunch,

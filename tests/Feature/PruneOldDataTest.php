@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Models\Absence;
 use App\Models\Child;
 use App\Models\DailyDeparture;
 use App\Models\DailyProgram;
@@ -33,6 +34,8 @@ class PruneOldDataTest extends TestCase
         $recentProgram = DailyProgram::factory()->create(['date' => '2026-06-26']);
         $oldExcursion = Excursion::factory()->create(['date' => '2026-05-01']);
         $recentExcursion = Excursion::factory()->create(['date' => '2026-06-27']);
+        $oldAbsence = Absence::create(['child_id' => $child->id, 'date' => '2026-05-01', 'reason' => 'sick']);
+        $recentAbsence = Absence::create(['child_id' => $child->id, 'date' => '2026-06-25', 'reason' => 'away']);
 
         // A tracked Slack DM for the old excursion (would be "cancelled" on a normal delete).
         ExcursionSlackMessage::create([
@@ -50,6 +53,8 @@ class PruneOldDataTest extends TestCase
         $this->assertModelExists($recentProgram);
         $this->assertModelMissing($oldExcursion);
         $this->assertModelExists($recentExcursion);
+        $this->assertModelMissing($oldAbsence);
+        $this->assertModelExists($recentAbsence);
 
         // The old excursion's tracked message cascaded away with it.
         $this->assertDatabaseMissing('excursion_slack_messages', ['excursion_id' => $oldExcursion->id]);

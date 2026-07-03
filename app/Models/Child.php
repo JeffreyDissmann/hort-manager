@@ -38,6 +38,12 @@ class Child extends Model
         return $this->hasMany(WeeklySchedule::class);
     }
 
+    /** @return HasMany<Absence, $this> */
+    public function absences(): HasMany
+    {
+        return $this->hasMany(Absence::class);
+    }
+
     /**
      * The parent users (Eltern) linked to this child.
      *

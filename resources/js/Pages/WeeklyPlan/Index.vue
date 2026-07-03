@@ -1,6 +1,7 @@
 <script setup>
 import { weeklyPlan } from '@/routes';
 import { adjust as weeklyPlanAdjust, reset as weeklyPlanReset } from '@/routes/weekly-plan';
+import { store as absenceStore, destroy as absenceDestroy } from '@/routes/absences';
 import { index as childrenIndex } from '@/routes/children';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import Modal from '@/Components/Modal.vue';
@@ -91,6 +92,7 @@ function openCell(child, day, dayMeta) {
         childName: child.name,
         date: day.date,
         label: `${dayMeta.label} ${dayMeta.date_label}`,
+        absent: day.absent ?? null,
     };
     form.planned_time = day.time ?? '';
     form.planned_method = day.method ?? '';
@@ -126,6 +128,31 @@ function resetDay() {
         { child_id: editing.value.childId, date: editing.value.date },
         { preserveScroll: true, onSuccess: closeEditor },
     );
+}
+
+function reportAbsence(reason) {
+    router.post(
+        absenceStore().url,
+        {
+            child_id: editing.value.childId,
+            from: editing.value.date,
+            to: editing.value.date,
+            reason,
+        },
+        { preserveScroll: true, onSuccess: closeEditor },
+    );
+}
+
+function cancelAbsence() {
+    router.delete(absenceDestroy().url, {
+        data: {
+            child_id: editing.value.childId,
+            from: editing.value.date,
+            to: editing.value.date,
+        },
+        preserveScroll: true,
+        onSuccess: closeEditor,
+    });
 }
 </script>
 
@@ -189,14 +216,14 @@ function resetDay() {
                                     type="button"
                                     class="relative mt-1 w-full rounded-lg py-2 text-xs font-semibold"
                                     :class="[
-                                        cellClass(day),
-                                        day.adjusted ? 'ring-2 ring-amber-400' : '',
+                                        day.absent ? 'bg-amber-100 text-amber-700' : cellClass(day),
+                                        day.adjusted && !day.absent ? 'ring-2 ring-amber-400' : '',
                                         day.editable ? 'cursor-pointer hover:brightness-95 active:scale-[0.97]' : '',
                                     ]"
-                                    :title="day.comment || undefined"
+                                    :title="day.absent ? day.absent.label : day.comment || undefined"
                                     @click="openCell(child, day, weekDays[i])"
                                 >
-                                    {{ day.time ?? 'frei' }}
+                                    {{ day.absent ? day.absent.label : (day.time ?? 'frei') }}
                                     <span
                                         v-if="day.birthday !== null"
                                         class="mt-0.5 block text-[10px] leading-none"
@@ -405,6 +432,33 @@ function resetDay() {
                         class="mt-1 block w-full"
                         placeholder="z. B. wegen Arzttermin"
                     />
+                </div>
+
+                <!-- Krankmeldung / Abwesenheit -->
+                <div class="rounded-lg bg-hort-sand p-3">
+                    <template v-if="editing.absent">
+                        <p class="text-sm font-medium text-amber-700">
+                            Als „{{ editing.absent.label }}“ gemeldet.
+                        </p>
+                        <button
+                            type="button"
+                            class="mt-2 text-sm font-medium text-hort-teal-dark underline-offset-2 hover:underline"
+                            @click="cancelAbsence"
+                        >
+                            Abwesenheit aufheben
+                        </button>
+                    </template>
+                    <template v-else>
+                        <p class="text-sm text-hort-navy/60">Kind ist heute nicht da?</p>
+                        <div class="mt-2 flex gap-2">
+                            <SecondaryButton @click="reportAbsence('sick')">
+                                Krank melden
+                            </SecondaryButton>
+                            <SecondaryButton @click="reportAbsence('away')">
+                                Abwesend
+                            </SecondaryButton>
+                        </div>
+                    </template>
                 </div>
 
                 <div class="flex items-center justify-between gap-3 pt-2">

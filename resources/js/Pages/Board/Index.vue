@@ -10,6 +10,7 @@ import { computed, ref, watch } from 'vue';
 const props = defineProps({
     date: { type: Object, required: true },
     rows: { type: Array, default: () => [] },
+    absent: { type: Array, default: () => [] },
     excursions: { type: Array, default: () => [] },
     program: { type: Object, default: null },
     canMark: { type: Boolean, default: false },
@@ -280,6 +281,23 @@ function saveEdit(row) {
                     >
                         Nur meine
                     </button>
+                </div>
+            </div>
+
+            <!-- Reported away today (krank/abwesend) -->
+            <div
+                v-if="absent.length"
+                class="rounded-2xl bg-amber-50 p-4 text-sm text-amber-800"
+            >
+                <p class="mb-1 font-semibold">Heute abwesend</p>
+                <div class="flex flex-wrap gap-1.5">
+                    <span
+                        v-for="(a, i) in absent"
+                        :key="i"
+                        class="rounded-lg bg-amber-100 px-2 py-1 text-xs font-medium"
+                    >
+                        {{ a.name }} · {{ a.reason_label }}
+                    </span>
                 </div>
             </div>
 
