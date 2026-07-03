@@ -1,5 +1,6 @@
 <script setup>
 import { mark as boardMark, override as boardOverride } from '@/routes/board';
+import { store as absenceStore } from '@/routes/absences';
 import { live as excursionLive } from '@/routes/excursions';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import TimeSelect from '@/Components/TimeSelect.vue';
@@ -166,6 +167,15 @@ function liveEvent(excursion, event) {
     router.patch(
         excursionLive(excursion.id).url,
         { event },
+        { preserveScroll: true },
+    );
+}
+
+// Report a child away for today straight from the board.
+function reportAbsent(row, reason) {
+    router.post(
+        absenceStore().url,
+        { child_id: row.child_id, from: props.date.iso, to: props.date.iso, reason },
         { preserveScroll: true },
     );
 }
@@ -575,6 +585,28 @@ function saveEdit(row) {
                                 <PencilSquareIcon class="h-4 w-4" />
                                 Abholzeit ändern
                             </button>
+
+                            <div
+                                v-if="row.can_override && row.excursion?.state !== 'away'"
+                                class="flex items-center gap-2 text-sm"
+                            >
+                                <span class="text-hort-navy/40">Nicht da?</span>
+                                <button
+                                    type="button"
+                                    class="font-semibold text-amber-700 underline-offset-2 hover:underline"
+                                    @click="reportAbsent(row, 'sick')"
+                                >
+                                    Krank melden
+                                </button>
+                                <span class="text-hort-navy/20">·</span>
+                                <button
+                                    type="button"
+                                    class="font-semibold text-amber-700 underline-offset-2 hover:underline"
+                                    @click="reportAbsent(row, 'away')"
+                                >
+                                    Abwesend
+                                </button>
+                            </div>
                         </div>
 
                         <div v-else-if="canMark" class="mt-3">
