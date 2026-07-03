@@ -30,9 +30,9 @@ class SlackController extends Controller
     private const SCOPES = ['openid', 'email', 'profile'];
 
     /**
-     * Entry point from a Slack link: deep-link into the app, signing the user
-     * in via Slack first (which auto-provisions first-timers) when there's no
-     * session yet — so it feels like one tap from Slack into the right page.
+     * Entry point from a Slack link: deep-link into the app. If already signed in,
+     * go straight to the target; otherwise show the normal login screen (Slack,
+     * e-mail/password, or password reset) and land on the target afterwards.
      */
     public function enter(Request $request): RedirectResponse
     {
@@ -44,7 +44,7 @@ class SlackController extends Controller
 
         $request->session()->put('url.intended', $url);
 
-        return $this->redirect();
+        return redirect()->route('login');
     }
 
     /** Send the user to Slack's "Sign in with Slack" consent screen. */

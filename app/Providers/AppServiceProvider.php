@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\URL;
@@ -41,6 +43,27 @@ class AppServiceProvider extends ServiceProvider
         // Register the "Sign in with Slack" Socialite driver.
         Event::listen(function (SocialiteWasCalled $event) {
             $event->extendSocialite('slack', Provider::class);
+        });
+
+        // The built-in password-reset e-mail is English; render it in German to
+        // match the rest of the app. (The framework mail template's remaining
+        // string is translated in lang/de.json.)
+        ResetPassword::toMailUsing(function (object $notifiable, string $token): MailMessage {
+            $url = url(route('password.reset', [
+                'token' => $token,
+                'email' => $notifiable->getEmailForPasswordReset(),
+            ], absolute: false));
+
+            $minutes = config('auth.passwords.'.config('auth.defaults.passwords').'.expire');
+
+            return (new MailMessage)
+                ->subject('Passwort zurücksetzen')
+                ->greeting('Hallo!')
+                ->line('Du erhältst diese E-Mail, weil für dein Konto beim Hort-Manager eine Zurücksetzung des Passworts angefordert wurde.')
+                ->action('Passwort zurücksetzen', $url)
+                ->line("Der Link ist {$minutes} Minuten gültig.")
+                ->line('Wenn du keine Zurücksetzung angefordert hast, musst du nichts tun.')
+                ->salutation("Viele Grüße\nDein Hort-Manager");
         });
 
         // One configured Slack Web API client (bot token, timeout, bounded retry)

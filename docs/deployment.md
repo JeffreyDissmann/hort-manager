@@ -123,6 +123,39 @@ Then `up -d`. Notes:
 - The service worker is served from the site root at `/sw.js` (Laravel route) so it
   controls the whole origin — no web-server header needed.
 
+## 7. E-Mail (password reset)
+
+Login is primarily **Sign in with Slack**, but the login screen also offers
+e-mail/password sign-in and a **"Passwort vergessen?"** reset link. That reset link
+e-mails a one-time URL, so it only works if a real mailer is configured — otherwise
+`MAIL_MAILER=log` just writes the mail to the container log and the parent never
+gets it.
+
+Point the `MAIL_*` vars at any SMTP relay (your host, Postmark, Resend, etc.) in
+`.env`, then `up -d`:
+
+```dotenv
+MAIL_MAILER=smtp
+MAIL_HOST=smtp.example.com
+MAIL_PORT=587
+MAIL_USERNAME=…
+MAIL_PASSWORD=…
+MAIL_SCHEME=smtp
+MAIL_FROM_ADDRESS="hort@example.com"
+MAIL_FROM_NAME="Hort-Manager"
+```
+
+Notes:
+
+- **`MAIL_SCHEME` must be `smtp` or `smtps`, never `tls`** (that throws
+  `UnsupportedSchemeException`). Port **587** → keep `smtp` (STARTTLS is negotiated
+  automatically); port **465** (implicit TLS) → set `smtps` and `MAIL_PORT=465`.
+- The reset mail is sent **synchronously** during the request, so a wrong SMTP config
+  surfaces immediately as a 500 (not a silently failed job). Test it right after `up -d`.
+- Leave it as `log` and password-based accounts simply can't self-reset — Slack sign-in
+  still works fine.
+- `APP_URL` must be correct: the reset link in the mail is built from it.
+
 ## Upgrades
 
 ```bash
