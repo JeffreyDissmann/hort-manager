@@ -100,10 +100,13 @@ class SlackEventTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_the_dm_job_posts_the_assistants_reply_in_the_channel(): void
+    public function test_the_dm_job_posts_an_ack_then_updates_it_with_the_reply(): void
     {
         config(['services.slack.notifications.bot_user_oauth_token' => 'xoxb-test']);
-        Http::fake(['slack.com/api/chat.postMessage' => Http::response(['ok' => true])]);
+        Http::fake([
+            'slack.com/api/chat.postMessage' => Http::response(['ok' => true, 'ts' => '111.222']),
+            'slack.com/api/chat.update' => Http::response(['ok' => true]),
+        ]);
 
         $user = User::factory()->create(['slack_id' => 'U1']);
         $child = Child::factory()->create(['name' => 'Tom']);
@@ -115,19 +118,29 @@ class SlackEventTest extends TestCase
 
         (new HandleSlackDirectMessage('U1', 'Tom ist krank', 'D1'))->handle(app(HortAssistant::class));
 
+        // Immediate placeholder …
         Http::assertSent(fn ($request) => $request->url() === 'https://slack.com/api/chat.postMessage'
             && $request['channel'] === 'D1'
+            && str_contains((string) $request['text'], 'Moment'));
+        // … then the real answer swapped in on the same message.
+        Http::assertSent(fn ($request) => $request->url() === 'https://slack.com/api/chat.update'
+            && $request['channel'] === 'D1'
+            && $request['ts'] === '111.222'
             && str_contains((string) $request['text'], 'Tom'));
     }
 
     public function test_the_dm_job_asks_unknown_users_to_sign_in(): void
     {
         config(['services.slack.notifications.bot_user_oauth_token' => 'xoxb-test']);
-        Http::fake(['slack.com/api/chat.postMessage' => Http::response(['ok' => true])]);
+        Http::fake([
+            'slack.com/api/chat.postMessage' => Http::response(['ok' => true, 'ts' => '111.222']),
+            'slack.com/api/chat.update' => Http::response(['ok' => true]),
+        ]);
 
         (new HandleSlackDirectMessage('U-nobody', 'Hallo', 'D1'))->handle(app(HortAssistant::class));
 
-        Http::assertSent(fn ($request) => str_contains((string) $request['text'], 'anmelden'));
+        Http::assertSent(fn ($request) => $request->url() === 'https://slack.com/api/chat.update'
+            && str_contains((string) $request['text'], 'anmelden'));
     }
 
     public function test_the_dm_job_stays_silent_without_a_bot_token(): void

@@ -22,6 +22,13 @@ class SlackEventController extends Controller
             return response($request->input('challenge'));
         }
 
+        // Slack re-delivers an event if it doesn't see a prompt 200 (its own
+        // hiccup, a slow hop). We already ack immediately and process async, so a
+        // retry would only double-handle the same message — ignore retries.
+        if ($request->hasHeader('X-Slack-Retry-Num')) {
+            return response()->noContent();
+        }
+
         $event = (array) $request->input('event', []);
         $type = $event['type'] ?? null;
 

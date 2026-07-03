@@ -241,6 +241,18 @@ class HortAssistantTest extends TestCase
         $this->assertStringContainsString('Kind', $reply); // asks which of the parent's own kids
     }
 
+    public function test_a_single_child_parent_naming_another_child_is_asked_not_guessed(): void
+    {
+        [$parent, $child] = $this->parentWithTom(); // sole child: Tom
+        $this->fakeIntent(['intent' => 'krank', 'kind' => 'Fremdkind', 'datum' => 'heute']);
+
+        $reply = app(HortAssistant::class)->reply($parent, 'Fremdkind ist krank');
+
+        // Must NOT silently apply to Tom just because he's the only child.
+        $this->assertDatabaseMissing('absences', ['child_id' => $child->id]);
+        $this->assertStringContainsString('Kind', $reply);
+    }
+
     public function test_an_unknown_intent_returns_the_help_text(): void
     {
         [$parent] = $this->parentWithTom();

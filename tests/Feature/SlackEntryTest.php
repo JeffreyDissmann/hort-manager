@@ -4,9 +4,13 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Ai\Agents\HortIntentAgent;
 use App\Jobs\RespondToSlackCommand;
+use App\Models\Child;
 use App\Models\User;
+use App\Services\HortAssistant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
@@ -83,6 +87,25 @@ class SlackEntryTest extends TestCase
         Queue::assertPushed(RespondToSlackCommand::class, fn ($job) => $job->slackUserId === 'U9'
             && $job->text === 'Tom ist krank'
             && $job->responseUrl === $url);
+    }
+
+    public function test_the_command_job_replaces_the_placeholder_with_the_answer(): void
+    {
+        Http::fake(['hooks.slack.com/*' => Http::response('ok')]);
+        $user = User::factory()->create(['slack_id' => 'U9']);
+        $child = Child::factory()->create(['name' => 'Tom']);
+        $user->children()->attach($child);
+        HortIntentAgent::fake(fn () => [
+            'intent' => 'krank', 'kind' => 'Tom', 'datum' => 'heute',
+            'uhrzeit' => null, 'art' => null, 'ausflug' => null, 'zusage' => null,
+        ]);
+
+        (new RespondToSlackCommand('U9', 'Tom ist krank', 'https://hooks.slack.com/commands/T/1'))
+            ->handle(app(HortAssistant::class));
+
+        Http::assertSent(fn ($request) => $request->url() === 'https://hooks.slack.com/commands/T/1'
+            && $request['replace_original'] === true
+            && str_contains((string) $request['text'], 'Tom'));
     }
 
     public function test_the_command_rejects_a_bad_signature(): void

@@ -120,6 +120,9 @@ return [
             'key' => env('OLLAMA_API_KEY', ''),
             'url' => env('OLLAMA_URL', 'http://localhost:11434'),
             'model' => env('OLLAMA_MODEL', 'ministral-3:8b'),
+            // Bound how long a single generation may take (seconds); the agents
+            // read this so a slow/hung Ollama can't wedge the queue worker.
+            'request_timeout' => (int) env('OLLAMA_TIMEOUT', 30),
         ],
 
         'openai' => [

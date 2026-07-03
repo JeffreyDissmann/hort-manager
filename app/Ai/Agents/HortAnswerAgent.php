@@ -14,6 +14,12 @@ class HortAnswerAgent implements Agent
 
     public function __construct(private string $context) {}
 
+    /** Cap the Ollama request so a hung host can't block the queue worker. */
+    public function timeout(): int
+    {
+        return (int) config('ai.providers.ollama.request_timeout', 30);
+    }
+
     public function instructions(): string
     {
         return <<<PROMPT

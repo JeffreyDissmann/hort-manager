@@ -17,6 +17,7 @@ use App\Models\DailyProgram;
 use App\Models\Excursion;
 use App\Models\HomeworkDefault;
 use App\Models\User;
+use App\Models\WeeklySchedule;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Laravel\Ai\Enums\Lab;
@@ -224,8 +225,11 @@ class HortAssistant
         $today = now();
         $lines = ['Heute: '.$this->weekdayLong($today).', '.$today->format('d.m.Y').'.'];
 
+        // The standard weekly plan is the baseline; deviations are listed separately.
+        $plans = []; // child id => [weekday => WeeklySchedule]
         foreach ($children as $child) {
             $byWeekday = $child->weeklySchedules()->get()->keyBy('weekday');
+            $plans[$child->id] = $byWeekday;
             $plan = collect(self::WEEKDAYS)->map(function (string $lbl, int $wd) use ($byWeekday) {
                 $s = $byWeekday->get($wd);
 
@@ -234,11 +238,12 @@ class HortAssistant
                     : 'frei');
             })->implode(', ');
             $lines[] = "Abholplan {$child->name} (Standard): {$plan}.";
-
-            if ($abs = Absence::where('child_id', $child->id)->where('date', $today->toDateString())->first()) {
-                $lines[] = "{$child->name} ist heute {$abs->reason->label()}.";
-            }
         }
+
+        // Upcoming deviations from that standard (next 14 days): same-day/future
+        // pickup overrides and reported absences. This is what "am Freitag?" and
+        // "was ist diese Woche anders?" hinge on — not just today.
+        $lines = array_merge($lines, $this->upcomingDeviations($children, $plans));
 
         $program = DailyProgram::where('date', $today->toDateString())->first();
         $default = HomeworkDefault::where('weekday', $today->dayOfWeekIso)->first();
@@ -256,6 +261,54 @@ class HortAssistant
         return implode("\n", $lines);
     }
 
+    /**
+     * Pickup overrides that deviate from the Stammplan, plus reported absences, for
+     * the next two weeks — the exceptions the standard plan can't answer on its own.
+     *
+     * @param  Collection<int, Child>  $children
+     * @param  array<int, Collection<int, WeeklySchedule>>  $plans
+     * @return list<string>
+     */
+    private function upcomingDeviations(Collection $children, array $plans): array
+    {
+        $today = now();
+        $from = $today->toDateString();
+        $to = $today->copy()->addDays(14)->toDateString();
+        $ids = $children->pluck('id');
+        $nameOf = fn (int $id): string => (string) $children->firstWhere('id', $id)?->name;
+
+        $deviations = collect();
+
+        Absence::whereIn('child_id', $ids)->whereBetween('date', [$from, $to])->get()
+            ->each(function (Absence $a) use ($deviations, $nameOf): void {
+                $deviations->push([$a->date->toDateString(), $nameOf($a->child_id).' ist '.$a->reason->label()]);
+            });
+
+        DailyDeparture::whereIn('child_id', $ids)->whereBetween('date', [$from, $to])->get()
+            ->each(function (DailyDeparture $d) use ($deviations, $nameOf, $plans): void {
+                $date = Carbon::parse((string) $d->date);
+                $standard = $plans[$d->child_id]->get($date->dayOfWeekIso);
+                $sameTime = substr((string) $d->planned_time, 0, 5) === substr((string) $standard?->planned_time, 0, 5);
+                if ($sameTime && $d->planned_method === $standard?->method) {
+                    return; // matches the Stammplan — not a deviation
+                }
+
+                $how = $d->planned_time
+                    ? 'um '.substr((string) $d->planned_time, 0, 5).' Uhr'.($d->planned_method ? ' ('.$d->planned_method->label().')' : '')
+                    : 'keine feste Abholzeit';
+                $deviations->push([$date->toDateString(), $nameOf($d->child_id).' '.$how]);
+            });
+
+        if ($deviations->isEmpty()) {
+            return [];
+        }
+
+        return $deviations->sortBy(0)->values()
+            ->map(fn (array $d): string => '- '.$this->humanDate($d[0]).': '.$d[1].'.')
+            ->prepend('Abweichungen vom Standard (heute bis in zwei Wochen):')
+            ->all();
+    }
+
     /** @param Collection<int, Child> $children */
     private function matchChild(Collection $children, ?string $name): ?Child
     {
@@ -266,11 +319,10 @@ class HortAssistant
         $needle = mb_strtolower($name);
         $matches = $children->filter(fn (Child $c) => str_contains(mb_strtolower($c->name), $needle));
 
-        if ($matches->count() === 1) {
-            return $matches->first();
-        }
-
-        return $children->count() === 1 ? $children->first() : null;
+        // Exactly one match wins. A named-but-unmatched (or ambiguous) child must
+        // NOT silently fall back to the only kid — that could act on the wrong
+        // child; return null so the caller asks which child is meant.
+        return $matches->count() === 1 ? $matches->first() : null;
     }
 
     private function findExcursion(Child $child, ?string $name): ?Excursion
