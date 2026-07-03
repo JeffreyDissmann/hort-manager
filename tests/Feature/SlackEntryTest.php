@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
-use App\Enums\UserRole;
+use App\Ai\Agents\HortIntentAgent;
+use App\Jobs\RespondToSlackCommand;
 use App\Models\Child;
 use App\Models\User;
+use App\Services\HortAssistant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
 class SlackEntryTest extends TestCase
@@ -62,60 +65,47 @@ class SlackEntryTest extends TestCase
             ->assertJsonFragment(['url' => route('slack.enter', ['to' => 'polls'])]);
     }
 
-    public function test_the_hort_krank_command_reports_the_child_absent(): void
+    public function test_hort_with_free_text_hands_off_to_the_assistant(): void
     {
-        Carbon::setTestNow('2026-06-22');
+        Queue::fake();
         config(['services.slack.signing_secret' => 'shh']);
 
-        $parent = User::factory()->create(['role' => UserRole::Parent, 'slack_id' => 'U9']);
-        $child = Child::factory()->create(['name' => 'Tom']);
-        $parent->children()->attach($child);
-
-        $body = 'command='.urlencode('/hort').'&user_id=U9&text='.urlencode('krank Tom');
+        $url = 'https://hooks.slack.com/commands/T/123';
+        $body = 'command='.urlencode('/hort').'&user_id=U9&text='.urlencode('Tom ist krank').'&response_url='.urlencode($url);
         $timestamp = (string) time();
         $signature = 'v0='.hash_hmac('sha256', "v0:{$timestamp}:{$body}", 'shh');
 
         $this->call('POST', '/slack/commands',
-            ['command' => '/hort', 'user_id' => 'U9', 'text' => 'krank Tom'], [], [], [
+            ['command' => '/hort', 'user_id' => 'U9', 'text' => 'Tom ist krank', 'response_url' => $url], [], [], [
                 'CONTENT_TYPE' => 'application/x-www-form-urlencoded',
                 'HTTP_X-Slack-Request-Timestamp' => $timestamp,
                 'HTTP_X-Slack-Signature' => $signature,
             ], $body)
             ->assertOk()
-            ->assertJsonPath('response_type', 'ephemeral')
-            ->assertSee('Tom')
-            ->assertSee('Krank');
+            ->assertJsonPath('response_type', 'ephemeral');
 
-        $this->assertDatabaseHas('absences', [
-            'child_id' => $child->id,
-            'date' => '2026-06-22',
-            'reason' => 'sick',
-            'reported_by' => $parent->id,
-        ]);
+        Queue::assertPushed(RespondToSlackCommand::class, fn ($job) => $job->slackUserId === 'U9'
+            && $job->text === 'Tom ist krank'
+            && $job->responseUrl === $url);
     }
 
-    public function test_the_krank_command_only_matches_the_callers_own_children(): void
+    public function test_the_command_job_replaces_the_placeholder_with_the_answer(): void
     {
-        Carbon::setTestNow('2026-06-22');
-        config(['services.slack.signing_secret' => 'shh']);
+        Http::fake(['hooks.slack.com/*' => Http::response('ok')]);
+        $user = User::factory()->create(['slack_id' => 'U9']);
+        $child = Child::factory()->create(['name' => 'Tom']);
+        $user->children()->attach($child);
+        HortIntentAgent::fake(fn () => [
+            'intent' => 'krank', 'kind' => 'Tom', 'datum' => 'heute',
+            'uhrzeit' => null, 'art' => null, 'ausflug' => null, 'zusage' => null,
+        ]);
 
-        $parent = User::factory()->create(['role' => UserRole::Parent, 'slack_id' => 'U9']);
-        $parent->children()->attach(Child::factory()->create(['name' => 'Tom']));
-        $other = Child::factory()->create(['name' => 'Lena']); // not this parent's child
+        (new RespondToSlackCommand('U9', 'Tom ist krank', 'https://hooks.slack.com/commands/T/1'))
+            ->handle(app(HortAssistant::class));
 
-        $body = 'command='.urlencode('/hort').'&user_id=U9&text='.urlencode('krank Lena');
-        $timestamp = (string) time();
-        $signature = 'v0='.hash_hmac('sha256', "v0:{$timestamp}:{$body}", 'shh');
-
-        $this->call('POST', '/slack/commands',
-            ['command' => '/hort', 'user_id' => 'U9', 'text' => 'krank Lena'], [], [], [
-                'CONTENT_TYPE' => 'application/x-www-form-urlencoded',
-                'HTTP_X-Slack-Request-Timestamp' => $timestamp,
-                'HTTP_X-Slack-Signature' => $signature,
-            ], $body)->assertOk();
-
-        // No absence created for someone else's child.
-        $this->assertDatabaseMissing('absences', ['child_id' => $other->id]);
+        Http::assertSent(fn ($request) => $request->url() === 'https://hooks.slack.com/commands/T/1'
+            && $request['replace_original'] === true
+            && str_contains((string) $request['text'], 'Tom'));
     }
 
     public function test_the_command_rejects_a_bad_signature(): void

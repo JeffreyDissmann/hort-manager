@@ -29,8 +29,9 @@ All callback URLs below must be **public HTTPS** on your real domain. Locally we
 
 ## 4. Bot token (outbound messages)
 - **OAuth & Permissions → Bot Token Scopes**: add
-  - `chat:write` — send & update DMs (departures, RSVP, reminders, cancellations)
+  - `chat:write` — send & update DMs (departures, RSVP, reminders, cancellations, assistant replies)
   - `commands` — the `/hort` slash command
+  - `im:history` — receive the parent's DMs so the assistant can read & answer them
   - `users:read` + `users:read.email` — import workspace members (Benutzer → „Aus Slack importieren", or `php artisan hort:sync-slack-users`)
 - **Install to Workspace** → copy the **Bot User OAuth Token** (`xoxb-…`) → `SLACK_BOT_USER_OAUTH_TOKEN`.
 - Reinstall whenever you change scopes.
@@ -44,20 +45,39 @@ All callback URLs below must be **public HTTPS** on your real domain. Locally we
 - Request URL: `https://YOUR_DOMAIN/slack/commands`
 - Description: „Hort-Manager öffnen" → Save → reinstall if prompted.
 
-## 7. App Home (sidebar entry)
-- **App Home** → enable **Home Tab**.
+## 7. App Home + DM chat (Event Subscriptions)
+- **App Home** → enable **Home Tab**. Also enable **Messages Tab** and tick
+  *„Allow users to send Slash commands and messages from the messages tab"* — otherwise
+  the parent can't type to the bot at all.
 - **Event Subscriptions** → On → **Request URL**: `https://YOUR_DOMAIN/slack/events`
   (Slack sends a one-time verification challenge — the endpoint answers it automatically.)
-- **Subscribe to bot events**: add `app_home_opened` → Save → reinstall if prompted.
+- **Subscribe to bot events**: add
+  - `app_home_opened` — (re)publish the Home tab
+  - `message.im` — deliver the parent's DMs to the assistant (needs the `im:history` scope from step 4)
+- **Save** → reinstall (the yellow banner) — required for the new event + scope to take effect.
 
-## 8. Restrict to the Hort workspace
+## 8. AI assistant (Ollama)
+The `/hort <text>` command and the DM chat are answered by a local LLM (Ollama).
+It is optional — with no reachable Ollama the assistant degrades gracefully with a
+„nicht verfügbar" reply, but plain `/hort` (quick links) and all outbound DMs keep working.
+
+- Run Ollama somewhere the **app container can reach**, and pull the model:
+  `ollama pull ministral-3:8b`.
+- Set the env vars (see the table below): `AI_PROVIDER=ollama`,
+  `OLLAMA_URL=http://HOST:11434`, `OLLAMA_MODEL=ministral-3:8b`.
+- `OLLAMA_URL` must resolve **from inside the container** — prefer the host's IP;
+  mDNS `*.local` names often don't resolve in Docker. Verify:
+  `docker compose … exec app curl -s http://HOST:11434/api/tags`.
+
+## 9. Restrict to the Hort workspace
 - `SLACK_TEAM_ID` — the workspace/team id (`T…`); the SSO callback rejects logins from any other workspace.
 - `SLACK_WORKSPACE` — the workspace subdomain (e.g. `hort-manager`), so the sign-in screen skips the "which workspace" picker.
 
-## 9. Scheduler + queue worker
-All Slack DMs (departures, RSVP announce/sync, reminders, App Home) are **queued**,
-and `QUEUE_CONNECTION=database` in production — so a worker must be running, or
-nothing gets sent:
+## 10. Scheduler + queue worker
+All Slack DMs (departures, RSVP announce/sync, reminders, App Home) **and the
+assistant's replies** (DM chat + `/hort <text>`) are **queued**, and
+`QUEUE_CONNECTION=database` in production — so a worker must be running, or nothing
+gets sent (the message arrives but the bot never answers):
 
 ```
 php artisan queue:work        # keep alive via supervisor / Horizon
@@ -85,6 +105,9 @@ The daily reminder (`excursions:remind-rsvps`, 08:00) needs the scheduler. Add o
 | `SLACK_BOT_USER_OAUTH_TOKEN` | OAuth & Permissions → Bot token (`xoxb-…`) |
 | `SLACK_TEAM_ID` | Workspace/team id (`T…`) |
 | `SLACK_WORKSPACE` | Workspace subdomain |
+| `AI_PROVIDER` | `ollama` (assistant behind `/hort <text>` + DM chat) |
+| `OLLAMA_URL` | `http://HOST:11434` — reachable from the app container (step 8) |
+| `OLLAMA_MODEL` | `ministral-3:8b` (pulled on the Ollama host) |
 
 ## Callback URLs (all on `APP_URL`)
 
@@ -93,7 +116,7 @@ The daily reminder (`excursions:remind-rsvps`, 08:00) needs the scheduler. Add o
 | SSO login | OAuth & Permissions → Redirect URLs | `/auth/slack/callback` |
 | RSVP buttons | Interactivity & Shortcuts | `/slack/interactions` |
 | `/hort` command | Slash Commands | `/slack/commands` |
-| Home tab events | Event Subscriptions | `/slack/events` |
+| Home tab + DM chat events | Event Subscriptions | `/slack/events` |
 
 > If a callback ever fails with a signature error, the **Signing Secret** in `.env`
 > is stale — recopy it from Basic Information. If buttons link to the wrong host,
