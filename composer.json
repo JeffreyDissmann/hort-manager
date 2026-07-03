@@ -12,6 +12,7 @@
         "php": "^8.3",
         "inertiajs/inertia-laravel": "^2.0",
         "laravel-notification-channels/webpush": "^11",
+        "laravel/ai": "^0.8.1",
         "laravel/framework": "^13.8",
         "laravel/sanctum": "^4.0",
         "laravel/slack-notification-channel": "^3.8",
