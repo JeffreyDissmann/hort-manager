@@ -8,7 +8,9 @@
 # your .env yet. Add it AFTER installing + setting SLACK_SIGNING_SECRET + restart:
 #   Event Subscriptions → Enable → Request URL:
 #     https://your-domain.example/slack/events
-#   → Subscribe to bot events → app_home_opened → Save.
+#   → Subscribe to bot events → app_home_opened AND message.im → Save.
+# (message.im delivers the parent's DMs to the assistant; it needs the im:history
+#  scope below. Reinstall the app afterwards.)
 #
 # If your domain differs, replace your-domain.example throughout.
 
@@ -23,10 +25,11 @@ features:
     always_online: true
   app_home:
     home_tab_enabled: true
-    # Must be enabled for the bot to DM users (departures, RSVPs); read-only keeps
-    # it outbound-only. With this off, chat.postMessage fails: messages_tab_disabled.
+    # Must be enabled for the bot to DM users (departures, RSVPs). With this off,
+    # chat.postMessage fails: messages_tab_disabled. NOT read-only, so parents can
+    # type to the assistant (krank/Abholzeit/RSVP/questions) — needs im:history.
     messages_tab_enabled: true
-    messages_tab_read_only_enabled: true
+    messages_tab_read_only_enabled: false
   slash_commands:
     - command: /hort
       url: https://your-domain.example/slack/commands
@@ -40,6 +43,7 @@ oauth_config:
     bot:
       - chat:write
       - commands
+      - im:history # receive parents' DMs so the assistant can read them
       - users:read
       - users:read.email
 

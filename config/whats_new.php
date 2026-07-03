@@ -16,6 +16,16 @@ declare(strict_types=1);
 
 return [
     [
+        'version' => '2026.07.03',
+        'date' => '2026-07-03',
+        'title' => 'Schreib dem Hort-Manager einfach – direkt in Slack',
+        'items' => [
+            '💬 Du kannst dem Hort-Manager in Slack jetzt ganz normal schreiben: „Tom ist morgen krank", „Ich hole Lena am Montag um 15:30 ab" oder „Kommt Tom beim Zoo-Ausflug mit? Ja" – er versteht das und trägt es direkt ein.',
+            '❓ Frag ihn auch einfach etwas, z. B. „Wann geht Lena heute?" oder „Was gibt es heute zum Mittagessen?".',
+            'ℹ️ Das geht per Direktnachricht an den Hort-Manager oder mit „/hort …" – und betrifft immer nur deine eigenen Kinder.',
+        ],
+    ],
+    [
         'version' => '2026.07.02',
         'date' => '2026-07-02',
         'title' => 'Hausaufgaben: „keine" möglich & klarere Anzeige',

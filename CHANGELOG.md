@@ -8,6 +8,16 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **AI assistant in Slack (DM chat + `/hort`)**: parents can write to the bot in
+  plain German — report a child sick/absent, change a pickup time or method, answer
+  an excursion RSVP, or ask about the day's plan. A local Ollama model (via the
+  `laravel/ai` SDK) classifies the intent and extracts parameters; date resolution
+  and every mutation happen server-side, scoped strictly to the parent's own
+  children. Needs the `message.im` event + `im:history` scope — see
+  [`docs/slack-setup.md`](docs/slack-setup.md).
+- **Krankmeldung / Abwesenheit**: parents and staff can report a child sick or absent
+  (from today on) on Heute and the Wochenplan editor, or via the assistant; a pending
+  departure for that day is removed, and the entry is pruned with the other old data.
 - **"Keine Hausaufgaben" per day and per weekday**: staff can explicitly mark a day
   (or a whole weekday default) as having no homework, overriding the weekday default
   — a `homework_none` state on `DailyProgram`, with the effective slot centralised in
