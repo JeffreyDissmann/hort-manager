@@ -43,6 +43,8 @@ class SlackHome
                         $this->link('👧 Kinder', 'children'),
                     ],
                 ],
+                ['type' => 'divider'],
+                ['type' => 'section', 'text' => ['type' => 'mrkdwn', 'text' => "*Schreib mir einfach*\nHier im Chat (oder mit `/hort …`) verstehe ich z. B. „Tom ist morgen krank“, „Lena wird Montag um 15:30 abgeholt“, „Kommt Tom beim Ausflug mit? Ja“ – oder Fragen wie „Wann geht Lena heute?“."]],
             ],
         ];
     }
