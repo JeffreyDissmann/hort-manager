@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\AbsenceController;
 use App\Http\Controllers\Auth\SlackController;
 use App\Http\Controllers\ChildController;
 use App\Http\Controllers\DailyBoardController;
@@ -88,6 +89,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/wochenplan', WeeklyOverviewController::class)->name('weekly-plan');
     Route::patch('/wochenplan/anpassung', [WeeklyAdjustmentController::class, 'update'])->name('weekly-plan.adjust');
     Route::patch('/wochenplan/zuruecksetzen', [WeeklyAdjustmentController::class, 'reset'])->name('weekly-plan.reset');
+
+    // Krankmeldung / Abwesenheit — staff or the child's parent.
+    Route::post('/abwesenheiten', [AbsenceController::class, 'store'])->name('absences.store');
+    Route::delete('/abwesenheiten', [AbsenceController::class, 'destroy'])->name('absences.destroy');
 
     Route::get('/programm', [DailyProgramController::class, 'index'])->name('program');
     Route::patch('/programm', [DailyProgramController::class, 'update'])->name('program.update');

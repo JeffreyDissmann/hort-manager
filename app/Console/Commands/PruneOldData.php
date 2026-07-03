@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Models\Absence;
 use App\Models\DailyDeparture;
 use App\Models\DailyProgram;
 use App\Models\Excursion;
@@ -13,7 +14,7 @@ class PruneOldData extends Command
 {
     protected $signature = 'hort:prune-old-data';
 
-    protected $description = 'Delete day boards, day programs and excursions older than the retention period';
+    protected $description = 'Delete day boards, day programs, excursions and absences older than the retention period';
 
     public function handle(): int
     {
@@ -26,8 +27,9 @@ class PruneOldData extends Command
         $departures = DailyDeparture::where('date', '<', $cutoff)->delete();
         $programs = DailyProgram::where('date', '<', $cutoff)->delete();
         $excursions = Excursion::where('date', '<', $cutoff)->delete();
+        $absences = Absence::where('date', '<', $cutoff)->delete();
 
-        $this->info("Älter als {$weeks} Wochen aufgeräumt: {$departures} Abholungen, {$programs} Programme, {$excursions} Ausflüge.");
+        $this->info("Älter als {$weeks} Wochen aufgeräumt: {$departures} Abholungen, {$programs} Programme, {$excursions} Ausflüge, {$absences} Abwesenheiten.");
 
         return self::SUCCESS;
     }

@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\Enums\DepartureMethod;
 use App\Enums\DepartureStatus;
 use App\Http\Controllers\Concerns\ResolvesWeek;
+use App\Models\Absence;
 use App\Models\Child;
 use App\Models\DailyDeparture;
 use App\Models\DailyProgram;
@@ -49,6 +50,12 @@ class WeeklyOverviewController extends Controller
             ->whereIn('date', $weekDates)
             ->get()
             ->keyBy(fn (DailyDeparture $d) => $d->child_id.'|'.$d->date->toDateString());
+
+        $absences = Absence::query()
+            ->whereIn('child_id', $weekChildren->pluck('id'))
+            ->whereIn('date', $weekDates)
+            ->get()
+            ->keyBy(fn (Absence $a) => $a->child_id.'|'.$a->date->toDateString());
 
         $todayString = $today->toDateString();
         $toMinutes = fn (string $time): int => ((int) substr($time, 0, 2)) * 60 + (int) substr($time, 3, 2);
@@ -103,11 +110,11 @@ class WeeklyOverviewController extends Controller
             }
         }
 
-        $currentWeek = $weekChildren->map(function (Child $child) use ($weekDays, $departures, $todayString, $excursionByChildDate, $toMinutes) {
+        $currentWeek = $weekChildren->map(function (Child $child) use ($weekDays, $departures, $absences, $todayString, $excursionByChildDate, $toMinutes) {
             $byWeekday = $child->weeklySchedules->keyBy('weekday');
             $canManage = true;
 
-            $days = $weekDays->values()->map(function (array $day, int $i) use ($child, $byWeekday, $departures, $todayString, $canManage, $excursionByChildDate, $toMinutes) {
+            $days = $weekDays->values()->map(function (array $day, int $i) use ($child, $byWeekday, $departures, $absences, $todayString, $canManage, $excursionByChildDate, $toMinutes) {
                 $schedule = $byWeekday->get($i + 1);
                 $stdTime = $schedule && $schedule->planned_time ? substr((string) $schedule->planned_time, 0, 5) : null;
                 $stdMethod = $schedule?->method?->value;
@@ -122,6 +129,8 @@ class WeeklyOverviewController extends Controller
                 $departed = $status !== null && $status !== DepartureStatus::Present;
 
                 $adjusted = $departure !== null && ($time !== $stdTime || $method !== $stdMethod);
+
+                $absence = $absences->get($child->id.'|'.$day['date']);
 
                 // Is the child on a trip this day, and does the pickup fall inside it?
                 $excursion = $excursionByChildDate[$child->id.'|'.$day['date']] ?? null;
@@ -152,6 +161,8 @@ class WeeklyOverviewController extends Controller
                     'excursion' => $excursion,
                     'conflict' => $conflict,
                     'birthday' => $birthday,
+                    // Absence for this day: reason value + label, or null.
+                    'absent' => $absence ? ['reason' => $absence->reason->value, 'label' => $absence->reason->label()] : null,
                 ];
             });
 
