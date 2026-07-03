@@ -22,19 +22,13 @@ class SlackEntryTest extends TestCase
             ->assertRedirect(route('polls.index'));
     }
 
-    public function test_enter_starts_slack_sign_in_when_logged_out(): void
+    public function test_enter_sends_logged_out_users_to_the_login_screen(): void
     {
-        config([
-            'services.slack.client_id' => 'id',
-            'services.slack.client_secret' => 'secret',
-            'services.slack.redirect' => 'http://localhost/auth/slack/callback',
-        ]);
-
         $response = $this->get(route('slack.enter', ['to' => 'polls']));
 
-        $response->assertRedirect();
-        $this->assertStringContainsString('slack.com', $response->headers->get('Location'));
-        // Remembers where to land after the Slack round-trip.
+        // No auto-Slack: show the normal login screen instead …
+        $response->assertRedirect(route('login'));
+        // … but remember where to land after they log in (by any method).
         $this->assertSame(route('polls.index'), session('url.intended'));
     }
 

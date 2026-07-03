@@ -31,6 +31,18 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   scheduler, Cloudflare Tunnel) backed by a single SQLite volume, and a deployment
   guide ([`docs/deployment.md`](docs/deployment.md)).
 
+### Changed
+
+- **Slack deep-links open the normal login screen** instead of forcing "Sign in with
+  Slack". Every Slack button routes through `slack.enter`, which now shows the login
+  page (Slack, e-mail/password, or password reset) when signed out and still lands on
+  the linked target afterwards. Slack sign-in is only ever the explicit button.
+- **"Angemeldet bleiben" is checked by default** on the login screen.
+- The **"Passwort vergessen?"** reset flow is now reachable from the login screen,
+  and its e-mail is rendered **in German** (via `ResetPassword::toMailUsing` +
+  `lang/de.json`). Delivering the mail in production requires configuring `MAIL_*`
+  (SMTP) — see [`docs/deployment.md`](docs/deployment.md).
+
 ### Fixed
 
 - Wayfinder now generates **relative** route URLs, so the published image is

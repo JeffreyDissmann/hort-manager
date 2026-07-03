@@ -146,7 +146,7 @@ class SlackRsvp
             : "❌ *{$child->name}* kommt nicht mit.";
 
         // Answered — changing it only works in the app, so offer a link there
-        // (slack.enter signs the user in via Slack first if needed).
+        // (slack.enter shows the login screen first if the user isn't signed in).
         return [$this->section(
             $status.($by ? " _(von {$by})_" : ''),
             $this->linkButton('Ändern', route('slack.enter', ['to' => 'polls'])),

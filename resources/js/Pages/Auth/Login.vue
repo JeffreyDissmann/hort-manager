@@ -25,7 +25,7 @@ const slackError = computed(() => usePage().props.errors?.slack);
 const form = useForm({
     email: '',
     password: '',
-    remember: false,
+    remember: true,
 });
 
 const submit = () => {
