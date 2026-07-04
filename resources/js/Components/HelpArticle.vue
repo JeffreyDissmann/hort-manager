@@ -20,7 +20,7 @@ const areas = [
         icon: '📅',
         title: 'Abholplan',
         audience: 'Für alle',
-        text: 'Der Wochenplan von Montag bis Freitag mit den regulären Abholzeiten. Brauchst du an einem Tag ausnahmsweise eine andere Zeit, kannst du genau diesen Tag anpassen.',
+        text: 'Ganz oben siehst du die ganze Woche auf einen Blick – alle Kinder mit ihren Abholzeiten und den Zeiten für Essen, Aktivität, Hausaufgaben und Ausflüge. Brauchst du an einem Tag ausnahmsweise eine andere Zeit, kannst du genau diesen Tag anpassen oder dein Kind krank melden.',
     },
     {
         icon: '🚌',
@@ -38,21 +38,31 @@ const areas = [
         icon: '🍽️',
         title: 'Programm',
         audience: 'Nur Erzieher:innen',
-        text: 'Erzieher:innen tragen Mittagessen, Aktivität und die Hausaufgaben-Zeiten der Woche ein. Eltern sehen das mit.',
+        text: 'Erzieher:innen tragen Mittagessen, Aktivität und die Hausaufgaben-Zeiten der Woche ein – auch „keine Hausaufgaben“ ist möglich. Eltern sehen das mit; die Hausaufgabenzeit erscheint auch auf „Heute“.',
     },
 ];
 
 const slackPoints = [
     'Du bekommst eine kurze Nachricht, sobald dein Kind abgeholt wurde oder allein gegangen ist.',
     'Bei einem neuen Ausflug schickt dir der Hort-Manager alle Infos mit Ja/Nein-Knöpfen – du kannst direkt in Slack antworten.',
-    'Tippe in Slack den Befehl „/hort“, um schnell in die App zu springen.',
+    'Du kannst dem Hort-Manager auch einfach schreiben (siehe unten) oder „/hort“ tippen, um in die App zu springen.',
     'Über die App „Hort-Manager“ in deiner Slack-Seitenleiste kommst du jederzeit hierher.',
+];
+
+// Free-text examples the Slack assistant understands.
+const assistantExamples = [
+    'Mein Kind ist heute krank.',
+    'Lena wird morgen erst um 16:30 abgeholt.',
+    'Tom geht ab Montag allein nach Hause.',
+    'Kommt Lena beim Zoo-Ausflug mit? Ja.',
+    'Wann geht Tom heute?',
 ];
 
 const glossary = [
     ['Stammplan', 'Die festen, wöchentlich gleichen Abholzeiten eines Kindes – die Grundlage für den Abholplan.'],
     ['Abholplan', 'Der konkrete Plan für eine bestimmte Woche. Er kommt aus dem Stammplan, kann aber pro Tag angepasst werden.'],
     ['abgeholt / allein gegangen', 'Die zwei Arten, wie ein Kind nach Hause kommt: von jemandem abgeholt oder allein nach Hause gegangen.'],
+    ['Krankmeldung / Abwesenheit', 'Ein Kind ist für einen Tag als krank oder abwesend gemeldet – dann ist es an dem Tag nicht auf der Abholliste.'],
 ];
 </script>
 
@@ -92,9 +102,14 @@ const glossary = [
         <section class="space-y-3">
             <h3 class="text-lg font-semibold text-hort-navy">Wie melde ich mich an?</h3>
             <p class="text-hort-navy/70">
-                Mit <strong>„Mit Slack anmelden“</strong> – ein eigenes Passwort brauchst du nicht.
-                Voraussetzung ist, dass du im Slack des Horts bist. Beim ersten Anmelden wird dein
-                Konto automatisch angelegt.
+                Am einfachsten mit <strong>„Mit Slack anmelden“</strong> – ein eigenes Passwort
+                brauchst du dafür nicht. Voraussetzung ist, dass du im Slack des Horts bist. Beim
+                ersten Anmelden wird dein Konto automatisch angelegt.
+            </p>
+            <p class="text-hort-navy/70">
+                Alternativ kannst du dich mit <strong>E-Mail und Passwort</strong> anmelden. Passwort
+                vergessen? Über <strong>„Passwort vergessen?“</strong> auf der Anmeldeseite bekommst
+                du einen Link per E-Mail, mit dem du dir ein neues Passwort setzt.
             </p>
         </section>
 
@@ -138,6 +153,35 @@ const glossary = [
                     <span>{{ point }}</span>
                 </li>
             </ul>
+        </section>
+
+        <!-- Assistant & Krankmeldung -->
+        <section class="space-y-3">
+            <h3 class="text-lg font-semibold text-hort-navy">Krank melden & schnelle Änderungen</h3>
+            <p class="text-hort-navy/70">
+                Ist dein Kind krank oder kommt an einem Tag nicht? Tippe auf <strong>„Krank“</strong>
+                bzw. <strong>„Abwesend“</strong> – auf der Seite „Heute“ oder beim jeweiligen Tag im
+                Abholplan. Genauso trägst du dort kurzfristig eine andere Abholzeit ein.
+            </p>
+            <p class="text-hort-navy/70">
+                Noch einfacher: <strong>Schreib es dem Hort-Manager direkt in Slack.</strong> Er
+                versteht ganz normale Sätze – zum Beispiel:
+            </p>
+            <ul class="flex flex-wrap gap-2">
+                <li
+                    v-for="(ex, i) in assistantExamples"
+                    :key="i"
+                    class="rounded-full bg-hort-teal/10 px-3 py-1 text-sm text-hort-navy/80"
+                >
+                    „{{ ex }}“
+                </li>
+            </ul>
+            <p class="text-sm text-hort-navy/60">
+                Das geht per Direktnachricht an den „Hort-Manager“ in Slack oder mit „/hort …“. Er
+                kümmert sich nur um deine eigenen Kinder und bestätigt dir kurz, was er eingetragen
+                hat. Prüf die Antwort – bei einem Missverständnis schreib einfach die richtige Angabe
+                nach.
+            </p>
         </section>
 
         <!-- Install as app / notifications -->
