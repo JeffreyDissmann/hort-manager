@@ -39,6 +39,8 @@ return [
     'joined' => 'joining',
     'not_joined' => 'not joining',
     'no_response' => 'no response',
+    'show_all_children' => 'Show all children (:attending of :total joining)',
+    'hide_all_children' => 'Hide other children',
 
     'joining_count' => ':count joining',
     'joining_count_past' => ':count joined',

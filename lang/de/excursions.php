@@ -39,6 +39,8 @@ return [
     'joined' => 'dabei',
     'not_joined' => 'nicht dabei',
     'no_response' => 'keine Rückmeldung',
+    'show_all_children' => 'Alle Kinder anzeigen (:attending von :total dabei)',
+    'hide_all_children' => 'Andere Kinder ausblenden',
 
     'joining_count' => ':count dabei',
     'joining_count_past' => ':count waren dabei',
