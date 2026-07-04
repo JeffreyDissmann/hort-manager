@@ -3,6 +3,7 @@ import { mark as boardMark, override as boardOverride } from '@/routes/board';
 import { store as absenceStore } from '@/routes/absences';
 import { live as excursionLive } from '@/routes/excursions';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import CollapsibleChips from '@/Components/CollapsibleChips.vue';
 import TimeSelect from '@/Components/TimeSelect.vue';
 import { PencilSquareIcon } from '@heroicons/vue/24/outline';
 import { Head, router, usePage } from '@inertiajs/vue3';
@@ -366,6 +367,21 @@ function saveEdit(row) {
                             </button>
                         </div>
                     </div>
+
+                    <!-- Who's on the trip (collapsible, like the Ausflüge page) -->
+                    <CollapsibleChips
+                        v-if="ex.children.length"
+                        open-label="Kinder ausblenden"
+                        :closed-label="`Alle Kinder anzeigen (${ex.children.length})`"
+                    >
+                        <span
+                            v-for="name in ex.children"
+                            :key="name"
+                            class="rounded-md bg-white/70 px-2 py-0.5 text-xs font-medium text-hort-navy/70"
+                        >
+                            {{ name }}
+                        </span>
+                    </CollapsibleChips>
 
                     <div v-if="canMark && ex.state !== 'planned'" class="mt-2 text-right">
                         <button
