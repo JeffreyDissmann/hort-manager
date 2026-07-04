@@ -34,7 +34,7 @@ class AbsenceController extends Controller
             Absence::report($child, $date->toDateString(), $reason, $request->user()->id);
         }
 
-        return back()->with('status', "{$child->name} als „{$reason->label()}“ gemeldet.");
+        return back()->with('status', __('flash.absence_reported', ['name' => $child->name, 'reason' => $reason->label()]));
     }
 
     public function destroy(Request $request): RedirectResponse
@@ -52,6 +52,6 @@ class AbsenceController extends Controller
             ->whereBetween('date', [$validated['from'], $validated['to']])
             ->delete();
 
-        return back()->with('status', "Abwesenheit für {$child->name} aufgehoben.");
+        return back()->with('status', __('flash.absence_cleared', ['name' => $child->name]));
     }
 }

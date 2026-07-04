@@ -121,11 +121,11 @@ function onTouchEnd(e) {
 </script>
 
 <template>
-    <Head title="Programm" />
+    <Head :title="$t('program.title')" />
 
     <AuthenticatedLayout :wide="true">
         <template #header>
-            <h2 class="text-xl font-semibold text-hort-navy">Tagesprogramm</h2>
+            <h2 class="text-xl font-semibold text-hort-navy">{{ $t('program.header') }}</h2>
         </template>
 
         <div class="space-y-4">
@@ -137,9 +137,7 @@ function onTouchEnd(e) {
             </div>
 
             <p class="text-sm text-hort-navy/60">
-                Trage für jeden Tag das Mittagessen, die Aktivität und die
-                Hausaufgabenzeit ein. Eltern sehen das auf „Heute" und im
-                Abholplan.
+                {{ $t('program.intro') }}
             </p>
 
             <!-- Week navigation (kept compact so it doesn't spread on wide screens) -->
@@ -175,37 +173,37 @@ function onTouchEnd(e) {
                             🎂
                             <span v-for="(b, j) in day.birthdays" :key="b.name">
                                 <template v-if="j > 0">, </template>{{ b.name }}
-                                (wird {{ b.turns }})
+                                ({{ $t('program.birthday_turns', { age: b.turns }) }})
                             </span>
                         </p>
                     </div>
 
                     <div class="mt-3 lg:mt-0">
-                        <InputLabel :for="`lunch-${day.date}`" value="Mittagessen" />
+                        <InputLabel :for="`lunch-${day.date}`" :value="$t('program.lunch')" />
                         <TextInput
                             :id="`lunch-${day.date}`"
                             v-model="day.lunch"
                             type="text"
                             maxlength="255"
                             class="mt-1 block w-full"
-                            placeholder="z. B. Nudeln mit Tomatensoße"
+                            :placeholder="$t('program.lunch_placeholder')"
                         />
                     </div>
 
                     <div class="mt-3 lg:mt-0">
-                        <InputLabel :for="`activity-${day.date}`" value="Aktivität" />
+                        <InputLabel :for="`activity-${day.date}`" :value="$t('program.activity')" />
                         <TextInput
                             :id="`activity-${day.date}`"
                             v-model="day.activity"
                             type="text"
                             maxlength="255"
                             class="mt-1 block w-full"
-                            placeholder="z. B. Basteln, Ausflug in den Park"
+                            :placeholder="$t('program.activity_placeholder')"
                         />
                     </div>
 
                     <div class="mt-3 lg:mt-0">
-                        <InputLabel value="Hausaufgaben" />
+                        <InputLabel :value="$t('program.homework')" />
                         <label class="mt-1 flex items-center gap-2 text-sm text-hort-navy/70">
                             <Checkbox
                                 :checked="day.no_homework"
@@ -216,7 +214,7 @@ function onTouchEnd(e) {
                                     }
                                 "
                             />
-                            Keine Hausaufgaben
+                            {{ $t('program.no_homework') }}
                         </label>
                         <TimeRange
                             v-if="!day.no_homework"
@@ -230,18 +228,17 @@ function onTouchEnd(e) {
 
             <div class="flex justify-end">
                 <PrimaryButton :disabled="saving" @click="save">
-                    Woche speichern
+                    {{ $t('program.save_week') }}
                 </PrimaryButton>
             </div>
 
             <!-- Default homework schedule (Mo–Fr) -->
             <div class="rounded-2xl bg-white p-4 shadow-sm">
                 <p class="font-semibold text-hort-navy">
-                    Standard-Hausaufgabenzeiten
+                    {{ $t('program.default_homework_heading') }}
                 </p>
                 <p class="mb-3 mt-1 text-sm text-hort-navy/60">
-                    Gilt an jedem Tag, sofern oben für den Tag nichts anderes
-                    eingetragen ist.
+                    {{ $t('program.default_homework_intro') }}
                 </p>
                 <div class="space-y-2 lg:max-w-2xl">
                     <div
@@ -262,7 +259,7 @@ function onTouchEnd(e) {
                                     }
                                 "
                             />
-                            Keine
+                            {{ $t('common.none') }}
                         </label>
                         <TimeRange
                             v-if="!d.no_homework"
@@ -274,7 +271,7 @@ function onTouchEnd(e) {
                 </div>
                 <div class="mt-3 flex justify-end">
                     <PrimaryButton :disabled="savingDefaults" @click="saveDefaults">
-                        Standard speichern
+                        {{ $t('program.save_default') }}
                     </PrimaryButton>
                 </div>
             </div>

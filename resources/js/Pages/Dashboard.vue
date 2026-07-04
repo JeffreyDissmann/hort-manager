@@ -4,6 +4,7 @@ import { board, weeklyPlan, program, help } from '@/routes';
 import { index as childrenIndex } from '@/routes/children';
 import { index as excursionsIndex } from '@/routes/excursions';
 import { index as pollsIndex } from '@/routes/polls';
+import { t } from '@/i18n';
 import { Head, Link, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
 
@@ -14,39 +15,39 @@ const isStaff = computed(() => user.value?.role === 'staff');
 const tiles = computed(() => {
     const items = [
         {
-            title: 'Heute',
+            title: t('dashboard.today'),
             text: isStaff.value
-                ? 'Wer geht heute wann? Abholungen abhaken.'
-                : 'Wer geht heute wann?',
+                ? t('dashboard.today_text_staff')
+                : t('dashboard.today_text_parent'),
             href: board().url,
         },
         {
-            title: 'Ausflüge',
+            title: t('dashboard.excursions'),
             text: isStaff.value
-                ? 'Ausflüge planen und Rückmeldungen sehen.'
-                : 'Für Ausflüge deines Kindes abstimmen.',
+                ? t('dashboard.excursions_text_staff')
+                : t('dashboard.excursions_text_parent'),
             href: isStaff.value ? excursionsIndex().url : pollsIndex().url,
         },
         {
-            title: 'Abholplan',
-            text: 'Abholzeiten, Essen und Aktivitäten der Woche.',
+            title: t('dashboard.weekly_plan'),
+            text: t('dashboard.weekly_plan_text'),
             href: weeklyPlan().url,
         },
     ];
 
     if (isStaff.value) {
         items.push({
-            title: 'Programm',
-            text: 'Mittagessen, Aktivität und Hausaufgaben eintragen.',
+            title: t('dashboard.program'),
+            text: t('dashboard.program_text'),
             href: program().url,
         });
     }
 
     items.push({
-        title: isStaff.value ? 'Kinder' : 'Meine Kinder',
+        title: isStaff.value ? t('dashboard.children_staff') : t('dashboard.children_parent'),
         text: isStaff.value
-            ? 'Kinder und Stammpläne verwalten.'
-            : 'Stammplan deines Kindes pflegen.',
+            ? t('dashboard.children_text_staff')
+            : t('dashboard.children_text_parent'),
         href: childrenIndex().url,
     });
 
@@ -55,12 +56,12 @@ const tiles = computed(() => {
 </script>
 
 <template>
-    <Head title="Start" />
+    <Head :title="$t('dashboard.title')" />
 
     <AuthenticatedLayout>
         <template #header>
             <h2 class="text-xl font-semibold text-hort-navy">
-                Hallo {{ userName }} 👋
+                {{ $t('dashboard.greeting', { name: userName }) }}
             </h2>
         </template>
 
@@ -80,9 +81,9 @@ const tiles = computed(() => {
         </div>
 
         <p class="mt-6 text-center text-sm text-hort-navy/60">
-            Neu hier oder unsicher?
+            {{ $t('dashboard.new_here') }}
             <Link :href="help().url" class="font-medium text-hort-teal-dark underline hover:text-hort-navy">
-                So funktioniert der Hort-Manager
+                {{ $t('dashboard.how_it_works') }}
             </Link>
         </p>
     </AuthenticatedLayout>

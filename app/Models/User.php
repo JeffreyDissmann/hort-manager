@@ -7,6 +7,7 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Enums\UserRole;
 use Database\Factories\UserFactory;
+use Illuminate\Contracts\Translation\HasLocalePreference;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Builder;
@@ -19,9 +20,9 @@ use NotificationChannels\WebPush\HasPushSubscriptions;
 
 // role and is_admin are privilege fields — deliberately NOT mass-assignable;
 // they are only ever set via explicit forceFill (SSO, UserController, import).
-#[Fillable(['name', 'email', 'password', 'slack_id', 'avatar'])]
+#[Fillable(['name', 'email', 'password', 'slack_id', 'avatar', 'locale'])]
 #[Hidden(['password', 'remember_token'])]
-class User extends Authenticatable
+class User extends Authenticatable implements HasLocalePreference
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, HasPushSubscriptions, Notifiable;
@@ -49,6 +50,12 @@ class User extends Authenticatable
             'role' => UserRole::class,
             'is_admin' => 'boolean',
         ];
+    }
+
+    /** Preferred UI locale for notifications/mail; null → the app default (de). */
+    public function preferredLocale(): ?string
+    {
+        return $this->locale;
     }
 
     /** Staff member (Erzieher:in) — may manage children, schedules and the board. */

@@ -1,0 +1,52 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'title' => 'Abholplan',
+
+    'your_children' => 'Deine Kinder',
+    'tap_to_change' => 'Tippen zum Ändern',
+    'free' => 'frei',
+    'birthday_title' => 'Geburtstag',
+    'birthday_flag' => '🎂 :day: Geburtstag · wird :age',
+    'pickup_conflict' => ':day: Abholung :time liegt im :name',
+    'back_return' => 'zurück :time',
+    'excursion_flag' => '🚌 :day: :name',
+    'homework_conflict' => ':day: Abholung :time liegt in der Hausaufgabenzeit',
+    'no_child_assigned' => 'Dir ist noch kein Kind zugeordnet.',
+
+    'whole_week' => 'Ganze Woche · alle Kinder',
+    'empty_week' => 'Für diese Woche sind noch keine Abholzeiten oder Programme hinterlegt.',
+
+    'legend_picked_up' => 'wird abgeholt',
+    'legend_alone' => 'geht allein',
+    'legend_changed' => 'geändert',
+
+    'standard_heading' => 'Standard-Plan · gilt jede Woche',
+    'standard_intro' => 'Der reguläre Wochen-Stammplan aller Kinder – die normalen Abholzeiten ohne Änderungen.',
+    'edit_link_staff' => 'Stammplan unter „Kinder“ bearbeiten',
+    'edit_link_parent' => 'Stammplan unter „Meine Kinder“ ändern',
+    'empty_standard' => 'Noch keine Abholzeiten im Stammplan hinterlegt.',
+
+    'editor_subtitle' => ':label – nur für diese Woche',
+    'time_label' => 'Uhrzeit (leer = kommt nicht)',
+    'method_label' => 'Art',
+    'method_open' => '— offen —',
+    'note_placeholder' => 'z. B. wegen Arzttermin',
+
+    'reported_as' => 'Als „:label“ gemeldet.',
+    'cancel_absence' => 'Abwesenheit aufheben',
+    'not_here_today' => 'Kind ist heute nicht da?',
+    'report_sick' => 'Krank melden',
+    'report_away' => 'Abwesend',
+    'reset_to_standard' => 'Auf Standard',
+
+    'weekday' => [
+        'mon' => 'Mo',
+        'tue' => 'Di',
+        'wed' => 'Mi',
+        'thu' => 'Do',
+        'fri' => 'Fr',
+    ],
+];

@@ -1,6 +1,7 @@
 <script setup>
 import { update as pollsUpdate } from '@/routes/polls';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import { t } from '@/i18n';
 import { Head, router, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
 
@@ -10,11 +11,6 @@ defineProps({
 });
 
 const flash = computed(() => usePage().props.flash?.status);
-
-const weekdays = [
-    'Sonntag', 'Montag', 'Dienstag', 'Mittwoch',
-    'Donnerstag', 'Freitag', 'Samstag',
-];
 
 function parseDate(value) {
     const [year, month, day] = value.split('-').map(Number);
@@ -33,7 +29,7 @@ function longDate(value) {
     if (!value) {
         return '';
     }
-    return `${weekdays[parseDate(value).getDay()]}, ${formatDate(value)}`;
+    return `${t('excursions.weekdays.' + parseDate(value).getDay())}, ${formatDate(value)}`;
 }
 
 function daysUntil(value) {
@@ -51,19 +47,19 @@ function deadlineHint(value) {
         return '';
     }
     if (days <= 0) {
-        return 'Heute ist der letzte Tag zum Antworten';
+        return t('excursions.deadline_today');
     }
     if (days === 1) {
-        return 'Bitte bis morgen antworten';
+        return t('excursions.deadline_tomorrow');
     }
-    return `Bitte bis ${formatDate(value)} antworten (noch ${days} Tage)`;
+    return t('excursions.deadline_days', { date: formatDate(value), n: days });
 }
 
 function timeRange(e) {
     if (e.depart_at && e.return_at) {
-        return `${e.depart_at}–${e.return_at} Uhr`;
+        return t('excursions.time_range', { from: e.depart_at, to: e.return_at });
     }
-    return e.depart_at ? `ab ${e.depart_at} Uhr` : '';
+    return e.depart_at ? t('excursions.time_from', { time: e.depart_at }) : '';
 }
 
 function answer(excursion, child, response) {
@@ -76,11 +72,11 @@ function answer(excursion, child, response) {
 </script>
 
 <template>
-    <Head title="Ausflüge – Abstimmung" />
+    <Head :title="$t('excursions.poll_title')" />
 
     <AuthenticatedLayout>
         <template #header>
-            <h2 class="text-xl font-semibold text-hort-navy">Ausflüge</h2>
+            <h2 class="text-xl font-semibold text-hort-navy">{{ $t('excursions.heading') }}</h2>
         </template>
 
         <div class="space-y-8">
@@ -94,7 +90,7 @@ function answer(excursion, child, response) {
             <!-- Upcoming excursions (answerable while the poll is open) -->
             <section class="space-y-3">
                 <h3 class="text-sm font-semibold uppercase tracking-wide text-hort-navy/50">
-                    Anstehende Ausflüge
+                    {{ $t('excursions.upcoming_heading') }}
                 </h3>
 
                 <ul v-if="upcoming.length" class="space-y-3">
@@ -115,15 +111,15 @@ function answer(excursion, child, response) {
                             class="mt-2 flex flex-wrap gap-x-6 gap-y-1 text-sm"
                         >
                             <div v-if="excursion.depart_at" class="flex gap-1.5">
-                                <dt class="text-hort-navy/40">Abfahrt</dt>
+                                <dt class="text-hort-navy/40">{{ $t('excursions.depart') }}</dt>
                                 <dd class="font-semibold text-hort-navy">
-                                    {{ excursion.depart_at }} Uhr
+                                    {{ excursion.depart_at }} {{ $t('common.oclock') }}
                                 </dd>
                             </div>
                             <div v-if="excursion.return_at" class="flex gap-1.5">
-                                <dt class="text-hort-navy/40">Rückkehr</dt>
+                                <dt class="text-hort-navy/40">{{ $t('excursions.return') }}</dt>
                                 <dd class="font-semibold text-hort-navy">
-                                    {{ excursion.return_at }} Uhr
+                                    {{ excursion.return_at }} {{ $t('common.oclock') }}
                                 </dd>
                             </div>
                         </dl>
@@ -145,7 +141,7 @@ function answer(excursion, child, response) {
                             v-else-if="!excursion.poll_open"
                             class="mt-2 text-xs font-medium text-hort-navy/40"
                         >
-                            Abstimmung beendet
+                            {{ $t('excursions.poll_closed') }}
                         </p>
 
                         <div class="mt-3 space-y-2">
@@ -162,19 +158,19 @@ function answer(excursion, child, response) {
                                         v-if="child.response === null"
                                         class="ml-1 text-xs font-semibold text-amber-600"
                                     >
-                                        – noch offen
+                                        – {{ $t('excursions.status_open') }}
                                     </span>
                                     <span
                                         v-else-if="child.response === true"
                                         class="ml-1 text-xs font-semibold text-hort-teal-dark"
                                     >
-                                        – zugesagt ✓
+                                        – {{ $t('excursions.status_confirmed') }} ✓
                                     </span>
                                     <span
                                         v-else
                                         class="ml-1 text-xs font-semibold text-hort-purple"
                                     >
-                                        – abgesagt
+                                        – {{ $t('excursions.status_declined') }}
                                     </span>
                                 </div>
                                 <div
@@ -189,7 +185,7 @@ function answer(excursion, child, response) {
                                             : 'bg-white text-hort-navy/60 ring-1 ring-hort-navy/10 hover:bg-hort-teal/20'"
                                         @click="answer(excursion, child, true)"
                                     >
-                                        Kommt mit
+                                        {{ $t('excursions.answer_yes') }}
                                     </button>
                                     <button
                                         type="button"
@@ -199,7 +195,7 @@ function answer(excursion, child, response) {
                                             : 'bg-white text-hort-navy/60 ring-1 ring-hort-navy/10 hover:bg-hort-purple/15'"
                                         @click="answer(excursion, child, false)"
                                     >
-                                        Nicht dabei
+                                        {{ $t('excursions.answer_no') }}
                                     </button>
                                 </div>
                             </div>
@@ -211,14 +207,14 @@ function answer(excursion, child, response) {
                     v-else
                     class="rounded-2xl border-2 border-dashed border-hort-navy/15 p-6 text-center text-sm text-hort-navy/50"
                 >
-                    Aktuell sind keine Ausflüge geplant.
+                    {{ $t('excursions.none_planned') }}
                 </p>
             </section>
 
             <!-- Past excursions (read-only) -->
             <section v-if="past.length" class="space-y-3">
                 <h3 class="text-sm font-semibold uppercase tracking-wide text-hort-navy/50">
-                    Vergangene Ausflüge
+                    {{ $t('excursions.past_heading') }}
                 </h3>
 
                 <ul class="space-y-3">
@@ -256,10 +252,10 @@ function answer(excursion, child, response) {
                                 {{ child.name }}:
                                 {{
                                     child.response === true
-                                        ? 'dabei'
+                                        ? $t('excursions.joined')
                                         : child.response === false
-                                          ? 'nicht dabei'
-                                          : 'keine Rückmeldung'
+                                          ? $t('excursions.not_joined')
+                                          : $t('excursions.no_response')
                                 }}
                             </span>
                         </div>

@@ -59,7 +59,7 @@ defineExpose({ open });
     <Modal :show="show" max-width="md" @close="close">
         <div v-if="entry" class="p-6">
             <div class="flex items-center justify-between">
-                <h2 class="text-lg font-semibold text-hort-navy">✨ Was ist neu?</h2>
+                <h2 class="text-lg font-semibold text-hort-navy">{{ $t('components.whats_new.title') }}</h2>
                 <span v-if="entries.length > 1" class="text-xs text-gray-400">
                     {{ index + 1 }}/{{ entries.length }}
                 </span>
@@ -86,7 +86,7 @@ defineExpose({ open });
                         type="button"
                         :disabled="index >= entries.length - 1"
                         @click="older"
-                        aria-label="Ältere Neuigkeiten"
+                        :aria-label="$t('components.whats_new.older')"
                         class="rounded-lg border border-hort-navy/10 p-1.5 text-hort-navy transition hover:bg-hort-sand disabled:opacity-30"
                     >
                         <ChevronLeftIcon class="h-5 w-5" />
@@ -95,7 +95,7 @@ defineExpose({ open });
                         type="button"
                         :disabled="index <= 0"
                         @click="newer"
-                        aria-label="Neuere Neuigkeiten"
+                        :aria-label="$t('components.whats_new.newer')"
                         class="rounded-lg border border-hort-navy/10 p-1.5 text-hort-navy transition hover:bg-hort-sand disabled:opacity-30"
                     >
                         <ChevronRightIcon class="h-5 w-5" />
@@ -108,7 +108,7 @@ defineExpose({ open });
                     @click="close"
                     class="rounded-lg bg-hort-navy px-4 py-2 text-sm font-semibold text-white transition hover:bg-hort-navy-dark"
                 >
-                    Alles klar
+                    {{ $t('components.whats_new.dismiss') }}
                 </button>
             </div>
         </div>

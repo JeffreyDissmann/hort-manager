@@ -211,13 +211,13 @@ function saveEdit(row) {
 </script>
 
 <template>
-    <Head title="Tagesboard" />
+    <Head :title="$t('board.title')" />
 
     <AuthenticatedLayout>
         <template #header>
             <div>
                 <h2 class="text-xl font-semibold text-hort-navy">
-                    {{ date.is_today ? 'Heute' : 'Nächster Hort-Tag' }}
+                    {{ date.is_today ? $t('common.today') : $t('board.next_hort_day') }}
                 </h2>
                 <p class="text-sm text-hort-navy/50">{{ date.label }}</p>
             </div>
@@ -238,7 +238,7 @@ function saveEdit(row) {
                 class="rounded-2xl bg-white p-4 shadow-sm"
             >
                 <p v-if="program.lunch" class="text-sm text-hort-navy">
-                    <span class="font-semibold">Mittagessen:</span>
+                    <span class="font-semibold">{{ $t('board.lunch_label') }}</span>
                     {{ program.lunch }}
                 </p>
                 <p
@@ -246,7 +246,7 @@ function saveEdit(row) {
                     class="text-sm text-hort-navy"
                     :class="program.lunch ? 'mt-1' : ''"
                 >
-                    <span class="font-semibold">Aktivität:</span>
+                    <span class="font-semibold">{{ $t('board.activity_label') }}</span>
                     {{ program.activity }}
                 </p>
             </div>
@@ -258,16 +258,16 @@ function saveEdit(row) {
                     class="flex gap-2 text-sm font-semibold"
                 >
                     <span class="rounded-xl bg-white px-3 py-2 text-hort-navy shadow-sm">
-                        {{ counts.present }} noch da
+                        {{ $t('board.count_present', { n: counts.present }) }}
                     </span>
                     <span class="rounded-xl bg-white px-3 py-2 text-hort-navy/50 shadow-sm">
-                        {{ counts.left }} weg
+                        {{ $t('board.count_left', { n: counts.left }) }}
                     </span>
                     <span
                         v-if="counts.excursion"
                         class="rounded-xl bg-white px-3 py-2 text-hort-purple shadow-sm"
                     >
-                        {{ counts.excursion }} Ausflug
+                        {{ $t('board.count_excursion', { n: counts.excursion }) }}
                     </span>
                 </div>
 
@@ -281,7 +281,7 @@ function saveEdit(row) {
                         :class="showAll ? 'bg-hort-teal text-hort-navy' : 'text-hort-navy/50'"
                         @click="showAll = true"
                     >
-                        Alle
+                        {{ $t('common.all') }}
                     </button>
                     <button
                         type="button"
@@ -289,7 +289,7 @@ function saveEdit(row) {
                         :class="!showAll ? 'bg-hort-teal text-hort-navy' : 'text-hort-navy/50'"
                         @click="showAll = false"
                     >
-                        Nur meine
+                        {{ $t('board.only_mine') }}
                     </button>
                 </div>
             </div>
@@ -299,7 +299,7 @@ function saveEdit(row) {
                 v-if="absent.length"
                 class="rounded-2xl bg-amber-50 p-4 text-sm text-amber-800"
             >
-                <p class="mb-1 font-semibold">Heute abwesend</p>
+                <p class="mb-1 font-semibold">{{ $t('board.absent_today') }}</p>
                 <div class="flex flex-wrap gap-1.5">
                     <span
                         v-for="(a, i) in absent"
@@ -324,26 +324,26 @@ function saveEdit(row) {
                                 🚌 {{ ex.name }}
                             </p>
                             <p class="mt-0.5 text-sm text-hort-navy/60">
-                                {{ ex.child_count }} Kinder<span
+                                {{ $t('board.children_count', { n: ex.child_count }) }}<span
                                     v-if="ex.depart_at"
                                 >
                                     · {{ ex.depart_at }}<span v-if="ex.return_at"
                                         >–{{ ex.return_at }}</span
                                     >
-                                    Uhr</span
+                                    {{ $t('common.oclock') }}</span
                                 >
                             </p>
                             <p
                                 v-if="ex.state === 'away'"
                                 class="mt-1 text-sm font-medium text-hort-purple"
                             >
-                                Unterwegs seit {{ ex.departed_at }}
+                                {{ $t('board.away_since', { time: ex.departed_at }) }}
                             </p>
                             <p
                                 v-else-if="ex.state === 'back'"
                                 class="mt-1 text-sm font-medium text-hort-teal-dark"
                             >
-                                ✓ Zurück um {{ ex.returned_at }}
+                                {{ $t('board.back_at', { time: ex.returned_at }) }}
                             </p>
                         </div>
 
@@ -354,7 +354,7 @@ function saveEdit(row) {
                                 class="rounded-xl bg-hort-purple px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 active:scale-[0.98]"
                                 @click="liveEvent(ex, 'depart')"
                             >
-                                Losgegangen
+                                {{ $t('board.departed_button') }}
                             </button>
                             <button
                                 v-else-if="ex.state === 'away'"
@@ -362,7 +362,7 @@ function saveEdit(row) {
                                 class="rounded-xl bg-hort-teal px-4 py-2 text-sm font-semibold text-hort-navy transition hover:bg-hort-teal-dark active:scale-[0.98]"
                                 @click="liveEvent(ex, 'return')"
                             >
-                                Zurück
+                                {{ $t('board.return_button') }}
                             </button>
                         </div>
                     </div>
@@ -373,7 +373,7 @@ function saveEdit(row) {
                             class="text-xs font-medium text-hort-navy/40 underline-offset-2 hover:underline"
                             @click="liveEvent(ex, ex.state === 'back' ? 'undo_return' : 'undo_depart')"
                         >
-                            Rückgängig
+                            {{ $t('common.undo') }}
                         </button>
                     </div>
                 </div>
@@ -389,11 +389,11 @@ function saveEdit(row) {
                     v-if="homeworkSpan && program"
                     class="flex flex-col items-center gap-1 rounded-xl border border-dashed border-amber-300 bg-amber-50 px-1.5 py-2 text-amber-700"
                     :style="{ gridColumn: 1, gridRow: `${homeworkSpan.rowStart} / span ${homeworkSpan.span}` }"
-                    :title="`Hausaufgaben ${program.homework_start}–${program.homework_end || ''}`"
+                    :title="`${$t('board.homework')} ${program.homework_start}–${program.homework_end || ''}`"
                 >
                     <span class="text-base leading-none">📚</span>
                     <span class="text-[10px] font-semibold [writing-mode:vertical-rl]">
-                        {{ program.homework_start }}<span v-if="program.homework_end">–{{ program.homework_end }}</span> Uhr
+                        {{ program.homework_start }}<span v-if="program.homework_end">–{{ program.homework_end }}</span> {{ $t('common.oclock') }}
                     </span>
                 </div>
 
@@ -407,12 +407,12 @@ function saveEdit(row) {
                             v-if="block.homeworkCard"
                             class="rounded-2xl border border-dashed border-amber-300 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800"
                         >
-                            📚 Hausaufgaben · {{ block.homeworkCard.start }}<span v-if="block.homeworkCard.end">–{{ block.homeworkCard.end }}</span> Uhr
+                            📚 {{ $t('board.homework') }} · {{ block.homeworkCard.start }}<span v-if="block.homeworkCard.end">–{{ block.homeworkCard.end }}</span> {{ $t('common.oclock') }}
                         </div>
 
                         <template v-else>
                         <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-hort-navy/40">
-                            {{ block.time ?? 'Ohne feste Zeit' }}<span v-if="block.time"> Uhr</span>
+                            {{ block.time ?? $t('board.no_fixed_time') }}<span v-if="block.time"> {{ $t('common.oclock') }}</span>
                         </p>
                         <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
                             <div
@@ -432,7 +432,7 @@ function saveEdit(row) {
                                     v-if="row.birthday !== null"
                                     class="ml-1 rounded-md bg-amber-100 px-1.5 py-0.5 text-xs font-semibold text-amber-700"
                                 >
-                                    🎂 wird {{ row.birthday }}
+                                    {{ $t('board.turns', { age: row.birthday }) }}
                                 </span>
                             </p>
                             <p class="mt-0.5 text-sm text-hort-navy/60">
@@ -444,7 +444,7 @@ function saveEdit(row) {
                                     v-if="row.is_overridden"
                                     class="ml-1 rounded bg-amber-100 px-1.5 py-0.5 text-[11px] font-medium text-amber-700"
                                 >
-                                    für heute geändert
+                                    {{ $t('board.changed_today') }}
                                 </span>
                             </p>
                             <p
@@ -455,18 +455,18 @@ function saveEdit(row) {
                                     : 'bg-hort-purple/15 text-hort-purple'"
                             >
                                 <template v-if="row.excursion.state === 'away'">
-                                    🚌 Unterwegs: {{ row.excursion.name }}
+                                    {{ $t('board.on_excursion', { name: row.excursion.name }) }}
                                     <span v-if="row.excursion.return_at" class="font-medium">
-                                        · zurück ~{{ row.excursion.return_at }}
+                                        {{ $t('board.back_approx', { time: row.excursion.return_at }) }}
                                     </span>
                                 </template>
                                 <template v-else-if="row.excursion.state === 'back'">
-                                    ✓ Zurück vom {{ row.excursion.name }}
+                                    {{ $t('board.back_from', { name: row.excursion.name }) }}
                                 </template>
                                 <template v-else>
-                                    🚌 Ausflug: {{ row.excursion.name }}
+                                    {{ $t('board.excursion_label', { name: row.excursion.name }) }}
                                     <span v-if="row.excursion.return_at" class="font-medium">
-                                        · zurück {{ row.excursion.return_at }}
+                                        {{ $t('board.back_at_time', { time: row.excursion.return_at }) }}
                                     </span>
                                 </template>
                             </p>
@@ -474,13 +474,13 @@ function saveEdit(row) {
                                 v-if="row.status === 'present' && excursionConflict(row)"
                                 class="mt-1 inline-block rounded-lg bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700"
                             >
-                                Abholung liegt im Ausflug
+                                {{ $t('board.pickup_during_excursion') }}
                             </p>
                             <p
                                 v-if="row.status === 'present' && homeworkConflict(row)"
                                 class="mt-1 inline-block rounded-lg bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700"
                             >
-                                Abholung liegt in der Hausaufgabenzeit
+                                {{ $t('board.pickup_during_homework') }}
                             </p>
                         </div>
 
@@ -511,7 +511,7 @@ function saveEdit(row) {
                             v-model="editMethod"
                             class="block w-full rounded-lg border-gray-300 text-sm focus:border-hort-teal focus:ring-hort-teal"
                         >
-                            <option value="">— offen —</option>
+                            <option value="">{{ $t('board.method_open') }}</option>
                             <option
                                 v-for="o in methodOptions"
                                 :key="o.value"
@@ -524,7 +524,7 @@ function saveEdit(row) {
                             v-model="editNote"
                             type="text"
                             maxlength="255"
-                            placeholder="Kommentar, z. B. wegen Arzttermin"
+                            :placeholder="$t('board.comment_placeholder')"
                             class="block w-full rounded-lg border-gray-300 text-sm focus:border-hort-teal focus:ring-hort-teal"
                         />
                         <div class="flex justify-end gap-3 text-sm">
@@ -533,14 +533,14 @@ function saveEdit(row) {
                                 class="px-2 py-1 text-hort-navy/60"
                                 @click="cancelEdit"
                             >
-                                Abbrechen
+                                {{ $t('common.cancel') }}
                             </button>
                             <button
                                 type="button"
                                 class="rounded-lg bg-hort-navy px-4 py-1.5 font-semibold text-white"
                                 @click="saveEdit(row)"
                             >
-                                Speichern
+                                {{ $t('common.save') }}
                             </button>
                         </div>
                     </div>
@@ -555,7 +555,7 @@ function saveEdit(row) {
                                 v-if="row.excursion?.state === 'away'"
                                 class="rounded-xl bg-hort-purple/10 py-2.5 text-center text-sm font-medium text-hort-purple"
                             >
-                                Auf Ausflug – Abholung erst nach der Rückkehr
+                                {{ $t('board.on_excursion_wait') }}
                             </p>
                             <div
                                 v-else-if="canMark"
@@ -566,14 +566,14 @@ function saveEdit(row) {
                                     class="rounded-xl bg-hort-teal py-3 font-semibold text-hort-navy transition hover:bg-hort-teal-dark active:scale-[0.98]"
                                     @click="mark(row, 'picked_up')"
                                 >
-                                    Abgeholt
+                                    {{ $t('board.picked_up_button') }}
                                 </button>
                                 <button
                                     type="button"
                                     class="rounded-xl bg-hort-purple py-3 font-semibold text-white transition hover:opacity-90 active:scale-[0.98]"
                                     @click="mark(row, 'sent_home')"
                                 >
-                                    Nach Hause
+                                    {{ $t('board.sent_home_button') }}
                                 </button>
                             </div>
                             <button
@@ -583,20 +583,20 @@ function saveEdit(row) {
                                 @click="openEdit(row)"
                             >
                                 <PencilSquareIcon class="h-4 w-4" />
-                                Abholzeit ändern
+                                {{ $t('board.change_pickup_time') }}
                             </button>
 
                             <div
                                 v-if="row.can_override && row.excursion?.state !== 'away'"
                                 class="flex items-center gap-2 text-sm"
                             >
-                                <span class="text-hort-navy/40">Nicht da?</span>
+                                <span class="text-hort-navy/40">{{ $t('board.not_here') }}</span>
                                 <button
                                     type="button"
                                     class="font-semibold text-amber-700 underline-offset-2 hover:underline"
                                     @click="reportAbsent(row, 'sick')"
                                 >
-                                    Krank melden
+                                    {{ $t('board.report_sick') }}
                                 </button>
                                 <span class="text-hort-navy/20">·</span>
                                 <button
@@ -604,7 +604,7 @@ function saveEdit(row) {
                                     class="font-semibold text-amber-700 underline-offset-2 hover:underline"
                                     @click="reportAbsent(row, 'away')"
                                 >
-                                    Abwesend
+                                    {{ $t('board.report_away') }}
                                 </button>
                             </div>
                         </div>
@@ -615,7 +615,7 @@ function saveEdit(row) {
                                 class="text-sm font-medium text-hort-navy/50 underline-offset-2 hover:underline"
                                 @click="mark(row, 'present')"
                             >
-                                Rückgängig
+                                {{ $t('common.undo') }}
                             </button>
                         </div>
                     </template>
@@ -631,10 +631,10 @@ function saveEdit(row) {
                 class="rounded-2xl border-2 border-dashed border-hort-navy/15 p-6 text-center text-sm text-hort-navy/50"
             >
                 <template v-if="rows.length && isParent && !showAll">
-                    Heute ist keins deiner Kinder im Hort.
+                    {{ $t('board.empty_own') }}
                 </template>
                 <template v-else>
-                    Für diesen Tag sind keine Kinder im Hort.
+                    {{ $t('board.empty_all') }}
                 </template>
             </p>
         </div>

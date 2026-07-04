@@ -11,9 +11,6 @@ enum AbsenceReason: string
 
     public function label(): string
     {
-        return match ($this) {
-            self::Sick => 'Krank',
-            self::Away => 'Abwesend',
-        };
+        return __('enums.absence_reason.'.$this->value);
     }
 }

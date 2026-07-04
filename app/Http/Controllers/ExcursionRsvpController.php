@@ -80,6 +80,6 @@ class ExcursionRsvpController extends Controller
         // Keep the Slack DMs in sync (buttons → result) for both guardians, queued.
         SyncExcursionRsvp::dispatch($excursion, $child);
 
-        return back()->with('status', "Antwort für {$child->name} gespeichert.");
+        return back()->with('status', __('flash.rsvp_saved', ['name' => $child->name]));
     }
 }

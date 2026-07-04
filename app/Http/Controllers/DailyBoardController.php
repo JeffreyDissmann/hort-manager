@@ -223,7 +223,7 @@ class DailyBoardController extends Controller
             'note' => $validated['note'] ?? null,
         ]);
 
-        return back()->with('status', "Plan für {$departure->child->name} aktualisiert.");
+        return back()->with('status', __('flash.plan_updated', ['name' => $departure->child->name]));
     }
 
     /** Today, advancing across the weekend to the next weekday. */

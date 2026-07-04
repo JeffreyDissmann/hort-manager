@@ -37,7 +37,7 @@ const submit = () => {
 
 <template>
     <GuestLayout>
-        <Head title="Anmelden" />
+        <Head :title="$t('login.title')" />
 
         <div v-if="status" class="mb-4 text-sm font-medium text-green-600">
             {{ status }}
@@ -65,18 +65,18 @@ const submit = () => {
                 <path d="M77.6 97c7.1 0 12.9 5.8 12.9 12.9s-5.8 12.9-12.9 12.9-12.9-5.8-12.9-12.9V97h12.9z" fill="#ecb22e" />
                 <path d="M77.6 90.5c-7.1 0-12.9-5.8-12.9-12.9s5.8-12.9 12.9-12.9h32.3c7.1 0 12.9 5.8 12.9 12.9s-5.8 12.9-12.9 12.9H77.6z" fill="#ecb22e" />
             </svg>
-            Mit Slack anmelden
+            {{ $t('login.sign_in_with_slack') }}
         </a>
 
         <div class="my-6 flex items-center gap-3 text-xs text-gray-400">
             <span class="h-px flex-1 bg-gray-200" />
-            oder mit E-Mail
+            {{ $t('login.or_with_email') }}
             <span class="h-px flex-1 bg-gray-200" />
         </div>
 
         <form @submit.prevent="submit">
             <div>
-                <InputLabel for="email" value="E-Mail-Adresse" />
+                <InputLabel for="email" :value="$t('login.email')" />
 
                 <TextInput
                     id="email"
@@ -92,7 +92,7 @@ const submit = () => {
             </div>
 
             <div class="mt-4">
-                <InputLabel for="password" value="Passwort" />
+                <InputLabel for="password" :value="$t('login.password')" />
 
                 <TextInput
                     id="password"
@@ -110,7 +110,7 @@ const submit = () => {
                 <label class="flex items-center">
                     <Checkbox name="remember" v-model:checked="form.remember" />
                     <span class="ms-2 text-sm text-gray-600"
-                        >Angemeldet bleiben</span
+                        >{{ $t('login.remember_me') }}</span
                     >
                 </label>
             </div>
@@ -121,7 +121,7 @@ const submit = () => {
                     :href="passwordRequest().url"
                     class="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-hort-teal focus:ring-offset-2"
                 >
-                    Passwort vergessen?
+                    {{ $t('login.forgot_password') }}
                 </Link>
 
                 <PrimaryButton
@@ -129,14 +129,15 @@ const submit = () => {
                     :class="{ 'opacity-25': form.processing }"
                     :disabled="form.processing"
                 >
-                    Anmelden                </PrimaryButton>
+                    {{ $t('login.sign_in') }}
+                </PrimaryButton>
             </div>
         </form>
 
         <p class="mt-6 text-center text-sm text-gray-600">
-            Neu hier?
+            {{ $t('login.new_here') }}
             <Link :href="help().url" class="font-medium text-hort-teal-dark underline hover:text-hort-navy">
-                So funktioniert der Hort-Manager
+                {{ $t('login.how_it_works') }}
             </Link>
         </p>
     </GuestLayout>

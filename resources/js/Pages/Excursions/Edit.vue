@@ -39,12 +39,12 @@ function setResponse(childId, response) {
 </script>
 
 <template>
-    <Head :title="`${excursion.name} bearbeiten`" />
+    <Head :title="$t('excursions.edit_title', { name: excursion.name })" />
 
     <AuthenticatedLayout>
         <template #header>
             <h2 class="text-xl font-semibold text-hort-navy">
-                Ausflug bearbeiten
+                {{ $t('excursions.edit_heading') }}
             </h2>
         </template>
 
@@ -60,20 +60,19 @@ function setResponse(childId, response) {
                         :href="excursionsIndex().url"
                         class="text-sm text-gray-600 hover:text-gray-900"
                     >
-                        Abbrechen
+                        {{ $t('common.cancel') }}
                     </Link>
                     <PrimaryButton :disabled="form.processing || !canSubmit">
-                        Speichern
+                        {{ $t('common.save') }}
                     </PrimaryButton>
                 </div>
             </form>
 
             <!-- RSVP status — staff can also answer on a parent's behalf -->
             <div class="rounded-2xl bg-white p-6 shadow-sm">
-                <h3 class="font-semibold text-hort-navy">Rückmeldungen</h3>
+                <h3 class="font-semibold text-hort-navy">{{ $t('excursions.responses_heading') }}</h3>
                 <p class="mt-1 text-sm text-hort-navy/60">
-                    Status der Eltern-Abstimmung. Du kannst bei Bedarf selbst
-                    eintragen.
+                    {{ $t('excursions.responses_hint') }}
                 </p>
 
                 <ul class="mt-4 divide-y divide-gray-100">
@@ -96,10 +95,10 @@ function setResponse(childId, response) {
                             >
                                 {{
                                     child.response === true
-                                        ? '✓ dabei'
+                                        ? `✓ ${$t('excursions.joined')}`
                                         : child.response === false
-                                          ? '✗ nicht dabei'
-                                          : 'offen'
+                                          ? `✗ ${$t('excursions.not_joined')}`
+                                          : $t('excursions.open')
                                 }}
                             </span>
                         </div>
@@ -112,7 +111,7 @@ function setResponse(childId, response) {
                                     : 'bg-hort-navy/5 text-hort-navy/60 hover:bg-hort-teal/30'"
                                 @click="setResponse(child.id, true)"
                             >
-                                Ja
+                                {{ $t('common.yes') }}
                             </button>
                             <button
                                 type="button"
@@ -122,7 +121,7 @@ function setResponse(childId, response) {
                                     : 'bg-hort-navy/5 text-hort-navy/60 hover:bg-hort-purple/20'"
                                 @click="setResponse(child.id, false)"
                             >
-                                Nein
+                                {{ $t('common.no') }}
                             </button>
                         </div>
                     </li>

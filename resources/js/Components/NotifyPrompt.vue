@@ -49,8 +49,7 @@ function decline() {
         <div class="mx-auto flex max-w-7xl flex-wrap items-center gap-3 px-4 py-3">
             <span class="text-lg">🔔</span>
             <p class="flex-1 text-sm text-hort-navy">
-                Möchtest du Benachrichtigungen erhalten, wenn dein Kind abgeholt wurde oder
-                ein neuer Ausflug ansteht?
+                {{ $t('components.notify.prompt') }}
             </p>
             <button
                 type="button"
@@ -58,14 +57,14 @@ function decline() {
                 @click="accept"
                 class="shrink-0 rounded-lg bg-hort-navy px-3 py-1 text-sm font-semibold text-white transition hover:bg-hort-navy-dark disabled:opacity-50"
             >
-                Ja, aktivieren
+                {{ $t('components.notify.accept') }}
             </button>
             <button
                 type="button"
                 @click="decline"
                 class="shrink-0 rounded-lg px-3 py-1 text-sm text-hort-navy/70 transition hover:text-hort-navy"
             >
-                Später
+                {{ $t('components.notify.decline') }}
             </button>
         </div>
     </div>

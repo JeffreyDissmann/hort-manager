@@ -22,6 +22,7 @@ import { index as usersIndex } from '@/routes/users';
 import { index as pollsIndex } from '@/routes/polls';
 import { edit as profileEdit } from '@/routes/profile';
 import { Link, usePage } from '@inertiajs/vue3';
+import { t } from '@/i18n';
 
 // Pages with wide weekly editors (Stammplan, Programm) opt into a roomier
 // content column on large screens; everything else stays at max-w-5xl.
@@ -45,16 +46,16 @@ const navItems = computed(() => {
     // Staff: full nav (Kinder last — changes least). Parents: Heute, Ausflüge, Abholplan.
     const items = isStaff.value
         ? [
-              { label: 'Heute', href: board().url, icon: 'sun' },
-              { label: 'Ausflüge', href: excursionsIndex().url, icon: 'map' },
-              { label: 'Abholplan', href: weeklyPlan().url, icon: 'calendar' },
-              { label: 'Programm', href: program().url, icon: 'food' },
-              { label: 'Kinder', href: childrenIndex().url, icon: 'children' },
+              { label: t('common.today'), href: board().url, icon: 'sun' },
+              { label: t('nav.excursions'), href: excursionsIndex().url, icon: 'map' },
+              { label: t('nav.pickup_plan'), href: weeklyPlan().url, icon: 'calendar' },
+              { label: t('nav.program'), href: program().url, icon: 'food' },
+              { label: t('nav.children'), href: childrenIndex().url, icon: 'children' },
           ]
         : [
-              { label: 'Heute', href: board().url, icon: 'sun' },
-              { label: 'Ausflüge', href: pollsIndex().url, icon: 'map', badge: pendingPolls.value },
-              { label: 'Abholplan', href: weeklyPlan().url, icon: 'calendar' },
+              { label: t('common.today'), href: board().url, icon: 'sun' },
+              { label: t('nav.excursions'), href: pollsIndex().url, icon: 'map', badge: pendingPolls.value },
+              { label: t('nav.pickup_plan'), href: weeklyPlan().url, icon: 'calendar' },
           ];
 
     return items;
@@ -134,7 +135,7 @@ function isActive(href) {
                     <template #content>
                         <template v-if="isAdmin">
                             <DropdownLink :href="usersIndex().url">
-                                Benutzer
+                                {{ $t('nav.users') }}
                             </DropdownLink>
                             <hr class="my-1 border-hort-navy/10" />
                         </template>
@@ -142,27 +143,27 @@ function isActive(href) {
                             v-if="!isStaff"
                             :href="childrenIndex().url"
                         >
-                            Meine Kinder
+                            {{ $t('nav.my_children') }}
                         </DropdownLink>
                         <DropdownLink :href="profileEdit().url">
-                            Profil
+                            {{ $t('nav.profile') }}
                         </DropdownLink>
                         <DropdownLink :href="help().url">
-                            Hilfe
+                            {{ $t('nav.help') }}
                         </DropdownLink>
                         <button
                             type="button"
                             @click="whatsNewModal?.open()"
                             class="block w-full px-4 py-2 text-start text-sm leading-5 text-hort-navy transition duration-150 ease-in-out hover:bg-hort-sand focus:bg-hort-sand focus:outline-none"
                         >
-                            Was ist neu?
+                            {{ $t('nav.whats_new') }}
                         </button>
                         <DropdownLink
                             :href="logout().url"
                             method="post"
                             as="button"
                         >
-                            Abmelden
+                            {{ $t('nav.logout') }}
                         </DropdownLink>
                     </template>
                 </Dropdown>
@@ -181,10 +182,11 @@ function isActive(href) {
             >
                 <span class="text-lg">📣</span>
                 <span>
-                    {{ pendingPolls }} offene Ausflug-Abstimmung{{
-                        pendingPolls > 1 ? 'en' : ''
+                    {{
+                        pendingPolls > 1
+                            ? $t('nav.pending_polls_plural', { n: pendingPolls })
+                            : $t('nav.pending_polls', { n: pendingPolls })
                     }}
-                    – bitte antworten
                 </span>
                 <span class="ml-auto">→</span>
             </div>

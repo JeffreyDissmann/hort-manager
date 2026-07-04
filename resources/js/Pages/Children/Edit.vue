@@ -8,6 +8,7 @@ import TimeSelect from '@/Components/TimeSelect.vue';
 import InputError from '@/Components/InputError.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
+import { t } from '@/i18n';
 
 const currentUserId = usePage().props.auth?.user?.id;
 
@@ -43,11 +44,11 @@ const props = defineProps({
 });
 
 const weekdayNames = {
-    1: 'Montag',
-    2: 'Dienstag',
-    3: 'Mittwoch',
-    4: 'Donnerstag',
-    5: 'Freitag',
+    1: t('children.weekdays.monday'),
+    2: t('children.weekdays.tuesday'),
+    3: t('children.weekdays.wednesday'),
+    4: t('children.weekdays.thursday'),
+    5: t('children.weekdays.friday'),
 };
 
 const form = useForm({
@@ -75,9 +76,7 @@ function submit() {
 
 function destroy() {
     if (
-        confirm(
-            `„${props.child.name}“ wirklich löschen? Der Stammplan geht verloren.`,
-        )
+        confirm(t('children.delete_confirm', { name: props.child.name }))
     ) {
         router.delete(childrenDestroy(props.child.id).url);
     }
@@ -85,12 +84,12 @@ function destroy() {
 </script>
 
 <template>
-    <Head :title="`${child.name} – Stammplan`" />
+    <Head :title="$t('children.schedule_title', { name: child.name })" />
 
     <AuthenticatedLayout :wide="true">
         <template #header>
             <h2 class="text-xl font-semibold leading-tight text-hort-navy">
-                {{ child.name }} – Stammplan
+                {{ $t('children.schedule_title', { name: child.name }) }}
             </h2>
         </template>
 
@@ -102,11 +101,11 @@ function destroy() {
                     <!-- Stammdaten -->
                     <section class="space-y-6">
                         <h3 class="text-lg font-medium text-hort-navy">
-                            Stammdaten
+                            {{ $t('children.master_data') }}
                         </h3>
 
                         <div>
-                            <InputLabel for="name" value="Name" />
+                            <InputLabel for="name" :value="$t('children.name')" />
                             <TextInput
                                 id="name"
                                 v-model="form.name"
@@ -117,7 +116,7 @@ function destroy() {
                         </div>
 
                         <div>
-                            <InputLabel for="date_of_birth" value="Geburtsdatum" />
+                            <InputLabel for="date_of_birth" :value="$t('children.date_of_birth')" />
                             <TextInput
                                 id="date_of_birth"
                                 v-model="form.date_of_birth"
@@ -131,12 +130,12 @@ function destroy() {
                         </div>
 
                         <div>
-                            <InputLabel for="note" value="Hinweise (optional)" />
+                            <InputLabel for="note" :value="$t('children.note_label')" />
                             <textarea
                                 id="note"
                                 v-model="form.note"
                                 rows="3"
-                                placeholder="z. B. Abholberechtigte, Aktivitäten oder Hinweise zur Abholung …"
+                                :placeholder="$t('children.note_placeholder')"
                                 class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-hort-teal focus:ring-hort-teal"
                             ></textarea>
                             <InputError :message="form.errors.note" class="mt-2" />
@@ -147,12 +146,10 @@ function destroy() {
                     <section class="space-y-4">
                         <div>
                             <h3 class="text-lg font-medium text-hort-navy">
-                                Stammplan (Mo–Fr)
+                                {{ $t('children.schedule_heading') }}
                             </h3>
                             <p class="mt-1 text-sm text-gray-500">
-                                Trage für jeden Tag ein, wann das Kind regulär
-                                abgeholt wird oder allein geht. Tage ohne Uhrzeit
-                                gelten als hortfrei.
+                                {{ $t('children.schedule_hint') }}
                             </p>
                         </div>
 
@@ -173,7 +170,7 @@ function destroy() {
                                 <div>
                                     <InputLabel
                                         :for="`time-${day.weekday}`"
-                                        value="Uhrzeit"
+                                        :value="$t('common.time')"
                                         class="sr-only"
                                     />
                                     <TimeSelect
@@ -186,7 +183,7 @@ function destroy() {
                                 <div>
                                     <InputLabel
                                         :for="`method-${day.weekday}`"
-                                        value="Art"
+                                        :value="$t('children.method_label')"
                                         class="sr-only"
                                     />
                                     <select
@@ -195,7 +192,7 @@ function destroy() {
                                         :disabled="!day.planned_time"
                                         class="block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-hort-teal focus:ring-hort-teal disabled:bg-gray-100 disabled:text-gray-400"
                                     >
-                                        <option value="">— bitte wählen —</option>
+                                        <option value="">{{ $t('children.method_placeholder') }}</option>
                                         <option
                                             v-for="option in methodOptions"
                                             :key="option.value"
@@ -211,7 +208,7 @@ function destroy() {
                                     v-model="day.comment"
                                     type="text"
                                     maxlength="255"
-                                    placeholder="Kommentar, z. B. wegen Fußball"
+                                    :placeholder="$t('children.comment_placeholder')"
                                     class="block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-hort-teal focus:ring-hort-teal"
                                 />
                             </div>
@@ -222,12 +219,10 @@ function destroy() {
                     <section v-if="canManageGuardians" class="space-y-4">
                         <div>
                             <h3 class="text-lg font-medium text-hort-navy">
-                                Eltern
+                                {{ $t('children.parents_title') }}
                             </h3>
                             <p class="mt-1 text-sm text-gray-500">
-                                Wähle die Eltern dieses Kindes – z. B. den anderen
-                                Elternteil, damit ihr beide den Stammplan und
-                                kurzfristige Änderungen pflegen könnt.
+                                {{ $t('children.parents_hint') }}
                             </p>
                         </div>
 
@@ -265,7 +260,7 @@ function destroy() {
                                         v-if="parent.id === currentUserId"
                                         class="text-hort-teal-dark"
                                     >
-                                        · du
+                                        · {{ $t('children.you') }}
                                     </span>
                                     <span class="text-gray-500">
                                         · {{ parent.email }}
@@ -274,7 +269,7 @@ function destroy() {
                             </label>
                         </div>
                         <p v-else class="text-sm text-gray-500">
-                            Noch keine Eltern-Konten vorhanden.
+                            {{ $t('children.no_parents') }}
                         </p>
                     </section>
 
@@ -285,7 +280,7 @@ function destroy() {
                             @click="destroy"
                             class="text-sm font-medium text-red-600 transition hover:text-red-700"
                         >
-                            Kind löschen
+                            {{ $t('children.delete_child') }}
                         </button>
                         <span v-else></span>
 
@@ -294,10 +289,10 @@ function destroy() {
                                 :href="childrenIndex().url"
                                 class="text-sm text-gray-600 hover:text-gray-900"
                             >
-                                Abbrechen
+                                {{ $t('common.cancel') }}
                             </Link>
                             <PrimaryButton :disabled="form.processing">
-                                Speichern
+                                {{ $t('common.save') }}
                             </PrimaryButton>
                         </div>
                     </div>

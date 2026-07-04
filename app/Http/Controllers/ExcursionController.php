@@ -82,7 +82,7 @@ class ExcursionController extends Controller
 
         return redirect()
             ->route('excursions.index')
-            ->with('status', "Ausflug „{$excursion->name}\" angelegt. Die Eltern wurden zur Abstimmung eingeladen.");
+            ->with('status', __('flash.excursion_created', ['name' => $excursion->name]));
     }
 
     public function edit(Excursion $excursion): Response
@@ -122,7 +122,7 @@ class ExcursionController extends Controller
 
         return redirect()
             ->route('excursions.index')
-            ->with('status', "Ausflug „{$excursion->name}\" gespeichert.");
+            ->with('status', __('flash.excursion_saved', ['name' => $excursion->name]));
     }
 
     public function destroy(Excursion $excursion): RedirectResponse
@@ -134,7 +134,7 @@ class ExcursionController extends Controller
 
         return redirect()
             ->route('excursions.index')
-            ->with('status', "Ausflug „{$name}\" gelöscht.");
+            ->with('status', __('flash.excursion_deleted', ['name' => $name]));
     }
 
     /** Staff flip the live trip state from the Tagesboard on the day itself. */

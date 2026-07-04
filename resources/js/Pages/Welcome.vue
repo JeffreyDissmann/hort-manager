@@ -16,7 +16,7 @@ const user = computed(() => usePage().props.auth?.user);
 </script>
 
 <template>
-    <Head title="Willkommen" />
+    <Head :title="$t('welcome.title')" />
 
     <div
         class="relative flex min-h-[100dvh] flex-col overflow-hidden bg-hort-sand text-hort-navy"
@@ -41,8 +41,7 @@ const user = computed(() => usePage().props.auth?.user);
             </h1>
 
             <p class="mt-4 text-lg text-hort-navy/70">
-                Stammplan, Abholzeiten und Ausflüge – alles an einem Ort. Für
-                unser Hort-Team und die Eltern.
+                {{ $t('welcome.tagline') }}
             </p>
 
             <div class="mt-10 w-full space-y-3">
@@ -51,7 +50,7 @@ const user = computed(() => usePage().props.auth?.user);
                         :href="dashboard().url"
                         class="block w-full rounded-2xl bg-hort-teal px-6 py-4 text-lg font-semibold text-hort-navy shadow-sm transition hover:bg-hort-teal-dark active:scale-[0.99]"
                     >
-                        Zur App
+                        {{ $t('welcome.to_app') }}
                     </Link>
                 </template>
 
@@ -60,7 +59,7 @@ const user = computed(() => usePage().props.auth?.user);
                         :href="login().url"
                         class="block w-full rounded-2xl bg-hort-teal px-6 py-4 text-lg font-semibold text-hort-navy shadow-sm transition hover:bg-hort-teal-dark active:scale-[0.99]"
                     >
-                        Anmelden
+                        {{ $t('welcome.sign_in') }}
                     </Link>
                 </template>
 
@@ -68,7 +67,7 @@ const user = computed(() => usePage().props.auth?.user);
                     :href="help().url"
                     class="block w-full rounded-2xl px-6 py-3 text-base font-medium text-hort-navy/70 transition hover:bg-hort-navy/5"
                 >
-                    So funktioniert der Hort-Manager
+                    {{ $t('welcome.how_it_works') }}
                 </Link>
             </div>
         </main>
@@ -76,7 +75,7 @@ const user = computed(() => usePage().props.auth?.user);
         <footer
             class="relative z-10 pb-[max(1.5rem,env(safe-area-inset-bottom))] text-center text-sm text-hort-navy/50"
         >
-            Mit ♥ für den Hort gemacht
+            {{ $t('welcome.made_with_love') }}
         </footer>
     </div>
 </template>

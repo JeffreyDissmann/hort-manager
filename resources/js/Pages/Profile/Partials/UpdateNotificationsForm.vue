@@ -17,24 +17,22 @@ function toggle() {
 <template>
     <section>
         <header>
-            <h2 class="text-lg font-medium text-hort-navy">Benachrichtigungen</h2>
+            <h2 class="text-lg font-medium text-hort-navy">{{ $t('profile.notifications_title') }}</h2>
 
             <p class="mt-1 text-sm text-gray-600">
-                Erhalte eine Push-Nachricht auf dieses Gerät, wenn dein Kind abgeholt
-                wurde oder allein gegangen ist – und bei neuen Ausflügen samt
-                Erinnerung zur Abstimmung.
+                {{ $t('profile.notifications_description') }}
             </p>
         </header>
 
         <div class="mt-6 max-w-xl">
             <div v-if="supported" class="flex items-center justify-between gap-4">
                 <span class="text-sm font-medium text-hort-navy">
-                    Push-Benachrichtigungen
+                    {{ $t('profile.push') }}
                     <span
                         class="ml-1 text-xs font-normal"
                         :class="subscribed ? 'text-hort-teal-dark' : 'text-gray-400'"
                     >
-                        {{ subscribed ? 'An' : 'Aus' }}
+                        {{ subscribed ? $t('profile.on') : $t('profile.off') }}
                     </span>
                 </span>
 
@@ -54,17 +52,12 @@ function toggle() {
                 </button>
             </div>
 
-            <p v-else class="text-sm text-gray-500">
-                Dieser Browser kann keine Benachrichtigungen anzeigen. Auf dem iPhone
-                musst du die App dafür zuerst über <strong>Teilen → Zum
-                Home-Bildschirm</strong> installieren und sie von dort öffnen.
-            </p>
+            <p v-else class="text-sm text-gray-500" v-html="$t('profile.notifications_unsupported')" />
 
             <p v-if="error" class="mt-3 text-sm text-red-600">{{ error }}</p>
 
             <p class="mt-4 text-xs text-gray-500">
-                Die Einstellung gilt pro Gerät – aktiviere sie auf jedem Handy oder
-                Rechner, auf dem du benachrichtigt werden möchtest.
+                {{ $t('profile.notifications_per_device') }}
             </p>
         </div>
     </section>

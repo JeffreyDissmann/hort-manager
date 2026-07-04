@@ -25,19 +25,17 @@ const verificationLinkSent = computed(
 
 <template>
     <GuestLayout>
-        <Head title="E-Mail-Bestätigung" />
+        <Head :title="$t('login.verify_title')" />
 
         <div class="mb-4 text-sm text-gray-600">
-            Danke für deine Registrierung! Bitte bestätige deine E-Mail-Adresse
-            über den Link, den wir dir gerade geschickt haben. Falls du keine
-            E-Mail erhalten hast, senden wir dir gerne eine neue.
+            {{ $t('login.verify_intro') }}
         </div>
 
         <div
             class="mb-4 text-sm font-medium text-green-600"
             v-if="verificationLinkSent"
         >
-            Ein neuer Bestätigungslink wurde an deine E-Mail-Adresse gesendet.
+            {{ $t('login.verify_link_sent') }}
         </div>
 
         <form @submit.prevent="submit">
@@ -46,7 +44,7 @@ const verificationLinkSent = computed(
                     :class="{ 'opacity-25': form.processing }"
                     :disabled="form.processing"
                 >
-                    Bestätigungs-E-Mail erneut senden
+                    {{ $t('login.resend_verification') }}
                 </PrimaryButton>
 
                 <Link
@@ -54,7 +52,7 @@ const verificationLinkSent = computed(
                     method="post"
                     as="button"
                     class="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-hort-teal focus:ring-offset-2"
-                    >Abmelden</Link
+                    >{{ $t('login.log_out') }}</Link
                 >
             </div>
         </form>

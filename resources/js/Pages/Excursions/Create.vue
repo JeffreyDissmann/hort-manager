@@ -29,11 +29,11 @@ function submit() {
 </script>
 
 <template>
-    <Head title="Ausflug planen" />
+    <Head :title="$t('excursions.plan_title')" />
 
     <AuthenticatedLayout>
         <template #header>
-            <h2 class="text-xl font-semibold text-hort-navy">Ausflug planen</h2>
+            <h2 class="text-xl font-semibold text-hort-navy">{{ $t('excursions.plan_title') }}</h2>
         </template>
 
         <div class="mx-auto max-w-2xl">
@@ -48,10 +48,10 @@ function submit() {
                         :href="excursionsIndex().url"
                         class="text-sm text-gray-600 hover:text-gray-900"
                     >
-                        Abbrechen
+                        {{ $t('common.cancel') }}
                     </Link>
                     <PrimaryButton :disabled="form.processing || !canSubmit">
-                        Speichern
+                        {{ $t('common.save') }}
                     </PrimaryButton>
                 </div>
             </form>
