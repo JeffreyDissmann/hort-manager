@@ -76,12 +76,12 @@ function dismiss() {
             <span class="text-lg">📲</span>
             <p class="flex-1">
                 <template v-if="iosHint">
-                    Tipp: über <strong>Teilen → Zum Home-Bildschirm</strong> kannst du den
-                    Hort-Manager als App installieren.
+                    {{ $t('components.install.ios_prefix') }}
+                    <strong>{{ $t('components.install.ios_share') }}</strong>
+                    {{ $t('components.install.ios_suffix') }}
                 </template>
                 <template v-else>
-                    Installiere den Hort-Manager als App – für schnellen Zugriff und
-                    Benachrichtigungen.
+                    {{ $t('components.install.prompt') }}
                 </template>
             </p>
             <button
@@ -90,13 +90,13 @@ function dismiss() {
                 @click="install"
                 class="shrink-0 rounded-lg bg-hort-teal px-3 py-1 font-semibold text-hort-navy transition hover:bg-hort-teal-dark"
             >
-                Installieren
+                {{ $t('components.install.action') }}
             </button>
             <button
                 type="button"
                 @click="dismiss"
                 class="shrink-0 rounded-lg px-2 py-1 text-white/70 transition hover:text-white"
-                aria-label="Schließen"
+                :aria-label="$t('common.close')"
             >
                 ✕
             </button>

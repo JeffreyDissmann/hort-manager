@@ -55,20 +55,20 @@ function pickFriday() {
 <template>
     <div class="space-y-6">
         <div>
-            <InputLabel for="name" value="Name des Ausflugs" />
+            <InputLabel for="name" :value="$t('excursions.field_name')" />
             <TextInput
                 id="name"
                 v-model="form.name"
                 type="text"
                 class="mt-1 block w-full"
-                placeholder="z. B. Zoo-Ausflug"
+                :placeholder="$t('excursions.field_name_placeholder')"
                 autofocus
             />
             <InputError :message="form.errors.name" class="mt-2" />
         </div>
 
         <div>
-            <InputLabel for="date" value="Datum" />
+            <InputLabel for="date" :value="$t('excursions.field_date')" />
             <button
                 v-if="suggestedDate"
                 type="button"
@@ -78,7 +78,7 @@ function pickFriday() {
                     : 'bg-hort-teal/15 text-hort-teal-dark hover:bg-hort-teal/25'"
                 @click="pickFriday"
             >
-                Nächster Freitag · {{ shortDate(suggestedDate) }}
+                {{ $t('excursions.next_friday', { date: shortDate(suggestedDate) }) }}
             </button>
             <TextInput
                 id="date"
@@ -92,7 +92,7 @@ function pickFriday() {
 
         <div class="flex gap-3">
             <div class="flex-1">
-                <InputLabel for="depart_at" value="Abfahrt" />
+                <InputLabel for="depart_at" :value="$t('excursions.depart')" />
                 <TimeSelect
                     id="depart_at"
                     v-model="form.depart_at"
@@ -101,7 +101,7 @@ function pickFriday() {
                 <InputError :message="form.errors.depart_at" class="mt-2" />
             </div>
             <div class="flex-1">
-                <InputLabel for="return_at" value="Rückkehr" />
+                <InputLabel for="return_at" :value="$t('excursions.return')" />
                 <TimeSelect
                     id="return_at"
                     v-model="form.return_at"
@@ -112,7 +112,7 @@ function pickFriday() {
         </div>
 
         <div>
-            <InputLabel for="rsvp_deadline" value="Rückmeldung bis" />
+            <InputLabel for="rsvp_deadline" :value="$t('excursions.field_deadline')" />
             <TextInput
                 id="rsvp_deadline"
                 v-model="form.rsvp_deadline"
@@ -124,27 +124,26 @@ function pickFriday() {
                 @change="deadlineTouched = true"
             />
             <p class="mt-1 text-sm text-gray-500">
-                Bis zu diesem Tag können die Eltern Rückmeldung geben. Standard:
-                3 Tage vor dem Ausflug.
+                {{ $t('excursions.field_deadline_hint') }}
             </p>
             <InputError :message="form.errors.rsvp_deadline" class="mt-2" />
         </div>
 
         <div>
-            <InputLabel for="note" value="Notiz (optional)" />
+            <InputLabel for="note" :value="$t('excursions.field_note')" />
             <textarea
                 id="note"
                 v-model="form.note"
                 rows="2"
-                placeholder="z. B. Brotzeit und feste Schuhe mitbringen"
+                :placeholder="$t('excursions.field_note_placeholder')"
                 class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-hort-teal focus:ring-hort-teal"
             ></textarea>
             <InputError :message="form.errors.note" class="mt-2" />
         </div>
 
         <p class="rounded-xl bg-hort-teal/10 p-3 text-sm text-hort-navy/70">
-            Nach dem Speichern werden <strong>alle Eltern</strong> gefragt, ob ihr
-            Kind mitkommt.
+            {{ $t('excursions.after_save_before')
+            }}<strong>{{ $t('excursions.after_save_strong') }}</strong>{{ $t('excursions.after_save_after') }}
         </p>
     </div>
 </template>

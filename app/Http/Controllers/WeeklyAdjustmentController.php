@@ -41,7 +41,7 @@ class WeeklyAdjustmentController extends Controller
 
         $departure->save();
 
-        return back()->with('status', "Plan für {$child->name} aktualisiert.");
+        return back()->with('status', __('flash.plan_updated', ['name' => $child->name]));
     }
 
     /** Revert one day back to the standard Stammplan. */
@@ -60,7 +60,7 @@ class WeeklyAdjustmentController extends Controller
             $departure->delete();
         }
 
-        return back()->with('status', "{$child->name}: Tag auf Standard zurückgesetzt.");
+        return back()->with('status', __('flash.day_reset', ['name' => $child->name]));
     }
 
     /**

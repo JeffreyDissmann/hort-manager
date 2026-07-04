@@ -6,6 +6,7 @@ import TextInput from '@/Components/TextInput.vue';
 import InputError from '@/Components/InputError.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
+import { t } from '@/i18n';
 
 const form = useForm({
     name: '',
@@ -19,12 +20,12 @@ function submit() {
 </script>
 
 <template>
-    <Head title="Kind hinzufügen" />
+    <Head :title="$t('children.add_child')" />
 
     <AuthenticatedLayout>
         <template #header>
             <h2 class="text-xl font-semibold leading-tight text-hort-navy">
-                Kind hinzufügen
+                {{ $t('children.add_child') }}
             </h2>
         </template>
 
@@ -34,7 +35,7 @@ function submit() {
                 class="space-y-6 rounded-2xl bg-white p-6 shadow-sm"
             >
                     <div>
-                        <InputLabel for="name" value="Name" />
+                        <InputLabel for="name" :value="$t('children.name')" />
                         <TextInput
                             id="name"
                             v-model="form.name"
@@ -46,7 +47,7 @@ function submit() {
                     </div>
 
                     <div>
-                        <InputLabel for="date_of_birth" value="Geburtsdatum" />
+                        <InputLabel for="date_of_birth" :value="$t('children.date_of_birth')" />
                         <TextInput
                             id="date_of_birth"
                             v-model="form.date_of_birth"
@@ -60,12 +61,12 @@ function submit() {
                     </div>
 
                     <div>
-                        <InputLabel for="note" value="Hinweise (optional)" />
+                        <InputLabel for="note" :value="$t('children.note_label')" />
                         <textarea
                             id="note"
                             v-model="form.note"
                             rows="3"
-                            placeholder="z. B. Abholberechtigte, Aktivitäten oder Hinweise zur Abholung …"
+                            :placeholder="$t('children.note_placeholder')"
                             class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-hort-teal focus:ring-hort-teal"
                         ></textarea>
                         <InputError :message="form.errors.note" class="mt-2" />
@@ -76,10 +77,10 @@ function submit() {
                             :href="childrenIndex().url"
                             class="text-sm text-gray-600 hover:text-gray-900"
                         >
-                            Abbrechen
+                            {{ $t('common.cancel') }}
                         </Link>
                         <PrimaryButton :disabled="form.processing">
-                            Speichern
+                            {{ $t('common.save') }}
                         </PrimaryButton>
                     </div>
                 </form>

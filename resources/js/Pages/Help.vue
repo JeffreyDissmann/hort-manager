@@ -11,12 +11,12 @@ const loggedIn = computed(() => !!usePage().props.auth?.user);
 </script>
 
 <template>
-    <Head title="Hilfe" />
+    <Head :title="$t('help.title')" />
 
     <!-- Logged in: show inside the normal app shell. -->
     <AuthenticatedLayout v-if="loggedIn">
         <template #header>
-            <h2 class="text-xl font-semibold text-hort-navy">Hilfe &amp; Anleitung</h2>
+            <h2 class="text-xl font-semibold text-hort-navy">{{ $t('help.header') }}</h2>
         </template>
 
         <HelpArticle />
@@ -33,7 +33,7 @@ const loggedIn = computed(() => !!usePage().props.auth?.user);
                 :href="login().url"
                 class="rounded-xl bg-hort-teal px-4 py-2 text-sm font-semibold text-hort-navy transition hover:bg-hort-teal-dark"
             >
-                Zur Anmeldung
+                {{ $t('help.to_login') }}
             </Link>
         </header>
 

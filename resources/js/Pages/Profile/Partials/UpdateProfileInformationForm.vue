@@ -28,11 +28,11 @@ const form = useForm({
     <section>
         <header>
             <h2 class="text-lg font-medium text-hort-navy">
-                Profil-Informationen
+                {{ $t('profile.information_title') }}
             </h2>
 
             <p class="mt-1 text-sm text-gray-600">
-                Aktualisiere die Profil-Informationen und die E-Mail-Adresse deines Kontos.
+                {{ $t('profile.information_description') }}
             </p>
         </header>
 
@@ -41,7 +41,7 @@ const form = useForm({
             class="mt-6 space-y-6"
         >
             <div>
-                <InputLabel for="name" value="Name" />
+                <InputLabel for="name" :value="$t('profile.name')" />
 
                 <TextInput
                     id="name"
@@ -57,7 +57,7 @@ const form = useForm({
             </div>
 
             <div>
-                <InputLabel for="email" value="E-Mail-Adresse" />
+                <InputLabel for="email" :value="$t('profile.email')" />
 
                 <TextInput
                     id="email"
@@ -73,14 +73,14 @@ const form = useForm({
 
             <div v-if="mustVerifyEmail && user.email_verified_at === null">
                 <p class="mt-2 text-sm text-gray-800">
-                    Deine E-Mail-Adresse ist nicht bestätigt.
+                    {{ $t('profile.email_unverified') }}
                     <Link
                         :href="verificationSend().url"
                         method="post"
                         as="button"
                         class="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-hort-teal focus:ring-offset-2"
                     >
-                        Klicke hier, um die Bestätigungs-E-Mail erneut zu senden.
+                        {{ $t('profile.email_resend') }}
                     </Link>
                 </p>
 
@@ -88,12 +88,12 @@ const form = useForm({
                     v-show="status === 'verification-link-sent'"
                     class="mt-2 text-sm font-medium text-green-600"
                 >
-                    Ein neuer Bestätigungslink wurde an deine E-Mail-Adresse gesendet.
+                    {{ $t('profile.email_verification_sent') }}
                 </div>
             </div>
 
             <div class="flex items-center gap-4">
-                <PrimaryButton :disabled="form.processing">Speichern</PrimaryButton>
+                <PrimaryButton :disabled="form.processing">{{ $t('common.save') }}</PrimaryButton>
 
                 <Transition
                     enter-active-class="transition ease-in-out"
@@ -105,7 +105,7 @@ const form = useForm({
                         v-if="form.recentlySuccessful"
                         class="text-sm text-gray-600"
                     >
-                        Gespeichert.
+                        {{ $t('common.saved') }}
                     </p>
                 </Transition>
             </div>

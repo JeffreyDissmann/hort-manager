@@ -46,11 +46,17 @@ class HandleInertiaRequests extends Middleware
                     'role' => $user->role->value,
                     'is_admin' => $user->is_admin,
                     'email_verified_at' => $user->email_verified_at,
+                    'locale' => $user->locale,
                 ] : null,
             ],
             'flash' => [
                 'status' => fn () => $request->session()->get('status'),
             ],
+            // Active UI locale, the languages a user can pick, and the full message
+            // catalog for the active locale — for the frontend $t() helper.
+            'locale' => app()->getLocale(),
+            'locales' => config('locales'),
+            'translations' => fn () => $this->translations(app()->getLocale()),
             // Public VAPID key so the browser can subscribe to web push.
             'vapidPublicKey' => config('webpush.vapid.public_key'),
             // The latest "Was ist neu?" entries (newest first, max 5); the popup
@@ -59,6 +65,33 @@ class HandleInertiaRequests extends Middleware
             // Open excursion polls still awaiting an answer for this parent's children.
             'pendingPolls' => fn () => $this->pendingPollsCount($request->user()),
         ];
+    }
+
+    /**
+     * The UI message catalog for a locale, keyed by namespace (file name). German
+     * is the base so any untranslated key falls back to it. Framework message
+     * files (auth/passwords/validation) stay server-side.
+     *
+     * @return array<string, mixed>
+     */
+    private function translations(string $locale): array
+    {
+        $load = function (string $loc): array {
+            $out = [];
+            foreach (glob(lang_path($loc).'/*.php') ?: [] as $file) {
+                $name = basename($file, '.php');
+                if (in_array($name, ['auth', 'passwords', 'validation'], true)) {
+                    continue;
+                }
+                $out[$name] = require $file;
+            }
+
+            return $out;
+        };
+
+        $base = $load('de');
+
+        return $locale === 'de' ? $base : array_replace_recursive($base, $load($locale));
     }
 
     /** How many (child, excursion) poll answers this parent still owes. */

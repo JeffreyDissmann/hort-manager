@@ -1,6 +1,7 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import DeleteUserForm from './Partials/DeleteUserForm.vue';
+import UpdateLanguageForm from './Partials/UpdateLanguageForm.vue';
 import UpdateNotificationsForm from './Partials/UpdateNotificationsForm.vue';
 import UpdatePasswordForm from './Partials/UpdatePasswordForm.vue';
 import UpdateProfileInformationForm from './Partials/UpdateProfileInformationForm.vue';
@@ -21,14 +22,14 @@ defineProps({
 </script>
 
 <template>
-    <Head title="Profil" />
+    <Head :title="$t('profile.title')" />
 
     <AuthenticatedLayout>
         <template #header>
             <h2
                 class="text-xl font-semibold leading-tight text-gray-800"
             >
-                Profil
+                {{ $t('profile.title') }}
             </h2>
         </template>
 
@@ -42,6 +43,12 @@ defineProps({
                         :status="status"
                         class="max-w-xl"
                     />
+                </div>
+
+                <div
+                    class="bg-white p-4 shadow sm:rounded-lg sm:p-8"
+                >
+                    <UpdateLanguageForm />
                 </div>
 
                 <div

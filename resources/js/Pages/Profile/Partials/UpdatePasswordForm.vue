@@ -46,24 +46,22 @@ const updatePassword = () => {
     <section>
         <header>
             <h2 class="text-lg font-medium text-hort-navy">
-                {{ hasPassword ? 'Passwort ändern' : 'Passwort festlegen' }}
+                {{ hasPassword ? $t('profile.password_change') : $t('profile.password_set') }}
             </h2>
 
             <p class="mt-1 text-sm text-gray-600">
                 <template v-if="hasPassword">
-                    Verwende ein langes, zufälliges Passwort, um dein Konto zu
-                    schützen.
+                    {{ $t('profile.password_help') }}
                 </template>
                 <template v-else>
-                    Du bist mit Slack angemeldet. Lege ein Passwort fest, um dich
-                    auch mit deiner E-Mail-Adresse anmelden zu können.
+                    {{ $t('profile.password_help_slack') }}
                 </template>
             </p>
         </header>
 
         <form @submit.prevent="updatePassword" class="mt-6 space-y-6">
             <div v-if="hasPassword">
-                <InputLabel for="current_password" value="Aktuelles Passwort" />
+                <InputLabel for="current_password" :value="$t('profile.current_password')" />
 
                 <TextInput
                     id="current_password"
@@ -81,7 +79,7 @@ const updatePassword = () => {
             </div>
 
             <div>
-                <InputLabel for="password" value="Neues Passwort" />
+                <InputLabel for="password" :value="$t('profile.new_password')" />
 
                 <TextInput
                     id="password"
@@ -98,7 +96,7 @@ const updatePassword = () => {
             <div>
                 <InputLabel
                     for="password_confirmation"
-                    value="Passwort bestätigen"
+                    :value="$t('profile.confirm_password')"
                 />
 
                 <TextInput
@@ -116,7 +114,7 @@ const updatePassword = () => {
             </div>
 
             <div class="flex items-center gap-4">
-                <PrimaryButton :disabled="form.processing">Speichern</PrimaryButton>
+                <PrimaryButton :disabled="form.processing">{{ $t('common.save') }}</PrimaryButton>
 
                 <Transition
                     enter-active-class="transition ease-in-out"
@@ -128,7 +126,7 @@ const updatePassword = () => {
                         v-if="form.recentlySuccessful"
                         class="text-sm text-gray-600"
                     >
-                        Gespeichert.
+                        {{ $t('common.saved') }}
                     </p>
                 </Transition>
             </div>

@@ -64,7 +64,7 @@ class ChildController extends Controller
 
         return redirect()
             ->route('children.edit', $child)
-            ->with('status', 'Kind angelegt. Jetzt den Stammplan festlegen.');
+            ->with('status', __('flash.child_created'));
     }
 
     /** Edit a child plus their weekly Stammplan (all five weekdays). */
@@ -161,7 +161,7 @@ class ChildController extends Controller
 
         return redirect()
             ->route('children.index')
-            ->with('status', "Stammplan für {$child->name} gespeichert.");
+            ->with('status', __('flash.schedule_saved', ['name' => $child->name]));
     }
 
     public function destroy(Child $child): RedirectResponse
@@ -173,7 +173,7 @@ class ChildController extends Controller
 
         return redirect()
             ->route('children.index')
-            ->with('status', "{$name} wurde gelöscht.");
+            ->with('status', __('flash.child_deleted', ['name' => $name]));
     }
 
     /**

@@ -129,7 +129,7 @@ function chipClass(method) {
                         gridColumn: `${bandCol(j)} / ${bandCol(j) + 1}`,
                         gridRow: bandRow(p.homework_start, p.homework_end) || 'auto',
                     }"
-                    :title="`Hausaufgaben ${p.homework_start}–${p.homework_end || ''}`"
+                    :title="$t('components.timetable.homework_range', { start: p.homework_start, end: p.homework_end || '' })"
                 >
                     <span class="text-xs leading-none">📚</span>
                 </div>

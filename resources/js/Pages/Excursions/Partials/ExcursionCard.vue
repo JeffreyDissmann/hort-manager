@@ -1,5 +1,6 @@
 <script setup>
 import { edit as excursionsEdit, destroy as excursionsDestroy } from '@/routes/excursions';
+import { t } from '@/i18n';
 import { TrashIcon } from '@heroicons/vue/24/outline';
 import { Link, router } from '@inertiajs/vue3';
 
@@ -18,13 +19,13 @@ function formatDate(value) {
 
 function timeRange(e) {
     if (e.depart_at && e.return_at) {
-        return `${e.depart_at}–${e.return_at} Uhr`;
+        return t('excursions.time_range', { from: e.depart_at, to: e.return_at });
     }
-    return e.depart_at ? `ab ${e.depart_at} Uhr` : '';
+    return e.depart_at ? t('excursions.time_from', { time: e.depart_at }) : '';
 }
 
 function destroy() {
-    if (confirm(`Ausflug „${props.excursion.name}“ wirklich löschen?`)) {
+    if (confirm(t('excursions.delete_confirm', { name: props.excursion.name }))) {
         router.delete(excursionsDestroy(props.excursion.id).url);
     }
 }
@@ -54,7 +55,7 @@ function destroy() {
                 type="button"
                 @click="destroy"
                 class="shrink-0 rounded-lg p-2 text-hort-navy/30 transition hover:bg-red-50 hover:text-red-600"
-                aria-label="Ausflug löschen"
+                :aria-label="$t('excursions.delete_aria')"
             >
                 <TrashIcon class="h-5 w-5" />
             </button>
@@ -63,10 +64,12 @@ function destroy() {
         <!-- Poll status -->
         <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-semibold">
             <span class="text-hort-teal-dark">
-                ✓ {{ excursion.joining_count }} {{ past ? 'waren dabei' : 'dabei' }}
+                ✓ {{ past
+                    ? $t('excursions.joining_count_past', { count: excursion.joining_count })
+                    : $t('excursions.joining_count', { count: excursion.joining_count }) }}
             </span>
             <span v-if="!past" class="text-amber-600">
-                offen {{ excursion.pending_count }}
+                {{ $t('excursions.pending_count', { count: excursion.pending_count }) }}
             </span>
             <span v-if="excursion.declined_count" class="text-hort-purple">
                 ✗ {{ excursion.declined_count }}
@@ -74,9 +77,9 @@ function destroy() {
             <span v-if="!past" class="font-medium text-hort-navy/40">
                 ·
                 <template v-if="excursion.poll_open">
-                    Abstimmung bis {{ formatDate(excursion.rsvp_deadline) }}
+                    {{ $t('excursions.poll_until', { date: formatDate(excursion.rsvp_deadline) }) }}
                 </template>
-                <template v-else>Abstimmung beendet</template>
+                <template v-else>{{ $t('excursions.poll_closed') }}</template>
             </span>
         </div>
 
@@ -97,7 +100,7 @@ function destroy() {
             :href="excursionsEdit(excursion.id).url"
             class="mt-3 flex items-center justify-center gap-1 rounded-xl border-2 border-hort-navy/10 py-2.5 text-sm font-semibold text-hort-navy transition hover:border-hort-teal hover:bg-hort-teal/10"
         >
-            {{ past ? 'Ansehen' : 'Bearbeiten' }}
+            {{ past ? $t('excursions.view') : $t('common.edit') }}
         </Link>
     </li>
 </template>

@@ -16,6 +16,16 @@ declare(strict_types=1);
 
 return [
     [
+        'version' => '2026.07.04',
+        'date' => '2026-07-04',
+        'title' => 'Wer kommt beim Ausflug mit? · Und: Englisch als Sprache',
+        'items' => [
+            '🚌 Beim Ausflug siehst du jetzt mit „Alle Kinder anzeigen", wer noch mitkommt – auf der Ausflüge-Seite und am Ausflugstag auch auf „Heute".',
+            '🌍 Du kannst die App-Sprache umstellen: unter „Profil → Sprache" zwischen Deutsch und Englisch wählen. Deutsch bleibt die Standardsprache.',
+            '🌍 You can switch the app language under „Profil → Language" (German/English). German stays the default.',
+        ],
+    ],
+    [
         'version' => '2026.07.03',
         'date' => '2026-07-03',
         'title' => 'Schreib dem Hort-Manager einfach – direkt in Slack',

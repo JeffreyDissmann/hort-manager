@@ -14,15 +14,10 @@ enum DepartureStatus: string
     case SentHome = 'sent_home';
     case Excursion = 'excursion';
 
-    /** German label for the UI. */
+    /** Localised label for the UI (de/en, per the active locale). */
     public function label(): string
     {
-        return match ($this) {
-            self::Present => 'Noch da',
-            self::PickedUp => 'Abgeholt',
-            self::SentHome => 'Nach Hause geschickt',
-            self::Excursion => 'Ausflug',
-        };
+        return __('enums.departure_status.'.$this->value);
     }
 
     /** Whether the child has already left the Hort. */

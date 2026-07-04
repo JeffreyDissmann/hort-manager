@@ -9,6 +9,7 @@ use App\Http\Controllers\DailyBoardController;
 use App\Http\Controllers\DailyProgramController;
 use App\Http\Controllers\ExcursionController;
 use App\Http\Controllers\ExcursionRsvpController;
+use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\SlackCommandController;
@@ -77,6 +78,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    Route::patch('/profile/language', [LocaleController::class, 'update'])->name('locale.update');
 
     Route::resource('children', ChildController::class)->except('show');
 

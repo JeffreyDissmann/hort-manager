@@ -4,6 +4,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { TrashIcon } from '@heroicons/vue/24/outline';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
+import { t } from '@/i18n';
 
 const props = defineProps({
     children: {
@@ -32,7 +33,7 @@ function formatDate(value) {
 
 function destroy(child) {
     if (
-        confirm(`„${child.name}“ wirklich löschen? Der Stammplan geht verloren.`)
+        confirm(t('children.delete_confirm', { name: child.name }))
     ) {
         router.delete(childrenDestroy(child.id).url);
     }
@@ -40,12 +41,12 @@ function destroy(child) {
 </script>
 
 <template>
-    <Head title="Kinder" />
+    <Head :title="$t('children.title')" />
 
     <AuthenticatedLayout>
         <template #header>
             <h2 class="text-xl font-semibold text-hort-navy">
-                {{ canManage ? 'Kinder' : 'Meine Kinder' }}
+                {{ canManage ? $t('children.title') : $t('children.my_children') }}
             </h2>
         </template>
 
@@ -62,7 +63,7 @@ function destroy(child) {
                 :href="childrenCreate().url"
                 class="flex w-full items-center justify-center gap-2 rounded-2xl bg-hort-teal px-6 py-4 text-base font-semibold text-hort-navy shadow-sm transition hover:bg-hort-teal-dark active:scale-[0.99]"
             >
-                <span class="text-xl leading-none">+</span> Kind hinzufügen
+                <span class="text-xl leading-none">+</span> {{ $t('children.add_child') }}
             </Link>
 
             <ul v-if="children.length" class="space-y-3">
@@ -94,7 +95,7 @@ function destroy(child) {
                             type="button"
                             @click="destroy(child)"
                             class="shrink-0 rounded-lg p-2 text-hort-navy/30 transition hover:bg-red-50 hover:text-red-600"
-                            aria-label="Kind löschen"
+                            :aria-label="$t('children.delete_child')"
                         >
                             <TrashIcon class="h-5 w-5" />
                         </button>
@@ -104,7 +105,7 @@ function destroy(child) {
                         :href="childrenEdit(child.id).url"
                         class="mt-3 flex items-center justify-center gap-1 rounded-xl border-2 border-hort-navy/10 py-2.5 text-sm font-semibold text-hort-navy transition hover:border-hort-teal hover:bg-hort-teal/10"
                     >
-                        Stammplan bearbeiten
+                        {{ $t('children.edit_schedule') }}
                     </Link>
                 </li>
             </ul>
@@ -114,12 +115,10 @@ function destroy(child) {
                 class="rounded-2xl border-2 border-dashed border-hort-navy/15 p-6 text-center text-sm text-hort-navy/50"
             >
                 <template v-if="canManage">
-                    Noch keine Kinder angelegt. Lege das erste Kind an, um seinen
-                    Stammplan festzulegen.
+                    {{ $t('children.empty_manage') }}
                 </template>
                 <template v-else>
-                    Dir ist noch kein Kind zugeordnet. Lege dein Kind an oder bitte
-                    den anderen Elternteil, dich als Elternteil hinzuzufügen.
+                    {{ $t('children.empty_parent') }}
                 </template>
             </p>
         </div>

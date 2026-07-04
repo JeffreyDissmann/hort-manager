@@ -24,12 +24,10 @@ const submit = () => {
 
 <template>
     <GuestLayout>
-        <Head title="Passwort vergessen" />
+        <Head :title="$t('login.forgot_title')" />
 
         <div class="mb-4 text-sm text-gray-600">
-            Passwort vergessen? Kein Problem. Gib einfach deine E-Mail-Adresse
-            an und wir senden dir einen Link, mit dem du ein neues Passwort
-            wählen kannst.
+            {{ $t('login.forgot_intro') }}
         </div>
 
         <div
@@ -41,7 +39,7 @@ const submit = () => {
 
         <form @submit.prevent="submit">
             <div>
-                <InputLabel for="email" value="E-Mail-Adresse" />
+                <InputLabel for="email" :value="$t('login.email')" />
 
                 <TextInput
                     id="email"
@@ -61,7 +59,7 @@ const submit = () => {
                     :class="{ 'opacity-25': form.processing }"
                     :disabled="form.processing"
                 >
-                    Link zum Zurücksetzen senden
+                    {{ $t('login.send_reset_link') }}
                 </PrimaryButton>
             </div>
         </form>

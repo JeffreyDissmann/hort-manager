@@ -1,21 +1,25 @@
 <script setup>
-// A child's excursion status as a coloured chip: "Name: dabei / nicht dabei / …".
+// A child's excursion status as a coloured chip: "Name: joining / not joining / …".
+import { t } from '@/i18n';
 import { computed } from 'vue';
 
 const props = defineProps({
     name: { type: String, required: true },
-    // true = dabei, false = nicht dabei, null = not answered.
+    // true = joining, false = not joining, null = not answered.
     response: { type: Boolean, default: null },
-    // What to show when unanswered — "noch offen" while the poll runs, or e.g.
-    // "keine Rückmeldung" for a past excursion.
-    pendingLabel: { type: String, default: 'noch offen' },
+    // Overrides the "not answered" label — e.g. "keine Rückmeldung" for a past
+    // excursion. Null → the default "still open" label.
+    pendingLabel: { type: String, default: null },
 });
 
 const label = computed(() => {
     if (props.response === true) {
-        return 'dabei';
+        return t('components.child_status.present');
     }
-    return props.response === false ? 'nicht dabei' : props.pendingLabel;
+    if (props.response === false) {
+        return t('components.child_status.absent');
+    }
+    return props.pendingLabel ?? t('components.child_status.pending');
 });
 
 const badgeClass = computed(() => {

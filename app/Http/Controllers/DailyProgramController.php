@@ -136,7 +136,7 @@ class DailyProgramController extends Controller
             );
         }
 
-        return back()->with('status', 'Programm gespeichert.');
+        return back()->with('status', __('flash.program_saved'));
     }
 
     /** Save the Hort-wide default homework slots (per weekday). */
@@ -164,7 +164,7 @@ class DailyProgramController extends Controller
             );
         }
 
-        return back()->with('status', 'Standard-Hausaufgabenzeiten gespeichert.');
+        return back()->with('status', __('flash.homework_defaults_saved'));
     }
 
     private function short(?string $time): ?string

@@ -9,12 +9,9 @@ enum UserRole: string
     case Staff = 'staff';
     case Parent = 'parent';
 
-    /** German label for the UI. */
+    /** Localised label for the UI (de/en, per the active locale). */
     public function label(): string
     {
-        return match ($this) {
-            self::Staff => 'Erzieher:in',
-            self::Parent => 'Elternteil',
-        };
+        return __('enums.user_role.'.$this->value);
     }
 }

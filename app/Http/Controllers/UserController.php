@@ -54,12 +54,12 @@ class UserController extends Controller
 
         // Never leave the Hort without an admin.
         if ($user->is_admin && ! $isAdmin && User::where('is_admin', true)->count() <= 1) {
-            return back()->with('status', 'Es muss mindestens eine:n Administrator:in geben.');
+            return back()->with('status', __('flash.min_one_admin'));
         }
 
         $user->forceFill(['role' => $role, 'is_admin' => $isAdmin])->save();
 
-        return back()->with('status', "{$user->name} aktualisiert.");
+        return back()->with('status', __('flash.user_updated', ['name' => $user->name]));
     }
 
     /** Admin-only: delete a user (guardian links cascade; board/poll references null out). */
@@ -68,16 +68,16 @@ class UserController extends Controller
         $this->authorize('delete', $user);
 
         if ($user->is($request->user())) {
-            return back()->with('status', 'Du kannst dich nicht selbst löschen.');
+            return back()->with('status', __('flash.cannot_delete_self'));
         }
 
         if ($user->is_admin && User::where('is_admin', true)->count() <= 1) {
-            return back()->with('status', 'Es muss mindestens eine:n Administrator:in geben.');
+            return back()->with('status', __('flash.min_one_admin'));
         }
 
         $user->delete();
 
-        return back()->with('status', "{$user->name} wurde gelöscht.");
+        return back()->with('status', __('flash.user_deleted', ['name' => $user->name]));
     }
 
     /** Admin-only: import/refresh all Slack workspace members. */
@@ -87,6 +87,6 @@ class UserController extends Controller
 
         $count = $importer->run();
 
-        return back()->with('status', "{$count} Benutzer aus Slack synchronisiert.");
+        return back()->with('status', __('flash.users_synced', ['count' => $count]));
     }
 }

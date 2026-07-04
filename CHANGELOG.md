@@ -8,6 +8,17 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **See the whole group going on an Ausflug**: on the Ausflüge page a collapsible
+  „Alle Kinder anzeigen" link under the parent's own Abstimmung lists every invited
+  child and their status (open-information policy); the Heute board shows who's on
+  today's trip the same way. Adds a shared `CollapsibleChips` disclosure and a
+  `ChildStatusBadge` chip.
+- **German/English UI with an in-app language switch**: German stays the default;
+  each user can switch to English under Profil. Built on standard Laravel lang files
+  (`lang/de|en/*.php`) that drive both server output (`__()`, incl. enum labels and
+  flash messages) and the Vue UI via an Inertia-shared catalog + a small `$t()`
+  helper — no `vue-i18n` dependency. A `users.locale` column + `HasLocalePreference`
+  + a `SetLocale` middleware carry the choice through to notifications and mail.
 - **AI assistant in Slack (DM chat + `/hort`)**: parents can write to the bot in
   plain German — report a child sick/absent, change a pickup time or method, answer
   an excursion RSVP, or ask about the day's plan. A local Ollama model (via the

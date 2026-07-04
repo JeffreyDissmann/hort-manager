@@ -4,6 +4,7 @@ import './bootstrap';
 import { createInertiaApp } from '@inertiajs/vue3';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createApp, h } from 'vue';
+import { i18n } from './i18n';
 
 // Register the PWA service worker, served from the site root for "/" scope.
 // Register immediately (not on `load`): this module is deferred, so `load` may
@@ -26,6 +27,7 @@ createInertiaApp({
     setup({ el, App, props, plugin }) {
         return createApp({ render: () => h(App, props) })
             .use(plugin)
+            .use(i18n)
             .mount(el);
     },
     progress: {

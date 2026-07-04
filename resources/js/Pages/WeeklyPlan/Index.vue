@@ -15,6 +15,7 @@ import Timetable from '@/Components/Timetable.vue';
 import WeekTimetable from '@/Components/WeekTimetable.vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { computed, reactive, ref } from 'vue';
+import { t } from '@/i18n';
 
 const props = defineProps({
     week: { type: Object, default: () => ({}) },
@@ -31,7 +32,9 @@ const props = defineProps({
 const weekColumns = computed(() =>
     props.weekDays.map((d) => ({ label: d.label, sublabel: d.date_label })),
 );
-const standardColumns = ['Mo', 'Di', 'Mi', 'Do', 'Fr'].map((label) => ({ label }));
+const standardColumns = ['mon', 'tue', 'wed', 'thu', 'fri'].map((key) => ({
+    label: t(`weekly.weekday.${key}`),
+}));
 
 function goWeek(date) {
     router.get(
@@ -157,11 +160,11 @@ function cancelAbsence() {
 </script>
 
 <template>
-    <Head title="Abholplan" />
+    <Head :title="$t('weekly.title')" />
 
     <AuthenticatedLayout>
         <template #header>
-            <h2 class="text-xl font-semibold text-hort-navy">Abholplan</h2>
+            <h2 class="text-xl font-semibold text-hort-navy">{{ $t('weekly.title') }}</h2>
         </template>
 
         <div class="space-y-8">
@@ -178,7 +181,7 @@ function cancelAbsence() {
 
                 <!-- Parents see + edit their own children; staff use the timeline below. -->
                 <template v-if="!isStaff">
-                    <h3 class="text-sm font-semibold text-hort-navy/70">Deine Kinder</h3>
+                    <h3 class="text-sm font-semibold text-hort-navy/70">{{ $t('weekly.your_children') }}</h3>
 
                     <ul v-if="currentWeek.length" class="space-y-3">
                     <li
@@ -194,7 +197,7 @@ function cancelAbsence() {
                                 v-if="child.can_manage"
                                 class="text-xs text-hort-navy/40"
                             >
-                                Tippen zum Ändern
+                                {{ $t('weekly.tap_to_change') }}
                             </span>
                         </div>
 
@@ -223,11 +226,11 @@ function cancelAbsence() {
                                     :title="day.absent ? day.absent.label : day.comment || undefined"
                                     @click="openCell(child, day, weekDays[i])"
                                 >
-                                    {{ day.absent ? day.absent.label : (day.time ?? 'frei') }}
+                                    {{ day.absent ? day.absent.label : (day.time ?? $t('weekly.free')) }}
                                     <span
                                         v-if="day.birthday !== null"
                                         class="mt-0.5 block text-[10px] leading-none"
-                                        title="Geburtstag"
+                                        :title="$t('weekly.birthday_title')"
                                     >
                                         🎂
                                     </span>
@@ -258,26 +261,23 @@ function cancelAbsence() {
                                     v-if="day.birthday !== null"
                                     class="rounded-lg bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700"
                                 >
-                                    🎂 {{ weekDays[i].label }}: Geburtstag · wird
-                                    {{ day.birthday }}
+                                    {{ $t('weekly.birthday_flag', { day: weekDays[i].label, age: day.birthday }) }}
                                 </p>
                                 <p
                                     v-if="day.conflict"
                                     class="rounded-lg bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700"
                                 >
-                                    {{ weekDays[i].label }}: Abholung
-                                    {{ day.time }} liegt im {{ day.excursion.name }}<span
+                                    {{ $t('weekly.pickup_conflict', { day: weekDays[i].label, time: day.time, name: day.excursion.name }) }}<span
                                         v-if="day.excursion.return_at"
                                     >
-                                        (zurück {{ day.excursion.return_at }})</span
+                                        ({{ $t('weekly.back_return', { time: day.excursion.return_at }) }})</span
                                     >
                                 </p>
                                 <p
                                     v-else-if="day.excursion"
                                     class="rounded-lg bg-hort-purple/10 px-2 py-1 text-xs font-medium text-hort-purple"
                                 >
-                                    🚌 {{ weekDays[i].label }}:
-                                    {{ day.excursion.name }}<span
+                                    {{ $t('weekly.excursion_flag', { day: weekDays[i].label, name: day.excursion.name }) }}<span
                                         v-if="day.excursion.depart_at"
                                     >
                                         ({{ day.excursion.depart_at }}–{{
@@ -289,8 +289,7 @@ function cancelAbsence() {
                                     v-if="homeworkConflict(day, i)"
                                     class="rounded-lg bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700"
                                 >
-                                    {{ weekDays[i].label }}: Abholung {{ day.time }}
-                                    liegt in der Hausaufgabenzeit
+                                    {{ $t('weekly.homework_conflict', { day: weekDays[i].label, time: day.time }) }}
                                 </p>
                             </template>
                         </div>
@@ -301,14 +300,14 @@ function cancelAbsence() {
                         v-else
                         class="rounded-2xl border-2 border-dashed border-hort-navy/15 p-6 text-center text-sm text-hort-navy/50"
                     >
-                        Dir ist noch kein Kind zugeordnet.
+                        {{ $t('weekly.no_child_assigned') }}
                     </p>
                 </template>
 
                 <!-- Whole week, all children: effective plan + this week's programs -->
                 <div class="space-y-2">
                     <h3 class="text-sm font-semibold text-hort-navy/70">
-                        Ganze Woche · alle Kinder
+                        {{ $t('weekly.whole_week') }}
                     </h3>
                     <WeekTimetable
                         v-if="weekTimetable.length || program.some((p) => p && (p.lunch || p.activity || p.homework_start))"
@@ -323,8 +322,7 @@ function cancelAbsence() {
                         v-else
                         class="rounded-2xl border-2 border-dashed border-hort-navy/15 p-6 text-center text-sm text-hort-navy/50"
                     >
-                        Für diese Woche sind noch keine Abholzeiten oder Programme
-                        hinterlegt.
+                        {{ $t('weekly.empty_week') }}
                     </p>
                 </div>
 
@@ -334,15 +332,15 @@ function cancelAbsence() {
                 >
                     <span class="flex items-center gap-1.5">
                         <span class="h-3 w-3 rounded-full bg-hort-teal/60" />
-                        wird abgeholt
+                        {{ $t('weekly.legend_picked_up') }}
                     </span>
                     <span class="flex items-center gap-1.5">
                         <span class="h-3 w-3 rounded-full bg-hort-purple/50" />
-                        geht allein
+                        {{ $t('weekly.legend_alone') }}
                     </span>
                     <span class="flex items-center gap-1.5">
                         <span class="h-3 w-3 rounded-full ring-2 ring-amber-400" />
-                        geändert
+                        {{ $t('weekly.legend_changed') }}
                     </span>
                 </div>
             </section>
@@ -350,19 +348,18 @@ function cancelAbsence() {
             <!-- Standard Stammplan timetable -->
             <section class="space-y-3">
                 <h3 class="text-sm font-semibold uppercase tracking-wide text-hort-navy/50">
-                    Standard-Plan · gilt jede Woche
+                    {{ $t('weekly.standard_heading') }}
                 </h3>
                 <p class="text-sm text-hort-navy/60">
-                    Der reguläre Wochen-Stammplan aller Kinder – die normalen
-                    Abholzeiten ohne Änderungen.
+                    {{ $t('weekly.standard_intro') }}
                     <Link
                         :href="childrenIndex().url"
                         class="font-medium text-hort-teal-dark underline-offset-2 hover:underline"
                     >
                         {{
                             isStaff
-                                ? 'Stammplan unter „Kinder“ bearbeiten'
-                                : 'Stammplan unter „Meine Kinder“ ändern'
+                                ? $t('weekly.edit_link_staff')
+                                : $t('weekly.edit_link_parent')
                         }}
                     </Link>
                 </p>
@@ -377,7 +374,7 @@ function cancelAbsence() {
                     v-else
                     class="rounded-2xl border-2 border-dashed border-hort-navy/15 p-6 text-center text-sm text-hort-navy/50"
                 >
-                    Noch keine Abholzeiten im Stammplan hinterlegt.
+                    {{ $t('weekly.empty_standard') }}
                 </p>
             </section>
         </div>
@@ -390,12 +387,12 @@ function cancelAbsence() {
                         {{ editing.childName }}
                     </h2>
                     <p class="text-sm text-hort-navy/50">
-                        {{ editing.label }} – nur für diese Woche
+                        {{ $t('weekly.editor_subtitle', { label: editing.label }) }}
                     </p>
                 </div>
 
                 <div>
-                    <InputLabel for="time" value="Uhrzeit (leer = kommt nicht)" />
+                    <InputLabel for="time" :value="$t('weekly.time_label')" />
                     <TimeSelect
                         id="time"
                         v-model="form.planned_time"
@@ -404,14 +401,14 @@ function cancelAbsence() {
                 </div>
 
                 <div>
-                    <InputLabel for="method" value="Art" />
+                    <InputLabel for="method" :value="$t('weekly.method_label')" />
                     <select
                         id="method"
                         v-model="form.planned_method"
                         :disabled="!form.planned_time"
                         class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-hort-teal focus:ring-hort-teal disabled:bg-gray-100 disabled:text-gray-400"
                     >
-                        <option value="">— offen —</option>
+                        <option value="">{{ $t('weekly.method_open') }}</option>
                         <option
                             v-for="o in methodOptions"
                             :key="o.value"
@@ -423,14 +420,14 @@ function cancelAbsence() {
                 </div>
 
                 <div>
-                    <InputLabel for="note" value="Kommentar" />
+                    <InputLabel for="note" :value="$t('common.note')" />
                     <TextInput
                         id="note"
                         v-model="form.note"
                         type="text"
                         maxlength="255"
                         class="mt-1 block w-full"
-                        placeholder="z. B. wegen Arzttermin"
+                        :placeholder="$t('weekly.note_placeholder')"
                     />
                 </div>
 
@@ -438,24 +435,24 @@ function cancelAbsence() {
                 <div class="rounded-lg bg-hort-sand p-3">
                     <template v-if="editing.absent">
                         <p class="text-sm font-medium text-amber-700">
-                            Als „{{ editing.absent.label }}“ gemeldet.
+                            {{ $t('weekly.reported_as', { label: editing.absent.label }) }}
                         </p>
                         <button
                             type="button"
                             class="mt-2 text-sm font-medium text-hort-teal-dark underline-offset-2 hover:underline"
                             @click="cancelAbsence"
                         >
-                            Abwesenheit aufheben
+                            {{ $t('weekly.cancel_absence') }}
                         </button>
                     </template>
                     <template v-else>
-                        <p class="text-sm text-hort-navy/60">Kind ist heute nicht da?</p>
+                        <p class="text-sm text-hort-navy/60">{{ $t('weekly.not_here_today') }}</p>
                         <div class="mt-2 flex gap-2">
                             <SecondaryButton @click="reportAbsence('sick')">
-                                Krank melden
+                                {{ $t('weekly.report_sick') }}
                             </SecondaryButton>
                             <SecondaryButton @click="reportAbsence('away')">
-                                Abwesend
+                                {{ $t('weekly.report_away') }}
                             </SecondaryButton>
                         </div>
                     </template>
@@ -467,13 +464,13 @@ function cancelAbsence() {
                         class="text-sm font-medium text-hort-navy/50 underline-offset-2 hover:underline"
                         @click="resetDay"
                     >
-                        Auf Standard
+                        {{ $t('weekly.reset_to_standard') }}
                     </button>
                     <div class="flex gap-3">
                         <SecondaryButton @click="closeEditor">
-                            Abbrechen
+                            {{ $t('common.cancel') }}
                         </SecondaryButton>
-                        <PrimaryButton @click="save">Speichern</PrimaryButton>
+                        <PrimaryButton @click="save">{{ $t('common.save') }}</PrimaryButton>
                     </div>
                 </div>
             </div>

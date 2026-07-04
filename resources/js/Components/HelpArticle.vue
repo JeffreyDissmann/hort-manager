@@ -1,87 +1,46 @@
 <script setup>
 // Plain-language manual, shown on the Hilfe page (guest and logged-in).
 // Written for both parents (Eltern) and staff (Erzieher:innen).
+import { t } from '@/i18n';
+import { computed } from 'vue';
 
-const firstSteps = [
-    'Tippe auf „Mit Slack anmelden“ – dein Konto wird beim ersten Mal automatisch erstellt.',
-    'Lege unter „Kinder“ dein Kind an.',
-    'Trage den Stammplan ein: wann dein Kind an welchem Wochentag abgeholt wird.',
-    'Fertig. Ab jetzt siehst du alles und bekommst wichtige Infos als Nachricht in Slack.',
-];
+const firstSteps = computed(() => [0, 1, 2, 3].map((i) => t(`help.steps.${i}`)));
 
-const areas = [
-    {
-        icon: '☀️',
-        title: 'Heute',
-        audience: 'Für alle',
-        text: 'Die Übersicht für den heutigen Tag: Wer wird wann abgeholt, wer geht allein nach Hause, wer ist auf einem Ausflug. Erzieher:innen haken jedes Kind ab, sobald es geht.',
-    },
-    {
-        icon: '📅',
-        title: 'Abholplan',
-        audience: 'Für alle',
-        text: 'Ganz oben siehst du die ganze Woche auf einen Blick – alle Kinder mit ihren Abholzeiten und den Zeiten für Essen, Aktivität, Hausaufgaben und Ausflüge. Brauchst du an einem Tag ausnahmsweise eine andere Zeit, kannst du genau diesen Tag anpassen oder dein Kind krank melden.',
-    },
-    {
-        icon: '🚌',
-        title: 'Ausflüge',
-        audience: 'Eltern antworten',
-        text: 'Steht ein Ausflug an, wirst du gefragt, ob dein Kind mitkommt. Ein Klick auf Ja oder Nein genügt – in der App oder direkt in Slack. Erzieher:innen planen die Ausflüge.',
-    },
-    {
-        icon: '👧',
-        title: 'Kinder',
-        audience: 'Eltern & Erzieher:innen',
-        text: 'Hier legst du dein Kind an und pflegst seinen Stammplan. Du kannst auch das zweite Elternteil verknüpfen, damit ihr beide alles seht und ändern könnt.',
-    },
-    {
-        icon: '🍽️',
-        title: 'Programm',
-        audience: 'Nur Erzieher:innen',
-        text: 'Erzieher:innen tragen Mittagessen, Aktivität und die Hausaufgaben-Zeiten der Woche ein – auch „keine Hausaufgaben“ ist möglich. Eltern sehen das mit; die Hausaufgabenzeit erscheint auch auf „Heute“.',
-    },
-];
+const areas = computed(() => [
+    { icon: '☀️', key: 'today' },
+    { icon: '📅', key: 'pickup_plan' },
+    { icon: '🚌', key: 'excursions' },
+    { icon: '👧', key: 'children' },
+    { icon: '🍽️', key: 'program' },
+].map(({ icon, key }) => ({
+    icon,
+    title: t(`help.areas.${key}.title`),
+    audience: t(`help.areas.${key}.audience`),
+    text: t(`help.areas.${key}.text`),
+})));
 
-const slackPoints = [
-    'Du bekommst eine kurze Nachricht, sobald dein Kind abgeholt wurde oder allein gegangen ist.',
-    'Bei einem neuen Ausflug schickt dir der Hort-Manager alle Infos mit Ja/Nein-Knöpfen – du kannst direkt in Slack antworten.',
-    'Du kannst dem Hort-Manager auch einfach schreiben (siehe unten) oder „/hort“ tippen, um in die App zu springen.',
-    'Über die App „Hort-Manager“ in deiner Slack-Seitenleiste kommst du jederzeit hierher.',
-];
+const slackPoints = computed(() => [0, 1, 2, 3].map((i) => t(`help.slack_points.${i}`)));
 
 // Free-text examples the Slack assistant understands.
-const assistantExamples = [
-    'Mein Kind ist heute krank.',
-    'Lena wird morgen erst um 16:30 abgeholt.',
-    'Tom geht ab Montag allein nach Hause.',
-    'Kommt Lena beim Zoo-Ausflug mit? Ja.',
-    'Wann geht Tom heute?',
-];
+const assistantExamples = computed(() => [0, 1, 2, 3, 4].map((i) => t(`help.assistant_examples.${i}`)));
 
-const glossary = [
-    ['Stammplan', 'Die festen, wöchentlich gleichen Abholzeiten eines Kindes – die Grundlage für den Abholplan.'],
-    ['Abholplan', 'Der konkrete Plan für eine bestimmte Woche. Er kommt aus dem Stammplan, kann aber pro Tag angepasst werden.'],
-    ['abgeholt / allein gegangen', 'Die zwei Arten, wie ein Kind nach Hause kommt: von jemandem abgeholt oder allein nach Hause gegangen.'],
-    ['Krankmeldung / Abwesenheit', 'Ein Kind ist für einen Tag als krank oder abwesend gemeldet – dann ist es an dem Tag nicht auf der Abholliste.'],
-];
+const glossary = computed(() => ['stammplan', 'pickup_plan', 'departure', 'absence'].map((key) => [
+    t(`help.glossary.${key}.term`),
+    t(`help.glossary.${key}.def`),
+]));
 </script>
 
 <template>
     <div class="space-y-12">
         <!-- Intro -->
         <section class="space-y-3">
-            <h2 class="text-2xl font-bold text-hort-navy">Willkommen beim Hort-Manager 👋</h2>
-            <p class="text-hort-navy/70">
-                Der Hort-Manager hilft Eltern und Erzieher:innen, gemeinsam den Überblick zu
-                behalten – vor allem über das Wichtigste:
-                <strong>wann und wie jedes Kind nach Hause geht</strong>. Du kannst alles bequem
-                am Handy erledigen.
-            </p>
+            <h2 class="text-2xl font-bold text-hort-navy">{{ $t('help.intro_title') }}</h2>
+            <p class="text-hort-navy/70" v-html="$t('help.intro_text')" />
         </section>
 
         <!-- Quick start -->
         <section class="space-y-4">
-            <h3 class="text-lg font-semibold text-hort-navy">In 4 Schritten startklar</h3>
+            <h3 class="text-lg font-semibold text-hort-navy">{{ $t('help.quick_start_title') }}</h3>
             <ol class="space-y-3 rounded-2xl bg-hort-teal/10 p-5">
                 <li
                     v-for="(step, i) in firstSteps"
@@ -100,22 +59,14 @@ const glossary = [
 
         <!-- Login -->
         <section class="space-y-3">
-            <h3 class="text-lg font-semibold text-hort-navy">Wie melde ich mich an?</h3>
-            <p class="text-hort-navy/70">
-                Am einfachsten mit <strong>„Mit Slack anmelden“</strong> – ein eigenes Passwort
-                brauchst du dafür nicht. Voraussetzung ist, dass du im Slack des Horts bist. Beim
-                ersten Anmelden wird dein Konto automatisch angelegt.
-            </p>
-            <p class="text-hort-navy/70">
-                Alternativ kannst du dich mit <strong>E-Mail und Passwort</strong> anmelden. Passwort
-                vergessen? Über <strong>„Passwort vergessen?“</strong> auf der Anmeldeseite bekommst
-                du einen Link per E-Mail, mit dem du dir ein neues Passwort setzt.
-            </p>
+            <h3 class="text-lg font-semibold text-hort-navy">{{ $t('help.login_title') }}</h3>
+            <p class="text-hort-navy/70" v-html="$t('help.login_text_1')" />
+            <p class="text-hort-navy/70" v-html="$t('help.login_text_2')" />
         </section>
 
         <!-- Areas -->
         <section class="space-y-4">
-            <h3 class="text-lg font-semibold text-hort-navy">Was kann ich wo machen?</h3>
+            <h3 class="text-lg font-semibold text-hort-navy">{{ $t('help.areas_title') }}</h3>
             <ul class="grid gap-3 sm:grid-cols-2">
                 <li
                     v-for="area in areas"
@@ -139,9 +90,9 @@ const glossary = [
 
         <!-- Slack -->
         <section class="space-y-3">
-            <h3 class="text-lg font-semibold text-hort-navy">Was passiert in Slack?</h3>
+            <h3 class="text-lg font-semibold text-hort-navy">{{ $t('help.slack_title') }}</h3>
             <p class="text-hort-navy/70">
-                Der Hort-Manager ist mit dem Slack des Horts verbunden, damit du nichts verpasst:
+                {{ $t('help.slack_intro') }}
             </p>
             <ul class="space-y-2">
                 <li
@@ -157,16 +108,9 @@ const glossary = [
 
         <!-- Assistant & Krankmeldung -->
         <section class="space-y-3">
-            <h3 class="text-lg font-semibold text-hort-navy">Krank melden & schnelle Änderungen</h3>
-            <p class="text-hort-navy/70">
-                Ist dein Kind krank oder kommt an einem Tag nicht? Tippe auf <strong>„Krank“</strong>
-                bzw. <strong>„Abwesend“</strong> – auf der Seite „Heute“ oder beim jeweiligen Tag im
-                Abholplan. Genauso trägst du dort kurzfristig eine andere Abholzeit ein.
-            </p>
-            <p class="text-hort-navy/70">
-                Noch einfacher: <strong>Schreib es dem Hort-Manager direkt in Slack.</strong> Er
-                versteht ganz normale Sätze – zum Beispiel:
-            </p>
+            <h3 class="text-lg font-semibold text-hort-navy">{{ $t('help.assistant_title') }}</h3>
+            <p class="text-hort-navy/70" v-html="$t('help.assistant_text_1')" />
+            <p class="text-hort-navy/70" v-html="$t('help.assistant_text_2')" />
             <ul class="flex flex-wrap gap-2">
                 <li
                     v-for="(ex, i) in assistantExamples"
@@ -177,45 +121,39 @@ const glossary = [
                 </li>
             </ul>
             <p class="text-sm text-hort-navy/60">
-                Das geht per Direktnachricht an den „Hort-Manager“ in Slack oder mit „/hort …“. Er
-                kümmert sich nur um deine eigenen Kinder und bestätigt dir kurz, was er eingetragen
-                hat. Prüf die Antwort – bei einem Missverständnis schreib einfach die richtige Angabe
-                nach.
+                {{ $t('help.assistant_note') }}
             </p>
         </section>
 
         <!-- Install as app / notifications -->
         <section class="space-y-3">
-            <h3 class="text-lg font-semibold text-hort-navy">Als App installieren & Benachrichtigungen</h3>
+            <h3 class="text-lg font-semibold text-hort-navy">{{ $t('help.install_title') }}</h3>
             <p class="text-hort-navy/70">
-                Du kannst den Hort-Manager wie eine echte App auf dein Handy legen – dann
-                startet er im Vollbild und kann dir Benachrichtigungen schicken (z. B.
-                „Kind wurde abgeholt“ oder eine Erinnerung an einen Ausflug).
+                {{ $t('help.install_text') }}
             </p>
             <ul class="space-y-2 text-sm text-hort-navy/70">
-                <li><strong>iPhone (Safari):</strong> Teilen-Symbol antippen → „Zum Home-Bildschirm“.</li>
-                <li><strong>Android (Chrome):</strong> oben auf das Banner „Installieren“ tippen (oder Menü → „App installieren“).</li>
-                <li>Danach im Menü oben rechts auf <strong>🔔 Benachrichtigungen an</strong> tippen und erlauben.</li>
+                <li v-html="$t('help.install_ios')" />
+                <li v-html="$t('help.install_android')" />
+                <li v-html="$t('help.install_enable')" />
             </ul>
             <p class="text-sm text-hort-navy/60">
-                Hinweis: Auf dem iPhone funktionieren Benachrichtigungen nur, wenn die App
-                vorher zum Home-Bildschirm hinzugefügt wurde.
+                {{ $t('help.install_note') }}
             </p>
         </section>
 
         <!-- Roles -->
         <section class="space-y-3">
-            <h3 class="text-lg font-semibold text-hort-navy">Wer darf was?</h3>
+            <h3 class="text-lg font-semibold text-hort-navy">{{ $t('help.roles_title') }}</h3>
             <ul class="space-y-2 text-sm text-hort-navy/70">
-                <li><strong>Eltern</strong> sehen alles, pflegen ihre eigenen Kinder und antworten auf Ausflüge.</li>
-                <li><strong>Erzieher:innen</strong> haken Abholungen ab und planen Ausflüge und das Programm.</li>
-                <li><strong>Admins</strong> verwalten zusätzlich die Benutzer und vergeben die Rollen.</li>
+                <li v-html="$t('help.role_parents')" />
+                <li v-html="$t('help.role_staff')" />
+                <li v-html="$t('help.role_admins')" />
             </ul>
         </section>
 
         <!-- Glossary -->
         <section class="space-y-3">
-            <h3 class="text-lg font-semibold text-hort-navy">Kurz erklärt</h3>
+            <h3 class="text-lg font-semibold text-hort-navy">{{ $t('help.glossary_title') }}</h3>
             <dl class="space-y-3">
                 <div v-for="[term, def] in glossary" :key="term" class="text-sm">
                     <dt class="font-semibold text-hort-navy">{{ term }}</dt>
@@ -226,10 +164,9 @@ const glossary = [
 
         <!-- Questions -->
         <section class="space-y-2">
-            <h3 class="text-lg font-semibold text-hort-navy">Noch Fragen?</h3>
+            <h3 class="text-lg font-semibold text-hort-navy">{{ $t('help.questions_title') }}</h3>
             <p class="text-hort-navy/70">
-                Bei Fragen oder Problemen mit der App wende dich an den Entwickler
-                <strong>Jeffrey Dissmann</strong>:
+                <span v-html="$t('help.questions_text')" />
                 <a
                     href="mailto:jeffrey@dissmann.net"
                     class="font-medium text-hort-teal-dark underline hover:text-hort-navy"

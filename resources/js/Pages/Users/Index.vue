@@ -5,6 +5,7 @@ import Avatar from '@/Components/Avatar.vue';
 import { ArrowPathIcon, TrashIcon } from '@heroicons/vue/24/outline';
 import { Head, router, usePage } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
+import { t } from '@/i18n';
 
 const props = defineProps({
     users: {
@@ -34,7 +35,7 @@ function syncFromSlack() {
 }
 
 function destroy(user) {
-    if (confirm(`„${user.name}“ wirklich löschen?`)) {
+    if (confirm(t('users.delete_confirm', { name: user.name }))) {
         router.delete(usersDestroy(user.id).url, { preserveScroll: true });
     }
 }
@@ -53,11 +54,11 @@ function save(user, changes) {
 </script>
 
 <template>
-    <Head title="Benutzer" />
+    <Head :title="$t('users.title')" />
 
     <AuthenticatedLayout>
         <template #header>
-            <h2 class="text-xl font-semibold text-hort-navy">Benutzer</h2>
+            <h2 class="text-xl font-semibold text-hort-navy">{{ $t('users.title') }}</h2>
         </template>
 
         <div class="space-y-4">
@@ -70,8 +71,7 @@ function save(user, changes) {
 
             <div class="flex flex-wrap items-center justify-between gap-3">
                 <p class="text-sm text-hort-navy/60">
-                    Rolle = Zugriff in der App (Erzieher:in oder Elternteil).
-                    Admin = darf Benutzer verwalten. Beides ist unabhängig.
+                    {{ $t('users.intro') }}
                 </p>
                 <button
                     type="button"
@@ -80,7 +80,7 @@ function save(user, changes) {
                     class="flex shrink-0 items-center gap-2 rounded-xl bg-hort-navy px-4 py-2 text-sm font-semibold text-white transition hover:bg-hort-navy/90 disabled:opacity-60"
                 >
                     <ArrowPathIcon class="h-4 w-4" :class="{ 'animate-spin': syncing }" />
-                    Aus Slack importieren
+                    {{ $t('users.import_from_slack') }}
                 </button>
             </div>
 
@@ -95,7 +95,7 @@ function save(user, changes) {
                     <div class="min-w-0 flex-1">
                         <p class="truncate font-semibold text-hort-navy">
                             {{ user.name }}
-                            <span v-if="user.is_self" class="text-hort-teal-dark">· du</span>
+                            <span v-if="user.is_self" class="text-hort-teal-dark">· {{ $t('users.self_suffix') }}</span>
                         </p>
                         <p class="truncate text-sm text-hort-navy/50">{{ user.email }}</p>
                     </div>
@@ -123,7 +123,7 @@ function save(user, changes) {
                             @change="(e) => save(user, { is_admin: e.target.checked })"
                             class="rounded border-gray-300 text-hort-teal-dark focus:ring-hort-teal"
                         />
-                        Admin
+                        {{ $t('users.admin') }}
                     </label>
 
                     <button
@@ -131,7 +131,7 @@ function save(user, changes) {
                         type="button"
                         @click="destroy(user)"
                         class="shrink-0 rounded-lg p-2 text-hort-navy/30 transition hover:bg-red-50 hover:text-red-600"
-                        aria-label="Benutzer löschen"
+                        :aria-label="$t('users.delete_aria')"
                     >
                         <TrashIcon class="h-5 w-5" />
                     </button>

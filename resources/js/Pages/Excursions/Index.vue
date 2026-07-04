@@ -14,11 +14,11 @@ const flash = computed(() => usePage().props.flash?.status);
 </script>
 
 <template>
-    <Head title="Ausflüge" />
+    <Head :title="$t('excursions.heading')" />
 
     <AuthenticatedLayout>
         <template #header>
-            <h2 class="text-xl font-semibold text-hort-navy">Ausflüge</h2>
+            <h2 class="text-xl font-semibold text-hort-navy">{{ $t('excursions.heading') }}</h2>
         </template>
 
         <div class="space-y-6">
@@ -31,22 +31,20 @@ const flash = computed(() => usePage().props.flash?.status);
 
             <!-- How it works -->
             <p class="rounded-2xl bg-white p-4 text-sm text-hort-navy/70 shadow-sm">
-                Plane einen Ausflug und lege eine Frist fest – alle Eltern werden
-                automatisch gefragt, ob ihr Kind mitkommt. Am Ausflugstag
-                erscheinen die zugesagten Kinder im Tagesboard.
+                {{ $t('excursions.intro') }}
             </p>
 
             <Link
                 :href="excursionsCreate().url"
                 class="flex w-full items-center justify-center gap-2 rounded-2xl bg-hort-teal px-6 py-4 text-base font-semibold text-hort-navy shadow-sm transition hover:bg-hort-teal-dark active:scale-[0.99]"
             >
-                <span class="text-xl leading-none">+</span> Ausflug planen
+                <span class="text-xl leading-none">+</span> {{ $t('excursions.plan_title') }}
             </Link>
 
             <!-- Upcoming -->
             <section class="space-y-3">
                 <h3 class="text-sm font-semibold uppercase tracking-wide text-hort-navy/50">
-                    Anstehende Ausflüge
+                    {{ $t('excursions.upcoming_heading') }}
                 </h3>
 
                 <ul v-if="upcoming.length" class="space-y-3">
@@ -60,18 +58,17 @@ const flash = computed(() => usePage().props.flash?.status);
                     v-else
                     class="rounded-2xl border-2 border-dashed border-hort-navy/15 p-6 text-center text-sm text-hort-navy/50"
                 >
-                    Aktuell sind keine Ausflüge geplant. Lege oben den ersten an.
+                    {{ $t('excursions.none_planned_create') }}
                 </p>
             </section>
 
             <!-- History -->
             <section v-if="past.length" class="space-y-3">
                 <h3 class="text-sm font-semibold uppercase tracking-wide text-hort-navy/50">
-                    Vergangene Ausflüge
+                    {{ $t('excursions.past_heading') }}
                 </h3>
                 <p class="-mt-1 text-xs text-hort-navy/45">
-                    Bereits stattgefundene Ausflüge mit den Kindern, die dabei
-                    waren.
+                    {{ $t('excursions.past_hint') }}
                 </p>
 
                 <ul class="space-y-3">

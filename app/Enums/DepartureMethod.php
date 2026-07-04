@@ -14,12 +14,9 @@ enum DepartureMethod: string
     case PickedUp = 'picked_up';
     case SentHome = 'sent_home';
 
-    /** German label for the UI. */
+    /** Localised label for the UI (de/en, per the active locale). */
     public function label(): string
     {
-        return match ($this) {
-            self::PickedUp => 'Wird abgeholt',
-            self::SentHome => 'Geht allein nach Hause',
-        };
+        return __('enums.departure_method.'.$this->value);
     }
 }
