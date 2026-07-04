@@ -16,6 +16,15 @@ declare(strict_types=1);
 
 return [
     [
+        'version' => '2026.07.04',
+        'date' => '2026-07-04',
+        'title' => 'Neu: Englisch als Sprache · New: English language',
+        'items' => [
+            '🌍 Du kannst die App jetzt auf Englisch umstellen: unter „Profil → Sprache" zwischen Deutsch und Englisch wählen. Deutsch bleibt die Standardsprache.',
+            '🌍 You can now switch the app to English: choose between German and English under „Profil → Language". German stays the default.',
+        ],
+    ],
+    [
         'version' => '2026.07.03',
         'date' => '2026-07-03',
         'title' => 'Schreib dem Hort-Manager einfach – direkt in Slack',
