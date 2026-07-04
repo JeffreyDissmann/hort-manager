@@ -8,6 +8,11 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **See the whole group going on an Ausflug**: on the Ausflüge page a collapsible
+  „Alle Kinder anzeigen" link under the parent's own Abstimmung lists every invited
+  child and their status (open-information policy); the Heute board shows who's on
+  today's trip the same way. Adds a shared `CollapsibleChips` disclosure and a
+  `ChildStatusBadge` chip.
 - **German/English UI with an in-app language switch**: German stays the default;
   each user can switch to English under Profil. Built on standard Laravel lang files
   (`lang/de|en/*.php`) that drive both server output (`__()`, incl. enum labels and

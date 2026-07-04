@@ -18,10 +18,11 @@ return [
     [
         'version' => '2026.07.04',
         'date' => '2026-07-04',
-        'title' => 'Neu: Englisch als Sprache · New: English language',
+        'title' => 'Wer kommt beim Ausflug mit? · Und: Englisch als Sprache',
         'items' => [
-            '🌍 Du kannst die App jetzt auf Englisch umstellen: unter „Profil → Sprache" zwischen Deutsch und Englisch wählen. Deutsch bleibt die Standardsprache.',
-            '🌍 You can now switch the app to English: choose between German and English under „Profil → Language". German stays the default.',
+            '🚌 Beim Ausflug siehst du jetzt mit „Alle Kinder anzeigen", wer noch mitkommt – auf der Ausflüge-Seite und am Ausflugstag auch auf „Heute".',
+            '🌍 Du kannst die App-Sprache umstellen: unter „Profil → Sprache" zwischen Deutsch und Englisch wählen. Deutsch bleibt die Standardsprache.',
+            '🌍 You can switch the app language under „Profil → Language" (German/English). German stays the default.',
         ],
     ],
     [
