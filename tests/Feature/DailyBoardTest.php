@@ -9,6 +9,7 @@ use App\Enums\DepartureStatus;
 use App\Enums\UserRole;
 use App\Models\Child;
 use App\Models\DailyDeparture;
+use App\Models\Excursion;
 use App\Models\User;
 use App\Models\WeeklySchedule;
 use App\Notifications\ChildDeparted;
@@ -255,5 +256,29 @@ class DailyBoardTest extends TestCase
             ->patch(route('board.mark', $departure), ['status' => DepartureStatus::Present->value]);
 
         Notification::assertNothingSent();
+    }
+
+    public function test_the_board_lists_who_is_on_todays_excursion(): void
+    {
+        Carbon::setTestNow('2026-07-06'); // Montag
+
+        $emma = Child::factory()->create(['name' => 'Emma']);
+        $mia = Child::factory()->create(['name' => 'Mia']);
+        Child::factory()->create(['name' => 'Nein-Kind']); // invited but not attending
+
+        $excursion = Excursion::factory()->create(['date' => '2026-07-06']);
+        $excursion->children()->attach($emma->id, ['response' => true]);
+        $excursion->children()->attach($mia->id, ['response' => true]);
+
+        $this->actingAs($this->staff())
+            ->get(route('board'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('excursions', 1)
+                ->where('excursions.0.child_count', 2)
+                ->has('excursions.0.children', 2)
+                ->where('excursions.0.children.0', 'Emma') // sorted
+                ->where('excursions.0.children.1', 'Mia')
+                ->etc()
+            );
     }
 }

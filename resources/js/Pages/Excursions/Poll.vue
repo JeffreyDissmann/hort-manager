@@ -1,6 +1,8 @@
 <script setup>
 import { update as pollsUpdate } from '@/routes/polls';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import ChildStatusBadge from '@/Components/ChildStatusBadge.vue';
+import CollapsibleChips from '@/Components/CollapsibleChips.vue';
 import { Head, router, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
 
@@ -10,6 +12,10 @@ defineProps({
 });
 
 const flash = computed(() => usePage().props.flash?.status);
+
+function attendingCount(children) {
+    return children.filter((c) => c.response === true).length;
+}
 
 const weekdays = [
     'Sonntag', 'Montag', 'Dienstag', 'Mittwoch',
@@ -204,6 +210,20 @@ function answer(excursion, child, response) {
                                 </div>
                             </div>
                         </div>
+
+                        <!-- Whole group's status (open information) -->
+                        <CollapsibleChips
+                            v-if="excursion.all_children.length"
+                            open-label="Andere Kinder ausblenden"
+                            :closed-label="`Alle Kinder anzeigen (${attendingCount(excursion.all_children)} von ${excursion.all_children.length} dabei)`"
+                        >
+                            <ChildStatusBadge
+                                v-for="child in excursion.all_children"
+                                :key="child.id"
+                                :name="child.name"
+                                :response="child.response"
+                            />
+                        </CollapsibleChips>
                     </li>
                 </ul>
 
@@ -243,25 +263,13 @@ function answer(excursion, child, response) {
                         </p>
 
                         <div class="mt-2 flex flex-wrap gap-1.5">
-                            <span
+                            <ChildStatusBadge
                                 v-for="child in excursion.children"
                                 :key="child.id"
-                                class="rounded-md px-2 py-0.5 text-xs font-medium"
-                                :class="child.response === true
-                                    ? 'bg-hort-teal/15 text-hort-teal-dark'
-                                    : child.response === false
-                                      ? 'bg-hort-purple/10 text-hort-purple'
-                                      : 'bg-hort-navy/5 text-hort-navy/40'"
-                            >
-                                {{ child.name }}:
-                                {{
-                                    child.response === true
-                                        ? 'dabei'
-                                        : child.response === false
-                                          ? 'nicht dabei'
-                                          : 'keine Rückmeldung'
-                                }}
-                            </span>
+                                :name="child.name"
+                                :response="child.response"
+                                pending-label="keine Rückmeldung"
+                            />
                         </div>
                     </li>
                 </ul>

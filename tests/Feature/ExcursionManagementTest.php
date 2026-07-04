@@ -321,6 +321,28 @@ class ExcursionManagementTest extends TestCase
             );
     }
 
+    public function test_poll_page_shows_the_whole_group_but_only_own_children_to_answer(): void
+    {
+        $parent = $this->parent();
+        $mine = Child::factory()->create(['name' => 'Emma']);
+        $parent->children()->attach($mine);
+        $other = Child::factory()->create(['name' => 'Fremd']); // another family's child
+
+        $excursion = Excursion::factory()->create(['date' => Carbon::tomorrow()->toDateString()]);
+        $excursion->children()->attach($mine->id); // response null
+        $excursion->children()->attach($other->id, ['response' => true]);
+
+        $this->actingAs($parent)
+            ->get(route('polls.index'))
+            ->assertInertia(fn (Assert $page) => $page
+                // Only the parent's own child gets answer buttons …
+                ->has('upcoming.0.children', 1)
+                ->where('upcoming.0.children.0.name', 'Emma')
+                // … but the whole invited group is visible with status.
+                ->has('upcoming.0.all_children', 2)
+            );
+    }
+
     public function test_deleting_an_excursion_removes_its_links(): void
     {
         $excursion = Excursion::factory()->create();

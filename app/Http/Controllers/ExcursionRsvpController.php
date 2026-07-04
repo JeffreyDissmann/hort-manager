@@ -20,26 +20,35 @@ class ExcursionRsvpController extends Controller
         $user = $request->user();
         $childIds = $user->children()->pluck('children.id');
 
+        // Load every invited child (open-information policy) — the parent answers for
+        // their own, and can also see the whole group's status per excursion.
         $excursions = Excursion::query()
             ->whereHas('children', fn ($q) => $q->whereIn('children.id', $childIds))
-            ->with(['children' => fn ($q) => $q->whereIn('children.id', $childIds)->orderBy('name')])
+            ->with(['children' => fn ($q) => $q->orderBy('name')])
             ->orderBy('date')
             ->get()
-            ->map(fn (Excursion $e) => [
-                'id' => $e->id,
-                'name' => $e->name,
-                'date' => $e->date->toDateString(),
-                'depart_at' => $e->depart_at ? substr((string) $e->depart_at, 0, 5) : null,
-                'return_at' => $e->return_at ? substr((string) $e->return_at, 0, 5) : null,
-                'rsvp_deadline' => $e->rsvp_deadline?->toDateString(),
-                'note' => $e->note,
-                'poll_open' => $e->pollIsOpen(),
-                'children' => $e->children->map(fn (Child $c) => [
+            ->map(function (Excursion $e) use ($childIds) {
+                $toRow = fn (Child $c) => [
                     'id' => $c->id,
                     'name' => $c->name,
                     'response' => $c->pivot->response === null ? null : (bool) $c->pivot->response,
-                ]),
-            ]);
+                ];
+
+                return [
+                    'id' => $e->id,
+                    'name' => $e->name,
+                    'date' => $e->date->toDateString(),
+                    'depart_at' => $e->depart_at ? substr((string) $e->depart_at, 0, 5) : null,
+                    'return_at' => $e->return_at ? substr((string) $e->return_at, 0, 5) : null,
+                    'rsvp_deadline' => $e->rsvp_deadline?->toDateString(),
+                    'note' => $e->note,
+                    'poll_open' => $e->pollIsOpen(),
+                    // The parent's own children — the ones with answer buttons.
+                    'children' => $e->children->whereIn('id', $childIds)->values()->map($toRow),
+                    // Everyone invited, with their status (for the "Alle Kinder" list).
+                    'all_children' => $e->children->map($toRow)->values(),
+                ];
+            });
 
         $today = now()->toDateString();
 
