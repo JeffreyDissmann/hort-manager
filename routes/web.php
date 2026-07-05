@@ -15,6 +15,7 @@ use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\SlackCommandController;
 use App\Http\Controllers\SlackEventController;
 use App\Http\Controllers\SlackInteractionController;
+use App\Http\Controllers\TrmnlDashboardController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\WeeklyAdjustmentController;
 use App\Http\Controllers\WeeklyOverviewController;
@@ -58,6 +59,12 @@ Route::get('/hilfe', fn () => Inertia::render('Help'))->name('help');
 
 // Deep-link from a Slack message into the app, signing in via Slack if needed.
 Route::get('/slack/enter', [SlackController::class, 'enter'])->name('slack.enter');
+
+// Read-only JSON feed for the TRMNL staff-room display. No session — authenticated
+// by a signed URL (hort:trmnl-url prints the link to paste into TRMNL's polling field).
+Route::get('/trmnl/dashboard', TrmnlDashboardController::class)
+    ->middleware('signed')
+    ->name('trmnl.dashboard');
 
 // Slack interactive buttons + slash command; authenticated by signature, not a session.
 Route::post('/slack/interactions', [SlackInteractionController::class, 'handle'])
