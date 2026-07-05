@@ -53,7 +53,7 @@ class RespondToSlackCommand implements ShouldQueue
 
     private function post(string $text): void
     {
-        Http::post($this->responseUrl, [
+        Http::connectTimeout(3)->timeout(5)->post($this->responseUrl, [
             'response_type' => 'ephemeral',
             'replace_original' => true,
             'text' => $text,

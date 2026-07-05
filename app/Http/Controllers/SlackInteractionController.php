@@ -58,9 +58,10 @@ class SlackInteractionController extends Controller
     /** Post a confirmation back into the same Slack DM via the interaction's response_url. */
     private function reply(?string $responseUrl, string $text): void
     {
-        // Only ever post back to Slack's own webhook host.
+        // Only ever post back to Slack's own webhook host. Bounded timeout: this
+        // runs inside the request that must ack Slack within 3s.
         if ($responseUrl && str_starts_with($responseUrl, 'https://hooks.slack.com/')) {
-            Http::post($responseUrl, ['text' => $text]);
+            Http::connectTimeout(3)->timeout(5)->post($responseUrl, ['text' => $text]);
         }
     }
 }
