@@ -17,6 +17,8 @@ The UI is in German; code, identifiers and docs are in English.
   daily reminders, an App Home tab and a `/hort` command. See [`docs/slack-setup.md`](docs/slack-setup.md).
 - **Installable PWA + push** — add to home screen; opt-in web-push for departures,
   excursion reminders and new excursions (VAPID, no third-party service). See [`docs/deployment.md`](docs/deployment.md).
+- **TRMNL staff-room display** — a signed, read-only JSON feed powering an e-ink
+  dashboard of today's pickups and the Mo–Fr week. See [`docs/trmnl/`](docs/trmnl/README.md).
 - **User & role management** — admins set roles, manage admins and import workspace members.
 - **Data retention** — old day boards, programs and excursions are pruned automatically.
 - A user-facing **help page** at `/hilfe`.
