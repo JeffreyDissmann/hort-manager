@@ -12,6 +12,7 @@ use App\Services\HortAssistant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
 class SlackEntryTest extends TestCase
@@ -81,6 +82,33 @@ class SlackEntryTest extends TestCase
         Queue::assertPushed(RespondToSlackCommand::class, fn ($job) => $job->slackUserId === 'U9'
             && $job->text === 'Tom ist krank'
             && $job->responseUrl === $url);
+    }
+
+    public function test_the_assistant_command_is_rate_limited_per_user(): void
+    {
+        Queue::fake();
+        config(['services.slack.signing_secret' => 'shh']);
+
+        $post = function (): TestResponse {
+            $body = 'command='.urlencode('/hort').'&user_id=U9&text='.urlencode('Tom ist krank');
+            $timestamp = (string) time();
+            $signature = 'v0='.hash_hmac('sha256', "v0:{$timestamp}:{$body}", 'shh');
+
+            return $this->call('POST', '/slack/commands',
+                ['command' => '/hort', 'user_id' => 'U9', 'text' => 'Tom ist krank'], [], [], [
+                    'CONTENT_TYPE' => 'application/x-www-form-urlencoded',
+                    'HTTP_X-Slack-Request-Timestamp' => $timestamp,
+                    'HTTP_X-Slack-Signature' => $signature,
+                ], $body);
+        };
+
+        // 15 allowed per minute, the rest get a "too many" reply and no job.
+        for ($i = 0; $i < 15; $i++) {
+            $post()->assertOk();
+        }
+        $post()->assertOk()->assertSee('Zu viele', escape: false);
+
+        Queue::assertPushed(RespondToSlackCommand::class, 15);
     }
 
     public function test_the_command_job_replaces_the_placeholder_with_the_answer(): void

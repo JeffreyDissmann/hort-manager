@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Jobs\RespondToSlackCommand;
+use App\Support\AssistantRateLimit;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -21,6 +22,15 @@ class SlackCommandController extends Controller
 
         if ($text === '') {
             return $this->quickLinks();
+        }
+
+        // Each assistant reply makes up to two Ollama calls; cap per user so a
+        // single member can't saturate the queue/model (shared with DMs).
+        if (! AssistantRateLimit::attempt((string) $request->input('user_id'))) {
+            return response()->json([
+                'response_type' => 'ephemeral',
+                'text' => '🙂 Zu viele Anfragen kurz hintereinander – bitte gleich noch einmal.',
+            ]);
         }
 
         RespondToSlackCommand::dispatch(
