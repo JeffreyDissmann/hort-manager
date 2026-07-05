@@ -16,6 +16,11 @@ export function usePush() {
     const page = usePage();
     const vapidPublicKey = page.props.vapidPublicKey;
 
+    // Resolve a translation key against the shared catalog captured at setup —
+    // usePage()'s inject context isn't reliable inside the async handlers below.
+    const t = (key) =>
+        key.split('.').reduce((carry, part) => carry?.[part], page.props.translations) ?? key;
+
     const supported = ref(
         'serviceWorker' in navigator &&
             'PushManager' in window &&
@@ -49,8 +54,8 @@ export function usePush() {
             if (permission !== 'granted') {
                 error.value =
                     permission === 'denied'
-                        ? 'Benachrichtigungen sind für diese Seite blockiert. Bitte erlaube sie in den Browser-Einstellungen.'
-                        : 'Benachrichtigungen wurden nicht erlaubt.';
+                        ? t('profile.push_blocked')
+                        : t('profile.push_not_allowed');
                 return false;
             }
             const registration = await navigator.serviceWorker.ready;
@@ -63,7 +68,7 @@ export function usePush() {
             subscribed.value = true;
             return true;
         } catch {
-            error.value = 'Benachrichtigungen konnten nicht aktiviert werden. Bitte versuche es später erneut.';
+            error.value = t('profile.push_failed');
             return false;
         } finally {
             busy.value = false;

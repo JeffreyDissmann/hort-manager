@@ -43,4 +43,9 @@ return [
     'delete_confirm_title' => 'Möchtest du dein Konto wirklich löschen?',
     'delete_confirm_description' => 'Wenn dein Konto gelöscht wird, werden alle zugehörigen Daten dauerhaft entfernt. Bitte gib dein Passwort ein, um die Löschung zu bestätigen.',
     'password' => 'Passwort',
+
+    // Push notification errors (from usePush)
+    'push_blocked' => 'Benachrichtigungen sind für diese Seite blockiert. Bitte erlaube sie in den Browser-Einstellungen.',
+    'push_not_allowed' => 'Benachrichtigungen wurden nicht erlaubt.',
+    'push_failed' => 'Benachrichtigungen konnten nicht aktiviert werden. Bitte versuche es später erneut.',
 ];
