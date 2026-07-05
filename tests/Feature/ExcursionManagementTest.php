@@ -181,6 +181,24 @@ class ExcursionManagementTest extends TestCase
         Notification::assertNotSentTo($answeredGuardian, ExcursionRsvpReminder::class);
     }
 
+    public function test_rsvp_reminder_reaches_a_push_only_guardian(): void
+    {
+        Notification::fake();
+        Carbon::setTestNow(Carbon::parse('2026-06-27'));
+
+        $excursion = Excursion::factory()->create(['date' => '2026-06-29', 'rsvp_deadline' => '2026-06-27']);
+        $child = Child::factory()->create();
+        // No slack_id — reachable only via web push.
+        $guardian = User::factory()->create(['role' => UserRole::Parent, 'slack_id' => null]);
+        $guardian->updatePushSubscription('https://push.example/g', 'k', 'a');
+        $child->guardians()->attach($guardian);
+        $excursion->children()->attach($child->id); // response stays null
+
+        $this->artisan('excursions:remind-rsvps')->assertSuccessful();
+
+        Notification::assertSentTo($guardian, ExcursionRsvpReminder::class);
+    }
+
     public function test_index_separates_upcoming_and_past_excursions(): void
     {
         Carbon::setTestNow(Carbon::parse('2026-06-24'));

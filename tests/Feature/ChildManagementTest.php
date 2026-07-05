@@ -163,6 +163,23 @@ class ChildManagementTest extends TestCase
         $this->assertSame(2, $child->weeklySchedules()->count());
     }
 
+    public function test_an_invalid_schedule_does_not_persist_the_name_change(): void
+    {
+        $child = Child::factory()->create(['name' => 'Original']);
+
+        $this->actingAs($this->staff())
+            ->patch(route('children.update', $child), [
+                'name' => 'Renamed',
+                'schedule' => [
+                    ['weekday' => 9, 'planned_time' => '16:00'], // weekday out of 1..5 → validation fails
+                ],
+            ])
+            ->assertSessionHasErrors('schedule.0.weekday');
+
+        // Nothing applied: the name is unchanged.
+        $this->assertSame('Original', $child->refresh()->name);
+    }
+
     public function test_a_weekday_can_carry_a_comment(): void
     {
         $child = Child::factory()->create();

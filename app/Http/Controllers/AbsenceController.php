@@ -20,7 +20,9 @@ class AbsenceController extends Controller
         $validated = $request->validate([
             'child_id' => ['required', 'exists:children,id'],
             'from' => ['required', 'date', 'after_or_equal:today'],
-            'to' => ['required', 'date', 'after_or_equal:from'],
+            // Cap the span at ~a school year: the loop below writes one row per day,
+            // so an unbounded range would flood the DB from a single request.
+            'to' => ['required', 'date', 'after_or_equal:from', 'before_or_equal:'.now()->addYear()->toDateString()],
             'reason' => ['required', Rule::enum(AbsenceReason::class)],
         ]);
 

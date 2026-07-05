@@ -7,6 +7,7 @@ namespace Tests\Feature;
 use App\Enums\UserRole;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Exceptions;
 use Laravel\Socialite\Contracts\Provider;
 use Laravel\Socialite\Contracts\User as SocialiteUser;
 use Laravel\Socialite\Facades\Socialite;
@@ -165,5 +166,22 @@ class SlackAuthTest extends TestCase
 
         $this->assertAuthenticated();
         $this->assertDatabaseHas('users', ['slack_id' => 'Uinsider']);
+    }
+
+    public function test_a_failed_oauth_callback_is_reported_and_shown_gracefully(): void
+    {
+        Exceptions::fake();
+
+        $provider = Mockery::mock(Provider::class);
+        $provider->shouldReceive('setUserScopes')->andReturnSelf();
+        $provider->shouldReceive('user')->andThrow(new \RuntimeException('slack boom'));
+        Socialite::shouldReceive('driver')->with('slack')->andReturn($provider);
+
+        $this->get(route('slack.callback'))
+            ->assertRedirect(route('login'))
+            ->assertSessionHasErrors('slack');
+
+        Exceptions::assertReported(\RuntimeException::class);
+        $this->assertGuest();
     }
 }

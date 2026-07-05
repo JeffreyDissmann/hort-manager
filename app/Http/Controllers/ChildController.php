@@ -10,6 +10,7 @@ use App\Models\Child;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -114,50 +115,58 @@ class ChildController extends Controller
     {
         $this->authorize('update', $child);
 
-        $child->update($this->validateChild($request));
+        // Validate everything up front so a later failure can't leave a partially
+        // applied update (e.g. name saved but the schedule rejected).
+        $childData = $this->validateChild($request);
 
-        $validated = $request->validate([
+        $schedule = $request->validate([
             'schedule' => ['array'],
             'schedule.*.weekday' => ['required', 'integer', 'between:1,5'],
             'schedule.*.planned_time' => ['nullable', 'date_format:H:i'],
             'schedule.*.method' => ['nullable', Rule::enum(DepartureMethod::class)],
             'schedule.*.comment' => ['nullable', 'string', 'max:255'],
-        ]);
-
-        foreach ($validated['schedule'] ?? [] as $row) {
-            // A weekday counts as a Hort day only when a pickup time is set.
-            if (empty($row['planned_time'])) {
-                $child->weeklySchedules()->where('weekday', $row['weekday'])->delete();
-
-                continue;
-            }
-
-            $child->weeklySchedules()->updateOrCreate(
-                ['weekday' => $row['weekday']],
-                [
-                    'planned_time' => $row['planned_time'],
-                    'method' => $row['method'] ?? null,
-                    'comment' => $row['comment'] ?? null,
-                ],
-            );
-        }
+        ])['schedule'] ?? [];
 
         // Staff or a guardian may set which parents are linked to the child.
+        $guardianIds = null;
         if ($request->user()->can('manageGuardians', $child)) {
-            $guardians = $request->validate([
+            $guardianIds = $request->validate([
                 'guardians' => ['array'],
                 'guardians.*' => [Rule::exists('users', 'id')->where('role', UserRole::Parent->value)],
-            ]);
-
-            $ids = $guardians['guardians'] ?? [];
+            ])['guardians'] ?? [];
 
             // A parent can't drop themselves as guardian (they'd lose access).
             if (! $request->user()->isStaff()) {
-                $ids[] = $request->user()->id;
+                $guardianIds[] = $request->user()->id;
+            }
+        }
+
+        // All validated — apply atomically.
+        DB::transaction(function () use ($child, $childData, $schedule, $guardianIds) {
+            $child->update($childData);
+
+            foreach ($schedule as $row) {
+                // A weekday counts as a Hort day only when a pickup time is set.
+                if (empty($row['planned_time'])) {
+                    $child->weeklySchedules()->where('weekday', $row['weekday'])->delete();
+
+                    continue;
+                }
+
+                $child->weeklySchedules()->updateOrCreate(
+                    ['weekday' => $row['weekday']],
+                    [
+                        'planned_time' => $row['planned_time'],
+                        'method' => $row['method'] ?? null,
+                        'comment' => $row['comment'] ?? null,
+                    ],
+                );
             }
 
-            $child->guardians()->sync(array_unique($ids));
-        }
+            if ($guardianIds !== null) {
+                $child->guardians()->sync(array_unique($guardianIds));
+            }
+        });
 
         return redirect()
             ->route('children.index')

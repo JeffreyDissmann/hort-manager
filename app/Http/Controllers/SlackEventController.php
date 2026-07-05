@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Jobs\HandleSlackDirectMessage;
 use App\Jobs\PublishSlackHome;
+use App\Support\AssistantRateLimit;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 
@@ -41,7 +42,9 @@ class SlackEventController extends Controller
             && ($event['channel_type'] ?? null) === 'im'
             && empty($event['bot_id'])
             && empty($event['subtype'])
-            && ! empty($event['user'])) {
+            && ! empty($event['user'])
+            // Over the per-user assistant limit (shared with /hort) → drop the excess DM.
+            && AssistantRateLimit::attempt((string) $event['user'])) {
             HandleSlackDirectMessage::dispatch(
                 $event['user'],
                 (string) ($event['text'] ?? ''),

@@ -98,6 +98,23 @@ class AbsenceTest extends TestCase
             ])->assertSessionHasErrors('from');
     }
 
+    public function test_an_absurdly_long_date_range_is_rejected(): void
+    {
+        $this->travelTo(Carbon::parse('2026-06-22'));
+        $parent = User::factory()->create(['role' => UserRole::Parent]);
+        $child = Child::factory()->create();
+        $parent->children()->attach($child);
+
+        $this->actingAs($parent)->post(route('absences.store'), [
+            'child_id' => $child->id,
+            'from' => '2026-06-22',
+            'to' => '9999-12-31', // would otherwise loop ~3M times
+            'reason' => 'sick',
+        ])->assertSessionHasErrors('to');
+
+        $this->assertDatabaseCount('absences', 0);
+    }
+
     public function test_an_absent_child_is_hidden_from_the_board_and_listed(): void
     {
         $this->travelTo(Carbon::parse('2026-06-22')); // Monday

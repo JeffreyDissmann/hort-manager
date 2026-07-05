@@ -43,4 +43,9 @@ return [
     'delete_confirm_title' => 'Are you sure you want to delete your account?',
     'delete_confirm_description' => 'Once your account is deleted, all of its resources and data will be permanently removed. Please enter your password to confirm the deletion.',
     'password' => 'Password',
+
+    // Push notification errors (from usePush)
+    'push_blocked' => 'Notifications are blocked for this site. Please allow them in your browser settings.',
+    'push_not_allowed' => 'Notifications were not allowed.',
+    'push_failed' => 'Could not enable notifications. Please try again later.',
 ];

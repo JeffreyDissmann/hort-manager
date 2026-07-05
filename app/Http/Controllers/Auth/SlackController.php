@@ -71,11 +71,13 @@ class SlackController extends Controller
     }
 
     /** Handle the Slack callback: find or create the user, then sign them in. */
-    public function callback(): RedirectResponse
+    public function callback(Request $request): RedirectResponse
     {
         try {
             $slackUser = Socialite::driver('slack')->setUserScopes(self::SCOPES)->user();
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            report($e); // surface misconfig / Slack API changes instead of swallowing them
+
             return $this->failed('Die Slack-Anmeldung ist fehlgeschlagen. Bitte versuche es erneut.');
         }
 
@@ -125,6 +127,9 @@ class SlackController extends Controller
         }
 
         $user->save();
+
+        // Rotate the session id on login to prevent session fixation.
+        $request->session()->regenerate();
 
         Auth::login($user, remember: true);
 
