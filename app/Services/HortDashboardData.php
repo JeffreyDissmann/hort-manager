@@ -106,7 +106,9 @@ class HortDashboardData
     /** @return array<int, array<string, mixed>> */
     private function week(): array
     {
-        $weekStart = Carbon::today()->startOfWeek(Carbon::MONDAY);
+        // On weekends the target day is already next Monday, so the week rolls
+        // straight over to the coming Mo–Fr instead of showing the finished one.
+        $weekStart = $this->targetDate()->startOfWeek(Carbon::MONDAY);
         $todayString = Carbon::today()->toDateString();
         $days = collect(range(0, 4))->map(fn (int $i) => $weekStart->copy()->addDays($i));
         $dateStrings = $days->map->toDateString()->all();

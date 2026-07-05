@@ -34,6 +34,22 @@ class TrmnlDashboardTest extends TestCase
         $this->get(route('trmnl.dashboard'))->assertForbidden();
     }
 
+    public function test_on_the_weekend_it_targets_the_coming_week(): void
+    {
+        Carbon::setTestNow('2026-07-11'); // Saturday
+        $tom = Child::factory()->create(['name' => 'Tom']);
+        $this->scheduleFor($tom, 1, '15:00'); // Monday
+
+        $this->getJson(URL::signedRoute('trmnl.dashboard'))
+            ->assertOk()
+            // "Today" jumps to the coming Monday …
+            ->assertJsonPath('today.weekday', 'Montag')
+            ->assertJsonPath('today.date', '13.07.2026')
+            // … and the week starts there too (not the finished one).
+            ->assertJsonPath('week.0.date', '13.07.')
+            ->assertJsonPath('week.0.is_today', false); // it's actually Saturday
+    }
+
     public function test_the_command_prints_a_signed_dashboard_url(): void
     {
         $this->artisan('hort:trmnl-url')
