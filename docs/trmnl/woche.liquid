@@ -1,0 +1,43 @@
+{%- comment -%}
+  TRMNL private plugin — Screen 2 "DIESE WOCHE": Mo–Fr pickup overview.
+  Paste into the plugin's Markup (Full view). Data comes from the polled
+  /trmnl/dashboard feed; fields under `week` (see docs/trmnl/README.md).
+{%- endcomment -%}
+
+<div class="view view--full">
+  <div class="layout">
+    <div class="columns">
+      {% for day in week %}
+        <div class="column">
+          <span class="title title--small{% if day.is_today %} label--underline{% endif %}">{{ day.weekday }} {{ day.date }}</span>
+
+          {% if day.excursion %}
+            <div class="item">
+              <div class="content"><span class="label label--small">🚌 {{ day.excursion }}</span></div>
+            </div>
+          {% endif %}
+
+          {% for slot in day.departures %}
+            <div class="item">
+              <div class="content">
+                <div class="flex gap--small">
+                  <span class="label label--small label--underline">{{ slot.time }}</span>
+                  <span class="label label--small">{{ slot.names | join: ', ' }}</span>
+                </div>
+              </div>
+            </div>
+          {% endfor %}
+
+          {% unless day.departures.size > 0 or day.excursion %}
+            <div class="item"><div class="content"><span class="label label--small">–</span></div></div>
+          {% endunless %}
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="title_bar">
+    <span class="title">Hort · Diese Woche</span>
+    <span class="instance">Stand {{ generated_at }}</span>
+  </div>
+</div>
