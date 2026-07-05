@@ -12,20 +12,24 @@
           <span class="title title--small{% if day.is_today %} label--underline{% endif %}">{{ day.weekday }} {{ day.date }}</span>
 
           {% if day.excursion %}
-            <span class="label label--small">🚌 {{ day.excursion }}</span>
+            <div class="item">
+              <div class="content"><span class="label label--small">🚌 {{ day.excursion }}</span></div>
+            </div>
           {% endif %}
 
           {% for slot in day.departures %}
             <div class="item">
-              <div class="meta"><span class="label label--small">{{ slot.time }}</span></div>
               <div class="content">
-                <span class="description">{{ slot.names | join: ', ' }}</span>
+                <div class="flex gap--small">
+                  <span class="label label--small label--underline">{{ slot.time }}</span>
+                  <span class="label label--small">{{ slot.names | join: ', ' }}</span>
+                </div>
               </div>
             </div>
           {% endfor %}
 
           {% unless day.departures.size > 0 or day.excursion %}
-            <span class="label label--small">–</span>
+            <div class="item"><div class="content"><span class="label label--small">–</span></div></div>
           {% endunless %}
         </div>
       {% endfor %}

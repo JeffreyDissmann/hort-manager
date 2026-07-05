@@ -6,51 +6,55 @@
 
 <div class="view view--full">
   <div class="layout">
-
-    <div class="richtext">
-      <span class="value value--large">{{ today.present_count }}</span>
-      <span class="label">Kinder noch da{% if today.next_pickup %} · nächste Abholung {{ today.next_pickup }}{% endif %}</span>
-    </div>
-
     <div class="columns">
       <div class="column">
-        {% for slot in today.departures %}
-          <div class="item">
-            <div class="meta"><span class="label label--small label--underline">{{ slot.time }}</span></div>
-            <div class="content">
-              <span class="title title--small">
-                {%- for kid in slot.children -%}
-                  {%- if kid.left %}✓ {% endif -%}
-                  {{ kid.name }}
-                  {%- if kid.method == 'sent_home' %} (allein){% endif -%}
-                  {%- if kid.changed %} ✱{% endif -%}
-                  {%- if kid.excursion %} 🚌{% endif -%}
-                  {%- unless forloop.last %}, {% endunless -%}
-                {%- endfor -%}
-              </span>
-            </div>
+
+        <div class="richtext richtext--center">
+          <span class="value value--large">{{ today.present_count }}</span>
+          <span class="label">Kinder noch da{% if today.next_pickup %} · nächste Abholung {{ today.next_pickup }} Uhr{% endif %}</span>
+        </div>
+
+        <table class="table">
+          <tbody>
+            {% for slot in today.departures %}
+              <tr>
+                <td class="w--16"><span class="value value--small">{{ slot.time }}</span></td>
+                <td>
+                  {%- for kid in slot.children -%}
+                    <span class="label">
+                      {%- if kid.left %}✓ {% endif -%}
+                      {{ kid.name }}
+                      {%- if kid.alone %} (allein){% endif -%}
+                      {%- if kid.excursion %} 🚌{% endif -%}
+                    </span>
+                    {%- if kid.deviation %}<span class="label label--underline">⚠ {{ kid.deviation }}</span>{% endif -%}
+                    {%- unless forloop.last %}<span class="label">·</span>{% endunless -%}
+                  {%- endfor -%}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+
+        {% if today.absent.size > 0 %}
+          <div class="richtext">
+            <span class="label label--underline">Heute nicht da:</span>
+            <span class="label label--small">
+              {%- for a in today.absent -%}{{ a.name }} ({{ a.reason }}){% unless forloop.last %} · {% endunless %}{%- endfor -%}
+            </span>
           </div>
-        {% endfor %}
+        {% endif %}
+
+        {% if today.program.lunch or today.program.activity or today.program.homework %}
+          <div class="flex gap--small">
+            {% if today.program.lunch %}<span class="label label--small">🍽 {{ today.program.lunch }}</span>{% endif %}
+            {% if today.program.activity %}<span class="label label--small">🎨 {{ today.program.activity }}</span>{% endif %}
+            {% if today.program.homework %}<span class="label label--small">📚 {{ today.program.homework }}</span>{% endif %}
+          </div>
+        {% endif %}
+
       </div>
     </div>
-
-    {% if today.absent.size > 0 %}
-      <div class="richtext">
-        <span class="label label--underline">Heute nicht da</span>
-        <span class="label label--small">
-          {%- for a in today.absent -%}{{ a.name }} ({{ a.reason }}){% unless forloop.last %} · {% endunless %}{%- endfor -%}
-        </span>
-      </div>
-    {% endif %}
-
-    {% if today.program.lunch or today.program.activity or today.program.homework %}
-      <div class="richtext">
-        {% if today.program.lunch %}<span class="label label--small">🍽 {{ today.program.lunch }}</span>{% endif %}
-        {% if today.program.activity %}<span class="label label--small">🎨 {{ today.program.activity }}</span>{% endif %}
-        {% if today.program.homework %}<span class="label label--small">📚 {{ today.program.homework }}</span>{% endif %}
-      </div>
-    {% endif %}
-
   </div>
 
   <div class="title_bar">

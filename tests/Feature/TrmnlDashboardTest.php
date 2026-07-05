@@ -34,6 +34,22 @@ class TrmnlDashboardTest extends TestCase
         $this->get(route('trmnl.dashboard'))->assertForbidden();
     }
 
+    public function test_on_the_weekend_it_targets_the_coming_week(): void
+    {
+        Carbon::setTestNow('2026-07-11'); // Saturday
+        $tom = Child::factory()->create(['name' => 'Tom']);
+        $this->scheduleFor($tom, 1, '15:00'); // Monday
+
+        $this->getJson(URL::signedRoute('trmnl.dashboard'))
+            ->assertOk()
+            // "Today" jumps to the coming Monday …
+            ->assertJsonPath('today.weekday', 'Montag')
+            ->assertJsonPath('today.date', '13.07.2026')
+            // … and the week starts there too (not the finished one).
+            ->assertJsonPath('week.0.date', '13.07.')
+            ->assertJsonPath('week.0.is_today', false); // it's actually Saturday
+    }
+
     public function test_the_command_prints_a_signed_dashboard_url(): void
     {
         $this->artisan('hort:trmnl-url')
@@ -71,12 +87,14 @@ class TrmnlDashboardTest extends TestCase
             ->assertJsonPath('today.weekday', 'Montag')
             ->assertJsonPath('today.present_count', 3) // Tom, Lena, Max (not Emma)
             ->assertJsonPath('today.next_pickup', '14:00')
-            // Grouped by time, ascending; 14:00 = Max (changed), 15:00 = Lena+Tom.
+            // Grouped by time, ascending; 14:00 = Max (moved from 16:00), 15:00 = Lena+Tom.
             ->assertJsonPath('today.departures.0.time', '14:00')
             ->assertJsonPath('today.departures.0.children.0.name', 'Max')
-            ->assertJsonPath('today.departures.0.children.0.changed', true)
+            ->assertJsonPath('today.departures.0.children.0.deviation', 'statt 16:00 Uhr')
             ->assertJsonPath('today.departures.1.time', '15:00')
             ->assertJsonPath('today.departures.1.children.0.name', 'Lena')
+            ->assertJsonPath('today.departures.1.children.0.alone', true) // usual, no deviation
+            ->assertJsonPath('today.departures.1.children.0.deviation', null)
             ->assertJsonPath('today.departures.1.children.1.name', 'Tom')
             ->assertJsonPath('today.absent.0.name', 'Emma')
             // Five weekdays; Monday reflects the override.
@@ -85,5 +103,25 @@ class TrmnlDashboardTest extends TestCase
             ->assertJsonPath('week.0.is_today', true)
             ->assertJsonPath('week.0.departures.0.time', '14:00')
             ->assertJsonPath('week.0.departures.0.names.0', 'Max');
+    }
+
+    public function test_an_unusual_go_home_alone_is_flagged(): void
+    {
+        Carbon::setTestNow('2026-07-06'); // Monday
+        $leo = Child::factory()->create(['name' => 'Leo']);
+        $this->scheduleFor($leo, 1, '15:00', DepartureMethod::PickedUp); // usually picked up
+
+        // Same time, but today he's allowed to walk home alone.
+        DailyDeparture::create([
+            'child_id' => $leo->id, 'date' => '2026-07-06',
+            'planned_time' => '15:00', 'planned_method' => DepartureMethod::SentHome,
+            'status' => DepartureStatus::Present,
+        ]);
+
+        $this->getJson(URL::signedRoute('trmnl.dashboard'))
+            ->assertOk()
+            ->assertJsonPath('today.departures.0.children.0.name', 'Leo')
+            ->assertJsonPath('today.departures.0.children.0.alone', true)
+            ->assertJsonPath('today.departures.0.children.0.deviation', 'heute allein');
     }
 }
