@@ -34,6 +34,13 @@ class TrmnlDashboardTest extends TestCase
         $this->get(route('trmnl.dashboard'))->assertForbidden();
     }
 
+    public function test_the_command_prints_a_signed_dashboard_url(): void
+    {
+        $this->artisan('hort:trmnl-url')
+            ->expectsOutputToContain('/trmnl/dashboard?signature=')
+            ->assertSuccessful();
+    }
+
     public function test_the_signed_feed_returns_todays_departures_and_the_week(): void
     {
         Carbon::setTestNow('2026-07-06'); // Monday
