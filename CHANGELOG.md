@@ -8,6 +8,12 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **TRMNL staff-room dashboard**: a read-only JSON feed (`GET /trmnl/dashboard`,
+  authenticated by a Laravel signed URL) that drives an e-ink display of today's
+  pickup timeline and the Mo–Fr week — focused on who leaves when, plus present
+  count, absences and the day's program. `HortDashboardData` derives everything
+  from the Stammplan + same-day overrides without seeding rows; `hort:trmnl-url`
+  prints the link to paste into TRMNL. Templates + setup in [`docs/trmnl/`](docs/trmnl/README.md).
 - **See the whole group going on an Ausflug**: on the Ausflüge page a collapsible
   „Alle Kinder anzeigen" link under the parent's own Abstimmung lists every invited
   child and their status (open-information policy); the Heute board shows who's on
