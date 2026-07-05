@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Enums\DepartureMethod;
 use App\Enums\DepartureStatus;
 use App\Models\Absence;
 use App\Models\Child;
@@ -79,10 +80,11 @@ class HortDashboardData
             return [
                 'time' => $time,
                 'name' => $child->name,
-                'method' => $method,
-                'changed' => $this->isChanged($schedule, $override, $time, $method),
+                'alone' => $method === DepartureMethod::SentHome->value,
                 'left' => ($override?->status ?? DepartureStatus::Present)->hasLeft(),
                 'excursion' => $onExcursion->contains($child->id),
+                // German note when today deviates from the Stammplan, else null.
+                'deviation' => $this->deviation($schedule, $override, $time, $method),
             ];
         })->filter();
 
@@ -168,10 +170,28 @@ class HortDashboardData
             ->all();
     }
 
-    private function isChanged(?WeeklySchedule $schedule, ?DailyDeparture $override, string $time, ?string $method): bool
+    /**
+     * How today deviates from the child's Stammplan, as a short German note
+     * ("heute allein", "statt 16:00 Uhr", or both) — null when nothing changed.
+     */
+    private function deviation(?WeeklySchedule $schedule, ?DailyDeparture $override, string $time, ?string $method): ?string
     {
-        return $override !== null
-            && ($time !== $this->short($schedule?->planned_time) || $method !== $schedule?->method?->value);
+        if ($override === null) {
+            return null;
+        }
+
+        $standardTime = $this->short($schedule?->planned_time);
+        $parts = [];
+
+        if ($method !== $schedule?->method?->value) {
+            $parts[] = $method === DepartureMethod::SentHome->value ? 'heute allein' : 'heute abgeholt';
+        }
+
+        if ($time !== $standardTime) {
+            $parts[] = $standardTime ? 'statt '.$standardTime.' Uhr' : 'geänderte Zeit';
+        }
+
+        return $parts === [] ? null : implode(', ', $parts);
     }
 
     /** @return array<string, mixed> */
