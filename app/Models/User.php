@@ -100,6 +100,19 @@ class User extends Authenticatable implements HasLocalePreference
     }
 
     /**
+     * Limit to users reachable by any notification channel — a Slack id and/or a
+     * web-push subscription. The notification's via() picks the channel(s) per user.
+     *
+     * @param  Builder<User>  $query
+     */
+    public function scopeReachable(Builder $query): void
+    {
+        $query->where(fn (Builder $q) => $q
+            ->whereNotNull('slack_id')
+            ->orWhereHas('pushSubscriptions'));
+    }
+
+    /**
      * Limit to users who are a guardian of at least one child.
      *
      * @param  Builder<User>  $query

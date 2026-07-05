@@ -14,13 +14,8 @@ class DailyDepartureObserver
     public function updated(DailyDeparture $departure): void
     {
         if ($departure->wasChanged('left_at') && $departure->left_at !== null) {
-            // Anyone reachable: a Slack id and/or a web-push subscription. The
-            // notification's via() picks the right channel(s) per guardian.
-            $guardians = $departure->child->guardians()
-                ->where(fn ($query) => $query
-                    ->whereNotNull('slack_id')
-                    ->orWhereHas('pushSubscriptions'))
-                ->get();
+            // Anyone reachable by Slack and/or web push; via() picks the channel(s).
+            $guardians = $departure->child->guardians()->reachable()->get();
 
             Notification::send($guardians, new ChildDeparted($departure));
         }
