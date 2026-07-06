@@ -60,6 +60,13 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **Wochenplan and Stammplan are now two separate pages.** The navigable week view
+  (`/wochenplan`) shows only the per-week plan, with a strong current-week cue (a
+  coloured „Aktuelle Woche" / „Nächste Woche" / „in X Wochen" pill plus a highlighted
+  today-column), while the read-only standard timetable moves to its own „Stammplan"
+  page (`/stammplan`, `StandardPlanController`) and navbar entry for parents and
+  staff. `ResolvesWeek` now exposes `week.offset` and per-day `is_today`; the former
+  „Abholplan" label is renamed „Wochenplan". Idea by Yvonne.
 - **Slack deep-links open the normal login screen** instead of forcing "Sign in with
   Slack". Every Slack button routes through `slack.enter`, which now shows the login
   page (Slack, e-mail/password, or password reset) when signed out and still lands on
