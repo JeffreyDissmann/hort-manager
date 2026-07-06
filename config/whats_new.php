@@ -16,6 +16,16 @@ declare(strict_types=1);
 
 return [
     [
+        'version' => '2026.07.06',
+        'date' => '2026-07-06',
+        'title' => 'Übersichtlicherer Wochenplan – und der Stammplan als eigene Seite',
+        'items' => [
+            '📅 Der „Wochenplan" zeigt jetzt viel deutlicher, welche Woche du gerade ansiehst: „Aktuelle Woche", „Nächste Woche" oder „in 2 Wochen" – und der heutige Tag ist farbig hervorgehoben.',
+            '🗂️ Der feste Standard-Wochenplan („Stammplan") hat jetzt eine eigene Seite im Menü. So sind die regulären Zeiten und der aktuelle Wochenplan sauber getrennt.',
+            '🙌 Idee dazu von Yvonne – vielen Dank!',
+        ],
+    ],
+    [
         'version' => '2026.07.04',
         'date' => '2026-07-04',
         'title' => 'Wer kommt beim Ausflug mit? · Und: Englisch als Sprache',
