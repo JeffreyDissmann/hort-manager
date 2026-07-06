@@ -24,9 +24,9 @@ const props = defineProps({
     methodOptions: { type: Array, default: () => [] },
 });
 
-// The picked week's column headers show the weekday + its date.
+// The picked week's column headers show the weekday + its date; today is flagged.
 const weekColumns = computed(() =>
-    props.weekDays.map((d) => ({ label: d.label, sublabel: d.date_label })),
+    props.weekDays.map((d) => ({ label: d.label, sublabel: d.date_label, is_today: d.is_today })),
 );
 
 function goWeek(date) {
@@ -198,13 +198,22 @@ function cancelAbsence() {
                             <div
                                 v-for="(day, i) in child.days"
                                 :key="day.date"
-                                class="text-center"
-                                :class="day.past ? 'opacity-40' : ''"
+                                class="rounded-lg text-center"
+                                :class="[
+                                    day.past ? 'opacity-40' : '',
+                                    weekDays[i].is_today ? 'bg-hort-teal/10 ring-1 ring-hort-teal/40' : '',
+                                ]"
                             >
-                                <div class="text-[11px] font-medium text-hort-navy/40">
-                                    {{ weekDays[i].label }}
+                                <div
+                                    class="text-[11px] font-medium"
+                                    :class="weekDays[i].is_today ? 'text-hort-teal-dark' : 'text-hort-navy/40'"
+                                >
+                                    {{ weekDays[i].label }}<span v-if="weekDays[i].is_today"> · {{ $t('common.today') }}</span>
                                 </div>
-                                <div class="text-[10px] text-hort-navy/30">
+                                <div
+                                    class="text-[10px]"
+                                    :class="weekDays[i].is_today ? 'font-semibold text-hort-teal-dark' : 'text-hort-navy/30'"
+                                >
                                     {{ weekDays[i].date_label }}
                                 </div>
                                 <component
