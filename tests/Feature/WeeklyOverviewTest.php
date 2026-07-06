@@ -27,24 +27,13 @@ class WeeklyOverviewTest extends TestCase
         $this->get(route('weekly-plan'))->assertRedirect(route('login'));
     }
 
-    public function test_standard_timetable_places_each_child_in_their_time_slot(): void
+    public function test_this_week_is_scoped_to_the_parents_own_children(): void
     {
+        Carbon::setTestNow('2026-07-06'); // Monday
         $emma = Child::factory()->create(['name' => 'Emma']);
-        $emma->weeklySchedules()->create([
-            'weekday' => 1, // Montag
-            'planned_time' => '14:00',
-            'method' => DepartureMethod::PickedUp,
-        ]);
+        $emma->weeklySchedules()->create(['weekday' => 1, 'planned_time' => '14:00', 'method' => DepartureMethod::PickedUp]);
+        Child::factory()->create(['name' => 'Mia']); // someone else's child
 
-        $mia = Child::factory()->create(['name' => 'Mia']);
-        $mia->weeklySchedules()->create([
-            'weekday' => 1, // Montag
-            'planned_time' => '15:00',
-            'method' => DepartureMethod::SentHome,
-        ]);
-
-        // The standard timetable shows every child (open information policy),
-        // but "Diese Woche" is scoped to the parent's own children.
         $parent = User::factory()->create(['role' => UserRole::Parent]);
         $parent->children()->attach($emma);
 
@@ -56,8 +45,33 @@ class WeeklyOverviewTest extends TestCase
                 // Only Emma (their own child) in the editable current week.
                 ->has('currentWeek', 1)
                 ->where('currentWeek.0.name', 'Emma')
-                // Standard timetable still lists everyone: slots 14:00, 14:30, 15:00.
-                ->has('standard', 3)
+                // The week payload now carries relative offset + today flags.
+                ->where('week.offset', 0)
+                ->where('week.is_current', true)
+                ->where('weekDays.0.is_today', true) // Monday
+                // The standard timetable moved to its own page.
+                ->missing('standard')
+            );
+    }
+
+    public function test_the_standard_plan_page_lists_every_child(): void
+    {
+        $emma = Child::factory()->create(['name' => 'Emma']);
+        $emma->weeklySchedules()->create(['weekday' => 1, 'planned_time' => '14:00', 'method' => DepartureMethod::PickedUp]);
+
+        $mia = Child::factory()->create(['name' => 'Mia']);
+        $mia->weeklySchedules()->create(['weekday' => 1, 'planned_time' => '15:00', 'method' => DepartureMethod::SentHome]);
+
+        // Open information: a parent sees every child's standard plan, not just their own.
+        $parent = User::factory()->create(['role' => UserRole::Parent]);
+        $parent->children()->attach($emma);
+
+        $this->actingAs($parent)
+            ->get(route('standard-plan'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('StandardPlan/Index')
+                ->has('standard', 3) // slots 14:00, 14:30, 15:00
                 ->where('standard.0.time', '14:00')
                 ->where('standard.0.days.0.0.name', 'Emma')
                 ->where('standard.2.time', '15:00')

@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 return [
-    'title' => 'Pickup plan',
+    'title' => 'Weekly plan',
 
     'your_children' => 'Your children',
     'tap_to_change' => 'Tap to change',
@@ -18,6 +18,9 @@ return [
 
     'whole_week' => 'Whole week · all children',
     'empty_week' => 'No pickup times or programs have been set for this week yet.',
+
+    'to_standard_hint' => 'Change the regular pickup times for every week?',
+    'to_standard_link' => 'To the standard plan',
 
     'legend_picked_up' => 'picked up',
     'legend_alone' => 'goes alone',

@@ -1,8 +1,7 @@
 <script setup>
-import { weeklyPlan } from '@/routes';
+import { weeklyPlan, standardPlan } from '@/routes';
 import { adjust as weeklyPlanAdjust, reset as weeklyPlanReset } from '@/routes/weekly-plan';
 import { store as absenceStore, destroy as absenceDestroy } from '@/routes/absences';
-import { index as childrenIndex } from '@/routes/children';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import Modal from '@/Components/Modal.vue';
 import InputLabel from '@/Components/InputLabel.vue';
@@ -11,11 +10,9 @@ import TimeSelect from '@/Components/TimeSelect.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import WeekNav from '@/Components/WeekNav.vue';
-import Timetable from '@/Components/Timetable.vue';
 import WeekTimetable from '@/Components/WeekTimetable.vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { computed, reactive, ref } from 'vue';
-import { t } from '@/i18n';
 
 const props = defineProps({
     week: { type: Object, default: () => ({}) },
@@ -24,17 +21,13 @@ const props = defineProps({
     activities: { type: Array, default: () => [] },
     program: { type: Array, default: () => [] },
     weekTimetable: { type: Array, default: () => [] },
-    standard: { type: Array, default: () => [] },
     methodOptions: { type: Array, default: () => [] },
 });
 
-// Column headers: the picked week shows dates; the standard plan is generic Mo–Fr.
+// The picked week's column headers show the weekday + its date.
 const weekColumns = computed(() =>
     props.weekDays.map((d) => ({ label: d.label, sublabel: d.date_label })),
 );
-const standardColumns = ['mon', 'tue', 'wed', 'thu', 'fri'].map((key) => ({
-    label: t(`weekly.weekday.${key}`),
-}));
 
 function goWeek(date) {
     router.get(
@@ -345,38 +338,16 @@ function cancelAbsence() {
                 </div>
             </section>
 
-            <!-- Standard Stammplan timetable -->
-            <section class="space-y-3">
-                <h3 class="text-sm font-semibold uppercase tracking-wide text-hort-navy/50">
-                    {{ $t('weekly.standard_heading') }}
-                </h3>
-                <p class="text-sm text-hort-navy/60">
-                    {{ $t('weekly.standard_intro') }}
-                    <Link
-                        :href="childrenIndex().url"
-                        class="font-medium text-hort-teal-dark underline-offset-2 hover:underline"
-                    >
-                        {{
-                            isStaff
-                                ? $t('weekly.edit_link_staff')
-                                : $t('weekly.edit_link_parent')
-                        }}
-                    </Link>
-                </p>
-
-                <Timetable
-                    v-if="standard.length"
-                    :rows="standard"
-                    :columns="standardColumns"
-                />
-
-                <p
-                    v-else
-                    class="rounded-2xl border-2 border-dashed border-hort-navy/15 p-6 text-center text-sm text-hort-navy/50"
+            <!-- Pointer to the standard plan (edit the regular weekly times there) -->
+            <p class="border-t border-hort-navy/5 pt-4 text-center text-sm text-hort-navy/50">
+                {{ $t('weekly.to_standard_hint') }}
+                <Link
+                    :href="standardPlan().url"
+                    class="font-medium text-hort-teal-dark underline-offset-2 hover:underline"
                 >
-                    {{ $t('weekly.empty_standard') }}
-                </p>
-            </section>
+                    {{ $t('weekly.to_standard_link') }} →
+                </Link>
+            </p>
         </div>
 
         <!-- Day editor -->

@@ -15,6 +15,7 @@ use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\SlackCommandController;
 use App\Http\Controllers\SlackEventController;
 use App\Http\Controllers\SlackInteractionController;
+use App\Http\Controllers\StandardPlanController;
 use App\Http\Controllers\TrmnlDashboardController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\WeeklyAdjustmentController;
@@ -98,6 +99,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/wochenplan', WeeklyOverviewController::class)->name('weekly-plan');
     Route::patch('/wochenplan/anpassung', [WeeklyAdjustmentController::class, 'update'])->name('weekly-plan.adjust');
     Route::patch('/wochenplan/zuruecksetzen', [WeeklyAdjustmentController::class, 'reset'])->name('weekly-plan.reset');
+    Route::get('/stammplan', StandardPlanController::class)->name('standard-plan');
 
     // Krankmeldung / Abwesenheit — staff or the child's parent.
     Route::post('/abwesenheiten', [AbsenceController::class, 'store'])->name('absences.store');
