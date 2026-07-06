@@ -63,15 +63,34 @@ function chipClass(method) {
                 gridAutoRows: 'minmax(1.9rem, auto)',
             }"
         >
+            <!-- Today's column: a full-height tint behind the cells -->
+            <template v-for="(col, j) in columns" :key="'today' + j">
+                <div
+                    v-if="col.is_today"
+                    class="pointer-events-none rounded-lg bg-hort-teal/10"
+                    :style="{ gridColumn: `${bandCol(j)} / ${bandCol(j) + 2}`, gridRow: '1 / -1' }"
+                />
+            </template>
+
             <!-- Day headers (+ lunch/activity, which have no time span) -->
             <div
                 v-for="(col, j) in columns"
                 :key="'h' + j"
-                class="border-b border-hort-navy/10 px-0.5 pb-1 text-center"
+                class="px-0.5 pb-1 text-center"
+                :class="col.is_today ? 'border-b-2 border-hort-teal' : 'border-b border-hort-navy/10'"
                 :style="{ gridRow: 1, gridColumn: `${bandCol(j)} / ${bandCol(j) + 2}` }"
             >
-                <div class="text-xs font-semibold text-hort-navy/50">{{ col.label }}</div>
-                <div v-if="col.sublabel" class="text-[10px] text-hort-navy/30">
+                <div
+                    class="text-xs font-semibold"
+                    :class="col.is_today ? 'text-hort-teal-dark' : 'text-hort-navy/50'"
+                >
+                    {{ col.label }}<span v-if="col.is_today"> · {{ $t('common.today') }}</span>
+                </div>
+                <div
+                    v-if="col.sublabel"
+                    class="text-[10px]"
+                    :class="col.is_today ? 'font-semibold text-hort-teal-dark' : 'text-hort-navy/30'"
+                >
                     {{ col.sublabel }}
                 </div>
                 <div

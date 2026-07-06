@@ -11,11 +11,12 @@ import WhatsNewModal from '@/Components/WhatsNewModal.vue';
 import {
     SunIcon,
     CalendarDaysIcon,
+    TableCellsIcon,
     UserGroupIcon,
     MapIcon,
     ClipboardDocumentListIcon,
 } from '@heroicons/vue/24/outline';
-import { board, weeklyPlan, program, logout, dashboard, help } from '@/routes';
+import { board, weeklyPlan, standardPlan, program, logout, dashboard, help } from '@/routes';
 import { index as childrenIndex } from '@/routes/children';
 import { index as excursionsIndex } from '@/routes/excursions';
 import { index as usersIndex } from '@/routes/users';
@@ -51,11 +52,13 @@ const navItems = computed(() => {
               { label: t('nav.pickup_plan'), href: weeklyPlan().url, icon: 'calendar' },
               { label: t('nav.program'), href: program().url, icon: 'food' },
               { label: t('nav.children'), href: childrenIndex().url, icon: 'children' },
+              { label: t('nav.standard_plan'), href: standardPlan().url, icon: 'table' },
           ]
         : [
               { label: t('common.today'), href: board().url, icon: 'sun' },
               { label: t('nav.excursions'), href: pollsIndex().url, icon: 'map', badge: pendingPolls.value },
               { label: t('nav.pickup_plan'), href: weeklyPlan().url, icon: 'calendar' },
+              { label: t('nav.standard_plan'), href: standardPlan().url, icon: 'table' },
           ];
 
     return items;
@@ -65,6 +68,7 @@ const navItems = computed(() => {
 const icons = {
     sun: SunIcon,
     calendar: CalendarDaysIcon,
+    table: TableCellsIcon,
     children: UserGroupIcon,
     map: MapIcon,
     food: ClipboardDocumentListIcon,

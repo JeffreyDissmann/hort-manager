@@ -33,21 +33,27 @@ trait ResolvesWeek
             }
         }
 
+        $currentWeekStart = $today->copy()->startOfWeek(Carbon::MONDAY);
+
         $week = [
             'label' => 'KW '.$weekStart->isoWeek().' · '
                 .$weekStart->format('d.m.').'–'.$weekStart->copy()->addDays(4)->format('d.m.'),
             'prev' => $weekStart->copy()->subWeek()->toDateString(),
             'next' => $weekStart->copy()->addWeek()->toDateString(),
-            'is_current' => $weekStart->equalTo($today->copy()->startOfWeek(Carbon::MONDAY)),
+            'is_current' => $weekStart->equalTo($currentWeekStart),
+            // Whole weeks from the current week: 0 = this week, 1 = next, -2 = two ago.
+            'offset' => (int) round($currentWeekStart->diffInWeeks($weekStart, false)),
         ];
 
-        $weekDays = collect(range(0, 4))->map(function (int $i) use ($weekStart) {
+        $todayString = $today->toDateString();
+        $weekDays = collect(range(0, 4))->map(function (int $i) use ($weekStart, $todayString) {
             $date = $weekStart->copy()->addDays($i);
 
             return [
                 'date' => $date->toDateString(),
                 'label' => self::WEEKDAY_LABELS[$i],
                 'date_label' => $date->format('d.m.'),
+                'is_today' => $date->toDateString() === $todayString,
             ];
         });
 

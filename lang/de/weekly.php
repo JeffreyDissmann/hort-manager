@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 return [
-    'title' => 'Abholplan',
+    'title' => 'Wochenplan',
 
     'your_children' => 'Deine Kinder',
     'tap_to_change' => 'Tippen zum Ändern',
@@ -18,6 +18,9 @@ return [
 
     'whole_week' => 'Ganze Woche · alle Kinder',
     'empty_week' => 'Für diese Woche sind noch keine Abholzeiten oder Programme hinterlegt.',
+
+    'to_standard_hint' => 'Die regulären Abholzeiten für jede Woche ändern?',
+    'to_standard_link' => 'Zum Stammplan',
 
     'legend_picked_up' => 'wird abgeholt',
     'legend_alone' => 'geht allein',

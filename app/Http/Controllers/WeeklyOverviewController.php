@@ -13,7 +13,6 @@ use App\Models\DailyDeparture;
 use App\Models\DailyProgram;
 use App\Models\Excursion;
 use App\Models\HomeworkDefault;
-use App\Models\WeeklySchedule;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
@@ -26,9 +25,9 @@ class WeeklyOverviewController extends Controller
     use ResolvesWeek;
 
     /**
-     * The Wochenplan: this week's effective plan (Stammplan + same-day overrides)
-     * on top, the standard Stammplan timetable below. Staff and a child's own
-     * parents may adjust individual days of the current week from here.
+     * The Wochenplan: a navigable week's effective plan (Stammplan + same-day
+     * overrides). Staff and a child's own parents may adjust individual days.
+     * The read-only Stammplan itself lives on its own page (StandardPlanController).
      */
     public function __invoke(Request $request): Response
     {
@@ -181,7 +180,6 @@ class WeeklyOverviewController extends Controller
             'activities' => $activities,
             'program' => $program,
             'weekTimetable' => $this->weekTimetable($weekDays, $excursionByChildDate, $program, $activities),
-            'standard' => $this->standardTimetable(),
             'methodOptions' => collect(DepartureMethod::cases())
                 ->map(fn (DepartureMethod $m) => ['value' => $m->value, 'label' => $m->label()])
                 ->all(),
@@ -289,51 +287,6 @@ class WeeklyOverviewController extends Controller
                     ->map(fn (array $e) => Arr::except($e, ['minutes']))
                     ->values();
             }
-            $rows[] = ['time' => $label($minutes), 'days' => $days];
-        }
-
-        return $rows;
-    }
-
-    /**
-     * The standard Stammplan as a 30-minute time-slot timetable (Mo–Fr).
-     *
-     * @return array<int, array{time: string, days: array}>
-     */
-    private function standardTimetable(): array
-    {
-        $schedules = WeeklySchedule::query()
-            ->with('child:id,name')
-            ->whereNotNull('planned_time')
-            ->get();
-
-        $toMinutes = fn (string $time): int => ((int) substr($time, 0, 2)) * 60 + (int) substr($time, 3, 2);
-        $bucket = fn (int $minutes): int => intdiv($minutes, 30) * 30;
-        $label = fn (int $minutes): string => sprintf('%02d:%02d', intdiv($minutes, 60), $minutes % 60);
-
-        $buckets = $schedules->map(fn (WeeklySchedule $s) => $bucket($toMinutes($s->planned_time)));
-
-        if ($buckets->isEmpty()) {
-            return [];
-        }
-
-        $rows = [];
-        for ($minutes = $buckets->min(); $minutes <= $buckets->max(); $minutes += 30) {
-            $days = [];
-            for ($weekday = 1; $weekday <= 5; $weekday++) {
-                $days[] = $schedules
-                    ->filter(fn (WeeklySchedule $s) => $s->weekday === $weekday
-                        && $bucket($toMinutes($s->planned_time)) === $minutes)
-                    ->sortBy(fn (WeeklySchedule $s) => $s->child->name)
-                    ->map(fn (WeeklySchedule $s) => [
-                        'id' => $s->child->id,
-                        'name' => $s->child->name,
-                        'method' => $s->method?->value,
-                        'comment' => $s->comment,
-                    ])
-                    ->values();
-            }
-
             $rows[] = ['time' => $label($minutes), 'days' => $days];
         }
 

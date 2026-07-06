@@ -26,11 +26,13 @@ return [
     ],
 
     'week' => [
-        'current' => 'Diese Woche',
+        'current' => 'Aktuelle Woche',
         'week' => 'Woche',
         'go_current' => 'Zur aktuellen Woche',
         'prev' => 'Vorige Woche',
         'next' => 'Nächste Woche',
+        'in_weeks' => 'in :n Wochen',
+        'weeks_ago' => 'vor :n Wochen',
     ],
 
     'timetable' => [

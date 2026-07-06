@@ -5,7 +5,8 @@ declare(strict_types=1);
 // Navigation labels, user menu, and the layout chrome (top bar / bottom tab bar).
 return [
     'excursions' => 'Ausflüge',
-    'pickup_plan' => 'Abholplan',
+    'pickup_plan' => 'Wochenplan',
+    'standard_plan' => 'Stammplan',
     'program' => 'Programm',
     'children' => 'Kinder',
     'users' => 'Benutzer',
