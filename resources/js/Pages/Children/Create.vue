@@ -24,7 +24,7 @@ function submit() {
 
     <AuthenticatedLayout>
         <template #header>
-            <h2 class="text-xl font-semibold leading-tight text-hort-navy">
+            <h2 class="text-xl font-semibold leading-tight text-ink">
                 {{ $t('children.add_child') }}
             </h2>
         </template>
@@ -32,7 +32,7 @@ function submit() {
         <div class="mx-auto max-w-2xl">
             <form
                 @submit.prevent="submit"
-                class="space-y-6 rounded-2xl bg-white p-6 shadow-sm"
+                class="space-y-6 rounded-2xl bg-surface p-6 shadow-sm"
             >
                     <div>
                         <InputLabel for="name" :value="$t('children.name')" />
@@ -67,7 +67,7 @@ function submit() {
                             v-model="form.note"
                             rows="3"
                             :placeholder="$t('children.note_placeholder')"
-                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-hort-teal focus:ring-hort-teal"
+                            class="mt-1 block w-full rounded-md border-ink/20 shadow-sm focus:border-hort-teal focus:ring-hort-teal"
                         ></textarea>
                         <InputError :message="form.errors.note" class="mt-2" />
                     </div>
@@ -75,7 +75,7 @@ function submit() {
                     <div class="flex items-center justify-end gap-4">
                         <Link
                             :href="childrenIndex().url"
-                            class="text-sm text-gray-600 hover:text-gray-900"
+                            class="text-sm text-ink/70 hover:text-ink"
                         >
                             {{ $t('common.cancel') }}
                         </Link>

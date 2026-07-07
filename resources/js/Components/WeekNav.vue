@@ -24,7 +24,7 @@ const relative = computed(() => {
 const tone = computed(() => {
     const o = props.week.offset ?? 0;
     if (o === 0) return 'bg-hort-teal text-hort-navy';
-    return o > 0 ? 'bg-amber-100 text-amber-700' : 'bg-hort-navy/10 text-hort-navy/50';
+    return o > 0 ? 'bg-amber-100 text-amber-700' : 'bg-ink/10 text-ink/50';
 });
 </script>
 
@@ -32,7 +32,7 @@ const tone = computed(() => {
     <div class="flex items-center justify-between gap-2">
         <button
             type="button"
-            class="rounded-lg p-2 text-hort-navy/60 transition hover:bg-hort-navy/5 active:scale-95"
+            class="rounded-lg p-2 text-ink/60 transition hover:bg-ink/5 active:scale-95"
             :aria-label="$t('components.week.prev')"
             @click="emit('navigate', week.prev)"
         >
@@ -46,7 +46,7 @@ const tone = computed(() => {
             >
                 {{ relative }}
             </span>
-            <p class="mt-1 text-xs font-medium text-hort-navy/60">{{ week.label }}</p>
+            <p class="mt-1 text-xs font-medium text-ink/60">{{ week.label }}</p>
             <button
                 v-if="!week.is_current"
                 type="button"
@@ -59,7 +59,7 @@ const tone = computed(() => {
 
         <button
             type="button"
-            class="rounded-lg p-2 text-hort-navy/60 transition hover:bg-hort-navy/5 active:scale-95"
+            class="rounded-lg p-2 text-ink/60 transition hover:bg-ink/5 active:scale-95"
             :aria-label="$t('components.week.next')"
             @click="emit('navigate', week.next)"
         >

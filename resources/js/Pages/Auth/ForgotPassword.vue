@@ -26,7 +26,7 @@ const submit = () => {
     <GuestLayout>
         <Head :title="$t('login.forgot_title')" />
 
-        <div class="mb-4 text-sm text-gray-600">
+        <div class="mb-4 text-sm text-ink/70">
             {{ $t('login.forgot_intro') }}
         </div>
 

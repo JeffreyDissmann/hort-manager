@@ -18,7 +18,7 @@ function onStartChange(value) {
 <template>
     <div class="flex items-center gap-2">
         <TimeSelect v-model="start" class="flex-1" @change="onStartChange" />
-        <span class="text-hort-navy/40">–</span>
+        <span class="text-ink/40">–</span>
         <TimeSelect v-model="end" class="flex-1" />
     </div>
 </template>

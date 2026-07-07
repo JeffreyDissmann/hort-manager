@@ -16,6 +16,17 @@ declare(strict_types=1);
 
 return [
     [
+        'version' => '2026.07.07',
+        'date' => '2026-07-07',
+        'title' => 'Dunkelmodus 🌙 & übersichtlichere Pläne',
+        'items' => [
+            '🌙 Der Hort-Manager gibt es jetzt auch in Dunkel – angenehmer für die Augen am Abend.',
+            '⚙️ Stell es unter „Profil → Darstellung" ein: Hell, Dunkel oder „Automatisch" (folgt der Einstellung deines Geräts).',
+            'ℹ️ Die Auswahl gilt pro Gerät – so kann dein Handy dunkel und dein Rechner hell sein.',
+            '👀 Wochenplan und Stammplan sind klarer: Wer allein nach Hause geht, ist jetzt deutlich zu erkennen (🚶 und eigene Farbe), der Name ist kräftiger und die Schrift etwas größer.',
+        ],
+    ],
+    [
         'version' => '2026.07.06',
         'date' => '2026-07-06',
         'title' => 'Übersichtlicherer Wochenplan – und der Stammplan als eigene Seite',

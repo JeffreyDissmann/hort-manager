@@ -58,19 +58,19 @@ function save(user, changes) {
 
     <AuthenticatedLayout>
         <template #header>
-            <h2 class="text-xl font-semibold text-hort-navy">{{ $t('users.title') }}</h2>
+            <h2 class="text-xl font-semibold text-ink">{{ $t('users.title') }}</h2>
         </template>
 
         <div class="space-y-4">
             <div
                 v-if="flash"
-                class="rounded-2xl bg-hort-teal/20 px-4 py-3 text-sm font-medium text-hort-navy"
+                class="rounded-2xl bg-hort-teal/20 px-4 py-3 text-sm font-medium text-ink"
             >
                 {{ flash }}
             </div>
 
             <div class="flex flex-wrap items-center justify-between gap-3">
-                <p class="text-sm text-hort-navy/60">
+                <p class="text-sm text-ink/60">
                     {{ $t('users.intro') }}
                 </p>
                 <button
@@ -88,22 +88,22 @@ function save(user, changes) {
                 <li
                     v-for="user in users"
                     :key="user.id"
-                    class="flex flex-wrap items-center gap-3 rounded-2xl bg-white p-4 shadow-sm"
+                    class="flex flex-wrap items-center gap-3 rounded-2xl bg-surface p-4 shadow-sm"
                 >
                     <Avatar :src="user.avatar" :name="user.name" />
 
                     <div class="min-w-0 flex-1">
-                        <p class="truncate font-semibold text-hort-navy">
+                        <p class="truncate font-semibold text-ink">
                             {{ user.name }}
                             <span v-if="user.is_self" class="text-hort-teal-dark">· {{ $t('users.self_suffix') }}</span>
                         </p>
-                        <p class="truncate text-sm text-hort-navy/50">{{ user.email }}</p>
+                        <p class="truncate text-sm text-ink/50">{{ user.email }}</p>
                     </div>
 
                     <select
                         :value="user.role"
                         @change="(e) => save(user, { role: e.target.value })"
-                        class="rounded-lg border-gray-300 text-sm text-hort-navy focus:border-hort-teal focus:ring-hort-teal"
+                        class="rounded-lg border-ink/20 text-sm text-ink focus:border-hort-teal focus:ring-hort-teal"
                     >
                         <option
                             v-for="option in roleOptions"
@@ -115,13 +115,13 @@ function save(user, changes) {
                     </select>
 
                     <label
-                        class="flex cursor-pointer items-center gap-2 rounded-lg bg-hort-navy/5 px-3 py-2 text-sm font-medium text-hort-navy"
+                        class="flex cursor-pointer items-center gap-2 rounded-lg bg-ink/5 px-3 py-2 text-sm font-medium text-ink"
                     >
                         <input
                             type="checkbox"
                             :checked="user.is_admin"
                             @change="(e) => save(user, { is_admin: e.target.checked })"
-                            class="rounded border-gray-300 text-hort-teal-dark focus:ring-hort-teal"
+                            class="rounded border-ink/20 text-hort-teal-dark focus:ring-hort-teal"
                         />
                         {{ $t('users.admin') }}
                     </label>
@@ -130,7 +130,7 @@ function save(user, changes) {
                         v-if="!user.is_self"
                         type="button"
                         @click="destroy(user)"
-                        class="shrink-0 rounded-lg p-2 text-hort-navy/30 transition hover:bg-red-50 hover:text-red-600"
+                        class="shrink-0 rounded-lg p-2 text-ink/30 transition hover:bg-red-50 hover:text-red-600"
                         :aria-label="$t('users.delete_aria')"
                     >
                         <TrashIcon class="h-5 w-5" />

@@ -123,7 +123,7 @@ function pickFriday() {
                 @input="deadlineTouched = true"
                 @change="deadlineTouched = true"
             />
-            <p class="mt-1 text-sm text-gray-500">
+            <p class="mt-1 text-sm text-ink/60">
                 {{ $t('excursions.field_deadline_hint') }}
             </p>
             <InputError :message="form.errors.rsvp_deadline" class="mt-2" />
@@ -136,12 +136,12 @@ function pickFriday() {
                 v-model="form.note"
                 rows="2"
                 :placeholder="$t('excursions.field_note_placeholder')"
-                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-hort-teal focus:ring-hort-teal"
+                class="mt-1 block w-full rounded-md border-ink/20 shadow-sm focus:border-hort-teal focus:ring-hort-teal"
             ></textarea>
             <InputError :message="form.errors.note" class="mt-2" />
         </div>
 
-        <p class="rounded-xl bg-hort-teal/10 p-3 text-sm text-hort-navy/70">
+        <p class="rounded-xl bg-hort-teal/10 p-3 text-sm text-ink/70">
             {{ $t('excursions.after_save_before')
             }}<strong>{{ $t('excursions.after_save_strong') }}</strong>{{ $t('excursions.after_save_after') }}
         </p>

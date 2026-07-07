@@ -19,7 +19,7 @@ const user = computed(() => usePage().props.auth?.user);
     <Head :title="$t('welcome.title')" />
 
     <div
-        class="relative flex min-h-[100dvh] flex-col overflow-hidden bg-hort-sand text-hort-navy"
+        class="relative flex min-h-[100dvh] flex-col overflow-hidden bg-canvas text-ink"
     >
         <!-- Playful background accents -->
         <div
@@ -36,11 +36,11 @@ const user = computed(() => usePage().props.auth?.user);
         >
             <ApplicationLogo class="h-20 w-20 drop-shadow-sm" />
 
-            <h1 class="mt-6 font-display text-5xl leading-tight text-hort-navy">
+            <h1 class="mt-6 font-display text-5xl leading-tight text-ink">
                 {{ appName }}
             </h1>
 
-            <p class="mt-4 text-lg text-hort-navy/70">
+            <p class="mt-4 text-lg text-ink/70">
                 {{ $t('welcome.tagline') }}
             </p>
 
@@ -65,7 +65,7 @@ const user = computed(() => usePage().props.auth?.user);
 
                 <Link
                     :href="help().url"
-                    class="block w-full rounded-2xl px-6 py-3 text-base font-medium text-hort-navy/70 transition hover:bg-hort-navy/5"
+                    class="block w-full rounded-2xl px-6 py-3 text-base font-medium text-ink/70 transition hover:bg-ink/5"
                 >
                     {{ $t('welcome.how_it_works') }}
                 </Link>
@@ -73,7 +73,7 @@ const user = computed(() => usePage().props.auth?.user);
         </main>
 
         <footer
-            class="relative z-10 pb-[max(1.5rem,env(safe-area-inset-bottom))] text-center text-sm text-hort-navy/50"
+            class="relative z-10 pb-[max(1.5rem,env(safe-area-inset-bottom))] text-center text-sm text-ink/50"
         >
             {{ $t('welcome.made_with_love') }}
         </footer>

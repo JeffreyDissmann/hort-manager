@@ -60,7 +60,7 @@ const tiles = computed(() => {
 
     <AuthenticatedLayout>
         <template #header>
-            <h2 class="text-xl font-semibold text-hort-navy">
+            <h2 class="text-xl font-semibold text-ink">
                 {{ $t('dashboard.greeting', { name: userName }) }}
             </h2>
         </template>
@@ -70,19 +70,19 @@ const tiles = computed(() => {
                 v-for="tile in tiles"
                 :key="tile.title"
                 :href="tile.href"
-                class="flex items-center justify-between rounded-2xl bg-white p-5 shadow-sm transition hover:shadow active:scale-[0.99]"
+                class="flex items-center justify-between rounded-2xl bg-surface p-5 shadow-sm transition hover:shadow active:scale-[0.99]"
             >
                 <div>
-                    <h3 class="font-semibold text-hort-navy">{{ tile.title }}</h3>
-                    <p class="mt-1 text-sm text-hort-navy/60">{{ tile.text }}</p>
+                    <h3 class="font-semibold text-ink">{{ tile.title }}</h3>
+                    <p class="mt-1 text-sm text-ink/60">{{ tile.text }}</p>
                 </div>
                 <span class="text-2xl text-hort-teal-dark">→</span>
             </Link>
         </div>
 
-        <p class="mt-6 text-center text-sm text-hort-navy/60">
+        <p class="mt-6 text-center text-sm text-ink/60">
             {{ $t('dashboard.new_here') }}
-            <Link :href="help().url" class="font-medium text-hort-teal-dark underline hover:text-hort-navy">
+            <Link :href="help().url" class="font-medium text-hort-teal-dark underline hover:text-ink">
                 {{ $t('dashboard.how_it_works') }}
             </Link>
         </p>

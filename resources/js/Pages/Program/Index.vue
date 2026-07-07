@@ -125,18 +125,18 @@ function onTouchEnd(e) {
 
     <AuthenticatedLayout :wide="true">
         <template #header>
-            <h2 class="text-xl font-semibold text-hort-navy">{{ $t('program.header') }}</h2>
+            <h2 class="text-xl font-semibold text-ink">{{ $t('program.header') }}</h2>
         </template>
 
         <div class="space-y-4">
             <div
                 v-if="flash"
-                class="rounded-2xl bg-hort-teal/20 px-4 py-3 text-sm font-medium text-hort-navy"
+                class="rounded-2xl bg-hort-teal/20 px-4 py-3 text-sm font-medium text-ink"
             >
                 {{ flash }}
             </div>
 
-            <p class="text-sm text-hort-navy/60">
+            <p class="text-sm text-ink/60">
                 {{ $t('program.intro') }}
             </p>
 
@@ -156,13 +156,13 @@ function onTouchEnd(e) {
             <div
                 v-for="day in days"
                 :key="day.date"
-                class="rounded-2xl bg-white p-4 shadow-sm"
+                class="rounded-2xl bg-surface p-4 shadow-sm"
             >
                 <div class="lg:grid lg:grid-cols-[7rem,minmax(0,18rem),minmax(0,18rem),auto] lg:items-start lg:gap-5">
                     <div>
-                        <p class="font-semibold text-hort-navy">
+                        <p class="font-semibold text-ink">
                             {{ day.label }}
-                            <span class="font-normal text-hort-navy/40">
+                            <span class="font-normal text-ink/40">
                                 · {{ day.date_label }}
                             </span>
                         </p>
@@ -204,7 +204,7 @@ function onTouchEnd(e) {
 
                     <div class="mt-3 lg:mt-0">
                         <InputLabel :value="$t('program.homework')" />
-                        <label class="mt-1 flex items-center gap-2 text-sm text-hort-navy/70">
+                        <label class="mt-1 flex items-center gap-2 text-sm text-ink/70">
                             <Checkbox
                                 :checked="day.no_homework"
                                 @update:checked="
@@ -233,11 +233,11 @@ function onTouchEnd(e) {
             </div>
 
             <!-- Default homework schedule (Mo–Fr) -->
-            <div class="rounded-2xl bg-white p-4 shadow-sm">
-                <p class="font-semibold text-hort-navy">
+            <div class="rounded-2xl bg-surface p-4 shadow-sm">
+                <p class="font-semibold text-ink">
                     {{ $t('program.default_homework_heading') }}
                 </p>
-                <p class="mb-3 mt-1 text-sm text-hort-navy/60">
+                <p class="mb-3 mt-1 text-sm text-ink/60">
                     {{ $t('program.default_homework_intro') }}
                 </p>
                 <div class="space-y-2 lg:max-w-2xl">
@@ -246,10 +246,10 @@ function onTouchEnd(e) {
                         :key="d.weekday"
                         class="flex flex-wrap items-center gap-2"
                     >
-                        <span class="w-8 shrink-0 text-sm font-medium text-hort-navy/60">
+                        <span class="w-8 shrink-0 text-sm font-medium text-ink/60">
                             {{ d.label }}
                         </span>
-                        <label class="flex shrink-0 items-center gap-2 text-sm text-hort-navy/70">
+                        <label class="flex shrink-0 items-center gap-2 text-sm text-ink/70">
                             <Checkbox
                                 :checked="d.no_homework"
                                 @update:checked="

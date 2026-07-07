@@ -45,11 +45,11 @@ const updatePassword = () => {
 <template>
     <section>
         <header>
-            <h2 class="text-lg font-medium text-hort-navy">
+            <h2 class="text-lg font-medium text-ink">
                 {{ hasPassword ? $t('profile.password_change') : $t('profile.password_set') }}
             </h2>
 
-            <p class="mt-1 text-sm text-gray-600">
+            <p class="mt-1 text-sm text-ink/70">
                 <template v-if="hasPassword">
                     {{ $t('profile.password_help') }}
                 </template>
@@ -124,7 +124,7 @@ const updatePassword = () => {
                 >
                     <p
                         v-if="form.recentlySuccessful"
-                        class="text-sm text-gray-600"
+                        class="text-sm text-ink/70"
                     >
                         {{ $t('common.saved') }}
                     </p>

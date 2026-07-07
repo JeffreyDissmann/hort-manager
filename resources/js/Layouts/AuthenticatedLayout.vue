@@ -82,7 +82,7 @@ function isActive(href) {
 </script>
 
 <template>
-    <div class="min-h-[100dvh] bg-hort-sand">
+    <div class="min-h-[100dvh] bg-canvas">
         <AppBadge />
         <WhatsNewModal ref="whatsNewModal" />
         <InstallBanner />
@@ -90,7 +90,7 @@ function isActive(href) {
 
         <!-- Top bar -->
         <header
-            class="sticky top-0 z-20 border-b border-hort-navy/10 bg-white/90 backdrop-blur"
+            class="sticky top-0 z-20 border-b border-ink/10 bg-surface/90 backdrop-blur"
         >
             <div
                 :class="contentMax"
@@ -101,7 +101,7 @@ function isActive(href) {
                     class="flex items-center gap-2"
                 >
                     <ApplicationLogo class="h-9 w-9" />
-                    <span class="font-display text-2xl text-hort-navy">
+                    <span class="font-display text-2xl text-ink">
                         {{ appName }}
                     </span>
                 </Link>
@@ -115,8 +115,8 @@ function isActive(href) {
                         :class="[
                             'rounded-lg px-3 py-2 text-sm font-medium transition',
                             isActive(item.href)
-                                ? 'bg-hort-teal/20 text-hort-navy'
-                                : 'text-hort-navy/60 hover:bg-hort-navy/5 hover:text-hort-navy',
+                                ? 'bg-hort-teal/20 text-ink'
+                                : 'text-ink/60 hover:bg-ink/5 hover:text-ink',
                         ]"
                     >
                         {{ item.label }}
@@ -128,7 +128,7 @@ function isActive(href) {
                     <template #trigger>
                         <button
                             type="button"
-                            class="flex items-center gap-2 rounded-full bg-hort-navy/5 py-1.5 pl-1.5 pr-3 text-sm font-medium text-hort-navy transition hover:bg-hort-navy/10"
+                            class="flex items-center gap-2 rounded-full bg-ink/5 py-1.5 pl-1.5 pr-3 text-sm font-medium text-ink transition hover:bg-ink/10"
                         >
                             <Avatar :src="userAvatar" :name="userName" />
                             <span class="hidden max-w-[8rem] truncate sm:inline">
@@ -141,7 +141,7 @@ function isActive(href) {
                             <DropdownLink :href="usersIndex().url">
                                 {{ $t('nav.users') }}
                             </DropdownLink>
-                            <hr class="my-1 border-hort-navy/10" />
+                            <hr class="my-1 border-ink/10" />
                         </template>
                         <DropdownLink
                             v-if="!isStaff"
@@ -158,7 +158,7 @@ function isActive(href) {
                         <button
                             type="button"
                             @click="whatsNewModal?.open()"
-                            class="block w-full px-4 py-2 text-start text-sm leading-5 text-hort-navy transition duration-150 ease-in-out hover:bg-hort-sand focus:bg-hort-sand focus:outline-none"
+                            class="block w-full px-4 py-2 text-start text-sm leading-5 text-ink transition duration-150 ease-in-out hover:bg-canvas focus:bg-canvas focus:outline-none"
                         >
                             {{ $t('nav.whats_new') }}
                         </button>
@@ -197,7 +197,7 @@ function isActive(href) {
         </Link>
 
         <!-- Page heading -->
-        <header v-if="$slots.header" class="bg-white">
+        <header v-if="$slots.header" class="bg-surface">
             <div :class="contentMax" class="mx-auto px-4 py-6 sm:px-6">
                 <slot name="header" />
             </div>
@@ -213,7 +213,7 @@ function isActive(href) {
 
         <!-- Mobile bottom tab bar -->
         <nav
-            class="fixed inset-x-0 bottom-0 z-20 border-t border-hort-navy/10 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur sm:hidden"
+            class="fixed inset-x-0 bottom-0 z-20 border-t border-ink/10 bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur sm:hidden"
         >
             <div class="mx-auto flex max-w-md items-stretch justify-around">
                 <Link
@@ -224,7 +224,7 @@ function isActive(href) {
                         'flex flex-1 flex-col items-center gap-1 py-2.5 text-xs font-medium transition',
                         isActive(item.href)
                             ? 'text-hort-teal-dark'
-                            : 'text-hort-navy/50',
+                            : 'text-ink/50',
                     ]"
                 >
                     <span class="relative">

@@ -88,7 +88,7 @@ function destroy() {
 
     <AuthenticatedLayout :wide="true">
         <template #header>
-            <h2 class="text-xl font-semibold leading-tight text-hort-navy">
+            <h2 class="text-xl font-semibold leading-tight text-ink">
                 {{ $t('children.schedule_title', { name: child.name }) }}
             </h2>
         </template>
@@ -96,11 +96,11 @@ function destroy() {
         <div class="mx-auto max-w-3xl lg:max-w-none">
             <form
                 @submit.prevent="submit"
-                class="space-y-8 rounded-2xl bg-white p-6 shadow-sm"
+                class="space-y-8 rounded-2xl bg-surface p-6 shadow-sm"
             >
                     <!-- Stammdaten -->
                     <section class="space-y-6">
-                        <h3 class="text-lg font-medium text-hort-navy">
+                        <h3 class="text-lg font-medium text-ink">
                             {{ $t('children.master_data') }}
                         </h3>
 
@@ -136,7 +136,7 @@ function destroy() {
                                 v-model="form.note"
                                 rows="3"
                                 :placeholder="$t('children.note_placeholder')"
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-hort-teal focus:ring-hort-teal"
+                                class="mt-1 block w-full rounded-md border-ink/20 shadow-sm focus:border-hort-teal focus:ring-hort-teal"
                             ></textarea>
                             <InputError :message="form.errors.note" class="mt-2" />
                         </div>
@@ -145,10 +145,10 @@ function destroy() {
                     <!-- Stammplan -->
                     <section class="space-y-4">
                         <div>
-                            <h3 class="text-lg font-medium text-hort-navy">
+                            <h3 class="text-lg font-medium text-ink">
                                 {{ $t('children.schedule_heading') }}
                             </h3>
-                            <p class="mt-1 text-sm text-gray-500">
+                            <p class="mt-1 text-sm text-ink/60">
                                 {{ $t('children.schedule_hint') }}
                             </p>
                         </div>
@@ -161,9 +161,9 @@ function destroy() {
                             <div
                                 v-for="day in form.schedule"
                                 :key="day.weekday"
-                                class="space-y-2 rounded-lg border border-gray-200 p-3"
+                                class="space-y-2 rounded-lg border border-ink/15 p-3"
                             >
-                                <div class="font-medium text-hort-navy lg:text-center">
+                                <div class="font-medium text-ink lg:text-center">
                                     {{ weekdayNames[day.weekday] }}
                                 </div>
 
@@ -190,7 +190,7 @@ function destroy() {
                                         :id="`method-${day.weekday}`"
                                         v-model="day.method"
                                         :disabled="!day.planned_time"
-                                        class="block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-hort-teal focus:ring-hort-teal disabled:bg-gray-100 disabled:text-gray-400"
+                                        class="block w-full rounded-md border-ink/20 text-sm shadow-sm focus:border-hort-teal focus:ring-hort-teal disabled:bg-ink/5 disabled:text-ink/40"
                                     >
                                         <option value="">{{ $t('children.method_placeholder') }}</option>
                                         <option
@@ -209,7 +209,7 @@ function destroy() {
                                     type="text"
                                     maxlength="255"
                                     :placeholder="$t('children.comment_placeholder')"
-                                    class="block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-hort-teal focus:ring-hort-teal"
+                                    class="block w-full rounded-md border-ink/20 text-sm shadow-sm focus:border-hort-teal focus:ring-hort-teal"
                                 />
                             </div>
                         </div>
@@ -218,17 +218,17 @@ function destroy() {
                     <!-- Eltern-Zuordnung -->
                     <section v-if="canManageGuardians" class="space-y-4">
                         <div>
-                            <h3 class="text-lg font-medium text-hort-navy">
+                            <h3 class="text-lg font-medium text-ink">
                                 {{ $t('children.parents_title') }}
                             </h3>
-                            <p class="mt-1 text-sm text-gray-500">
+                            <p class="mt-1 text-sm text-ink/60">
                                 {{ $t('children.parents_hint') }}
                             </p>
                         </div>
 
                         <div
                             v-if="allParents.length"
-                            class="space-y-2 rounded-md border border-gray-200 p-2"
+                            class="space-y-2 rounded-md border border-ink/15 p-2"
                         >
                             <label
                                 v-for="parent in allParents"
@@ -237,7 +237,7 @@ function destroy() {
                                 :class="
                                     parent.id === currentUserId
                                         ? 'opacity-70'
-                                        : 'cursor-pointer hover:bg-hort-sand'
+                                        : 'cursor-pointer hover:bg-canvas'
                                 "
                             >
                                 <input
@@ -245,7 +245,7 @@ function destroy() {
                                     :value="parent.id"
                                     v-model="form.guardians"
                                     :disabled="parent.id === currentUserId"
-                                    class="rounded border-gray-300 text-hort-teal-dark focus:ring-hort-teal disabled:opacity-60"
+                                    class="rounded border-ink/20 text-hort-teal-dark focus:ring-hort-teal disabled:opacity-60"
                                 />
                                 <Avatar
                                     :src="parent.avatar"
@@ -253,7 +253,7 @@ function destroy() {
                                     size-class="h-7 w-7 text-xs"
                                 />
                                 <span class="text-sm">
-                                    <span class="font-medium text-hort-navy">
+                                    <span class="font-medium text-ink">
                                         {{ parent.name }}
                                     </span>
                                     <span
@@ -262,13 +262,13 @@ function destroy() {
                                     >
                                         · {{ $t('children.you') }}
                                     </span>
-                                    <span class="text-gray-500">
+                                    <span class="text-ink/60">
                                         · {{ parent.email }}
                                     </span>
                                 </span>
                             </label>
                         </div>
-                        <p v-else class="text-sm text-gray-500">
+                        <p v-else class="text-sm text-ink/60">
                             {{ $t('children.no_parents') }}
                         </p>
                     </section>
@@ -287,7 +287,7 @@ function destroy() {
                         <div class="flex items-center gap-4">
                             <Link
                                 :href="childrenIndex().url"
-                                class="text-sm text-gray-600 hover:text-gray-900"
+                                class="text-sm text-ink/70 hover:text-ink"
                             >
                                 {{ $t('common.cancel') }}
                             </Link>

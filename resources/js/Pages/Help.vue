@@ -16,18 +16,18 @@ const loggedIn = computed(() => !!usePage().props.auth?.user);
     <!-- Logged in: show inside the normal app shell. -->
     <AuthenticatedLayout v-if="loggedIn">
         <template #header>
-            <h2 class="text-xl font-semibold text-hort-navy">{{ $t('help.header') }}</h2>
+            <h2 class="text-xl font-semibold text-ink">{{ $t('help.header') }}</h2>
         </template>
 
         <HelpArticle />
     </AuthenticatedLayout>
 
     <!-- Guest: standalone page with a way back to the login. -->
-    <div v-else class="min-h-screen bg-hort-sand">
+    <div v-else class="min-h-screen bg-canvas">
         <header class="mx-auto flex max-w-3xl items-center justify-between px-4 py-5">
             <Link :href="login().url" class="flex items-center gap-2">
                 <ApplicationLogo class="h-9 w-9" />
-                <span class="font-semibold text-hort-navy">Hort-Manager</span>
+                <span class="font-semibold text-ink">Hort-Manager</span>
             </Link>
             <Link
                 :href="login().url"

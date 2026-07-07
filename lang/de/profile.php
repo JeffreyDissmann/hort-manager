@@ -10,6 +10,13 @@ return [
     'language_help' => 'Wähle die Sprache der Benutzeroberfläche.',
     'language_saved' => 'Sprache gespeichert.',
 
+    // Theme (dark mode) — stored per device
+    'theme' => 'Darstellung',
+    'theme_help' => 'Helles oder dunkles Design – oder automatisch nach deinem Gerät. Die Einstellung gilt pro Gerät.',
+    'theme_system' => 'Automatisch',
+    'theme_light' => 'Hell',
+    'theme_dark' => 'Dunkel',
+
     // Profile information
     'information_title' => 'Profil-Informationen',
     'information_description' => 'Aktualisiere die Profil-Informationen und die E-Mail-Adresse deines Kontos.',

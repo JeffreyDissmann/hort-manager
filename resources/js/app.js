@@ -5,6 +5,11 @@ import { createInertiaApp } from '@inertiajs/vue3';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createApp, h } from 'vue';
 import { i18n } from './i18n';
+import { initTheme } from './theme';
+
+// Keep the runtime theme (OS-change listener + PWA colour) in sync; the pre-paint
+// `.dark` class is already set by the inline script in app.blade.php.
+initTheme();
 
 // Register the PWA service worker, served from the site root for "/" scope.
 // Register immediately (not on `load`): this module is deferred, so `load` may

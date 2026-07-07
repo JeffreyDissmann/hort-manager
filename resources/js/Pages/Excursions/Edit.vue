@@ -43,7 +43,7 @@ function setResponse(childId, response) {
 
     <AuthenticatedLayout>
         <template #header>
-            <h2 class="text-xl font-semibold text-hort-navy">
+            <h2 class="text-xl font-semibold text-ink">
                 {{ $t('excursions.edit_heading') }}
             </h2>
         </template>
@@ -51,14 +51,14 @@ function setResponse(childId, response) {
         <div class="mx-auto max-w-2xl space-y-6">
             <form
                 @submit.prevent="submit"
-                class="space-y-6 rounded-2xl bg-white p-6 shadow-sm"
+                class="space-y-6 rounded-2xl bg-surface p-6 shadow-sm"
             >
                 <ExcursionFields :form="form" />
 
                 <div class="flex items-center justify-end gap-4">
                     <Link
                         :href="excursionsIndex().url"
-                        class="text-sm text-gray-600 hover:text-gray-900"
+                        class="text-sm text-ink/70 hover:text-ink"
                     >
                         {{ $t('common.cancel') }}
                     </Link>
@@ -69,20 +69,20 @@ function setResponse(childId, response) {
             </form>
 
             <!-- RSVP status — staff can also answer on a parent's behalf -->
-            <div class="rounded-2xl bg-white p-6 shadow-sm">
-                <h3 class="font-semibold text-hort-navy">{{ $t('excursions.responses_heading') }}</h3>
-                <p class="mt-1 text-sm text-hort-navy/60">
+            <div class="rounded-2xl bg-surface p-6 shadow-sm">
+                <h3 class="font-semibold text-ink">{{ $t('excursions.responses_heading') }}</h3>
+                <p class="mt-1 text-sm text-ink/60">
                     {{ $t('excursions.responses_hint') }}
                 </p>
 
-                <ul class="mt-4 divide-y divide-gray-100">
+                <ul class="mt-4 divide-y divide-ink/10">
                     <li
                         v-for="child in children"
                         :key="child.id"
                         class="flex items-center justify-between gap-3 py-2"
                     >
                         <div class="min-w-0">
-                            <span class="font-medium text-hort-navy">
+                            <span class="font-medium text-ink">
                                 {{ child.name }}
                             </span>
                             <span
@@ -108,7 +108,7 @@ function setResponse(childId, response) {
                                 class="rounded-lg px-2.5 py-1 text-xs font-semibold transition"
                                 :class="child.response === true
                                     ? 'bg-hort-teal text-hort-navy'
-                                    : 'bg-hort-navy/5 text-hort-navy/60 hover:bg-hort-teal/30'"
+                                    : 'bg-ink/5 text-ink/60 hover:bg-hort-teal/30'"
                                 @click="setResponse(child.id, true)"
                             >
                                 {{ $t('common.yes') }}
@@ -118,7 +118,7 @@ function setResponse(childId, response) {
                                 class="rounded-lg px-2.5 py-1 text-xs font-semibold transition"
                                 :class="child.response === false
                                     ? 'bg-hort-purple text-white'
-                                    : 'bg-hort-navy/5 text-hort-navy/60 hover:bg-hort-purple/20'"
+                                    : 'bg-ink/5 text-ink/60 hover:bg-hort-purple/20'"
                                 @click="setResponse(child.id, false)"
                             >
                                 {{ $t('common.no') }}

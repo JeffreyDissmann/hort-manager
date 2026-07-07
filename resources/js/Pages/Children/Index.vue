@@ -45,7 +45,7 @@ function destroy(child) {
 
     <AuthenticatedLayout>
         <template #header>
-            <h2 class="text-xl font-semibold text-hort-navy">
+            <h2 class="text-xl font-semibold text-ink">
                 {{ canManage ? $t('children.title') : $t('children.my_children') }}
             </h2>
         </template>
@@ -53,7 +53,7 @@ function destroy(child) {
         <div class="space-y-4">
             <div
                 v-if="flash"
-                class="rounded-2xl bg-hort-teal/20 px-4 py-3 text-sm font-medium text-hort-navy"
+                class="rounded-2xl bg-hort-teal/20 px-4 py-3 text-sm font-medium text-ink"
             >
                 {{ flash }}
             </div>
@@ -70,22 +70,22 @@ function destroy(child) {
                 <li
                     v-for="child in children"
                     :key="child.id"
-                    class="rounded-2xl bg-white p-4 shadow-sm"
+                    class="rounded-2xl bg-surface p-4 shadow-sm"
                 >
                     <div class="flex items-start justify-between gap-3">
                         <div class="min-w-0">
-                            <p class="truncate font-semibold text-hort-navy">
+                            <p class="truncate font-semibold text-ink">
                                 {{ child.name }}
                             </p>
                             <p
                                 v-if="formatDate(child.date_of_birth)"
-                                class="mt-0.5 text-sm text-hort-navy/50"
+                                class="mt-0.5 text-sm text-ink/50"
                             >
                                 * {{ formatDate(child.date_of_birth) }}
                             </p>
                             <p
                                 v-if="child.note"
-                                class="mt-1 line-clamp-2 text-sm text-hort-navy/70"
+                                class="mt-1 line-clamp-2 text-sm text-ink/70"
                             >
                                 {{ child.note }}
                             </p>
@@ -94,7 +94,7 @@ function destroy(child) {
                             v-if="child.can_delete"
                             type="button"
                             @click="destroy(child)"
-                            class="shrink-0 rounded-lg p-2 text-hort-navy/30 transition hover:bg-red-50 hover:text-red-600"
+                            class="shrink-0 rounded-lg p-2 text-ink/30 transition hover:bg-red-50 hover:text-red-600"
                             :aria-label="$t('children.delete_child')"
                         >
                             <TrashIcon class="h-5 w-5" />
@@ -103,7 +103,7 @@ function destroy(child) {
 
                     <Link
                         :href="childrenEdit(child.id).url"
-                        class="mt-3 flex items-center justify-center gap-1 rounded-xl border-2 border-hort-navy/10 py-2.5 text-sm font-semibold text-hort-navy transition hover:border-hort-teal hover:bg-hort-teal/10"
+                        class="mt-3 flex items-center justify-center gap-1 rounded-xl border-2 border-ink/10 py-2.5 text-sm font-semibold text-ink transition hover:border-hort-teal hover:bg-hort-teal/10"
                     >
                         {{ $t('children.edit_schedule') }}
                     </Link>
@@ -112,7 +112,7 @@ function destroy(child) {
 
             <p
                 v-else
-                class="rounded-2xl border-2 border-dashed border-hort-navy/15 p-6 text-center text-sm text-hort-navy/50"
+                class="rounded-2xl border-2 border-dashed border-ink/15 p-6 text-center text-sm text-ink/50"
             >
                 <template v-if="canManage">
                     {{ $t('children.empty_manage') }}
