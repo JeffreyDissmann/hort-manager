@@ -2,6 +2,7 @@
 import { weeklyPlan, standardPlan } from '@/routes';
 import { adjust as weeklyPlanAdjust, reset as weeklyPlanReset } from '@/routes/weekly-plan';
 import { store as absenceStore, destroy as absenceDestroy } from '@/routes/absences';
+import { confirm as companionConfirm } from '@/routes/companion';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import Modal from '@/Components/Modal.vue';
 import InputLabel from '@/Components/InputLabel.vue';
@@ -22,6 +23,8 @@ const props = defineProps({
     program: { type: Array, default: () => [] },
     weekTimetable: { type: Array, default: () => [] },
     weekAbsences: { type: Array, default: () => [] },
+    children: { type: Array, default: () => [] },
+    companionRequests: { type: Array, default: () => [] },
     methodOptions: { type: Array, default: () => [] },
     qualifierOptions: { type: Array, default: () => [] },
 });
@@ -102,12 +105,35 @@ function cellClass(day) {
 
 // --- Inline editor (modal) ---
 const editing = ref(null); // { childId, childName, date, label }
-const form = reactive({ planned_time: '', planned_method: '', time_qualifier: 'at', note: '', absence_reason: '' });
+const form = reactive({ planned_time: '', planned_method: '', time_qualifier: 'at', companion_child_id: '', note: '', absence_reason: '' });
 
 // While a fresh absence is staged (Krank/Kommt nicht), the plan is disabled and the
 // comment becomes mandatory — nothing is submitted until the user hits Speichern.
 const stagingAbsence = computed(() => form.absence_reason !== '');
-const canSave = computed(() => !stagingAbsence.value || !!form.note.trim());
+
+// „Geht mit … mit": pick any other child; the companion picker replaces the time.
+const goingWithChild = computed(() => form.planned_method === 'with_child');
+const companionChoices = computed(() =>
+    props.children.filter((c) => c.id !== editing.value?.childId),
+);
+const selectedCompanion = computed(() =>
+    props.children.find((c) => c.id === form.companion_child_id),
+);
+const selectedCompanionName = computed(() => selectedCompanion.value?.name ?? '');
+// The companion's own pickup time on the edited day — shown in the mirror hint.
+const selectedCompanionTime = computed(
+    () => selectedCompanion.value?.times?.[editing.value?.date] ?? '',
+);
+
+const canSave = computed(() => {
+    if (stagingAbsence.value) {
+        return !!form.note.trim();
+    }
+    if (goingWithChild.value) {
+        return !!form.companion_child_id; // a companion must be chosen
+    }
+    return true;
+});
 
 function openCell(child, day, dayMeta) {
     if (!day.editable) {
@@ -123,6 +149,7 @@ function openCell(child, day, dayMeta) {
     form.planned_time = day.time ?? '';
     form.planned_method = day.method ?? '';
     form.time_qualifier = day.qualifier ?? 'at';
+    form.companion_child_id = day.companion?.id ?? '';
     form.note = day.note ?? '';
     form.absence_reason = '';
 }
@@ -164,10 +191,16 @@ function save() {
             planned_time: form.planned_time || null,
             planned_method: form.planned_method || null,
             time_qualifier: form.planned_method === 'sent_home' ? form.time_qualifier || null : null,
+            companion_child_id: goingWithChild.value ? form.companion_child_id || null : null,
             note: form.note || null,
         },
         { preserveScroll: true, onSuccess: closeEditor },
     );
+}
+
+// Confirm/decline another child going home with one of ours (companion's guardian/staff).
+function answerCompanion(id, confirmed) {
+    router.patch(companionConfirm(id).url, { confirmed }, { preserveScroll: true });
 }
 
 function resetDay() {
@@ -217,6 +250,40 @@ function cancelAbsence() {
             >
                 {{ flash }}
             </div>
+
+            <!-- Pending „geht mit … mit" confirmations: another child wants to go home
+                 with one of yours (who goes home alone). Confirm or decline. -->
+            <section v-if="companionRequests.length" class="space-y-2">
+                <h3 class="text-sm font-semibold text-hort-orange-dark">
+                    {{ $t('weekly.companion_requests_heading') }}
+                </h3>
+                <div
+                    v-for="req in companionRequests"
+                    :key="req.id"
+                    class="rounded-2xl bg-hort-orange/10 p-4"
+                >
+                    <p class="text-sm text-ink">
+                        {{ $t('weekly.companion_request', { child: req.child, companion: req.companion, day: req.day }) }}
+                    </p>
+                    <p v-if="req.comment" class="mt-0.5 text-sm text-ink/60">„{{ req.comment }}"</p>
+                    <div class="mt-3 flex gap-2">
+                        <button
+                            type="button"
+                            class="rounded-xl bg-hort-teal px-4 py-2 text-sm font-semibold text-hort-navy transition hover:bg-hort-teal-dark active:scale-[0.98]"
+                            @click="answerCompanion(req.id, true)"
+                        >
+                            {{ $t('weekly.companion_confirm') }}
+                        </button>
+                        <button
+                            type="button"
+                            class="rounded-xl bg-hort-orange px-4 py-2 text-sm font-semibold text-hort-navy transition hover:opacity-90 active:scale-[0.98]"
+                            @click="answerCompanion(req.id, false)"
+                        >
+                            {{ $t('weekly.companion_decline') }}
+                        </button>
+                    </div>
+                </div>
+            </section>
 
             <!-- Current week (effective plan, editable) -->
             <section class="space-y-3" @touchstart="onTouchStart" @touchend="onTouchEnd">
@@ -279,6 +346,13 @@ function cancelAbsence() {
                                     @click="openCell(child, day, weekDays[i])"
                                 >
                                     <template v-if="!day.absent && day.time"><span v-if="day.method === 'sent_home'">🚶&nbsp;</span><span v-if="timePrefix(day.method, day.qualifier)">{{ timePrefix(day.method, day.qualifier) }}&nbsp;</span></template>{{ day.absent ? day.absent.label : (day.time ?? $t('weekly.free')) }}
+                                    <span
+                                        v-if="day.companion"
+                                        class="mt-0.5 block truncate text-[10px] font-normal leading-tight"
+                                        :class="day.companion.confirmed === true ? 'opacity-70' : 'font-medium text-hort-orange-dark'"
+                                    >
+                                        {{ $t('weekly.companion_with', { name: day.companion.name }) }}<template v-if="day.companion.confirmed === null"> · {{ $t('weekly.companion_pending') }}</template><template v-else-if="day.companion.confirmed === false"> · {{ $t('weekly.companion_declined') }}</template>
+                                    </span>
                                     <span
                                         v-if="day.birthday !== null"
                                         class="mt-0.5 block text-[10px] leading-none"
@@ -488,7 +562,8 @@ function cancelAbsence() {
                     class="space-y-5"
                     :class="editing.absent || stagingAbsence ? 'opacity-40' : ''"
                 >
-                    <div>
+                    <!-- The time is hidden for „geht mit … mit" (mirrored from the companion). -->
+                    <div v-if="!goingWithChild">
                         <InputLabel for="time" :value="$t('weekly.time_label')" />
                         <TimeSelect
                             id="time"
@@ -502,7 +577,6 @@ function cancelAbsence() {
                         <select
                             id="method"
                             v-model="form.planned_method"
-                            :disabled="!form.planned_time"
                             class="mt-1 block w-full rounded-md border-ink/20 shadow-sm focus:border-hort-teal focus:ring-hort-teal disabled:bg-ink/5 disabled:text-ink/40"
                         >
                             <option value="">{{ $t('weekly.method_open') }}</option>
@@ -514,6 +588,24 @@ function cancelAbsence() {
                                 {{ o.label }}
                             </option>
                         </select>
+                    </div>
+
+                    <!-- „Geht mit … mit": pick the companion; the time is taken from them. -->
+                    <div v-if="goingWithChild">
+                        <InputLabel for="companion" :value="$t('weekly.companion_label')" />
+                        <select
+                            id="companion"
+                            v-model="form.companion_child_id"
+                            class="mt-1 block w-full rounded-md border-ink/20 shadow-sm focus:border-hort-teal focus:ring-hort-teal"
+                        >
+                            <option value="">{{ $t('weekly.companion_open') }}</option>
+                            <option v-for="c in companionChoices" :key="c.id" :value="c.id">
+                                {{ c.name }}
+                            </option>
+                        </select>
+                        <p v-if="selectedCompanionName" class="mt-1 text-xs text-ink/50">
+                            {{ $t('weekly.companion_mirror_hint', { name: selectedCompanionName }) }}<span v-if="selectedCompanionTime"> ({{ selectedCompanionTime }})</span>
+                        </p>
                     </div>
 
                     <!-- „Geht allein": what the time means (bis / genau um / ab) -->

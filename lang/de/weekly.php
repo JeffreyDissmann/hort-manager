@@ -45,6 +45,19 @@ return [
     'reason_hint' => 'Bitte kurz einen Grund angeben.',
     'not_coming_heading' => 'Diese Woche nicht da',
 
+    // „Geht mit einem anderen Kind mit"
+    'companion_label' => 'Mit welchem Kind?',
+    'companion_open' => '— Kind wählen —',
+    'companion_mirror_hint' => 'Die Abholzeit von :name wird übernommen.',
+    'companion_unavailable' => 'Dieses Kind wird an dem Tag nicht abgeholt oder geht selbst mit jemandem mit.',
+    'companion_with' => 'mit :name',
+    'companion_pending' => 'unbestätigt',
+    'companion_declined' => 'abgelehnt',
+    'companion_requests_heading' => 'Mitgehen bestätigen',
+    'companion_request' => ':child möchte am :day mit :companion nach Hause gehen.',
+    'companion_confirm' => 'Ja, in Ordnung',
+    'companion_decline' => 'Nein',
+
     'reported_as' => 'Als „:label“ gemeldet.',
     'cancel_absence' => 'Abwesenheit aufheben',
     'not_here_today' => 'Kind ist heute nicht da?',

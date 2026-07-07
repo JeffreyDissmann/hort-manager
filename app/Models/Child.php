@@ -45,6 +45,16 @@ class Child extends Model
     }
 
     /**
+     * Departures of *other* children set to go home with this one („geht mit … mit").
+     *
+     * @return HasMany<DailyDeparture, $this>
+     */
+    public function accompaniedDepartures(): HasMany
+    {
+        return $this->hasMany(DailyDeparture::class, 'companion_child_id');
+    }
+
+    /**
      * The parent users (Eltern) linked to this child.
      *
      * @return BelongsToMany<User, $this>

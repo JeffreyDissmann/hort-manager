@@ -17,4 +17,6 @@ return [
     'logout' => 'Abmelden',
     'pending_polls' => ':n offene Ausflug-Abstimmung – bitte antworten',
     'pending_polls_plural' => ':n offene Ausflug-Abstimmungen – bitte antworten',
+    'pending_companions' => ':n Kind möchte mit deinem mitgehen – bitte bestätigen',
+    'pending_companions_plural' => ':n Kinder möchten mit deinem mitgehen – bitte bestätigen',
 ];

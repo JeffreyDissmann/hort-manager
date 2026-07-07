@@ -22,6 +22,7 @@ return [
     'departure_method' => [
         'picked_up' => 'Wird abgeholt',
         'sent_home' => 'Geht allein nach Hause',
+        'with_child' => 'Geht mit einem anderen Kind mit',
     ],
     'time_qualifier' => [
         'by' => 'Bis zu der Uhrzeit',

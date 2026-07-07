@@ -14,6 +14,7 @@ use App\Models\DailyDeparture;
 use App\Models\DailyProgram;
 use App\Models\Excursion;
 use App\Models\HomeworkDefault;
+use App\Support\EffectivePlan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
@@ -42,6 +43,13 @@ class WeeklyOverviewController extends Controller
         $weekChildren = $user->isStaff()
             ? Child::query()->with('weeklySchedules')->orderBy('name')->get(['id', 'name', 'date_of_birth'])
             : $user->children()->with('weeklySchedules')->orderBy('name')->get();
+
+        // All children — for the companion picker and name lookups (a companion may be
+        // any child, not just one the current user manages). The picker excludes the
+        // child currently being edited client-side (which one is dynamic per edit), and
+        // the adjust endpoint enforces it with a `different:child_id` rule.
+        $allChildren = Child::query()->with('weeklySchedules')->orderBy('name')->get(['id', 'name']);
+        $childNames = $allChildren->pluck('name', 'id');
 
         $weekDates = $weekDays->pluck('date')->all();
 
@@ -110,11 +118,11 @@ class WeeklyOverviewController extends Controller
             }
         }
 
-        $currentWeek = $weekChildren->map(function (Child $child) use ($weekDays, $departures, $absences, $todayString, $excursionByChildDate, $toMinutes) {
+        $currentWeek = $weekChildren->map(function (Child $child) use ($weekDays, $departures, $absences, $todayString, $excursionByChildDate, $toMinutes, $childNames) {
             $byWeekday = $child->weeklySchedules->keyBy('weekday');
             $canManage = true;
 
-            $days = $weekDays->values()->map(function (array $day, int $i) use ($child, $byWeekday, $departures, $absences, $todayString, $canManage, $excursionByChildDate, $toMinutes) {
+            $days = $weekDays->values()->map(function (array $day, int $i) use ($child, $byWeekday, $departures, $absences, $todayString, $canManage, $excursionByChildDate, $toMinutes, $childNames) {
                 $schedule = $byWeekday->get($i + 1);
                 $stdTime = $schedule && $schedule->planned_time ? substr((string) $schedule->planned_time, 0, 5) : null;
                 $stdMethod = $schedule?->method?->value;
@@ -125,6 +133,17 @@ class WeeklyOverviewController extends Controller
                     : $stdTime;
                 $method = $departure ? $departure->planned_method?->value : $stdMethod;
                 $status = $departure?->status;
+
+                // „geht mit … mit": mirror the companion's effective time + carry its state.
+                $companion = null;
+                if ($departure && $method === DepartureMethod::WithChild->value && $departure->companion_child_id) {
+                    $companion = [
+                        'id' => $departure->companion_child_id,
+                        'name' => $childNames[$departure->companion_child_id] ?? '',
+                        'confirmed' => $departure->companion_confirmed,
+                    ];
+                    $time = EffectivePlan::for($departure->companion_child_id, $day['date'])['time'];
+                }
 
                 $departed = $status !== null && $status !== DepartureStatus::Present;
 
@@ -155,6 +174,8 @@ class WeeklyOverviewController extends Controller
                     'qualifier' => $method === DepartureMethod::SentHome->value
                         ? $departure?->time_qualifier?->value
                         : null,
+                    // Companion for „geht mit … mit": { name, confirmed: null|true|false }.
+                    'companion' => $companion,
                     // Shown on the cell: the override's own note, or the Stammplan comment.
                     'comment' => $adjusted ? $departure?->note : $schedule?->comment,
                     // Pre-fills the editor; an override defaults to the standard comment.
@@ -195,6 +216,48 @@ class WeeklyOverviewController extends Controller
             ])->values()->all())
             ->all();
 
+        // Pending „geht mit … mit" confirmations aimed at this user (their child is the
+        // companion) — staff see all. Answered via the cards + banner on this page.
+        $pendingCompanions = DailyDeparture::query()
+            ->pendingCompanion()
+            ->whereDate('date', '>=', $todayString)
+            ->when(! $user->isStaff(), fn ($q) => $q->whereIn('companion_child_id', $weekChildren->pluck('id')))
+            ->with('child:id,name')
+            ->orderBy('date')
+            ->get()
+            ->map(fn (DailyDeparture $d) => [
+                'id' => $d->id,
+                'child' => $d->child->name,
+                'companion' => $childNames[$d->companion_child_id] ?? '',
+                'day' => $this->shortDay($d->date),
+                'comment' => $d->note,
+            ])
+            ->all();
+
+        // Each child's effective pickup time per date this week (override → Stammplan),
+        // so the companion picker can show „… wird übernommen (15:30)". A with_child
+        // override has no own time (it mirrors someone else), so it stays blank.
+        $allOverrides = DailyDeparture::query()
+            ->whereIn('date', $weekDates)
+            ->get()
+            ->keyBy(fn (DailyDeparture $d) => $d->child_id.'|'.$d->date->toDateString());
+
+        $childTimes = $allChildren->mapWithKeys(function (Child $c) use ($weekDays, $allOverrides) {
+            $byWeekday = $c->weeklySchedules->keyBy('weekday');
+            $times = [];
+            foreach ($weekDays->values() as $i => $day) {
+                $override = $allOverrides->get($c->id.'|'.$day['date']);
+                $raw = $override
+                    ? $override->planned_time
+                    : $byWeekday->get($i + 1)?->planned_time;
+                if ($raw) {
+                    $times[$day['date']] = substr((string) $raw, 0, 5);
+                }
+            }
+
+            return [$c->id => $times];
+        });
+
         return Inertia::render('WeeklyPlan/Index', [
             'week' => $week,
             'weekDays' => $weekDays,
@@ -203,6 +266,12 @@ class WeeklyOverviewController extends Controller
             'activities' => $activities,
             'program' => $program,
             'weekTimetable' => $this->weekTimetable($weekDays, $excursionByChildDate, $program, $activities),
+            'children' => $allChildren->map(fn (Child $c) => [
+                'id' => $c->id,
+                'name' => $c->name,
+                'times' => $childTimes[$c->id] ?? [],
+            ])->all(),
+            'companionRequests' => $pendingCompanions,
             'methodOptions' => collect(DepartureMethod::cases())
                 ->map(fn (DepartureMethod $m) => ['value' => $m->value, 'label' => $m->label()])
                 ->all(),
@@ -210,6 +279,12 @@ class WeeklyOverviewController extends Controller
                 ->map(fn (TimeQualifier $q) => ['value' => $q->value, 'label' => $q->label(), 'prefix' => $q->prefix()])
                 ->all(),
         ]);
+    }
+
+    /** A localised short weekday + date label, e.g. „Mi, 8.7.". */
+    private function shortDay(Carbon $date): string
+    {
+        return $date->locale(app()->getLocale())->isoFormat('dd, D.M.');
     }
 
     /**
@@ -224,6 +299,7 @@ class WeeklyOverviewController extends Controller
     private function weekTimetable(Collection $weekDays, array $excursionByChildDate, array $program, array $activities): array
     {
         $children = Child::query()->with('weeklySchedules')->orderBy('name')->get(['id', 'name']);
+        $names = $children->pluck('name', 'id');
         $weekDates = $weekDays->pluck('date')->all();
 
         $departures = DailyDeparture::query()
@@ -259,7 +335,22 @@ class WeeklyOverviewController extends Controller
                 $schedule = $byWeekday->get($i + 1);
                 $stdTime = $schedule?->planned_time;
                 $departure = $departures->get($child->id.'|'.$day['date']);
+                $method = $departure ? $departure->planned_method : $schedule?->method;
                 $time = $departure && $departure->planned_time ? $departure->planned_time : $stdTime;
+
+                // „geht mit … mit": the time is always mirrored from the companion, but
+                // the arrangement itself is only shown to staff once the companion's
+                // family has confirmed. Until then it reads as a normal pickup at that
+                // synced time (see the board for the same rule).
+                $companion = null;
+                if ($departure && $method === DepartureMethod::WithChild && $departure->companion_child_id) {
+                    $time = EffectivePlan::for($departure->companion_child_id, $day['date'])['time'];
+                    if ($departure->companion_confirmed === true) {
+                        $companion = ['name' => $names[$departure->companion_child_id] ?? '', 'confirmed' => true];
+                    } else {
+                        $method = DepartureMethod::PickedUp;
+                    }
+                }
 
                 if (! $time) {
                     continue;
@@ -267,7 +358,6 @@ class WeeklyOverviewController extends Controller
 
                 $short = substr((string) $time, 0, 5);
                 $stdShort = $stdTime ? substr((string) $stdTime, 0, 5) : null;
-                $method = $departure ? $departure->planned_method : $schedule?->method;
                 $adjusted = $departure !== null
                     && ($short !== $stdShort || $method?->value !== $schedule?->method?->value);
                 $departed = $departure?->status !== null && $departure?->status !== DepartureStatus::Present;
@@ -285,6 +375,7 @@ class WeeklyOverviewController extends Controller
                     'qualifier_prefix' => $qualifier && $qualifier !== TimeQualifier::At
                         ? $qualifier->prefix()
                         : null,
+                    'companion' => $companion,
                     'comment' => $adjusted ? $departure?->note : $schedule?->comment,
                     'note' => $departure?->note ?? $schedule?->comment,
                     'adjusted' => $adjusted,

@@ -8,6 +8,7 @@ import TimeSelect from '@/Components/TimeSelect.vue';
 import { PencilSquareIcon } from '@heroicons/vue/24/outline';
 import { Head, router, usePage } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
+import { t } from '@/i18n';
 
 const props = defineProps({
     date: { type: Object, required: true },
@@ -62,6 +63,11 @@ function methodIcon(method) {
 }
 
 function planLabel(row) {
+    // „geht mit … mit": show the mirrored time + „mit B" rather than the long label.
+    if (row.planned_method === 'with_child' && row.companion) {
+        const withText = t('weekly.companion_with', { name: row.companion.name });
+        return row.planned_time ? `${row.planned_time} · ${withText}` : withText;
+    }
     const method = methodLabels.value[row.planned_method];
     if (!method) {
         return row.planned_time;

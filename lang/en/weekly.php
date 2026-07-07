@@ -45,6 +45,19 @@ return [
     'reason_hint' => 'Please add a short reason.',
     'not_coming_heading' => 'Away this week',
 
+    // „Goes with another child"
+    'companion_label' => 'With which child?',
+    'companion_open' => '— choose a child —',
+    'companion_mirror_hint' => ':name’s pickup time will be used.',
+    'companion_unavailable' => 'That child isn’t being picked up that day, or is themselves going with someone.',
+    'companion_with' => 'with :name',
+    'companion_pending' => 'unconfirmed',
+    'companion_declined' => 'declined',
+    'companion_requests_heading' => 'Confirm going along',
+    'companion_request' => ':child would like to go home with :companion on :day.',
+    'companion_confirm' => 'Yes, that’s fine',
+    'companion_decline' => 'No',
+
     'reported_as' => 'Reported as “:label”.',
     'cancel_absence' => 'Cancel absence',
     'not_here_today' => 'Child not here today?',

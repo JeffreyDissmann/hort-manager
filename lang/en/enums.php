@@ -22,6 +22,7 @@ return [
     'departure_method' => [
         'picked_up' => 'Picked up',
         'sent_home' => 'Walks home alone',
+        'with_child' => 'Goes with another child',
     ],
     'time_qualifier' => [
         'by' => 'By this time',

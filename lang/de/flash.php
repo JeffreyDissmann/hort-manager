@@ -19,6 +19,7 @@ return [
 
     'plan_updated' => 'Plan für :name aktualisiert.',
     'day_reset' => ':name: Tag auf Standard zurückgesetzt.',
+    'companion_answered' => 'Antwort für :name gespeichert.',
 
     'excursion_created' => 'Ausflug „:name“ angelegt. Die Eltern wurden zur Abstimmung eingeladen.',
     'excursion_saved' => 'Ausflug „:name“ gespeichert.',

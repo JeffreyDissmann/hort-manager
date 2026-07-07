@@ -41,6 +41,7 @@ const userAvatar = computed(() => user.value?.avatar ?? null);
 const isStaff = computed(() => user.value?.role === 'staff');
 const isAdmin = computed(() => user.value?.is_admin ?? false);
 const pendingPolls = computed(() => usePage().props.pendingPolls ?? 0);
+const pendingCompanions = computed(() => usePage().props.pendingCompanions ?? 0);
 
 // Primary navigation — shown as top links on desktop and as a bottom tab bar on mobile.
 const navItems = computed(() => {
@@ -190,6 +191,28 @@ function isActive(href) {
                         pendingPolls > 1
                             ? $t('nav.pending_polls_plural', { n: pendingPolls })
                             : $t('nav.pending_polls', { n: pendingPolls })
+                    }}
+                </span>
+                <span class="ml-auto">→</span>
+            </div>
+        </Link>
+
+        <!-- Pending „geht mit … mit" confirmation (parents) -->
+        <Link
+            v-if="!isStaff && pendingCompanions > 0"
+            :href="weeklyPlan().url"
+            class="block bg-hort-orange text-hort-navy"
+        >
+            <div
+                :class="contentMax"
+                class="mx-auto flex items-center gap-2 px-4 py-2.5 text-sm font-semibold sm:px-6"
+            >
+                <span class="text-lg">🚸</span>
+                <span>
+                    {{
+                        pendingCompanions > 1
+                            ? $t('nav.pending_companions_plural', { n: pendingCompanions })
+                            : $t('nav.pending_companions', { n: pendingCompanions })
                     }}
                 </span>
                 <span class="ml-auto">→</span>

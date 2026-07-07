@@ -5,10 +5,13 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Enums\AbsenceReason;
+use App\Observers\AbsenceObserver;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /** A child is away (sick or otherwise) on a given date — no pickup expected. */
+#[ObservedBy([AbsenceObserver::class])]
 class Absence extends Model
 {
     protected $fillable = ['child_id', 'date', 'reason', 'comment', 'reported_by'];
