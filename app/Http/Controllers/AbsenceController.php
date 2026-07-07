@@ -5,29 +5,19 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Enums\AbsenceReason;
+use App\Http\Requests\StoreAbsenceRequest;
 use App\Models\Absence;
 use App\Models\Child;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
-use Illuminate\Validation\Rule;
 
 /** Parents/staff report a child as away (krank/abwesend) — no pickup expected. */
 class AbsenceController extends Controller
 {
-    public function store(Request $request): RedirectResponse
+    public function store(StoreAbsenceRequest $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'child_id' => ['required', 'exists:children,id'],
-            'from' => ['required', 'date', 'after_or_equal:today'],
-            // Cap the span at ~a school year: the loop below writes one row per day,
-            // so an unbounded range would flood the DB from a single request.
-            'to' => ['required', 'date', 'after_or_equal:from', 'before_or_equal:'.now()->addYear()->toDateString()],
-            'reason' => ['required', Rule::enum(AbsenceReason::class)],
-            // Optional here so the board's quick-report and the assistant still work;
-            // the Wochenplan editor enforces it on the client.
-            'comment' => ['nullable', 'string', 'max:255'],
-        ]);
+        $validated = $request->validated();
 
         $child = Child::findOrFail($validated['child_id']);
         $this->authorize('update', $child);
