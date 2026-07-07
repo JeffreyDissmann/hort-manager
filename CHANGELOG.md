@@ -71,6 +71,14 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **Clearer departure-method distinction on the plans and board.** Per staff
+  feedback, the two methods were too close at a glance and the child's name shared
+  the method colour. Now the name/time is always solid `ink`, and the method reads
+  from a warm/cool split — picked up = teal, goes home alone = a new warm
+  `hort-orange` (moved off purple, which the app already uses for excursions /
+  activities) — and the "goes home alone" case additionally carries a 🚶 icon so
+  the safety-relevant exception stands out. Adds `hort-orange`/`hort-orange-dark`
+  theme tokens.
 - **Wochenplan and Stammplan are now two separate pages.** The navigable week view
   (`/wochenplan`) shows only the per-week plan, with a strong current-week cue (a
   coloured „Aktuelle Woche" / „Nächste Woche" / „in X Wochen" pill plus a highlighted

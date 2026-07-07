@@ -31,6 +31,8 @@
         --color-teal: 106 194 199; /* #6AC2C7 */
         --color-teal-dark: 79 168 173; /* #4FA8AD */
         --color-purple: 137 91 158; /* #895B9E */
+        --color-orange: 227 138 59; /* #E38A3B — departure "geht allein" */
+        --color-orange-dark: 180 83 9; /* #B45309 — orange accent text */
 
         color-scheme: light;
     }
@@ -46,6 +48,8 @@
         --color-teal: 122 210 214; /* brighter for accent text/buttons */
         --color-teal-dark: 106 194 199; /* brighter hover + accent text */
         --color-purple: 137 91 158; /* constant — protects white-on-purple */
+        --color-orange: 234 158 84; /* brighter warm accent on dark */
+        --color-orange-dark: 234 158 84; /* brighter so orange text stays legible */
 
         color-scheme: dark;
     }

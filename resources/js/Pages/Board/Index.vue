@@ -56,9 +56,18 @@ const counts = computed(() => {
     return { present, left, excursion };
 });
 
+// Only the safety-relevant "goes home alone" case gets a glanceable icon.
+function methodIcon(method) {
+    return method === 'sent_home' ? '🚶' : '';
+}
+
 function planLabel(row) {
     const method = methodLabels.value[row.planned_method];
-    return method ? `${row.planned_time} · ${method}` : row.planned_time;
+    if (!method) {
+        return row.planned_time;
+    }
+    const icon = methodIcon(row.planned_method);
+    return `${icon ? icon + ' ' : ''}${row.planned_time} · ${method}`;
 }
 
 function toMinutes(time) {
@@ -507,9 +516,9 @@ function saveEdit(row) {
                         >
                             <p
                                 class="text-sm font-semibold"
-                                :class="row.status === 'sent_home' ? 'text-hort-purple' : 'text-hort-teal-dark'"
+                                :class="row.status === 'sent_home' ? 'text-hort-orange-dark' : 'text-hort-teal-dark'"
                             >
-                                ✓ {{ row.status_label }}
+                                <span v-if="row.status === 'sent_home'">🚶 </span>✓ {{ row.status_label }}
                             </p>
                             <p class="text-xs text-ink/40">
                                 {{ row.left_at }}<span v-if="row.marked_by"> · {{ row.marked_by }}</span>
@@ -586,7 +595,7 @@ function saveEdit(row) {
                                 </button>
                                 <button
                                     type="button"
-                                    class="rounded-xl bg-hort-purple py-3 font-semibold text-white transition hover:opacity-90 active:scale-[0.98]"
+                                    class="rounded-xl bg-hort-orange py-3 font-semibold text-hort-navy transition hover:opacity-90 active:scale-[0.98]"
                                     @click="mark(row, 'sent_home')"
                                 >
                                     {{ $t('board.sent_home_button') }}

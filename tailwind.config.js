@@ -45,6 +45,8 @@ export default {
                     teal: 'rgb(var(--color-teal) / <alpha-value>)',
                     'teal-dark': 'rgb(var(--color-teal-dark) / <alpha-value>)',
                     purple: 'rgb(var(--color-purple) / <alpha-value>)',
+                    orange: 'rgb(var(--color-orange) / <alpha-value>)',
+                    'orange-dark': 'rgb(var(--color-orange-dark) / <alpha-value>)',
                 },
             },
         },

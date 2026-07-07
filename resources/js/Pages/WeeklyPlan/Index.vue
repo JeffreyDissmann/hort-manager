@@ -66,13 +66,15 @@ function homeworkConflict(day, i) {
     return pickup >= toMinutes(hw.homework_start) && pickup < toMinutes(hw.homework_end);
 }
 
+// Solid `ink` time; the method reads from the warm/cool tint, and the "goes home
+// alone" case additionally gets a 🚶 icon.
 function cellClass(day) {
     if (!day.time) {
         return 'bg-ink/5 text-ink/30';
     }
     return day.method === 'sent_home'
-        ? 'bg-hort-purple/15 text-hort-purple'
-        : 'bg-hort-teal/20 text-hort-teal-dark';
+        ? 'bg-hort-orange/20 text-ink'
+        : 'bg-hort-teal/20 text-ink';
 }
 
 // --- Inline editor (modal) ---
@@ -205,13 +207,13 @@ function cancelAbsence() {
                                 ]"
                             >
                                 <div
-                                    class="text-[11px] font-medium"
+                                    class="text-xs font-medium"
                                     :class="weekDays[i].is_today ? 'text-hort-teal-dark' : 'text-ink/40'"
                                 >
                                     {{ weekDays[i].label }}<span v-if="weekDays[i].is_today"> · {{ $t('common.today') }}</span>
                                 </div>
                                 <div
-                                    class="text-[10px]"
+                                    class="text-[11px]"
                                     :class="weekDays[i].is_today ? 'font-semibold text-hort-teal-dark' : 'text-ink/30'"
                                 >
                                     {{ weekDays[i].date_label }}
@@ -219,7 +221,7 @@ function cancelAbsence() {
                                 <component
                                     :is="day.editable ? 'button' : 'div'"
                                     type="button"
-                                    class="relative mt-1 w-full rounded-lg py-2 text-xs font-semibold"
+                                    class="relative mt-1 w-full rounded-lg py-2 text-sm font-semibold"
                                     :class="[
                                         day.absent ? 'bg-amber-100 text-amber-700' : cellClass(day),
                                         day.adjusted && !day.absent ? 'ring-2 ring-amber-400' : '',
@@ -228,7 +230,7 @@ function cancelAbsence() {
                                     :title="day.absent ? day.absent.label : day.comment || undefined"
                                     @click="openCell(child, day, weekDays[i])"
                                 >
-                                    {{ day.absent ? day.absent.label : (day.time ?? $t('weekly.free')) }}
+                                    <span v-if="!day.absent && day.time && day.method === 'sent_home'">🚶 </span>{{ day.absent ? day.absent.label : (day.time ?? $t('weekly.free')) }}
                                     <span
                                         v-if="day.birthday !== null"
                                         class="mt-0.5 block text-[10px] leading-none"
@@ -245,7 +247,7 @@ function cancelAbsence() {
                                     </span>
                                     <span
                                         v-else-if="day.comment"
-                                        class="mt-0.5 block truncate text-[9px] font-normal leading-tight opacity-70"
+                                        class="mt-0.5 block truncate text-[10px] font-normal leading-tight opacity-70"
                                     >
                                         {{ day.comment }}
                                     </span>
@@ -337,8 +339,8 @@ function cancelAbsence() {
                         {{ $t('weekly.legend_picked_up') }}
                     </span>
                     <span class="flex items-center gap-1.5">
-                        <span class="h-3 w-3 rounded-full bg-hort-purple/50" />
-                        {{ $t('weekly.legend_alone') }}
+                        <span class="h-3 w-3 rounded-full bg-hort-orange/60" />
+                        🚶 {{ $t('weekly.legend_alone') }}
                     </span>
                     <span class="flex items-center gap-1.5">
                         <span class="h-3 w-3 rounded-full ring-2 ring-amber-400" />
