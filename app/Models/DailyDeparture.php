@@ -6,6 +6,7 @@ namespace App\Models;
 
 use App\Enums\DepartureMethod;
 use App\Enums\DepartureStatus;
+use App\Enums\TimeQualifier;
 use App\Observers\DailyDepartureObserver;
 use Database\Factories\DailyDepartureFactory;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
@@ -24,6 +25,7 @@ class DailyDeparture extends Model
         'date',
         'status',
         'planned_time',
+        'time_qualifier',
         'planned_method',
         'left_at',
         'marked_by',
@@ -36,6 +38,7 @@ class DailyDeparture extends Model
             'date' => 'date:Y-m-d',
             'status' => DepartureStatus::class,
             'planned_method' => DepartureMethod::class,
+            'time_qualifier' => TimeQualifier::class,
             'left_at' => 'datetime',
         ];
     }

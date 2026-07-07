@@ -47,7 +47,7 @@ return [
     'change_pickup_time' => 'Abholzeit ändern',
     'not_here' => 'Nicht da?',
     'report_sick' => 'Krank melden',
-    'report_away' => 'Abwesend',
+    'report_away' => 'Kommt nicht',
 
     'empty_own' => 'Heute ist keins deiner Kinder im Hort.',
     'empty_all' => 'Für diesen Tag sind keine Kinder im Hort.',

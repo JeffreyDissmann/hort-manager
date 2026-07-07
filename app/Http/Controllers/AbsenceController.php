@@ -24,6 +24,9 @@ class AbsenceController extends Controller
             // so an unbounded range would flood the DB from a single request.
             'to' => ['required', 'date', 'after_or_equal:from', 'before_or_equal:'.now()->addYear()->toDateString()],
             'reason' => ['required', Rule::enum(AbsenceReason::class)],
+            // Optional here so the board's quick-report and the assistant still work;
+            // the Wochenplan editor enforces it on the client.
+            'comment' => ['nullable', 'string', 'max:255'],
         ]);
 
         $child = Child::findOrFail($validated['child_id']);
@@ -33,7 +36,7 @@ class AbsenceController extends Controller
         $to = Carbon::parse($validated['to']);
 
         for ($date = Carbon::parse($validated['from']); $date->lte($to); $date->addDay()) {
-            Absence::report($child, $date->toDateString(), $reason, $request->user()->id);
+            Absence::report($child, $date->toDateString(), $reason, $request->user()->id, $validated['comment'] ?? null);
         }
 
         return back()->with('status', __('flash.absence_reported', ['name' => $child->name, 'reason' => $reason->label()]));

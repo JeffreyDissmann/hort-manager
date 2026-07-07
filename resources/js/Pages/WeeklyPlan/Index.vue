@@ -21,8 +21,31 @@ const props = defineProps({
     activities: { type: Array, default: () => [] },
     program: { type: Array, default: () => [] },
     weekTimetable: { type: Array, default: () => [] },
+    weekAbsences: { type: Array, default: () => [] },
     methodOptions: { type: Array, default: () => [] },
+    qualifierOptions: { type: Array, default: () => [] },
 });
+
+// „Kind (Grund – Kommentar)" per day, for the not-coming summary under the grid.
+function absenceLine(day) {
+    return day
+        .map((a) => (a.comment ? `${a.name} (${a.label} – ${a.comment})` : `${a.name} (${a.label})`))
+        .join(', ');
+}
+
+// Short prefix per „geht allein" time qualifier (bis/um/ab), keyed by value.
+const qualifierPrefix = computed(() =>
+    Object.fromEntries(props.qualifierOptions.map((o) => [o.value, o.prefix])),
+);
+
+// The prefix to show before a sent_home time — only for the meaningful deviations
+// (bis/ab); „genau um" is the default and stays implicit to keep the cell clean.
+function timePrefix(method, qualifier) {
+    if (method !== 'sent_home' || !qualifier || qualifier === 'at') {
+        return '';
+    }
+    return qualifierPrefix.value[qualifier] ?? '';
+}
 
 // The picked week's column headers show the weekday + its date; today is flagged.
 const weekColumns = computed(() =>
@@ -79,7 +102,12 @@ function cellClass(day) {
 
 // --- Inline editor (modal) ---
 const editing = ref(null); // { childId, childName, date, label }
-const form = reactive({ planned_time: '', planned_method: '', note: '' });
+const form = reactive({ planned_time: '', planned_method: '', time_qualifier: 'at', note: '', absence_reason: '' });
+
+// While a fresh absence is staged (Krank/Kommt nicht), the plan is disabled and the
+// comment becomes mandatory — nothing is submitted until the user hits Speichern.
+const stagingAbsence = computed(() => form.absence_reason !== '');
+const canSave = computed(() => !stagingAbsence.value || !!form.note.trim());
 
 function openCell(child, day, dayMeta) {
     if (!day.editable) {
@@ -94,7 +122,9 @@ function openCell(child, day, dayMeta) {
     };
     form.planned_time = day.time ?? '';
     form.planned_method = day.method ?? '';
+    form.time_qualifier = day.qualifier ?? 'at';
     form.note = day.note ?? '';
+    form.absence_reason = '';
 }
 
 // Staff editing a pickup from the Ganze-Woche timeline (kid carries the day data).
@@ -107,6 +137,25 @@ function closeEditor() {
 }
 
 function save() {
+    // Staged absence: report it (with the now-required comment) instead of a plan.
+    if (stagingAbsence.value) {
+        if (!canSave.value) {
+            return;
+        }
+        router.post(
+            absenceStore().url,
+            {
+                child_id: editing.value.childId,
+                from: editing.value.date,
+                to: editing.value.date,
+                reason: form.absence_reason,
+                comment: form.note || null,
+            },
+            { preserveScroll: true, onSuccess: closeEditor },
+        );
+        return;
+    }
+
     router.patch(
         weeklyPlanAdjust().url,
         {
@@ -114,6 +163,7 @@ function save() {
             date: editing.value.date,
             planned_time: form.planned_time || null,
             planned_method: form.planned_method || null,
+            time_qualifier: form.planned_method === 'sent_home' ? form.time_qualifier || null : null,
             note: form.note || null,
         },
         { preserveScroll: true, onSuccess: closeEditor },
@@ -128,17 +178,15 @@ function resetDay() {
     );
 }
 
-function reportAbsence(reason) {
-    router.post(
-        absenceStore().url,
-        {
-            child_id: editing.value.childId,
-            from: editing.value.date,
-            to: editing.value.date,
-            reason,
-        },
-        { preserveScroll: true, onSuccess: closeEditor },
-    );
+// Stage/unstage a fresh absence locally — committed only on Speichern (see save()).
+// Staging clears the note so a fresh (required) reason is typed, not the plan comment.
+function stageAbsence(reason) {
+    if (form.absence_reason === reason) {
+        form.absence_reason = '';
+    } else {
+        form.absence_reason = reason;
+        form.note = '';
+    }
 }
 
 function cancelAbsence() {
@@ -230,7 +278,7 @@ function cancelAbsence() {
                                     :title="day.absent ? day.absent.label : day.comment || undefined"
                                     @click="openCell(child, day, weekDays[i])"
                                 >
-                                    <span v-if="!day.absent && day.time && day.method === 'sent_home'">🚶 </span>{{ day.absent ? day.absent.label : (day.time ?? $t('weekly.free')) }}
+                                    <template v-if="!day.absent && day.time"><span v-if="day.method === 'sent_home'">🚶&nbsp;</span><span v-if="timePrefix(day.method, day.qualifier)">{{ timePrefix(day.method, day.qualifier) }}&nbsp;</span></template>{{ day.absent ? day.absent.label : (day.time ?? $t('weekly.free')) }}
                                     <span
                                         v-if="day.birthday !== null"
                                         class="mt-0.5 block text-[10px] leading-none"
@@ -328,6 +376,20 @@ function cancelAbsence() {
                     >
                         {{ $t('weekly.empty_week') }}
                     </p>
+
+                    <!-- Reported away this week (absent kids are off the grid above) -->
+                    <div
+                        v-if="weekAbsences.some((d) => d.length)"
+                        class="rounded-2xl bg-amber-50 p-3 text-amber-800 shadow-sm"
+                    >
+                        <p class="mb-1 text-sm font-semibold">{{ $t('weekly.not_coming_heading') }}</p>
+                        <template v-for="(day, i) in weekAbsences" :key="i">
+                            <p v-if="day.length" class="text-xs leading-relaxed">
+                                <span class="font-semibold">{{ weekColumns[i].label }}:</span>
+                                {{ absenceLine(day) }}
+                            </p>
+                        </template>
+                    </div>
                 </div>
 
                 <div
@@ -373,51 +435,14 @@ function cancelAbsence() {
                     </p>
                 </div>
 
-                <div>
-                    <InputLabel for="time" :value="$t('weekly.time_label')" />
-                    <TimeSelect
-                        id="time"
-                        v-model="form.planned_time"
-                        class="mt-1 block w-full"
-                    />
-                </div>
-
-                <div>
-                    <InputLabel for="method" :value="$t('weekly.method_label')" />
-                    <select
-                        id="method"
-                        v-model="form.planned_method"
-                        :disabled="!form.planned_time"
-                        class="mt-1 block w-full rounded-md border-ink/20 shadow-sm focus:border-hort-teal focus:ring-hort-teal disabled:bg-ink/5 disabled:text-ink/40"
-                    >
-                        <option value="">{{ $t('weekly.method_open') }}</option>
-                        <option
-                            v-for="o in methodOptions"
-                            :key="o.value"
-                            :value="o.value"
-                        >
-                            {{ o.label }}
-                        </option>
-                    </select>
-                </div>
-
-                <div>
-                    <InputLabel for="note" :value="$t('common.note')" />
-                    <TextInput
-                        id="note"
-                        v-model="form.note"
-                        type="text"
-                        maxlength="255"
-                        class="mt-1 block w-full"
-                        :placeholder="$t('weekly.note_placeholder')"
-                    />
-                </div>
-
-                <!-- Krankmeldung / Abwesenheit -->
+                <!-- Krankmeldung / Abwesenheit — first: it overrides the plan below -->
                 <div class="rounded-lg bg-canvas p-3">
                     <template v-if="editing.absent">
                         <p class="text-sm font-medium text-amber-700">
                             {{ $t('weekly.reported_as', { label: editing.absent.label }) }}
+                        </p>
+                        <p v-if="editing.absent.comment" class="mt-0.5 text-sm text-ink/60">
+                            {{ editing.absent.comment }}
                         </p>
                         <button
                             type="button"
@@ -430,14 +455,105 @@ function cancelAbsence() {
                     <template v-else>
                         <p class="text-sm text-ink/60">{{ $t('weekly.not_here_today') }}</p>
                         <div class="mt-2 flex gap-2">
-                            <SecondaryButton @click="reportAbsence('sick')">
+                            <button
+                                type="button"
+                                class="rounded-md border px-4 py-2 text-xs font-semibold uppercase tracking-widest transition"
+                                :class="form.absence_reason === 'sick'
+                                    ? 'border-hort-orange bg-hort-orange/15 text-ink ring-1 ring-hort-orange'
+                                    : 'border-ink/20 text-ink/80 hover:bg-ink/5'"
+                                @click="stageAbsence('sick')"
+                            >
                                 {{ $t('weekly.report_sick') }}
-                            </SecondaryButton>
-                            <SecondaryButton @click="reportAbsence('away')">
+                            </button>
+                            <button
+                                type="button"
+                                class="rounded-md border px-4 py-2 text-xs font-semibold uppercase tracking-widest transition"
+                                :class="form.absence_reason === 'away'
+                                    ? 'border-hort-orange bg-hort-orange/15 text-ink ring-1 ring-hort-orange'
+                                    : 'border-ink/20 text-ink/80 hover:bg-ink/5'"
+                                @click="stageAbsence('away')"
+                            >
                                 {{ $t('weekly.report_away') }}
-                            </SecondaryButton>
+                            </button>
                         </div>
+                        <p v-if="stagingAbsence" class="mt-2 text-xs font-medium text-hort-orange-dark">
+                            {{ $t('weekly.absence_needs_comment') }}
+                        </p>
                     </template>
+                </div>
+
+                <!-- Pickup plan — disabled while the child is (or is being) reported away -->
+                <fieldset
+                    :disabled="!!editing.absent || stagingAbsence"
+                    class="space-y-5"
+                    :class="editing.absent || stagingAbsence ? 'opacity-40' : ''"
+                >
+                    <div>
+                        <InputLabel for="time" :value="$t('weekly.time_label')" />
+                        <TimeSelect
+                            id="time"
+                            v-model="form.planned_time"
+                            class="mt-1 block w-full"
+                        />
+                    </div>
+
+                    <div>
+                        <InputLabel for="method" :value="$t('weekly.method_label')" />
+                        <select
+                            id="method"
+                            v-model="form.planned_method"
+                            :disabled="!form.planned_time"
+                            class="mt-1 block w-full rounded-md border-ink/20 shadow-sm focus:border-hort-teal focus:ring-hort-teal disabled:bg-ink/5 disabled:text-ink/40"
+                        >
+                            <option value="">{{ $t('weekly.method_open') }}</option>
+                            <option
+                                v-for="o in methodOptions"
+                                :key="o.value"
+                                :value="o.value"
+                            >
+                                {{ o.label }}
+                            </option>
+                        </select>
+                    </div>
+
+                    <!-- „Geht allein": what the time means (bis / genau um / ab) -->
+                    <div v-if="form.planned_method === 'sent_home'">
+                        <InputLabel for="qualifier" :value="$t('weekly.qualifier_label')" />
+                        <select
+                            id="qualifier"
+                            v-model="form.time_qualifier"
+                            class="mt-1 block w-full rounded-md border-ink/20 shadow-sm focus:border-hort-teal focus:ring-hort-teal"
+                        >
+                            <option
+                                v-for="o in qualifierOptions"
+                                :key="o.value"
+                                :value="o.value"
+                            >
+                                {{ o.label }}
+                            </option>
+                        </select>
+                    </div>
+                </fieldset>
+
+                <div>
+                    <InputLabel
+                        for="note"
+                        :value="stagingAbsence ? $t('weekly.reason_label') : $t('common.note')"
+                    />
+                    <TextInput
+                        id="note"
+                        v-model="form.note"
+                        type="text"
+                        maxlength="255"
+                        class="mt-1 block w-full"
+                        :placeholder="stagingAbsence ? $t('weekly.reason_placeholder') : $t('weekly.note_placeholder')"
+                    />
+                    <p
+                        class="mt-1 text-xs"
+                        :class="stagingAbsence ? 'font-medium text-hort-orange-dark' : 'text-ink/50'"
+                    >
+                        {{ stagingAbsence ? $t('weekly.reason_hint') : $t('weekly.note_hint') }}
+                    </p>
                 </div>
 
                 <div class="flex items-center justify-between gap-3 pt-2">
@@ -452,7 +568,7 @@ function cancelAbsence() {
                         <SecondaryButton @click="closeEditor">
                             {{ $t('common.cancel') }}
                         </SecondaryButton>
-                        <PrimaryButton @click="save">{{ $t('common.save') }}</PrimaryButton>
+                        <PrimaryButton :disabled="!canSave" @click="save">{{ $t('common.save') }}</PrimaryButton>
                     </div>
                 </div>
             </div>

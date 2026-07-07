@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 /** A child is away (sick or otherwise) on a given date — no pickup expected. */
 class Absence extends Model
 {
-    protected $fillable = ['child_id', 'date', 'reason', 'reported_by'];
+    protected $fillable = ['child_id', 'date', 'reason', 'comment', 'reported_by'];
 
     protected function casts(): array
     {
@@ -24,11 +24,11 @@ class Absence extends Model
     /**
      * Record a child as away on a date and drop any not-yet-departed pickup.
      */
-    public static function report(Child $child, string $date, AbsenceReason $reason, ?int $reportedBy): self
+    public static function report(Child $child, string $date, AbsenceReason $reason, ?int $reportedBy, ?string $comment = null): self
     {
         $absence = static::updateOrCreate(
             ['child_id' => $child->id, 'date' => $date],
-            ['reason' => $reason, 'reported_by' => $reportedBy],
+            ['reason' => $reason, 'comment' => $comment, 'reported_by' => $reportedBy],
         );
 
         DailyDeparture::where('child_id', $child->id)

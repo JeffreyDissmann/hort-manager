@@ -7,6 +7,7 @@ namespace Tests\Feature;
 use App\Enums\DepartureMethod;
 use App\Enums\DepartureStatus;
 use App\Enums\UserRole;
+use App\Models\Absence;
 use App\Models\Child;
 use App\Models\DailyDeparture;
 use App\Models\Excursion;
@@ -204,6 +205,31 @@ class WeeklyOverviewTest extends TestCase
                 ->where('weekTimetable.0.days.0.0.adjusted', true)
                 ->where('weekTimetable.0.days.0.0.editable', true) // today, staff can edit
                 ->where('weekTimetable.0.days.1', []) // Tuesday empty
+            );
+    }
+
+    public function test_an_absent_child_is_dropped_from_the_week_timetable(): void
+    {
+        $this->travelTo(Carbon::parse('2026-06-22')); // Monday
+
+        $child = Child::factory()->create(['name' => 'Emma']);
+        WeeklySchedule::create([
+            'child_id' => $child->id,
+            'weekday' => 1, // Montag
+            'planned_time' => '14:00',
+            'method' => DepartureMethod::PickedUp,
+        ]);
+        // Reported away on Monday → must not fall back to the Stammplan on the grid.
+        Absence::create(['child_id' => $child->id, 'date' => '2026-06-22', 'reason' => 'away']);
+
+        $this->actingAs(User::factory()->create(['role' => UserRole::Staff]))
+            ->get(route('weekly-plan'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('weekTimetable', []) // no rows: Emma's only day is her absence
+                // …but she is listed in the not-coming summary for Monday (index 0).
+                ->where('weekAbsences.0.0.name', 'Emma')
+                ->where('weekAbsences.0.0.label', 'Kommt nicht')
+                ->where('weekAbsences.1', []) // Tuesday: nobody away
             );
     }
 

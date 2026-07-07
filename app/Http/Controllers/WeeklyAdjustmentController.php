@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\DepartureMethod;
 use App\Enums\DepartureStatus;
+use App\Enums\TimeQualifier;
 use App\Models\Child;
 use App\Models\DailyDeparture;
 use Illuminate\Http\RedirectResponse;
@@ -23,15 +24,23 @@ class WeeklyAdjustmentController extends Controller
             'date' => ['required', 'date'],
             'planned_time' => ['nullable', 'date_format:H:i'],
             'planned_method' => ['nullable', Rule::enum(DepartureMethod::class)],
+            'time_qualifier' => ['nullable', Rule::enum(TimeQualifier::class)],
             'note' => ['nullable', 'string', 'max:255'],
         ]);
 
         $child = Child::findOrFail($validated['child_id']);
         $departure = $this->authorizedDeparture($child, $validated['date']);
 
+        // The qualifier only qualifies a "geht allein" time; drop it for other methods.
+        $method = $validated['planned_method'] ?? null;
+        $qualifier = $method === DepartureMethod::SentHome->value
+            ? ($validated['time_qualifier'] ?? null)
+            : null;
+
         $departure->fill([
             'planned_time' => $validated['planned_time'] ?? null,
-            'planned_method' => $validated['planned_method'] ?? null,
+            'time_qualifier' => $qualifier,
+            'planned_method' => $method,
             'note' => $validated['note'] ?? null,
         ]);
 

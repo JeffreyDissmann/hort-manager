@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\DepartureMethod;
 use App\Enums\DepartureStatus;
+use App\Enums\TimeQualifier;
 use App\Http\Controllers\Concerns\ResolvesWeek;
 use App\Models\Absence;
 use App\Models\Child;
@@ -150,6 +151,10 @@ class WeeklyOverviewController extends Controller
                     'date' => $day['date'],
                     'time' => $time,
                     'method' => $method,
+                    // The "geht allein" time qualifier (bis/um/ab); only carried by an override.
+                    'qualifier' => $method === DepartureMethod::SentHome->value
+                        ? $departure?->time_qualifier?->value
+                        : null,
                     // Shown on the cell: the override's own note, or the Stammplan comment.
                     'comment' => $adjusted ? $departure?->note : $schedule?->comment,
                     // Pre-fills the editor; an override defaults to the standard comment.
@@ -160,8 +165,8 @@ class WeeklyOverviewController extends Controller
                     'excursion' => $excursion,
                     'conflict' => $conflict,
                     'birthday' => $birthday,
-                    // Absence for this day: reason value + label, or null.
-                    'absent' => $absence ? ['reason' => $absence->reason->value, 'label' => $absence->reason->label()] : null,
+                    // Absence for this day: reason value + label + comment, or null.
+                    'absent' => $absence ? ['reason' => $absence->reason->value, 'label' => $absence->reason->label(), 'comment' => $absence->comment] : null,
                 ];
             });
 
@@ -173,15 +178,36 @@ class WeeklyOverviewController extends Controller
             ];
         });
 
+        // Everyone reported away this week, per weekday — shown under the whole-week grid
+        // (where absent children no longer appear at a time).
+        $absencesByDate = Absence::query()
+            ->with('child:id,name')
+            ->whereIn('date', $weekDates)
+            ->get()
+            ->groupBy(fn (Absence $a) => $a->date->toDateString());
+
+        $weekAbsences = $weekDays->values()->map(fn (array $day) => ($absencesByDate->get($day['date']) ?? collect())
+            ->sortBy(fn (Absence $a) => $a->child->name)
+            ->map(fn (Absence $a) => [
+                'name' => $a->child->name,
+                'label' => $a->reason->label(),
+                'comment' => $a->comment,
+            ])->values()->all())
+            ->all();
+
         return Inertia::render('WeeklyPlan/Index', [
             'week' => $week,
             'weekDays' => $weekDays,
             'currentWeek' => $currentWeek,
+            'weekAbsences' => $weekAbsences,
             'activities' => $activities,
             'program' => $program,
             'weekTimetable' => $this->weekTimetable($weekDays, $excursionByChildDate, $program, $activities),
             'methodOptions' => collect(DepartureMethod::cases())
                 ->map(fn (DepartureMethod $m) => ['value' => $m->value, 'label' => $m->label()])
+                ->all(),
+            'qualifierOptions' => collect(TimeQualifier::cases())
+                ->map(fn (TimeQualifier $q) => ['value' => $q->value, 'label' => $q->label(), 'prefix' => $q->prefix()])
                 ->all(),
         ]);
     }
@@ -205,6 +231,14 @@ class WeeklyOverviewController extends Controller
             ->get()
             ->keyBy(fn (DailyDeparture $d) => $d->child_id.'|'.$d->date->toDateString());
 
+        // Reported-away child-days are off the timeline (their override row is gone,
+        // so without this they'd fall back to the Stammplan and reappear).
+        $absentKeys = Absence::query()
+            ->whereIn('date', $weekDates)
+            ->get()
+            ->map(fn (Absence $a) => $a->child_id.'|'.$a->date->toDateString())
+            ->flip();
+
         $toMinutes = fn (string $time): int => ((int) substr($time, 0, 2)) * 60 + (int) substr($time, 3, 2);
         $bucket = fn (int $minutes): int => intdiv($minutes, 30) * 30;
         $label = fn (int $minutes): string => sprintf('%02d:%02d', intdiv($minutes, 60), $minutes % 60);
@@ -218,6 +252,10 @@ class WeeklyOverviewController extends Controller
             $byWeekday = $child->weeklySchedules->keyBy('weekday');
 
             foreach ($weekdayDays as $i => $day) {
+                if ($absentKeys->has($child->id.'|'.$day['date'])) {
+                    continue;
+                }
+
                 $schedule = $byWeekday->get($i + 1);
                 $stdTime = $schedule?->planned_time;
                 $departure = $departures->get($child->id.'|'.$day['date']);
@@ -234,11 +272,19 @@ class WeeklyOverviewController extends Controller
                     && ($short !== $stdShort || $method?->value !== $schedule?->method?->value);
                 $departed = $departure?->status !== null && $departure?->status !== DepartureStatus::Present;
 
+                // „geht allein" prefix (bis/ab); the default „genau um" stays implicit.
+                $qualifier = $method?->value === DepartureMethod::SentHome->value
+                    ? $departure?->time_qualifier
+                    : null;
+
                 $dayLists[$i][] = [
                     'id' => $child->id,
                     'name' => $child->name,
                     'time' => $short,
                     'method' => $method?->value,
+                    'qualifier_prefix' => $qualifier && $qualifier !== TimeQualifier::At
+                        ? $qualifier->prefix()
+                        : null,
                     'comment' => $adjusted ? $departure?->note : $schedule?->comment,
                     'note' => $departure?->note ?? $schedule?->comment,
                     'adjusted' => $adjusted,

@@ -33,16 +33,23 @@ return [
     'empty_standard' => 'No pickup times set in the base plan yet.',
 
     'editor_subtitle' => ':label – this week only',
-    'time_label' => 'Time (empty = not coming)',
+    'time_label' => 'Time',
     'method_label' => 'Type',
     'method_open' => '— open —',
+    'qualifier_label' => 'The time means …',
     'note_placeholder' => 'e.g. due to a doctor’s appointment',
+    'note_hint' => 'Please keep it short.',
+    'absence_needs_comment' => 'Please add a short reason below and save.',
+    'reason_label' => 'Reason (required)',
+    'reason_placeholder' => 'e.g. holiday, fever',
+    'reason_hint' => 'Please add a short reason.',
+    'not_coming_heading' => 'Away this week',
 
     'reported_as' => 'Reported as “:label”.',
     'cancel_absence' => 'Cancel absence',
     'not_here_today' => 'Child not here today?',
     'report_sick' => 'Report sick',
-    'report_away' => 'Away',
+    'report_away' => 'Not coming',
     'reset_to_standard' => 'Reset to standard',
 
     'weekday' => [

@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\DepartureMethod;
 use App\Enums\DepartureStatus;
+use App\Enums\TimeQualifier;
 use App\Models\Absence;
 use App\Models\Child;
 use App\Models\DailyDeparture;
@@ -124,6 +125,8 @@ class DailyBoardController extends Controller
                 : null;
             $plannedTime = $d->planned_time ? substr((string) $d->planned_time, 0, 5) : null;
             $plannedMethod = $d->planned_method?->value;
+            // „geht allein" prefix (bis/ab); the default „genau um" stays implicit.
+            $qualifier = $plannedMethod === DepartureMethod::SentHome->value ? $d->time_qualifier : null;
             $std = $standard[$d->child_id] ?? null;
             $overridden = $std === null
                 || $std['time'] !== $plannedTime
@@ -135,6 +138,9 @@ class DailyBoardController extends Controller
                 'name' => $d->child->name,
                 'planned_time' => $plannedTime,
                 'planned_method' => $plannedMethod,
+                'qualifier_prefix' => $qualifier && $qualifier !== TimeQualifier::At
+                    ? $qualifier->prefix()
+                    : null,
                 'status' => $d->status->value,
                 'status_label' => $d->status->label(),
                 'left_at' => $d->left_at?->format('H:i'),
@@ -169,6 +175,7 @@ class DailyBoardController extends Controller
                 'name' => $a->child->name,
                 'reason' => $a->reason->value,
                 'reason_label' => $a->reason->label(),
+                'comment' => $a->comment,
             ])->values(),
             'excursions' => $excursionList,
             'program' => $hasProgram ? [

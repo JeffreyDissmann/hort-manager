@@ -67,7 +67,9 @@ function planLabel(row) {
         return row.planned_time;
     }
     const icon = methodIcon(row.planned_method);
-    return `${icon ? icon + ' ' : ''}${row.planned_time} · ${method}`;
+    // „geht allein" may carry a bis/ab prefix on the time (default „um" stays implicit).
+    const time = row.qualifier_prefix ? `${row.qualifier_prefix} ${row.planned_time}` : row.planned_time;
+    return `${icon ? icon + ' ' : ''}${time} · ${method}`;
 }
 
 function toMinutes(time) {
@@ -316,7 +318,7 @@ function saveEdit(row) {
                         :key="i"
                         class="rounded-lg bg-amber-100 px-2 py-1 text-xs font-medium"
                     >
-                        {{ a.name }} · {{ a.reason_label }}
+                        {{ a.name }} · {{ a.reason_label }}<span v-if="a.comment" class="font-normal opacity-80"> · {{ a.comment }}</span>
                     </span>
                 </div>
             </div>

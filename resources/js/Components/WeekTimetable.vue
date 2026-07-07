@@ -181,7 +181,7 @@ function chipClass(method) {
                             @click="editable && kid.editable ? emit('edit', kid, columns[j]) : null"
                         >
                             <span class="block truncate">
-                                <span v-if="kid.excursion">🚌 </span><span v-if="kid.method === 'sent_home'">🚶 </span>{{ kid.name }}
+                                <span v-if="kid.excursion">🚌&nbsp;</span><span v-if="kid.method === 'sent_home'">🚶&nbsp;</span>{{ kid.name }}<span v-if="kid.qualifier_prefix" class="font-normal opacity-70">&nbsp;· {{ kid.qualifier_prefix }} {{ kid.time }}</span>
                             </span>
                             <span
                                 v-if="kid.comment"

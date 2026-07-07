@@ -100,7 +100,7 @@ function chipClass(method) {
                         :title="kid.comment || undefined"
                     >
                         <span class="block truncate">
-                            <span v-if="kid.excursion">🚌 </span><span v-if="kid.method === 'sent_home'">🚶 </span>{{ kid.name }}
+                            <span v-if="kid.excursion">🚌&nbsp;</span><span v-if="kid.method === 'sent_home'">🚶&nbsp;</span>{{ kid.name }}
                         </span>
                         <span
                             v-if="kid.comment"

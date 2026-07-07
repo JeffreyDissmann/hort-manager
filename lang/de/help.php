@@ -67,7 +67,7 @@ return [
 
     // Assistant & sick reports
     'assistant_title' => 'Krank melden & schnelle Änderungen',
-    'assistant_text_1' => 'Ist dein Kind krank oder kommt an einem Tag nicht? Tippe auf <strong>„Krank“</strong> bzw. <strong>„Abwesend“</strong> – auf der Seite „Heute“ oder beim jeweiligen Tag im Abholplan. Genauso trägst du dort kurzfristig eine andere Abholzeit ein.',
+    'assistant_text_1' => 'Ist dein Kind krank oder kommt an einem Tag nicht? Tippe auf <strong>„Krank“</strong> bzw. <strong>„Kommt nicht“</strong> – auf der Seite „Heute“ oder beim jeweiligen Tag im Wochenplan. Genauso trägst du dort kurzfristig eine andere Abholzeit ein.',
     'assistant_text_2' => 'Noch einfacher: <strong>Schreib es dem Hort-Manager direkt in Slack.</strong> Er versteht ganz normale Sätze – zum Beispiel:',
     'assistant_examples' => [
         'Mein Kind ist heute krank.',

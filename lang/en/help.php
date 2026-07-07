@@ -67,7 +67,7 @@ return [
 
     // Assistant & sick reports
     'assistant_title' => 'Report sick & quick changes',
-    'assistant_text_1' => 'Is your child sick or not coming on a certain day? Tap <strong>“Sick”</strong> or <strong>“Absent”</strong> – on the “Today” page or on the respective day in the pickup plan. That’s also how you enter a different pickup time at short notice.',
+    'assistant_text_1' => 'Is your child sick or not coming on a certain day? Tap <strong>“Sick”</strong> or <strong>“Not coming”</strong> – on the “Today” page or on the respective day in the weekly plan. That’s also how you enter a different pickup time at short notice.',
     'assistant_text_2' => 'Even easier: <strong>Just write it to Hort-Manager directly in Slack.</strong> It understands plain sentences – for example:',
     'assistant_examples' => [
         'My child is sick today.',

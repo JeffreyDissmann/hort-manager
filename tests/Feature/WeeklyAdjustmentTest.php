@@ -6,6 +6,7 @@ namespace Tests\Feature;
 
 use App\Enums\DepartureMethod;
 use App\Enums\DepartureStatus;
+use App\Enums\TimeQualifier;
 use App\Enums\UserRole;
 use App\Models\Child;
 use App\Models\DailyDeparture;
@@ -80,6 +81,54 @@ class WeeklyAdjustmentTest extends TestCase
             'child_id' => $child->id,
             'date' => $date,
             'note' => 'wegen Arzttermin',
+        ]);
+    }
+
+    public function test_a_sent_home_adjustment_keeps_its_time_qualifier(): void
+    {
+        $date = $this->upcomingWeekday();
+        $parent = $this->parent();
+        $child = Child::factory()->create();
+        $parent->children()->attach($child);
+
+        $this->actingAs($parent)
+            ->patch(route('weekly-plan.adjust'), [
+                'child_id' => $child->id,
+                'date' => $date,
+                'planned_time' => '15:00',
+                'planned_method' => DepartureMethod::SentHome->value,
+                'time_qualifier' => TimeQualifier::From->value,
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('daily_departures', [
+            'child_id' => $child->id,
+            'date' => $date,
+            'planned_method' => DepartureMethod::SentHome->value,
+            'time_qualifier' => TimeQualifier::From->value,
+        ]);
+    }
+
+    public function test_the_time_qualifier_is_dropped_for_a_picked_up_adjustment(): void
+    {
+        $date = $this->upcomingWeekday();
+        $child = Child::factory()->create();
+
+        $this->actingAs($this->staff())
+            ->patch(route('weekly-plan.adjust'), [
+                'child_id' => $child->id,
+                'date' => $date,
+                'planned_time' => '15:00',
+                'planned_method' => DepartureMethod::PickedUp->value,
+                'time_qualifier' => TimeQualifier::From->value,
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('daily_departures', [
+            'child_id' => $child->id,
+            'date' => $date,
+            'planned_method' => DepartureMethod::PickedUp->value,
+            'time_qualifier' => null,
         ]);
     }
 

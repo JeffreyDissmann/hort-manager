@@ -33,16 +33,23 @@ return [
     'empty_standard' => 'Noch keine Abholzeiten im Stammplan hinterlegt.',
 
     'editor_subtitle' => ':label – nur für diese Woche',
-    'time_label' => 'Uhrzeit (leer = kommt nicht)',
+    'time_label' => 'Uhrzeit',
     'method_label' => 'Art',
     'method_open' => '— offen —',
+    'qualifier_label' => 'Die Uhrzeit ist …',
     'note_placeholder' => 'z. B. wegen Arzttermin',
+    'note_hint' => 'Bitte kurz & knapp.',
+    'absence_needs_comment' => 'Bitte unten kurz einen Grund angeben und speichern.',
+    'reason_label' => 'Grund (Pflicht)',
+    'reason_placeholder' => 'z. B. Urlaub, Fieber',
+    'reason_hint' => 'Bitte kurz einen Grund angeben.',
+    'not_coming_heading' => 'Diese Woche nicht da',
 
     'reported_as' => 'Als „:label“ gemeldet.',
     'cancel_absence' => 'Abwesenheit aufheben',
     'not_here_today' => 'Kind ist heute nicht da?',
     'report_sick' => 'Krank melden',
-    'report_away' => 'Abwesend',
+    'report_away' => 'Kommt nicht',
     'reset_to_standard' => 'Auf Standard',
 
     'weekday' => [
