@@ -34,17 +34,17 @@ function destroy() {
 <template>
     <li
         class="rounded-2xl p-4 shadow-sm"
-        :class="past ? 'bg-white/70' : 'bg-white'"
+        :class="past ? 'bg-surface/70' : 'bg-surface'"
     >
         <div class="flex items-start justify-between gap-3">
             <div class="min-w-0">
                 <p
                     class="font-semibold"
-                    :class="past ? 'text-hort-navy/80' : 'text-hort-navy'"
+                    :class="past ? 'text-ink/80' : 'text-ink'"
                 >
                     {{ excursion.name }}
                 </p>
-                <p class="mt-0.5 text-sm text-hort-navy/60">
+                <p class="mt-0.5 text-sm text-ink/60">
                     {{ formatDate(excursion.date) }}
                     <span v-if="timeRange(excursion)">
                         · {{ timeRange(excursion) }}
@@ -54,7 +54,7 @@ function destroy() {
             <button
                 type="button"
                 @click="destroy"
-                class="shrink-0 rounded-lg p-2 text-hort-navy/30 transition hover:bg-red-50 hover:text-red-600"
+                class="shrink-0 rounded-lg p-2 text-ink/30 transition hover:bg-red-50 hover:text-red-600"
                 :aria-label="$t('excursions.delete_aria')"
             >
                 <TrashIcon class="h-5 w-5" />
@@ -74,7 +74,7 @@ function destroy() {
             <span v-if="excursion.declined_count" class="text-hort-purple">
                 ✗ {{ excursion.declined_count }}
             </span>
-            <span v-if="!past" class="font-medium text-hort-navy/40">
+            <span v-if="!past" class="font-medium text-ink/40">
                 ·
                 <template v-if="excursion.poll_open">
                     {{ $t('excursions.poll_until', { date: formatDate(excursion.rsvp_deadline) }) }}
@@ -98,7 +98,7 @@ function destroy() {
 
         <Link
             :href="excursionsEdit(excursion.id).url"
-            class="mt-3 flex items-center justify-center gap-1 rounded-xl border-2 border-hort-navy/10 py-2.5 text-sm font-semibold text-hort-navy transition hover:border-hort-teal hover:bg-hort-teal/10"
+            class="mt-3 flex items-center justify-center gap-1 rounded-xl border-2 border-ink/10 py-2.5 text-sm font-semibold text-ink transition hover:border-hort-teal hover:bg-hort-teal/10"
         >
             {{ past ? $t('excursions.view') : $t('common.edit') }}
         </Link>

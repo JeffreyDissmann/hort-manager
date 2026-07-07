@@ -52,7 +52,7 @@ function update() {
 }
 
 const selectClass =
-    'min-w-0 flex-1 rounded-md border-gray-300 shadow-sm focus:border-hort-teal focus:ring-hort-teal';
+    'min-w-0 flex-1 rounded-md border-ink/20 shadow-sm focus:border-hort-teal focus:ring-hort-teal';
 </script>
 
 <template>
@@ -61,7 +61,7 @@ const selectClass =
             <option value="">––</option>
             <option v-for="h in hours" :key="h" :value="h">{{ h }}</option>
         </select>
-        <span class="font-semibold text-hort-navy/40">:</span>
+        <span class="font-semibold text-ink/40">:</span>
         <select v-model="minute" :class="selectClass" @change="update">
             <option value="">––</option>
             <option v-for="m in minutes" :key="m" :value="m">{{ m }}</option>

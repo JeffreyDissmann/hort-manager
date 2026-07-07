@@ -18,19 +18,19 @@ const flash = computed(() => usePage().props.flash?.status);
 
     <AuthenticatedLayout>
         <template #header>
-            <h2 class="text-xl font-semibold text-hort-navy">{{ $t('excursions.heading') }}</h2>
+            <h2 class="text-xl font-semibold text-ink">{{ $t('excursions.heading') }}</h2>
         </template>
 
         <div class="space-y-6">
             <div
                 v-if="flash"
-                class="rounded-2xl bg-hort-teal/20 px-4 py-3 text-sm font-medium text-hort-navy"
+                class="rounded-2xl bg-hort-teal/20 px-4 py-3 text-sm font-medium text-ink"
             >
                 {{ flash }}
             </div>
 
             <!-- How it works -->
-            <p class="rounded-2xl bg-white p-4 text-sm text-hort-navy/70 shadow-sm">
+            <p class="rounded-2xl bg-surface p-4 text-sm text-ink/70 shadow-sm">
                 {{ $t('excursions.intro') }}
             </p>
 
@@ -43,7 +43,7 @@ const flash = computed(() => usePage().props.flash?.status);
 
             <!-- Upcoming -->
             <section class="space-y-3">
-                <h3 class="text-sm font-semibold uppercase tracking-wide text-hort-navy/50">
+                <h3 class="text-sm font-semibold uppercase tracking-wide text-ink/50">
                     {{ $t('excursions.upcoming_heading') }}
                 </h3>
 
@@ -56,7 +56,7 @@ const flash = computed(() => usePage().props.flash?.status);
                 </ul>
                 <p
                     v-else
-                    class="rounded-2xl border-2 border-dashed border-hort-navy/15 p-6 text-center text-sm text-hort-navy/50"
+                    class="rounded-2xl border-2 border-dashed border-ink/15 p-6 text-center text-sm text-ink/50"
                 >
                     {{ $t('excursions.none_planned_create') }}
                 </p>
@@ -64,10 +64,10 @@ const flash = computed(() => usePage().props.flash?.status);
 
             <!-- History -->
             <section v-if="past.length" class="space-y-3">
-                <h3 class="text-sm font-semibold uppercase tracking-wide text-hort-navy/50">
+                <h3 class="text-sm font-semibold uppercase tracking-wide text-ink/50">
                     {{ $t('excursions.past_heading') }}
                 </h3>
-                <p class="-mt-1 text-xs text-hort-navy/45">
+                <p class="-mt-1 text-xs text-ink/45">
                     {{ $t('excursions.past_hint') }}
                 </p>
 

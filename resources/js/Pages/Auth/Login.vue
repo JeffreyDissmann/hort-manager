@@ -68,10 +68,10 @@ const submit = () => {
             {{ $t('login.sign_in_with_slack') }}
         </a>
 
-        <div class="my-6 flex items-center gap-3 text-xs text-gray-400">
-            <span class="h-px flex-1 bg-gray-200" />
+        <div class="my-6 flex items-center gap-3 text-xs text-ink/40">
+            <span class="h-px flex-1 bg-ink/15" />
             {{ $t('login.or_with_email') }}
-            <span class="h-px flex-1 bg-gray-200" />
+            <span class="h-px flex-1 bg-ink/15" />
         </div>
 
         <form @submit.prevent="submit">
@@ -109,7 +109,7 @@ const submit = () => {
             <div class="mt-4 block">
                 <label class="flex items-center">
                     <Checkbox name="remember" v-model:checked="form.remember" />
-                    <span class="ms-2 text-sm text-gray-600"
+                    <span class="ms-2 text-sm text-ink/70"
                         >{{ $t('login.remember_me') }}</span
                     >
                 </label>
@@ -119,7 +119,7 @@ const submit = () => {
                 <Link
                     v-if="canResetPassword"
                     :href="passwordRequest().url"
-                    class="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-hort-teal focus:ring-offset-2"
+                    class="rounded-md text-sm text-ink/70 underline hover:text-ink focus:outline-none focus:ring-2 focus:ring-hort-teal focus:ring-offset-2"
                 >
                     {{ $t('login.forgot_password') }}
                 </Link>
@@ -134,9 +134,9 @@ const submit = () => {
             </div>
         </form>
 
-        <p class="mt-6 text-center text-sm text-gray-600">
+        <p class="mt-6 text-center text-sm text-ink/70">
             {{ $t('login.new_here') }}
-            <Link :href="help().url" class="font-medium text-hort-teal-dark underline hover:text-hort-navy">
+            <Link :href="help().url" class="font-medium text-hort-teal-dark underline hover:text-ink">
                 {{ $t('login.how_it_works') }}
             </Link>
         </p>

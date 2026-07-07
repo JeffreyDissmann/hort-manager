@@ -217,17 +217,17 @@ function saveEdit(row) {
     <AuthenticatedLayout>
         <template #header>
             <div>
-                <h2 class="text-xl font-semibold text-hort-navy">
+                <h2 class="text-xl font-semibold text-ink">
                     {{ date.is_today ? $t('common.today') : $t('board.next_hort_day') }}
                 </h2>
-                <p class="text-sm text-hort-navy/50">{{ date.label }}</p>
+                <p class="text-sm text-ink/50">{{ date.label }}</p>
             </div>
         </template>
 
         <div class="space-y-4">
             <div
                 v-if="flash"
-                class="rounded-2xl bg-hort-teal/20 px-4 py-3 text-sm font-medium text-hort-navy"
+                class="rounded-2xl bg-hort-teal/20 px-4 py-3 text-sm font-medium text-ink"
             >
                 {{ flash }}
             </div>
@@ -236,15 +236,15 @@ function saveEdit(row) {
             <!-- Lunch + activity; homework now appears inline in the pickup list. -->
             <div
                 v-if="program && (program.lunch || program.activity)"
-                class="rounded-2xl bg-white p-4 shadow-sm"
+                class="rounded-2xl bg-surface p-4 shadow-sm"
             >
-                <p v-if="program.lunch" class="text-sm text-hort-navy">
+                <p v-if="program.lunch" class="text-sm text-ink">
                     <span class="font-semibold">{{ $t('board.lunch_label') }}</span>
                     {{ program.lunch }}
                 </p>
                 <p
                     v-if="program.activity"
-                    class="text-sm text-hort-navy"
+                    class="text-sm text-ink"
                     :class="program.lunch ? 'mt-1' : ''"
                 >
                     <span class="font-semibold">{{ $t('board.activity_label') }}</span>
@@ -258,15 +258,15 @@ function saveEdit(row) {
                     v-if="rows.length"
                     class="flex gap-2 text-sm font-semibold"
                 >
-                    <span class="rounded-xl bg-white px-3 py-2 text-hort-navy shadow-sm">
+                    <span class="rounded-xl bg-surface px-3 py-2 text-ink shadow-sm">
                         {{ $t('board.count_present', { n: counts.present }) }}
                     </span>
-                    <span class="rounded-xl bg-white px-3 py-2 text-hort-navy/50 shadow-sm">
+                    <span class="rounded-xl bg-surface px-3 py-2 text-ink/50 shadow-sm">
                         {{ $t('board.count_left', { n: counts.left }) }}
                     </span>
                     <span
                         v-if="counts.excursion"
-                        class="rounded-xl bg-white px-3 py-2 text-hort-purple shadow-sm"
+                        class="rounded-xl bg-surface px-3 py-2 text-hort-purple shadow-sm"
                     >
                         {{ $t('board.count_excursion', { n: counts.excursion }) }}
                     </span>
@@ -274,12 +274,12 @@ function saveEdit(row) {
 
                 <div
                     v-if="isParent"
-                    class="ml-auto inline-flex rounded-lg bg-white p-0.5 text-xs font-semibold shadow-sm"
+                    class="ml-auto inline-flex rounded-lg bg-surface p-0.5 text-xs font-semibold shadow-sm"
                 >
                     <button
                         type="button"
                         class="rounded-md px-2 py-1 transition"
-                        :class="showAll ? 'bg-hort-teal text-hort-navy' : 'text-hort-navy/50'"
+                        :class="showAll ? 'bg-hort-teal text-hort-navy' : 'text-ink/50'"
                         @click="showAll = true"
                     >
                         {{ $t('common.all') }}
@@ -287,7 +287,7 @@ function saveEdit(row) {
                     <button
                         type="button"
                         class="rounded-md px-2 py-1 transition"
-                        :class="!showAll ? 'bg-hort-teal text-hort-navy' : 'text-hort-navy/50'"
+                        :class="!showAll ? 'bg-hort-teal text-hort-navy' : 'text-ink/50'"
                         @click="showAll = false"
                     >
                         {{ $t('board.only_mine') }}
@@ -324,7 +324,7 @@ function saveEdit(row) {
                             <p class="font-semibold text-hort-purple">
                                 🚌 {{ ex.name }}
                             </p>
-                            <p class="mt-0.5 text-sm text-hort-navy/60">
+                            <p class="mt-0.5 text-sm text-ink/60">
                                 {{ $t('board.children_count', { n: ex.child_count }) }}<span
                                     v-if="ex.depart_at"
                                 >
@@ -377,7 +377,7 @@ function saveEdit(row) {
                         <span
                             v-for="name in ex.children"
                             :key="name"
-                            class="rounded-md bg-white/70 px-2 py-0.5 text-xs font-medium text-hort-navy/70"
+                            class="rounded-md bg-surface/70 px-2 py-0.5 text-xs font-medium text-ink/70"
                         >
                             {{ name }}
                         </span>
@@ -386,7 +386,7 @@ function saveEdit(row) {
                     <div v-if="canMark && ex.state !== 'planned'" class="mt-2 text-right">
                         <button
                             type="button"
-                            class="text-xs font-medium text-hort-navy/40 underline-offset-2 hover:underline"
+                            class="text-xs font-medium text-ink/40 underline-offset-2 hover:underline"
                             @click="liveEvent(ex, ex.state === 'back' ? 'undo_return' : 'undo_depart')"
                         >
                             {{ $t('common.undo') }}
@@ -427,14 +427,14 @@ function saveEdit(row) {
                         </div>
 
                         <template v-else>
-                        <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-hort-navy/40">
+                        <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-ink/40">
                             {{ block.time ?? $t('board.no_fixed_time') }}<span v-if="block.time"> {{ $t('common.oclock') }}</span>
                         </p>
                         <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
                             <div
                                 v-for="row in block.rows"
                                 :key="row.id"
-                                class="rounded-2xl bg-white p-4 shadow-sm transition"
+                                class="rounded-2xl bg-surface p-4 shadow-sm transition"
                                 :class="[
                                     { 'opacity-60': row.status === 'picked_up' || row.status === 'sent_home' },
                                     homeworkConflict(row) ? 'ring-1 ring-amber-300' : '',
@@ -442,7 +442,7 @@ function saveEdit(row) {
                             >
                     <div class="flex items-start justify-between gap-3">
                         <div class="min-w-0">
-                            <p class="font-semibold text-hort-navy">
+                            <p class="font-semibold text-ink">
                                 {{ row.name }}
                                 <span
                                     v-if="row.birthday !== null"
@@ -451,9 +451,9 @@ function saveEdit(row) {
                                     {{ $t('board.turns', { age: row.birthday }) }}
                                 </span>
                             </p>
-                            <p class="mt-0.5 text-sm text-hort-navy/60">
+                            <p class="mt-0.5 text-sm text-ink/60">
                                 {{ planLabel(row) }}
-                                <span v-if="row.comment" class="text-hort-navy/45">
+                                <span v-if="row.comment" class="text-ink/45">
                                     · {{ row.comment }}
                                 </span>
                                 <span
@@ -511,7 +511,7 @@ function saveEdit(row) {
                             >
                                 ✓ {{ row.status_label }}
                             </p>
-                            <p class="text-xs text-hort-navy/40">
+                            <p class="text-xs text-ink/40">
                                 {{ row.left_at }}<span v-if="row.marked_by"> · {{ row.marked_by }}</span>
                             </p>
                         </div>
@@ -520,12 +520,12 @@ function saveEdit(row) {
                     <!-- Inline same-day override editor -->
                     <div
                         v-if="editingId === row.id"
-                        class="mt-3 space-y-3 rounded-xl bg-hort-sand p-3"
+                        class="mt-3 space-y-3 rounded-xl bg-canvas p-3"
                     >
                         <TimeSelect v-model="editTime" class="text-sm" />
                         <select
                             v-model="editMethod"
-                            class="block w-full rounded-lg border-gray-300 text-sm focus:border-hort-teal focus:ring-hort-teal"
+                            class="block w-full rounded-lg border-ink/20 text-sm focus:border-hort-teal focus:ring-hort-teal"
                         >
                             <option value="">{{ $t('board.method_open') }}</option>
                             <option
@@ -541,12 +541,12 @@ function saveEdit(row) {
                             type="text"
                             maxlength="255"
                             :placeholder="$t('board.comment_placeholder')"
-                            class="block w-full rounded-lg border-gray-300 text-sm focus:border-hort-teal focus:ring-hort-teal"
+                            class="block w-full rounded-lg border-ink/20 text-sm focus:border-hort-teal focus:ring-hort-teal"
                         />
                         <div class="flex justify-end gap-3 text-sm">
                             <button
                                 type="button"
-                                class="px-2 py-1 text-hort-navy/60"
+                                class="px-2 py-1 text-ink/60"
                                 @click="cancelEdit"
                             >
                                 {{ $t('common.cancel') }}
@@ -595,7 +595,7 @@ function saveEdit(row) {
                             <button
                                 v-if="row.can_override && row.excursion?.state !== 'away'"
                                 type="button"
-                                class="inline-flex items-center gap-1.5 rounded-xl border-2 border-hort-navy/10 px-3 py-2 text-sm font-semibold text-hort-navy transition hover:border-hort-teal hover:bg-hort-teal/10 active:scale-[0.98]"
+                                class="inline-flex items-center gap-1.5 rounded-xl border-2 border-ink/10 px-3 py-2 text-sm font-semibold text-ink transition hover:border-hort-teal hover:bg-hort-teal/10 active:scale-[0.98]"
                                 @click="openEdit(row)"
                             >
                                 <PencilSquareIcon class="h-4 w-4" />
@@ -606,7 +606,7 @@ function saveEdit(row) {
                                 v-if="row.can_override && row.excursion?.state !== 'away'"
                                 class="flex items-center gap-2 text-sm"
                             >
-                                <span class="text-hort-navy/40">{{ $t('board.not_here') }}</span>
+                                <span class="text-ink/40">{{ $t('board.not_here') }}</span>
                                 <button
                                     type="button"
                                     class="font-semibold text-amber-700 underline-offset-2 hover:underline"
@@ -614,7 +614,7 @@ function saveEdit(row) {
                                 >
                                     {{ $t('board.report_sick') }}
                                 </button>
-                                <span class="text-hort-navy/20">·</span>
+                                <span class="text-ink/20">·</span>
                                 <button
                                     type="button"
                                     class="font-semibold text-amber-700 underline-offset-2 hover:underline"
@@ -628,7 +628,7 @@ function saveEdit(row) {
                         <div v-else-if="canMark" class="mt-3">
                             <button
                                 type="button"
-                                class="text-sm font-medium text-hort-navy/50 underline-offset-2 hover:underline"
+                                class="text-sm font-medium text-ink/50 underline-offset-2 hover:underline"
                                 @click="mark(row, 'present')"
                             >
                                 {{ $t('common.undo') }}
@@ -644,7 +644,7 @@ function saveEdit(row) {
 
             <p
                 v-else
-                class="rounded-2xl border-2 border-dashed border-hort-navy/15 p-6 text-center text-sm text-hort-navy/50"
+                class="rounded-2xl border-2 border-dashed border-ink/15 p-6 text-center text-sm text-ink/50"
             >
                 <template v-if="rows.length && isParent && !showAll">
                     {{ $t('board.empty_own') }}

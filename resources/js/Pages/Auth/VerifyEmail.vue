@@ -27,7 +27,7 @@ const verificationLinkSent = computed(
     <GuestLayout>
         <Head :title="$t('login.verify_title')" />
 
-        <div class="mb-4 text-sm text-gray-600">
+        <div class="mb-4 text-sm text-ink/70">
             {{ $t('login.verify_intro') }}
         </div>
 
@@ -51,7 +51,7 @@ const verificationLinkSent = computed(
                     :href="logout().url"
                     method="post"
                     as="button"
-                    class="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-hort-teal focus:ring-offset-2"
+                    class="rounded-md text-sm text-ink/70 underline hover:text-ink focus:outline-none focus:ring-2 focus:ring-hort-teal focus:ring-offset-2"
                     >{{ $t('login.log_out') }}</Link
                 >
             </div>

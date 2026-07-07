@@ -1,3 +1,69 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/*
+ | Theme tokens — the single source of truth for every colour in the app.
+ | Values are space-separated RGB channels so Tailwind's `<alpha-value>` opacity
+ | syntax keeps working (e.g. `text-ink/60`, `bg-ink/5`, `bg-hort-teal/20`).
+ |
+ | To retheme or fix a contrast issue, change a value here — never the components.
+ |
+ |   Neutrals (swap light ⇄ dark):
+ |     canvas   page background   (light: brand sand · dark: slate-950)
+ |     surface  cards / panels    (light: white      · dark: slate-800)
+ |     ink      primary text/border (light: brand navy · dark: near-white)
+ |
+ |   Brand hues (tunable per theme). `navy` intentionally stays dark in both
+ |   themes: it is the app chrome and the text colour on solid accent surfaces.
+ |   teal / teal-dark are lifted slightly in dark mode for legible accent text;
+ |   purple stays constant to protect white text on solid purple.
+ */
+@layer base {
+    :root {
+        --color-canvas: 247 245 240; /* #F7F5F0 sand */
+        --color-surface: 255 255 255; /* white */
+        --color-ink: 34 62 85; /* #223E55 navy */
+
+        --color-navy: 34 62 85; /* #223E55 */
+        --color-navy-dark: 24 41 63; /* #18293F */
+        --color-blue: 36 76 113; /* #244C71 */
+        --color-teal: 106 194 199; /* #6AC2C7 */
+        --color-teal-dark: 79 168 173; /* #4FA8AD */
+        --color-purple: 137 91 158; /* #895B9E */
+
+        color-scheme: light;
+    }
+
+    .dark {
+        --color-canvas: 15 23 42; /* slate-900 */
+        --color-surface: 30 41 59; /* slate-800 */
+        --color-ink: 226 232 240; /* slate-200 */
+
+        --color-navy: 34 62 85; /* stays dark — chrome + on-accent text */
+        --color-navy-dark: 24 41 63;
+        --color-blue: 122 162 200; /* lifted for legibility on dark */
+        --color-teal: 122 210 214; /* brighter for accent text/buttons */
+        --color-teal-dark: 106 194 199; /* brighter hover + accent text */
+        --color-purple: 137 91 158; /* constant — protects white-on-purple */
+
+        color-scheme: dark;
+    }
+
+    /* Themed root background so overscroll / any layout gap never flashes white. */
+    body {
+        background-color: rgb(var(--color-canvas));
+    }
+
+    /*
+     | Form controls default to a white background from @tailwindcss/forms. In dark
+     | mode, give text-like controls the surface colour (checkboxes/radios keep the
+     | plugin's accent styling). Utilities like `bg-surface` on an element still win.
+     */
+    .dark input:where(:not([type='checkbox']):not([type='radio']):not([type='range'])),
+    .dark select,
+    .dark textarea {
+        background-color: rgb(var(--color-surface));
+        color: rgb(var(--color-ink));
+    }
+}

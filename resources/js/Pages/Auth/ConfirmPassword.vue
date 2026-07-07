@@ -22,7 +22,7 @@ const submit = () => {
     <GuestLayout>
         <Head :title="$t('login.confirm_title')" />
 
-        <div class="mb-4 text-sm text-gray-600">
+        <div class="mb-4 text-sm text-ink/70">
             {{ $t('login.confirm_intro') }}
         </div>
 

@@ -45,10 +45,10 @@ function decline() {
 </script>
 
 <template>
-    <div v-if="visible" class="border-b border-hort-navy/10 bg-hort-teal/15">
+    <div v-if="visible" class="border-b border-ink/10 bg-hort-teal/15">
         <div class="mx-auto flex max-w-7xl flex-wrap items-center gap-3 px-4 py-3">
             <span class="text-lg">🔔</span>
-            <p class="flex-1 text-sm text-hort-navy">
+            <p class="flex-1 text-sm text-ink">
                 {{ $t('components.notify.prompt') }}
             </p>
             <button
@@ -62,7 +62,7 @@ function decline() {
             <button
                 type="button"
                 @click="decline"
-                class="shrink-0 rounded-lg px-3 py-1 text-sm text-hort-navy/70 transition hover:text-hort-navy"
+                class="shrink-0 rounded-lg px-3 py-1 text-sm text-ink/70 transition hover:text-ink"
             >
                 {{ $t('components.notify.decline') }}
             </button>

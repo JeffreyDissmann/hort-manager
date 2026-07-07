@@ -55,7 +55,7 @@ function chipClass(method) {
 </script>
 
 <template>
-    <div class="overflow-x-auto rounded-2xl bg-white p-2 shadow-sm">
+    <div class="overflow-x-auto rounded-2xl bg-surface p-2 shadow-sm">
         <div
             class="grid min-w-[24rem] gap-x-1"
             :style="{
@@ -77,25 +77,25 @@ function chipClass(method) {
                 v-for="(col, j) in columns"
                 :key="'h' + j"
                 class="px-0.5 pb-1 text-center"
-                :class="col.is_today ? 'border-b-2 border-hort-teal' : 'border-b border-hort-navy/10'"
+                :class="col.is_today ? 'border-b-2 border-hort-teal' : 'border-b border-ink/10'"
                 :style="{ gridRow: 1, gridColumn: `${bandCol(j)} / ${bandCol(j) + 2}` }"
             >
                 <div
                     class="text-xs font-semibold"
-                    :class="col.is_today ? 'text-hort-teal-dark' : 'text-hort-navy/50'"
+                    :class="col.is_today ? 'text-hort-teal-dark' : 'text-ink/50'"
                 >
                     {{ col.label }}<span v-if="col.is_today"> · {{ $t('common.today') }}</span>
                 </div>
                 <div
                     v-if="col.sublabel"
                     class="text-[10px]"
-                    :class="col.is_today ? 'font-semibold text-hort-teal-dark' : 'text-hort-navy/30'"
+                    :class="col.is_today ? 'font-semibold text-hort-teal-dark' : 'text-ink/30'"
                 >
                     {{ col.sublabel }}
                 </div>
                 <div
                     v-if="program[j] && program[j].lunch"
-                    class="mt-0.5 truncate text-[10px] text-hort-navy/70"
+                    class="mt-0.5 truncate text-[10px] text-ink/70"
                     :title="program[j].lunch"
                 >
                     🍽 {{ program[j].lunch }}
@@ -113,7 +113,7 @@ function chipClass(method) {
             <div
                 v-for="(row, i) in rows"
                 :key="'t' + row.time"
-                class="pr-1 pt-1 text-right text-[11px] font-medium tabular-nums text-hort-navy/40"
+                class="pr-1 pt-1 text-right text-[11px] font-medium tabular-nums text-ink/40"
                 :style="{ gridColumn: 1, gridRow: i + 2 }"
             >
                 {{ row.time }}

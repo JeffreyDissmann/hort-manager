@@ -8,6 +8,17 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Dark mode** with a per-device Light/Dark/Automatic switch under „Profil →
+  Darstellung" (Automatic follows the OS `prefers-color-scheme`). The scheme is
+  applied before first paint by a tiny inline script (no flash) and stored in
+  `localStorage`. Backed by a proper theme-token layer: the **entire palette is
+  driven by CSS variables** (`resources/css/app.css`), so retheming or fixing a
+  contrast issue is a one-line change and never touches component markup. Semantic
+  neutrals swap between schemes — `canvas` (page), `surface` (cards), `ink` (text /
+  borders) — while brand hues are tunable per theme (teal lifted slightly in dark
+  for legibility; `hort-navy` stays dark as it is both the app chrome and the text
+  colour on solid accent surfaces). Convention: text on a neutral surface uses
+  `ink`, text on a brand background uses `hort-navy`/`white`.
 - **TRMNL staff-room dashboard**: a read-only JSON feed (`GET /trmnl/dashboard`,
   authenticated by a Laravel signed URL) that drives an e-ink display of today's
   pickup timeline and the Mo–Fr week — focused on who leaves when, plus present

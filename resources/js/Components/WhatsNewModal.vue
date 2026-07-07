@@ -59,22 +59,22 @@ defineExpose({ open });
     <Modal :show="show" max-width="md" @close="close">
         <div v-if="entry" class="p-6">
             <div class="flex items-center justify-between">
-                <h2 class="text-lg font-semibold text-hort-navy">{{ $t('components.whats_new.title') }}</h2>
-                <span v-if="entries.length > 1" class="text-xs text-gray-400">
+                <h2 class="text-lg font-semibold text-ink">{{ $t('components.whats_new.title') }}</h2>
+                <span v-if="entries.length > 1" class="text-xs text-ink/40">
                     {{ index + 1 }}/{{ entries.length }}
                 </span>
             </div>
 
-            <p class="mt-1 text-sm text-gray-500">
+            <p class="mt-1 text-sm text-ink/60">
                 {{ entry.title }}
-                <span v-if="entry.date" class="text-gray-400">· {{ formatDate(entry.date) }}</span>
+                <span v-if="entry.date" class="text-ink/40">· {{ formatDate(entry.date) }}</span>
             </p>
 
             <ul class="mt-4 space-y-3">
                 <li
                     v-for="(item, i) in entry.items"
                     :key="i"
-                    class="text-sm leading-relaxed text-hort-navy/80"
+                    class="text-sm leading-relaxed text-ink/80"
                 >
                     {{ item }}
                 </li>
@@ -87,7 +87,7 @@ defineExpose({ open });
                         :disabled="index >= entries.length - 1"
                         @click="older"
                         :aria-label="$t('components.whats_new.older')"
-                        class="rounded-lg border border-hort-navy/10 p-1.5 text-hort-navy transition hover:bg-hort-sand disabled:opacity-30"
+                        class="rounded-lg border border-ink/10 p-1.5 text-ink transition hover:bg-canvas disabled:opacity-30"
                     >
                         <ChevronLeftIcon class="h-5 w-5" />
                     </button>
@@ -96,7 +96,7 @@ defineExpose({ open });
                         :disabled="index <= 0"
                         @click="newer"
                         :aria-label="$t('components.whats_new.newer')"
-                        class="rounded-lg border border-hort-navy/10 p-1.5 text-hort-navy transition hover:bg-hort-sand disabled:opacity-30"
+                        class="rounded-lg border border-ink/10 p-1.5 text-ink transition hover:bg-canvas disabled:opacity-30"
                     >
                         <ChevronRightIcon class="h-5 w-5" />
                     </button>

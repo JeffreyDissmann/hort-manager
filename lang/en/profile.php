@@ -10,6 +10,13 @@ return [
     'language_help' => 'Choose the language of the user interface.',
     'language_saved' => 'Language saved.',
 
+    // Theme (dark mode) — stored per device
+    'theme' => 'Appearance',
+    'theme_help' => 'Light or dark design — or automatically match your device. This setting applies per device.',
+    'theme_system' => 'Automatic',
+    'theme_light' => 'Light',
+    'theme_dark' => 'Dark',
+
     // Profile information
     'information_title' => 'Profile Information',
     'information_description' => "Update your account's profile information and email address.",

@@ -5,6 +5,22 @@
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
         <meta name="theme-color" content="#223E55">
 
+        {{-- Apply the saved theme before first paint to avoid a flash of the wrong scheme. --}}
+        <script>
+            (function () {
+                try {
+                    var pref = localStorage.getItem('theme');
+                    var dark = pref === 'dark' || ((pref === 'system' || !pref)
+                        && window.matchMedia('(prefers-color-scheme: dark)').matches);
+                    if (dark) {
+                        document.documentElement.classList.add('dark');
+                        var meta = document.querySelector('meta[name="theme-color"]');
+                        if (meta) { meta.setAttribute('content', '#0f172a'); }
+                    }
+                } catch (e) {}
+            })();
+        </script>
+
         <link rel="icon" href="/favicon.svg" type="image/svg+xml">
         <link rel="apple-touch-icon" href="/icons/icon-192.png">
 

@@ -33,20 +33,20 @@ function submit() {
 
     <AuthenticatedLayout>
         <template #header>
-            <h2 class="text-xl font-semibold text-hort-navy">{{ $t('excursions.plan_title') }}</h2>
+            <h2 class="text-xl font-semibold text-ink">{{ $t('excursions.plan_title') }}</h2>
         </template>
 
         <div class="mx-auto max-w-2xl">
             <form
                 @submit.prevent="submit"
-                class="space-y-6 rounded-2xl bg-white p-6 shadow-sm"
+                class="space-y-6 rounded-2xl bg-surface p-6 shadow-sm"
             >
                 <ExcursionFields :form="form" :suggested-date="suggestedDate" />
 
                 <div class="flex items-center justify-end gap-4">
                     <Link
                         :href="excursionsIndex().url"
-                        class="text-sm text-gray-600 hover:text-gray-900"
+                        class="text-sm text-ink/70 hover:text-ink"
                     >
                         {{ $t('common.cancel') }}
                     </Link>

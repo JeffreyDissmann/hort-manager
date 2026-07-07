@@ -21,11 +21,11 @@ const columns = ['mon', 'tue', 'wed', 'thu', 'fri'].map((key) => ({
 
     <AuthenticatedLayout :wide="true">
         <template #header>
-            <h2 class="text-xl font-semibold text-hort-navy">{{ $t('nav.standard_plan') }}</h2>
+            <h2 class="text-xl font-semibold text-ink">{{ $t('nav.standard_plan') }}</h2>
         </template>
 
         <div class="space-y-4">
-            <p class="text-sm text-hort-navy/60">
+            <p class="text-sm text-ink/60">
                 {{ $t('weekly.standard_intro') }}
                 <Link
                     :href="childrenIndex().url"
@@ -39,7 +39,7 @@ const columns = ['mon', 'tue', 'wed', 'thu', 'fri'].map((key) => ({
 
             <p
                 v-else
-                class="rounded-2xl border-2 border-dashed border-hort-navy/15 p-6 text-center text-sm text-hort-navy/50"
+                class="rounded-2xl border-2 border-dashed border-ink/15 p-6 text-center text-sm text-ink/50"
             >
                 {{ $t('weekly.empty_standard') }}
             </p>

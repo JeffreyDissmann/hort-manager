@@ -68,7 +68,7 @@ function homeworkConflict(day, i) {
 
 function cellClass(day) {
     if (!day.time) {
-        return 'bg-hort-navy/5 text-hort-navy/30';
+        return 'bg-ink/5 text-ink/30';
     }
     return day.method === 'sent_home'
         ? 'bg-hort-purple/15 text-hort-purple'
@@ -157,13 +157,13 @@ function cancelAbsence() {
 
     <AuthenticatedLayout>
         <template #header>
-            <h2 class="text-xl font-semibold text-hort-navy">{{ $t('weekly.title') }}</h2>
+            <h2 class="text-xl font-semibold text-ink">{{ $t('weekly.title') }}</h2>
         </template>
 
         <div class="space-y-8">
             <div
                 v-if="flash"
-                class="rounded-2xl bg-hort-teal/20 px-4 py-3 text-sm font-medium text-hort-navy"
+                class="rounded-2xl bg-hort-teal/20 px-4 py-3 text-sm font-medium text-ink"
             >
                 {{ flash }}
             </div>
@@ -174,21 +174,21 @@ function cancelAbsence() {
 
                 <!-- Parents see + edit their own children; staff use the timeline below. -->
                 <template v-if="!isStaff">
-                    <h3 class="text-sm font-semibold text-hort-navy/70">{{ $t('weekly.your_children') }}</h3>
+                    <h3 class="text-sm font-semibold text-ink/70">{{ $t('weekly.your_children') }}</h3>
 
                     <ul v-if="currentWeek.length" class="space-y-3">
                     <li
                         v-for="child in currentWeek"
                         :key="child.id"
-                        class="rounded-2xl bg-white p-4 shadow-sm"
+                        class="rounded-2xl bg-surface p-4 shadow-sm"
                     >
                         <div class="mb-2 flex items-center justify-between">
-                            <p class="font-semibold text-hort-navy">
+                            <p class="font-semibold text-ink">
                                 {{ child.name }}
                             </p>
                             <span
                                 v-if="child.can_manage"
-                                class="text-xs text-hort-navy/40"
+                                class="text-xs text-ink/40"
                             >
                                 {{ $t('weekly.tap_to_change') }}
                             </span>
@@ -206,13 +206,13 @@ function cancelAbsence() {
                             >
                                 <div
                                     class="text-[11px] font-medium"
-                                    :class="weekDays[i].is_today ? 'text-hort-teal-dark' : 'text-hort-navy/40'"
+                                    :class="weekDays[i].is_today ? 'text-hort-teal-dark' : 'text-ink/40'"
                                 >
                                     {{ weekDays[i].label }}<span v-if="weekDays[i].is_today"> · {{ $t('common.today') }}</span>
                                 </div>
                                 <div
                                     class="text-[10px]"
-                                    :class="weekDays[i].is_today ? 'font-semibold text-hort-teal-dark' : 'text-hort-navy/30'"
+                                    :class="weekDays[i].is_today ? 'font-semibold text-hort-teal-dark' : 'text-ink/30'"
                                 >
                                     {{ weekDays[i].date_label }}
                                 </div>
@@ -300,7 +300,7 @@ function cancelAbsence() {
 
                     <p
                         v-else
-                        class="rounded-2xl border-2 border-dashed border-hort-navy/15 p-6 text-center text-sm text-hort-navy/50"
+                        class="rounded-2xl border-2 border-dashed border-ink/15 p-6 text-center text-sm text-ink/50"
                     >
                         {{ $t('weekly.no_child_assigned') }}
                     </p>
@@ -308,7 +308,7 @@ function cancelAbsence() {
 
                 <!-- Whole week, all children: effective plan + this week's programs -->
                 <div class="space-y-2">
-                    <h3 class="text-sm font-semibold text-hort-navy/70">
+                    <h3 class="text-sm font-semibold text-ink/70">
                         {{ $t('weekly.whole_week') }}
                     </h3>
                     <WeekTimetable
@@ -322,7 +322,7 @@ function cancelAbsence() {
                     />
                     <p
                         v-else
-                        class="rounded-2xl border-2 border-dashed border-hort-navy/15 p-6 text-center text-sm text-hort-navy/50"
+                        class="rounded-2xl border-2 border-dashed border-ink/15 p-6 text-center text-sm text-ink/50"
                     >
                         {{ $t('weekly.empty_week') }}
                     </p>
@@ -330,7 +330,7 @@ function cancelAbsence() {
 
                 <div
                     v-if="currentWeek.length"
-                    class="flex flex-wrap gap-x-4 gap-y-1 text-xs font-medium text-hort-navy/60"
+                    class="flex flex-wrap gap-x-4 gap-y-1 text-xs font-medium text-ink/60"
                 >
                     <span class="flex items-center gap-1.5">
                         <span class="h-3 w-3 rounded-full bg-hort-teal/60" />
@@ -348,7 +348,7 @@ function cancelAbsence() {
             </section>
 
             <!-- Pointer to the standard plan (edit the regular weekly times there) -->
-            <p class="border-t border-hort-navy/5 pt-4 text-center text-sm text-hort-navy/50">
+            <p class="border-t border-ink/5 pt-4 text-center text-sm text-ink/50">
                 {{ $t('weekly.to_standard_hint') }}
                 <Link
                     :href="standardPlan().url"
@@ -363,10 +363,10 @@ function cancelAbsence() {
         <Modal :show="editing !== null" max-width="sm" @close="closeEditor">
             <div v-if="editing" class="space-y-5 p-6">
                 <div>
-                    <h2 class="text-lg font-semibold text-hort-navy">
+                    <h2 class="text-lg font-semibold text-ink">
                         {{ editing.childName }}
                     </h2>
-                    <p class="text-sm text-hort-navy/50">
+                    <p class="text-sm text-ink/50">
                         {{ $t('weekly.editor_subtitle', { label: editing.label }) }}
                     </p>
                 </div>
@@ -386,7 +386,7 @@ function cancelAbsence() {
                         id="method"
                         v-model="form.planned_method"
                         :disabled="!form.planned_time"
-                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-hort-teal focus:ring-hort-teal disabled:bg-gray-100 disabled:text-gray-400"
+                        class="mt-1 block w-full rounded-md border-ink/20 shadow-sm focus:border-hort-teal focus:ring-hort-teal disabled:bg-ink/5 disabled:text-ink/40"
                     >
                         <option value="">{{ $t('weekly.method_open') }}</option>
                         <option
@@ -412,7 +412,7 @@ function cancelAbsence() {
                 </div>
 
                 <!-- Krankmeldung / Abwesenheit -->
-                <div class="rounded-lg bg-hort-sand p-3">
+                <div class="rounded-lg bg-canvas p-3">
                     <template v-if="editing.absent">
                         <p class="text-sm font-medium text-amber-700">
                             {{ $t('weekly.reported_as', { label: editing.absent.label }) }}
@@ -426,7 +426,7 @@ function cancelAbsence() {
                         </button>
                     </template>
                     <template v-else>
-                        <p class="text-sm text-hort-navy/60">{{ $t('weekly.not_here_today') }}</p>
+                        <p class="text-sm text-ink/60">{{ $t('weekly.not_here_today') }}</p>
                         <div class="mt-2 flex gap-2">
                             <SecondaryButton @click="reportAbsence('sick')">
                                 {{ $t('weekly.report_sick') }}
@@ -441,7 +441,7 @@ function cancelAbsence() {
                 <div class="flex items-center justify-between gap-3 pt-2">
                     <button
                         type="button"
-                        class="text-sm font-medium text-hort-navy/50 underline-offset-2 hover:underline"
+                        class="text-sm font-medium text-ink/50 underline-offset-2 hover:underline"
                         @click="resetDay"
                     >
                         {{ $t('weekly.reset_to_standard') }}

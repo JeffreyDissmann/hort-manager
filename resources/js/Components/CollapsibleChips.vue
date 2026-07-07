@@ -12,10 +12,10 @@ const open = ref(false);
 </script>
 
 <template>
-    <div class="mt-3 border-t border-hort-navy/5 pt-3">
+    <div class="mt-3 border-t border-ink/5 pt-3">
         <button
             type="button"
-            class="text-sm font-medium text-hort-teal-dark hover:text-hort-navy"
+            class="text-sm font-medium text-hort-teal-dark hover:text-ink"
             @click="open = !open"
         >
             {{ open ? openLabel : closedLabel }}

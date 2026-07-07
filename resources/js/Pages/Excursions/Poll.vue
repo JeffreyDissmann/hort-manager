@@ -82,20 +82,20 @@ function answer(excursion, child, response) {
 
     <AuthenticatedLayout>
         <template #header>
-            <h2 class="text-xl font-semibold text-hort-navy">{{ $t('excursions.heading') }}</h2>
+            <h2 class="text-xl font-semibold text-ink">{{ $t('excursions.heading') }}</h2>
         </template>
 
         <div class="space-y-8">
             <div
                 v-if="flash"
-                class="rounded-2xl bg-hort-teal/20 px-4 py-3 text-sm font-medium text-hort-navy"
+                class="rounded-2xl bg-hort-teal/20 px-4 py-3 text-sm font-medium text-ink"
             >
                 {{ flash }}
             </div>
 
             <!-- Upcoming excursions (answerable while the poll is open) -->
             <section class="space-y-3">
-                <h3 class="text-sm font-semibold uppercase tracking-wide text-hort-navy/50">
+                <h3 class="text-sm font-semibold uppercase tracking-wide text-ink/50">
                     {{ $t('excursions.upcoming_heading') }}
                 </h3>
 
@@ -103,12 +103,12 @@ function answer(excursion, child, response) {
                     <li
                         v-for="excursion in upcoming"
                         :key="excursion.id"
-                        class="rounded-2xl bg-white p-4 shadow-sm"
+                        class="rounded-2xl bg-surface p-4 shadow-sm"
                     >
-                        <p class="font-semibold text-hort-navy">
+                        <p class="font-semibold text-ink">
                             🚌 {{ excursion.name }}
                         </p>
-                        <p class="mt-0.5 text-sm text-hort-navy/60">
+                        <p class="mt-0.5 text-sm text-ink/60">
                             {{ longDate(excursion.date) }}
                         </p>
 
@@ -117,14 +117,14 @@ function answer(excursion, child, response) {
                             class="mt-2 flex flex-wrap gap-x-6 gap-y-1 text-sm"
                         >
                             <div v-if="excursion.depart_at" class="flex gap-1.5">
-                                <dt class="text-hort-navy/40">{{ $t('excursions.depart') }}</dt>
-                                <dd class="font-semibold text-hort-navy">
+                                <dt class="text-ink/40">{{ $t('excursions.depart') }}</dt>
+                                <dd class="font-semibold text-ink">
                                     {{ excursion.depart_at }} {{ $t('common.oclock') }}
                                 </dd>
                             </div>
                             <div v-if="excursion.return_at" class="flex gap-1.5">
-                                <dt class="text-hort-navy/40">{{ $t('excursions.return') }}</dt>
-                                <dd class="font-semibold text-hort-navy">
+                                <dt class="text-ink/40">{{ $t('excursions.return') }}</dt>
+                                <dd class="font-semibold text-ink">
                                     {{ excursion.return_at }} {{ $t('common.oclock') }}
                                 </dd>
                             </div>
@@ -132,7 +132,7 @@ function answer(excursion, child, response) {
 
                         <p
                             v-if="excursion.note"
-                            class="mt-2 rounded-xl bg-hort-teal/10 px-3 py-2 text-sm text-hort-navy/80"
+                            class="mt-2 rounded-xl bg-hort-teal/10 px-3 py-2 text-sm text-ink/80"
                         >
                             📋 {{ excursion.note }}
                         </p>
@@ -145,7 +145,7 @@ function answer(excursion, child, response) {
                         </p>
                         <p
                             v-else-if="!excursion.poll_open"
-                            class="mt-2 text-xs font-medium text-hort-navy/40"
+                            class="mt-2 text-xs font-medium text-ink/40"
                         >
                             {{ $t('excursions.poll_closed') }}
                         </p>
@@ -154,10 +154,10 @@ function answer(excursion, child, response) {
                             <div
                                 v-for="child in excursion.children"
                                 :key="child.id"
-                                class="flex items-center justify-between gap-3 rounded-xl bg-hort-sand p-3"
+                                class="flex items-center justify-between gap-3 rounded-xl bg-canvas p-3"
                             >
                                 <div class="min-w-0">
-                                    <span class="font-medium text-hort-navy">
+                                    <span class="font-medium text-ink">
                                         {{ child.name }}
                                     </span>
                                     <span
@@ -188,7 +188,7 @@ function answer(excursion, child, response) {
                                         class="rounded-lg px-4 py-2 text-sm font-semibold transition active:scale-[0.97]"
                                         :class="child.response === true
                                             ? 'bg-hort-teal text-hort-navy'
-                                            : 'bg-white text-hort-navy/60 ring-1 ring-hort-navy/10 hover:bg-hort-teal/20'"
+                                            : 'bg-surface text-ink/60 ring-1 ring-ink/10 hover:bg-hort-teal/20'"
                                         @click="answer(excursion, child, true)"
                                     >
                                         {{ $t('excursions.answer_yes') }}
@@ -198,7 +198,7 @@ function answer(excursion, child, response) {
                                         class="rounded-lg px-4 py-2 text-sm font-semibold transition active:scale-[0.97]"
                                         :class="child.response === false
                                             ? 'bg-hort-purple text-white'
-                                            : 'bg-white text-hort-navy/60 ring-1 ring-hort-navy/10 hover:bg-hort-purple/15'"
+                                            : 'bg-surface text-ink/60 ring-1 ring-ink/10 hover:bg-hort-purple/15'"
                                         @click="answer(excursion, child, false)"
                                     >
                                         {{ $t('excursions.answer_no') }}
@@ -228,7 +228,7 @@ function answer(excursion, child, response) {
 
                 <p
                     v-else
-                    class="rounded-2xl border-2 border-dashed border-hort-navy/15 p-6 text-center text-sm text-hort-navy/50"
+                    class="rounded-2xl border-2 border-dashed border-ink/15 p-6 text-center text-sm text-ink/50"
                 >
                     {{ $t('excursions.none_planned') }}
                 </p>
@@ -236,7 +236,7 @@ function answer(excursion, child, response) {
 
             <!-- Past excursions (read-only) -->
             <section v-if="past.length" class="space-y-3">
-                <h3 class="text-sm font-semibold uppercase tracking-wide text-hort-navy/50">
+                <h3 class="text-sm font-semibold uppercase tracking-wide text-ink/50">
                     {{ $t('excursions.past_heading') }}
                 </h3>
 
@@ -244,19 +244,19 @@ function answer(excursion, child, response) {
                     <li
                         v-for="excursion in past"
                         :key="excursion.id"
-                        class="rounded-2xl bg-white/70 p-4 shadow-sm"
+                        class="rounded-2xl bg-surface/70 p-4 shadow-sm"
                     >
                         <div class="flex items-baseline justify-between gap-3">
-                            <p class="font-semibold text-hort-navy/80">
+                            <p class="font-semibold text-ink/80">
                                 {{ excursion.name }}
                             </p>
-                            <p class="shrink-0 text-sm text-hort-navy/50">
+                            <p class="shrink-0 text-sm text-ink/50">
                                 {{ formatDate(excursion.date) }}
                             </p>
                         </div>
                         <p
                             v-if="timeRange(excursion)"
-                            class="mt-0.5 text-sm text-hort-navy/50"
+                            class="mt-0.5 text-sm text-ink/50"
                         >
                             {{ timeRange(excursion) }}
                         </p>

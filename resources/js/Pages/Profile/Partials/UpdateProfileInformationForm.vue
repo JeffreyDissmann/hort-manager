@@ -27,11 +27,11 @@ const form = useForm({
 <template>
     <section>
         <header>
-            <h2 class="text-lg font-medium text-hort-navy">
+            <h2 class="text-lg font-medium text-ink">
                 {{ $t('profile.information_title') }}
             </h2>
 
-            <p class="mt-1 text-sm text-gray-600">
+            <p class="mt-1 text-sm text-ink/70">
                 {{ $t('profile.information_description') }}
             </p>
         </header>
@@ -72,13 +72,13 @@ const form = useForm({
             </div>
 
             <div v-if="mustVerifyEmail && user.email_verified_at === null">
-                <p class="mt-2 text-sm text-gray-800">
+                <p class="mt-2 text-sm text-ink">
                     {{ $t('profile.email_unverified') }}
                     <Link
                         :href="verificationSend().url"
                         method="post"
                         as="button"
-                        class="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-hort-teal focus:ring-offset-2"
+                        class="rounded-md text-sm text-ink/70 underline hover:text-ink focus:outline-none focus:ring-2 focus:ring-hort-teal focus:ring-offset-2"
                     >
                         {{ $t('profile.email_resend') }}
                     </Link>
@@ -103,7 +103,7 @@ const form = useForm({
                 >
                     <p
                         v-if="form.recentlySuccessful"
-                        class="text-sm text-gray-600"
+                        class="text-sm text-ink/70"
                     >
                         {{ $t('common.saved') }}
                     </p>
