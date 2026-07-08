@@ -28,6 +28,10 @@ const kidsCol = (j) => 3 + j * 2;
 
 const slotMins = computed(() => props.rows.map((r) => toMin(r.time)));
 
+// Full-height grid span (header + one line per time slot). `1 / -1` doesn't work here
+// because the rows are implicit (no gridTemplateRows), so -1 collapses to the first row.
+const fullColumn = computed(() => `1 / ${props.rows.length + 2}`);
+
 // A band's CSS `grid-row` (start line / span), or null if it can't be placed.
 function bandRow(startStr, endStr) {
     if (!startStr) {
@@ -70,7 +74,16 @@ function chipClass(method) {
                 <div
                     v-if="col.is_today"
                     class="pointer-events-none rounded-lg bg-hort-teal/10"
-                    :style="{ gridColumn: `${bandCol(j)} / ${bandCol(j) + 2}`, gridRow: '1 / -1' }"
+                    :style="{ gridColumn: `${bandCol(j)} / ${bandCol(j) + 2}`, gridRow: fullColumn }"
+                />
+            </template>
+
+            <!-- Faint horizontal lines between the time slots -->
+            <template v-for="(row, i) in rows" :key="'hr' + i">
+                <div
+                    v-if="i > 0"
+                    class="pointer-events-none border-t border-ink/10"
+                    :style="{ gridColumn: '1 / -1', gridRow: i + 2 }"
                 />
             </template>
 

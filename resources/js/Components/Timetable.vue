@@ -86,7 +86,7 @@ function chipClass(method) {
             <div
                 v-for="row in rows"
                 :key="row.time"
-                class="grid grid-cols-[2.75rem_repeat(5,minmax(0,1fr))] items-stretch gap-1 border-b border-ink/5 last:border-0"
+                class="grid grid-cols-[2.75rem_repeat(5,minmax(0,1fr))] items-stretch gap-1 border-b border-ink/10 last:border-0"
             >
                 <div class="flex items-start justify-end pr-1 pt-1.5 text-xs font-medium tabular-nums text-ink/40">
                     {{ row.time }}
