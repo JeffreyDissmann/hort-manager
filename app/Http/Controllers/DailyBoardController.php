@@ -15,6 +15,7 @@ use App\Models\DailyDeparture;
 use App\Models\DailyProgram;
 use App\Models\Excursion;
 use App\Models\HomeworkDefault;
+use App\Support\CompanionNotes;
 use App\Support\CompanionReconciler;
 use App\Support\EffectivePlan;
 use Illuminate\Http\RedirectResponse;
@@ -201,6 +202,8 @@ class DailyBoardController extends Controller
                 'is_today' => $date->isToday(),
             ],
             'rows' => $rows,
+            // Parent-facing „geht mit … mit" summary for today (staff use the plan display).
+            'companionNotes' => CompanionNotes::for($user, [$date->toDateString()]),
             'absent' => $absences->map(fn (Absence $a) => [
                 'name' => $a->child->name,
                 'reason' => $a->reason->value,

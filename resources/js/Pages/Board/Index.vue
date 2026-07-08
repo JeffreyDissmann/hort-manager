@@ -4,8 +4,10 @@ import { store as absenceStore } from '@/routes/absences';
 import { live as excursionLive } from '@/routes/excursions';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import CollapsibleChips from '@/Components/CollapsibleChips.vue';
+import CompanionNotes from '@/Components/CompanionNotes.vue';
 import TimeSelect from '@/Components/TimeSelect.vue';
 import { PencilSquareIcon } from '@heroicons/vue/24/outline';
+import { confirm as companionConfirm } from '@/routes/companion';
 import { Head, router, usePage } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
 import { t } from '@/i18n';
@@ -13,12 +15,18 @@ import { t } from '@/i18n';
 const props = defineProps({
     date: { type: Object, required: true },
     rows: { type: Array, default: () => [] },
+    companionNotes: { type: Array, default: () => [] },
     absent: { type: Array, default: () => [] },
     excursions: { type: Array, default: () => [] },
     program: { type: Object, default: null },
     canMark: { type: Boolean, default: false },
     methodOptions: { type: Array, default: () => [] },
 });
+
+// Confirm/decline another child going home with one of ours (from the notes panel).
+function answerCompanion(id, confirmed) {
+    router.patch(companionConfirm(id).url, { confirmed }, { preserveScroll: true });
+}
 
 const flash = computed(() => usePage().props.flash?.status);
 const isParent = computed(() => usePage().props.auth?.user?.role === 'parent');
@@ -248,6 +256,9 @@ function saveEdit(row) {
             >
                 {{ flash }}
             </div>
+
+            <!-- „Geht mit … mit" overview for the parent (staff use the plan display). -->
+            <CompanionNotes :notes="companionNotes" @confirm="answerCompanion" />
 
             <!-- Today's program (lunch + activity) -->
             <!-- Lunch + activity; homework now appears inline in the pickup list. -->

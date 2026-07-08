@@ -607,6 +607,57 @@ class CompanionDepartureTest extends TestCase
         Notification::assertSentTo($annasParent, CompanionCancelled::class);
     }
 
+    public function test_the_requesting_parent_gets_an_informational_note(): void
+    {
+        $date = $this->wednesday();
+        $anna = Child::factory()->create(['name' => 'Anna']);
+        $tom = Child::factory()->create(['name' => 'Tom']);
+        $annasParent = User::factory()->create(['role' => UserRole::Parent]);
+        $annasParent->children()->attach($anna);
+
+        $this->departsAt($tom, $date, DepartureMethod::SentHome);
+        $this->actingAs($this->staff())->patch(route('weekly-plan.adjust'), [
+            'child_id' => $anna->id,
+            'date' => $date,
+            'planned_method' => DepartureMethod::WithChild->value,
+            'companion_child_id' => $tom->id,
+        ]);
+
+        // Anna's family sees the note as status only — they can't confirm (not Tom's).
+        $this->actingAs($annasParent)->get(route('weekly-plan'))
+            ->assertInertia(fn ($page) => $page
+                ->where('companionNotes.0.child', 'Anna')
+                ->where('companionNotes.0.companion', 'Tom')
+                ->where('companionNotes.0.status', 'pending')
+                ->where('companionNotes.0.actionable', false));
+    }
+
+    public function test_the_companion_family_gets_an_actionable_note(): void
+    {
+        // The board shows *today*, so make the arrangement fall on today.
+        Carbon::setTestNow(Carbon::parse('2026-06-24')); // a Wednesday
+        $date = '2026-06-24';
+        $anna = Child::factory()->create(['name' => 'Anna']);
+        $tom = Child::factory()->create(['name' => 'Tom']);
+        $tomsParent = User::factory()->create(['role' => UserRole::Parent]);
+        $tomsParent->children()->attach($tom);
+
+        $this->departsAt($tom, $date, DepartureMethod::SentHome);
+        $this->actingAs($this->staff())->patch(route('weekly-plan.adjust'), [
+            'child_id' => $anna->id,
+            'date' => $date,
+            'planned_method' => DepartureMethod::WithChild->value,
+            'companion_child_id' => $tom->id,
+        ]);
+
+        // Tom's family (the companion's guardian) gets the note as actionable — on Heute too.
+        $this->actingAs($tomsParent)->get(route('board'))
+            ->assertInertia(fn ($page) => $page
+                ->where('companionNotes.0.companion', 'Tom')
+                ->where('companionNotes.0.status', 'pending')
+                ->where('companionNotes.0.actionable', true));
+    }
+
     public function test_the_requesting_parent_sees_their_pending_arrangement(): void
     {
         $date = $this->wednesday(); // 2026-06-24 = Wednesday, day index 2

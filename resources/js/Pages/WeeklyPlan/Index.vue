@@ -12,6 +12,7 @@ import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import WeekNav from '@/Components/WeekNav.vue';
 import WeekTimetable from '@/Components/WeekTimetable.vue';
+import CompanionNotes from '@/Components/CompanionNotes.vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { computed, reactive, ref } from 'vue';
 
@@ -24,7 +25,7 @@ const props = defineProps({
     weekTimetable: { type: Array, default: () => [] },
     weekAbsences: { type: Array, default: () => [] },
     children: { type: Array, default: () => [] },
-    companionRequests: { type: Array, default: () => [] },
+    companionNotes: { type: Array, default: () => [] },
     methodOptions: { type: Array, default: () => [] },
     qualifierOptions: { type: Array, default: () => [] },
 });
@@ -260,39 +261,9 @@ function cancelAbsence() {
                 {{ flash }}
             </div>
 
-            <!-- Pending „geht mit … mit" confirmations: another child wants to go home
-                 with one of yours (who goes home alone). Confirm or decline. -->
-            <section v-if="companionRequests.length" class="space-y-2">
-                <h3 class="text-sm font-semibold text-hort-orange-dark">
-                    {{ $t('weekly.companion_requests_heading') }}
-                </h3>
-                <div
-                    v-for="req in companionRequests"
-                    :key="req.id"
-                    class="rounded-2xl bg-hort-orange/10 p-4"
-                >
-                    <p class="text-sm text-ink">
-                        {{ $t('weekly.companion_request', { child: req.child, companion: req.companion, day: req.day }) }}
-                    </p>
-                    <p v-if="req.comment" class="mt-0.5 text-sm text-ink/60">„{{ req.comment }}"</p>
-                    <div class="mt-3 flex gap-2">
-                        <button
-                            type="button"
-                            class="rounded-xl bg-hort-teal px-4 py-2 text-sm font-semibold text-hort-navy transition hover:bg-hort-teal-dark active:scale-[0.98]"
-                            @click="answerCompanion(req.id, true)"
-                        >
-                            {{ $t('weekly.companion_confirm') }}
-                        </button>
-                        <button
-                            type="button"
-                            class="rounded-xl bg-hort-orange px-4 py-2 text-sm font-semibold text-hort-navy transition hover:opacity-90 active:scale-[0.98]"
-                            @click="answerCompanion(req.id, false)"
-                        >
-                            {{ $t('weekly.companion_decline') }}
-                        </button>
-                    </div>
-                </div>
-            </section>
+            <!-- „Geht mit … mit" overview for the parent: their child going with another
+                 (+ status), or a child coming home with theirs (confirm inline). -->
+            <CompanionNotes :notes="companionNotes" @confirm="answerCompanion" />
 
             <!-- Current week (effective plan, editable) -->
             <section class="space-y-3" @touchstart="onTouchStart" @touchend="onTouchEnd">

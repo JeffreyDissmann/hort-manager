@@ -14,6 +14,7 @@ use App\Models\DailyDeparture;
 use App\Models\DailyProgram;
 use App\Models\Excursion;
 use App\Models\HomeworkDefault;
+use App\Support\CompanionNotes;
 use App\Support\EffectivePlan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -216,24 +217,6 @@ class WeeklyOverviewController extends Controller
             ])->values()->all())
             ->all();
 
-        // Pending „geht mit … mit" confirmations aimed at this user (their child is the
-        // companion) — staff see all. Answered via the cards + banner on this page.
-        $pendingCompanions = DailyDeparture::query()
-            ->pendingCompanion()
-            ->whereDate('date', '>=', $todayString)
-            ->when(! $user->isStaff(), fn ($q) => $q->whereIn('companion_child_id', $weekChildren->pluck('id')))
-            ->with('child:id,name')
-            ->orderBy('date')
-            ->get()
-            ->map(fn (DailyDeparture $d) => [
-                'id' => $d->id,
-                'child' => $d->child->name,
-                'companion' => $childNames[$d->companion_child_id] ?? '',
-                'day' => $this->shortDay($d->date),
-                'comment' => $d->note,
-            ])
-            ->all();
-
         // Each child's effective pickup time per date this week (override → Stammplan),
         // so the companion picker can show „… wird übernommen (15:30)". A with_child
         // override has no own time (it mirrors someone else), so it stays blank.
@@ -271,7 +254,7 @@ class WeeklyOverviewController extends Controller
                 'name' => $c->name,
                 'times' => $childTimes[$c->id] ?? [],
             ])->all(),
-            'companionRequests' => $pendingCompanions,
+            'companionNotes' => CompanionNotes::for($user, $weekDates),
             'methodOptions' => collect(DepartureMethod::cases())
                 ->map(fn (DepartureMethod $m) => ['value' => $m->value, 'label' => $m->label()])
                 ->all(),
@@ -279,12 +262,6 @@ class WeeklyOverviewController extends Controller
                 ->map(fn (TimeQualifier $q) => ['value' => $q->value, 'label' => $q->label(), 'prefix' => $q->prefix()])
                 ->all(),
         ]);
-    }
-
-    /** A localised short weekday + date label, e.g. „Mi, 8.7.". */
-    private function shortDay(Carbon $date): string
-    {
-        return $date->locale(app()->getLocale())->isoFormat('dd, D.M.');
     }
 
     /**

@@ -57,6 +57,10 @@ return [
     'companion_request' => ':child would like to go home with :companion on :day.',
     'companion_confirm' => 'Yes, that’s fine',
     'companion_decline' => 'No',
+    'notes_heading' => 'Going home together',
+    'note_line' => ':child goes home with :companion on :day.',
+    'note_status_pickup' => 'picked up',
+    'note_status_confirmed' => 'confirmed',
 
     'reported_as' => 'Reported as “:label”.',
     'cancel_absence' => 'Cancel absence',
