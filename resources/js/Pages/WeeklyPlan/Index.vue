@@ -106,6 +106,12 @@ function cellClass(day) {
 // --- Inline editor (modal) ---
 const editing = ref(null); // { childId, childName, date, label }
 const form = reactive({ planned_time: '', planned_method: '', time_qualifier: 'at', companion_child_id: '', note: '', absence_reason: '' });
+const saveError = ref(''); // server validation message shown in the modal on a failed save
+
+// Surface the first server error (e.g. an invalid companion) so a failed save isn't silent.
+function showFirstError(errors) {
+    saveError.value = errors.companion_child_id || errors.planned_time || Object.values(errors)[0] || '';
+}
 
 // While a fresh absence is staged (Krank/Kommt nicht), the plan is disabled and the
 // comment becomes mandatory — nothing is submitted until the user hits Speichern.
@@ -152,6 +158,7 @@ function openCell(child, day, dayMeta) {
     form.companion_child_id = day.companion?.id ?? '';
     form.note = day.note ?? '';
     form.absence_reason = '';
+    saveError.value = '';
 }
 
 // Staff editing a pickup from the Ganze-Woche timeline (kid carries the day data).
@@ -164,6 +171,8 @@ function closeEditor() {
 }
 
 function save() {
+    saveError.value = '';
+
     // Staged absence: report it (with the now-required comment) instead of a plan.
     if (stagingAbsence.value) {
         if (!canSave.value) {
@@ -178,7 +187,7 @@ function save() {
                 reason: form.absence_reason,
                 comment: form.note || null,
             },
-            { preserveScroll: true, onSuccess: closeEditor },
+            { preserveScroll: true, onSuccess: closeEditor, onError: showFirstError },
         );
         return;
     }
@@ -194,7 +203,7 @@ function save() {
             companion_child_id: goingWithChild.value ? form.companion_child_id || null : null,
             note: form.note || null,
         },
-        { preserveScroll: true, onSuccess: closeEditor },
+        { preserveScroll: true, onSuccess: closeEditor, onError: showFirstError },
     );
 }
 
@@ -647,6 +656,13 @@ function cancelAbsence() {
                         {{ stagingAbsence ? $t('weekly.reason_hint') : $t('weekly.note_hint') }}
                     </p>
                 </div>
+
+                <p
+                    v-if="saveError"
+                    class="rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-700"
+                >
+                    {{ saveError }}
+                </p>
 
                 <div class="flex items-center justify-between gap-3 pt-2">
                     <button
