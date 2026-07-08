@@ -6,9 +6,11 @@ namespace App\Support;
 
 use App\Enums\DepartureMethod;
 use App\Models\Child;
+use App\Models\DailyDeparture;
 use App\Notifications\CompanionCancelled;
 use App\Notifications\CompanionRequest;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Notification;
 
 /**
@@ -34,13 +36,29 @@ class CompanionReconciler
 
         $dependents = $companion->accompaniedDepartures()
             ->where('date', $date)
+            ->with('child.guardians')
             ->get();
 
         if ($dependents->isEmpty()) {
             return;
         }
 
-        $companionAlone = EffectivePlan::for($companionChildId, $date)['method'] === DepartureMethod::SentHome->value;
+        $plan = EffectivePlan::for($companionChildId, $date);
+
+        // The companion can only be a companion if they themselves leave on their own —
+        // a concrete pickup that is picked_up or sent_home. If their plan changed so that
+        // is no longer true (they now tag along with someone else → a chain, or they no
+        // longer have a pickup), nobody can go with them: unwind, same as an absence.
+        $leavesOnOwn = $plan['time'] !== null
+            && in_array($plan['method'], [DepartureMethod::PickedUp->value, DepartureMethod::SentHome->value], true);
+
+        if (! $leavesOnOwn) {
+            self::unwind($companion, $dependents, $date);
+
+            return;
+        }
+
+        $companionAlone = $plan['method'] === DepartureMethod::SentHome->value;
         $guardians = $companion->guardians()->get();
 
         foreach ($dependents as $dependent) {
@@ -62,9 +80,8 @@ class CompanionReconciler
     }
 
     /**
-     * The companion was reported away, so nobody can go home with them. Each dependent
-     * arrangement is reverted to that child's Stammplan (a safe default) and its family
-     * is told to plan a fresh pickup — otherwise a child could be left without a way home.
+     * The companion was reported away, so nobody can go home with them. Same procedure
+     * as when the companion can no longer be one (see reconcile): unwind each dependent.
      */
     public static function companionAbsent(int $companionChildId, string $date): void
     {
@@ -78,6 +95,37 @@ class CompanionReconciler
             ->with('child.guardians')
             ->get();
 
+        self::unwind($companion, $dependents, $date);
+    }
+
+    /**
+     * The companion child is being deleted → unwind every arrangement (any day) that
+     * named them, so no dependent is left pointing at a child who no longer exists.
+     */
+    public static function companionRemoved(Child $companion): void
+    {
+        $dependents = $companion->accompaniedDepartures()->with('child.guardians')->get();
+
+        foreach ($dependents as $dependent) {
+            $child = $dependent->child;
+            $guardians = $child->guardians;
+            $shortDate = $dependent->date->format('d.m.');
+
+            $dependent->delete();
+
+            Notification::send($guardians, new CompanionCancelled($child->name, $companion->name, $shortDate));
+        }
+    }
+
+    /**
+     * Revert each dependent arrangement to that child's Stammplan (a safe default) and
+     * tell their family to plan a fresh pickup — otherwise a child could be left without
+     * a way home.
+     *
+     * @param  Collection<int, DailyDeparture>  $dependents
+     */
+    private static function unwind(Child $companion, $dependents, string $date): void
+    {
         $shortDate = Carbon::parse($date)->format('d.m.');
 
         foreach ($dependents as $dependent) {

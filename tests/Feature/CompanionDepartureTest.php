@@ -485,6 +485,63 @@ class CompanionDepartureTest extends TestCase
             ->assertInertia(fn ($page) => $page->where('pendingCompanions', 1));
     }
 
+    public function test_a_companion_becoming_a_tagalong_unwinds_dependents(): void
+    {
+        Notification::fake();
+        $date = $this->wednesday();
+        $anna = Child::factory()->create(['name' => 'Anna']);
+        $bob = Child::factory()->create(['name' => 'Bob']);
+        $cara = Child::factory()->create(['name' => 'Cara']);
+        $annasParent = User::factory()->create(['role' => UserRole::Parent]);
+        $annasParent->children()->attach($anna);
+
+        // Cara is picked up (a valid companion later); Bob goes alone; Anna goes with Bob.
+        $this->departsAt($cara, $date, DepartureMethod::PickedUp);
+        $this->departsAt($bob, $date, DepartureMethod::SentHome);
+        $this->actingAs($this->staff())->patch(route('weekly-plan.adjust'), [
+            'child_id' => $anna->id,
+            'date' => $date,
+            'planned_method' => DepartureMethod::WithChild->value,
+            'companion_child_id' => $bob->id,
+        ])->assertRedirect();
+
+        // Bob himself now tags along with Cara → a chain. Anna can't go with Bob anymore,
+        // so her arrangement is unwound and her family told to re-plan.
+        $this->actingAs($this->staff())->patch(route('weekly-plan.adjust'), [
+            'child_id' => $bob->id,
+            'date' => $date,
+            'planned_method' => DepartureMethod::WithChild->value,
+            'companion_child_id' => $cara->id,
+        ])->assertRedirect();
+
+        $this->assertDatabaseMissing('daily_departures', ['child_id' => $anna->id]);
+        Notification::assertSentTo($annasParent, CompanionCancelled::class);
+    }
+
+    public function test_deleting_a_companion_unwinds_dependents(): void
+    {
+        Notification::fake();
+        $date = $this->wednesday();
+        $anna = Child::factory()->create(['name' => 'Anna']);
+        $bob = Child::factory()->create(['name' => 'Bob']);
+        $annasParent = User::factory()->create(['role' => UserRole::Parent]);
+        $annasParent->children()->attach($anna);
+
+        $this->departsAt($bob, $date, DepartureMethod::SentHome);
+        $this->actingAs($this->staff())->patch(route('weekly-plan.adjust'), [
+            'child_id' => $anna->id,
+            'date' => $date,
+            'planned_method' => DepartureMethod::WithChild->value,
+            'companion_child_id' => $bob->id,
+        ])->assertRedirect();
+
+        // Bob is removed entirely → nobody can go with him.
+        $bob->delete();
+
+        $this->assertDatabaseMissing('daily_departures', ['child_id' => $anna->id]);
+        Notification::assertSentTo($annasParent, CompanionCancelled::class);
+    }
+
     public function test_the_requesting_parent_sees_their_pending_arrangement(): void
     {
         $date = $this->wednesday(); // 2026-06-24 = Wednesday, day index 2
