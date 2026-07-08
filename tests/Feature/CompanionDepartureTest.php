@@ -7,6 +7,8 @@ namespace Tests\Feature;
 use App\Enums\DepartureMethod;
 use App\Enums\DepartureStatus;
 use App\Enums\UserRole;
+use App\Jobs\AskCompanionConfirmation;
+use App\Jobs\SyncCompanionConfirmation;
 use App\Models\Absence;
 use App\Models\Child;
 use App\Models\DailyDeparture;
@@ -18,6 +20,7 @@ use App\Notifications\CompanionRequest;
 use App\Support\CompanionReconciler;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
@@ -548,6 +551,42 @@ class CompanionDepartureTest extends TestCase
         // Bob is a tag-along, so nobody can go with him → Anna is unwound + told.
         $this->assertDatabaseMissing('daily_departures', ['child_id' => $anna->id]);
         Notification::assertSentTo($annasParent, CompanionCancelled::class);
+    }
+
+    public function test_a_pending_arrangement_queues_the_slack_ask(): void
+    {
+        Bus::fake([AskCompanionConfirmation::class]);
+        $date = $this->wednesday();
+        $anna = Child::factory()->create();
+        $tom = Child::factory()->create();
+        $this->departsAt($tom, $date, DepartureMethod::SentHome);
+
+        $this->actingAs($this->staff())->patch(route('weekly-plan.adjust'), [
+            'child_id' => $anna->id,
+            'date' => $date,
+            'planned_method' => DepartureMethod::WithChild->value,
+            'companion_child_id' => $tom->id,
+        ]);
+
+        Bus::assertDispatched(AskCompanionConfirmation::class);
+    }
+
+    public function test_answering_queues_the_slack_sync(): void
+    {
+        Bus::fake([SyncCompanionConfirmation::class]);
+        $date = $this->wednesday();
+        $anna = Child::factory()->create();
+        $tom = Child::factory()->create();
+        $tomsParent = User::factory()->create(['role' => UserRole::Parent]);
+        $tomsParent->children()->attach($tom);
+        $departure = DailyDeparture::create([
+            'child_id' => $anna->id, 'date' => $date, 'status' => DepartureStatus::Present,
+            'planned_method' => DepartureMethod::WithChild, 'companion_child_id' => $tom->id, 'companion_confirmed' => null,
+        ]);
+
+        $this->actingAs($tomsParent)->patch(route('companion.confirm', $departure), ['confirmed' => true]);
+
+        Bus::assertDispatched(SyncCompanionConfirmation::class);
     }
 
     public function test_a_companion_becoming_a_tagalong_unwinds_dependents(): void

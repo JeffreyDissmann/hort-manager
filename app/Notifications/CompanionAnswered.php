@@ -5,44 +5,50 @@ declare(strict_types=1);
 namespace App\Notifications;
 
 use App\Models\DailyDeparture;
-use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Notifications\Notification;
-use NotificationChannels\WebPush\WebPushChannel;
+use Illuminate\Notifications\Slack\BlockKit\Blocks\ActionsBlock;
+use Illuminate\Notifications\Slack\BlockKit\Blocks\SectionBlock;
+use Illuminate\Notifications\Slack\SlackMessage;
 use NotificationChannels\WebPush\WebPushMessage;
 
 /**
- * Web-push back to the *requesting* child's guardians once the companion's family has
- * answered — so they learn whether the „geht mit … mit" became the plan (confirmed) or
- * their child stays a normal pickup at the synced time (declined).
+ * Tells the *requesting* child's guardians once the companion's family has answered —
+ * whether the „geht mit … mit" became the plan (confirmed) or their child stays a
+ * normal pickup at the synced time (declined). Sent on Slack and/or web-push.
  */
-class CompanionAnswered extends Notification implements ShouldQueue
+class CompanionAnswered extends SlackNotification
 {
-    use Queueable;
-
     public function __construct(public DailyDeparture $departure, public bool $confirmed) {}
 
-    /** @return array<int, class-string> */
-    public function via(object $notifiable): array
+    public function toSlack(object $notifiable): SlackMessage
     {
-        return [WebPushChannel::class];
+        $body = $this->body();
+
+        return (new SlackMessage)
+            ->text($body)
+            ->sectionBlock(fn (SectionBlock $block) => $block->text($body)->markdown())
+            ->actionsBlock(fn (ActionsBlock $block) => $block
+                ->button('Im Hort-Manager öffnen')
+                ->url(route('slack.enter', ['to' => 'weekly-plan'])));
     }
 
     public function toWebPush(object $notifiable, object $notification): WebPushMessage
+    {
+        return (new WebPushMessage)
+            ->title('Antwort zum Mitgehen')
+            ->body($this->body())
+            ->icon('/icons/icon-192.png')
+            ->badge('/icons/icon-192.png')
+            ->data(['url' => route('weekly-plan')]);
+    }
+
+    private function body(): string
     {
         $child = $this->departure->child->name;
         $companion = $this->departure->companion->name;
         $date = $this->departure->date->format('d.m.');
 
-        $body = $this->confirmed
+        return $this->confirmed
             ? "{$companion}s Familie hat zugestimmt: {$child} geht am {$date} mit {$companion} mit."
             : "{$companion}s Familie hat abgesagt. {$child} wird am {$date} wie gewohnt abgeholt.";
-
-        return (new WebPushMessage)
-            ->title('Antwort zum Mitgehen')
-            ->body($body)
-            ->icon('/icons/icon-192.png')
-            ->badge('/icons/icon-192.png')
-            ->data(['url' => route('weekly-plan')]);
     }
 }

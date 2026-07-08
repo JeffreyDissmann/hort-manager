@@ -4,41 +4,53 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Enums\DepartureMethod;
+use App\Jobs\SyncCompanionConfirmation;
 use App\Jobs\SyncExcursionRsvp;
 use App\Models\Child;
+use App\Models\DailyDeparture;
 use App\Models\Excursion;
 use App\Models\User;
+use App\Notifications\CompanionAnswered;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Notification;
 
 class SlackInteractionController extends Controller
 {
     /**
-     * Handle a Slack interactive button click. Buttons carry a value of
-     * "rsvp|{excursionId}|{childId}|{1|0}". The request is already signature-verified.
+     * Handle a Slack interactive button click. Buttons carry a pipe-delimited value:
+     * "rsvp|{excursionId}|{childId}|{1|0}" or "companion|{departureId}|{1|0}". The
+     * request is already signature-verified by middleware.
      */
     public function handle(Request $request): Response
     {
         $payload = json_decode((string) $request->input('payload'), true) ?? [];
         $responseUrl = data_get($payload, 'response_url');
-
-        [$tag, $excursionId, $childId, $answer] = array_pad(
-            explode('|', (string) data_get($payload, 'actions.0.value')), 4, null,
-        );
-
-        if ($tag !== 'rsvp') {
-            return response()->noContent();
-        }
-
+        $value = (string) data_get($payload, 'actions.0.value');
         $user = User::firstWhere('slack_id', data_get($payload, 'user.id'));
+
+        match (strtok($value, '|')) {
+            'rsvp' => $this->answerRsvp($value, $user, $responseUrl),
+            'companion' => $this->answerCompanion($value, $user, $responseUrl),
+            default => null,
+        };
+
+        return response()->noContent();
+    }
+
+    private function answerRsvp(string $value, ?User $user, ?string $responseUrl): void
+    {
+        [, $excursionId, $childId, $answer] = array_pad(explode('|', $value), 4, null);
+
         $excursion = Excursion::find($excursionId);
         $child = Child::find($childId);
 
         if (! $user || ! $excursion || ! $child || ! $child->isGuardedBy($user) || ! $excursion->pollIsOpen()) {
             $this->reply($responseUrl, '⚠️ Diese Abstimmung ist nicht (mehr) möglich.');
 
-            return response()->noContent();
+            return;
         }
 
         $excursion->children()->syncWithoutDetaching([
@@ -51,8 +63,37 @@ class SlackInteractionController extends Controller
 
         // Re-render every guardian's DM (queued) so Slack gets a fast ack.
         SyncExcursionRsvp::dispatch($excursion, $child);
+    }
 
-        return response()->noContent();
+    private function answerCompanion(string $value, ?User $user, ?string $responseUrl): void
+    {
+        [, $departureId, $answer] = array_pad(explode('|', $value), 3, null);
+
+        $departure = DailyDeparture::find($departureId);
+
+        // Only the companion's guardian may answer, and only a real, open arrangement.
+        $valid = $user
+            && $departure
+            && $departure->planned_method === DepartureMethod::WithChild
+            && $departure->companion_child_id
+            && ($departure->companion?->isGuardedBy($user) ?? false);
+
+        if (! $valid) {
+            $this->reply($responseUrl, '⚠️ Diese Anfrage ist nicht (mehr) möglich.');
+
+            return;
+        }
+
+        $confirmed = (bool) (int) $answer;
+        $departure->update([
+            'companion_confirmed' => $confirmed,
+            'companion_confirmed_by' => $user->id,
+            'companion_confirmed_at' => now(),
+        ]);
+
+        // Tell the requesting family and keep every companion-guardian's DM in sync.
+        Notification::send($departure->child->guardians()->get(), new CompanionAnswered($departure, $confirmed));
+        SyncCompanionConfirmation::dispatch($departure);
     }
 
     /** Post a confirmation back into the same Slack DM via the interaction's response_url. */

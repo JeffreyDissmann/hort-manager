@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\Enums\DepartureMethod;
 use App\Enums\DepartureStatus;
 use App\Http\Requests\AdjustDayRequest;
+use App\Jobs\AskCompanionConfirmation;
 use App\Models\Child;
 use App\Models\DailyDeparture;
 use App\Notifications\CompanionRequest;
@@ -72,6 +73,7 @@ class WeeklyAdjustmentController extends Controller
         // Ask this row's companion family, if their confirmation is now pending.
         if ($departure->awaitingCompanionConfirmation()) {
             Notification::send($departure->companion->guardians()->get(), new CompanionRequest($departure));
+            AskCompanionConfirmation::dispatch($departure);
         }
 
         // This child may itself be someone else's companion — re-evaluate those

@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Support;
 
 use App\Enums\DepartureMethod;
+use App\Jobs\AskCompanionConfirmation;
 use App\Models\Child;
 use App\Models\DailyDeparture;
 use App\Notifications\CompanionCancelled;
 use App\Notifications\CompanionRequest;
+use App\Services\SlackCompanion;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Notification;
@@ -71,6 +73,7 @@ class CompanionReconciler
                 if (! $answeredByHuman && $dependent->companion_confirmed === true) {
                     $dependent->update(['companion_confirmed' => null]);
                     Notification::send($guardians, new CompanionRequest($dependent));
+                    AskCompanionConfirmation::dispatch($dependent);
                 }
             } elseif (! $answeredByHuman && $dependent->companion_confirmed === null) {
                 // Companion is picked up again → an adult is there, no gate needed.
@@ -111,6 +114,7 @@ class CompanionReconciler
             $guardians = $child->guardians;
             $shortDate = $dependent->date->format('d.m.');
 
+            SlackCompanion::cancelFor($dependent, $child->name, $companion->name);
             $dependent->delete();
 
             Notification::send($guardians, new CompanionCancelled($child->name, $companion->name, $shortDate));
@@ -132,6 +136,7 @@ class CompanionReconciler
             $child = $dependent->child;
             $guardians = $child->guardians; // eager-loaded before the row is deleted
 
+            SlackCompanion::cancelFor($dependent, $child->name, $companion->name);
             $dependent->delete(); // revert to the child's Stammplan for that day
 
             Notification::send($guardians, new CompanionCancelled($child->name, $companion->name, $shortDate));

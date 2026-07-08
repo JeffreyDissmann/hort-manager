@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ConfirmCompanionRequest;
+use App\Jobs\SyncCompanionConfirmation;
 use App\Models\DailyDeparture;
 use App\Notifications\CompanionAnswered;
 use Illuminate\Http\RedirectResponse;
@@ -33,6 +34,9 @@ class CompanionConfirmationController extends Controller
             $departure->child->guardians()->get(),
             new CompanionAnswered($departure, $confirmed),
         );
+
+        // Keep every companion-guardian's Slack DM in sync with the recorded answer.
+        SyncCompanionConfirmation::dispatch($departure);
 
         return back()->with('status', __('flash.companion_answered', ['name' => $departure->child->name]));
     }

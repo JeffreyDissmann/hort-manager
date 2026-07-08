@@ -19,6 +19,7 @@ class SlackController extends Controller
         'board' => 'board',
         'polls' => 'polls.index',
         'children' => 'children.index',
+        'weekly-plan' => 'weekly-plan',
     ];
 
     /**

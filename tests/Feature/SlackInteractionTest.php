@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Enums\DepartureMethod;
+use App\Enums\DepartureStatus;
 use App\Models\Child;
+use App\Models\DailyDeparture;
 use App\Models\Excursion;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -110,5 +113,54 @@ class SlackInteractionTest extends TestCase
         ])->assertNoContent();
 
         $this->assertNull($excursion->children()->find($child->id)->pivot->response);
+    }
+
+    /** A pending „geht mit … mit" arrangement whose companion is $guardian's child. */
+    private function pendingCompanionFor(User $guardian): DailyDeparture
+    {
+        $companion = Child::factory()->create();      // the guardian's child (gone-home-with)
+        $companion->guardians()->attach($guardian);
+        $tagalong = Child::factory()->create();       // the child tagging along
+
+        return DailyDeparture::create([
+            'child_id' => $tagalong->id,
+            'date' => '2026-06-24',
+            'planned_method' => DepartureMethod::WithChild,
+            'companion_child_id' => $companion->id,
+            'companion_confirmed' => null,
+            'status' => DepartureStatus::Present,
+        ]);
+    }
+
+    public function test_a_signed_companion_yes_records_the_confirmation(): void
+    {
+        Http::fake();
+        $guardian = User::factory()->create(['slack_id' => 'U1']);
+        $departure = $this->pendingCompanionFor($guardian);
+
+        $this->postInteraction([
+            'user' => ['id' => 'U1'],
+            'response_url' => 'https://hooks.slack.test/confirm',
+            'actions' => [['value' => "companion|{$departure->id}|1"]],
+        ])->assertNoContent();
+
+        $this->assertTrue((bool) $departure->fresh()->companion_confirmed);
+        $this->assertSame($guardian->id, $departure->fresh()->companion_confirmed_by);
+    }
+
+    public function test_a_companion_click_from_a_non_guardian_is_ignored(): void
+    {
+        Http::fake();
+        $guardian = User::factory()->create(['slack_id' => 'U1']);
+        User::factory()->create(['slack_id' => 'U9']);
+        $departure = $this->pendingCompanionFor($guardian);
+
+        $this->postInteraction([
+            'user' => ['id' => 'U9'], // not the companion's guardian
+            'response_url' => 'https://hooks.slack.test/confirm',
+            'actions' => [['value' => "companion|{$departure->id}|1"]],
+        ])->assertNoContent();
+
+        $this->assertNull($departure->fresh()->companion_confirmed);
     }
 }

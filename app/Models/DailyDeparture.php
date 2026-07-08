@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[ObservedBy([DailyDepartureObserver::class])]
 class DailyDeparture extends Model
@@ -98,6 +99,16 @@ class DailyDeparture extends Model
     public function companion(): BelongsTo
     {
         return $this->belongsTo(Child::class, 'companion_child_id');
+    }
+
+    /**
+     * The per-guardian Slack DMs asking the companion's family to confirm.
+     *
+     * @return HasMany<CompanionSlackMessage, $this>
+     */
+    public function companionSlackMessages(): HasMany
+    {
+        return $this->hasMany(CompanionSlackMessage::class);
     }
 
     /**
