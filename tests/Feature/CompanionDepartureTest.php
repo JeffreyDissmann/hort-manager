@@ -15,6 +15,7 @@ use App\Models\WeeklySchedule;
 use App\Notifications\CompanionAnswered;
 use App\Notifications\CompanionCancelled;
 use App\Notifications\CompanionRequest;
+use App\Support\CompanionReconciler;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Notification;
@@ -483,6 +484,70 @@ class CompanionDepartureTest extends TestCase
         // The shared banner count reaches Tom's family.
         $this->actingAs($tomsParent)->get(route('board'))
             ->assertInertia(fn ($page) => $page->where('pendingCompanions', 1));
+    }
+
+    public function test_two_children_cannot_go_home_with_each_other(): void
+    {
+        $date = $this->wednesday();
+        $anna = Child::factory()->create();
+        $bob = Child::factory()->create();
+        // Bob leaves on his own → a valid companion.
+        $this->departsAt($bob, $date, DepartureMethod::SentHome);
+
+        // Anna goes with Bob.
+        $this->actingAs($this->staff())->patch(route('weekly-plan.adjust'), [
+            'child_id' => $anna->id,
+            'date' => $date,
+            'planned_method' => DepartureMethod::WithChild->value,
+            'companion_child_id' => $bob->id,
+        ])->assertRedirect();
+
+        // Bob can't now go with Anna — she's already a tag-along (no chains, no mutual).
+        $this->actingAs($this->staff())->patch(route('weekly-plan.adjust'), [
+            'child_id' => $bob->id,
+            'date' => $date,
+            'planned_method' => DepartureMethod::WithChild->value,
+            'companion_child_id' => $anna->id,
+        ])->assertSessionHasErrors('companion_child_id');
+
+        // Anna's arrangement stands; Bob was not turned into a tag-along.
+        $this->assertDatabaseHas('daily_departures', [
+            'child_id' => $anna->id,
+            'planned_method' => 'with_child',
+            'companion_child_id' => $bob->id,
+        ]);
+        $this->assertDatabaseHas('daily_departures', [
+            'child_id' => $bob->id,
+            'planned_method' => 'sent_home',
+            'companion_child_id' => null,
+        ]);
+    }
+
+    public function test_a_mutual_arrangement_self_heals_on_reconcile(): void
+    {
+        // A concurrent race is the only way two mutual rows could ever coexist. The
+        // reconciler that runs after every plan write collapses it back to one.
+        Notification::fake();
+        $date = $this->wednesday();
+        $anna = Child::factory()->create(['name' => 'Anna']);
+        $bob = Child::factory()->create(['name' => 'Bob']);
+        $annasParent = User::factory()->create(['role' => UserRole::Parent]);
+        $annasParent->children()->attach($anna);
+
+        DailyDeparture::create([
+            'child_id' => $anna->id, 'date' => $date, 'status' => DepartureStatus::Present,
+            'planned_method' => DepartureMethod::WithChild, 'companion_child_id' => $bob->id, 'companion_confirmed' => true,
+        ]);
+        DailyDeparture::create([
+            'child_id' => $bob->id, 'date' => $date, 'status' => DepartureStatus::Present,
+            'planned_method' => DepartureMethod::WithChild, 'companion_child_id' => $anna->id, 'companion_confirmed' => true,
+        ]);
+
+        CompanionReconciler::reconcile($bob->id, $date);
+
+        // Bob is a tag-along, so nobody can go with him → Anna is unwound + told.
+        $this->assertDatabaseMissing('daily_departures', ['child_id' => $anna->id]);
+        Notification::assertSentTo($annasParent, CompanionCancelled::class);
     }
 
     public function test_a_companion_becoming_a_tagalong_unwinds_dependents(): void
