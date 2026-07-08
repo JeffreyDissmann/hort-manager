@@ -34,9 +34,9 @@ return [
             'text' => 'The overview for today: who is picked up when, who goes home alone, who is on an excursion. Staff check off each child as soon as it leaves.',
         ],
         'pickup_plan' => [
-            'title' => 'Pickup plan',
+            'title' => 'Weekly plan',
             'audience' => 'For everyone',
-            'text' => 'At the top you see the whole week at a glance – all children with their pickup times and the times for lunch, activity, homework and excursions. If you need a different time on one day as an exception, you can adjust exactly that day or report your child sick.',
+            'text' => 'The whole week at a glance – with lunch, activity, homework and excursions. Tap a day to adjust it: time, whether your child is picked up, goes home alone (also “until / exactly at / from” a time) or goes home with another child – or report it sick or “not coming”.',
         ],
         'excursions' => [
             'title' => 'Excursions',
@@ -78,9 +78,31 @@ return [
     ],
     'assistant_note' => 'This works via direct message to “Hort-Manager” in Slack or with “/hort …”. It only handles your own children and briefly confirms what it has entered. Check the reply – if there is a misunderstanding, just write the correct detail again.',
 
+    // Go home with another child
+    'companion_title' => 'Going home with another child',
+    'companion_intro' => 'Sometimes a child goes home with another one – to play, or because one family takes both. Here’s how it works:',
+    'companion_points' => [
+        'In the weekly plan, pick <strong>“Goes home with another child”</strong> under “Type”, then choose the child. The pickup time is taken from that child automatically – if their time changes, yours changes with it.',
+        'If the other child is <strong>picked up</strong>, everything is settled right away – an adult is there anyway.',
+        'If the other child goes home <strong>alone</strong>, their family has to agree first. Until then everyone else just sees the normal pickup time – the “going home with” only appears after the yes.',
+        'At the top of “Today” and in the weekly plan you see a “Going home with others” overview – with the status of the agreement, and to confirm when a child wants to go home with yours.',
+    ],
+
+    // Notifications
+    'notifications_title' => 'Which notifications do I get?',
+    'notifications_intro' => 'Hort-Manager lets you know when something important happens – as a <strong>push notification</strong> on your device and, if your account is connected to Slack, additionally as a <strong>Slack message</strong>. Both show the same thing; one channel is enough.',
+    'notifications_points' => [
+        '<strong>Child picked up / left alone:</strong> as soon as the Hort team checks your child off, you’re notified.',
+        '<strong>New excursion:</strong> you’re invited to respond – with a reminder if you haven’t answered yet.',
+        '<strong>A child wants to go home with yours:</strong> if your child goes home alone and another one wants to come along, their family asks you for permission – right there with “Yes/No” in Slack or in the app.',
+        '<strong>Answer about going along:</strong> if you asked whether your child may go home with another one, you’ll find out as soon as the other family accepts or declines.',
+        '<strong>Going along not possible:</strong> if the other child is reported sick or absent, we let you know so you can re-plan the pickup.',
+    ],
+    'notifications_note' => 'You can respond anywhere – in Slack or in the app; both sides automatically stay on the same page.',
+
     // Install as app
-    'install_title' => 'Install as an app & notifications',
-    'install_text' => 'You can put Hort-Manager on your phone like a real app – then it starts in full screen and can send you notifications (e.g. “Child was picked up” or a reminder about an excursion).',
+    'install_title' => 'Install as an app',
+    'install_text' => 'You can put Hort-Manager on your phone like a real app – then it starts in full screen and can send you notifications.',
     'install_ios' => '<strong>iPhone (Safari):</strong> tap the share icon → “Add to Home Screen”.',
     'install_android' => '<strong>Android (Chrome):</strong> tap the “Install” banner at the top (or menu → “Install app”).',
     'install_enable' => 'Then tap <strong>🔔 Notifications on</strong> in the menu at the top right and allow them.',
@@ -100,15 +122,19 @@ return [
             'def' => 'The fixed, weekly-recurring pickup times of a child – the basis for the pickup plan.',
         ],
         'pickup_plan' => [
-            'term' => 'Pickup plan',
+            'term' => 'Weekly plan',
             'def' => 'The concrete plan for a specific week. It comes from the standard plan but can be adjusted per day.',
         ],
         'departure' => [
-            'term' => 'picked up / left alone',
-            'def' => 'The two ways a child goes home: picked up by someone or gone home alone.',
+            'term' => 'picked up / alone / with a child',
+            'def' => 'The three ways a child goes home: picked up, home alone, or together with another child.',
+        ],
+        'companion' => [
+            'term' => 'Going home with another child',
+            'def' => 'A child goes home with another one and takes over their pickup time. If the other child goes alone, their family must agree.',
         ],
         'absence' => [
-            'term' => 'Sick report / absence',
+            'term' => 'Sick / Not coming',
             'def' => 'A child is reported sick or absent for a day – then it is not on the pickup list that day.',
         ],
     ],
