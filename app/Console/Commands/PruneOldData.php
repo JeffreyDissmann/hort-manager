@@ -21,9 +21,10 @@ class PruneOldData extends Command
         $weeks = (int) config('hort.retention_weeks');
         $cutoff = now()->subWeeks($weeks)->startOfDay()->toDateString();
 
-        // Mass deletes (query builder) skip model events on purpose: pruning
-        // weeks-old data must NOT fire the excursion "Ausflug abgesagt" Slack DMs.
-        // The database foreign keys still cascade child_excursion / excursion_slack_messages.
+        // Mass deletes (query builder) skip model events on purpose: pruning weeks-old
+        // data must NOT fire the excursion "Ausflug abgesagt" or companion "hat sich
+        // erledigt" Slack DMs, nor the companion reconciler. The database foreign keys
+        // still cascade child_excursion / excursion_slack_messages / companion_slack_messages.
         $departures = DailyDeparture::where('date', '<', $cutoff)->delete();
         $programs = DailyProgram::where('date', '<', $cutoff)->delete();
         $excursions = Excursion::where('date', '<', $cutoff)->delete();

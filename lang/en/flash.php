@@ -19,6 +19,7 @@ return [
 
     'plan_updated' => 'Plan for :name updated.',
     'day_reset' => ':name: day reset to the standard.',
+    'companion_answered' => 'Answer saved for :name.',
 
     'excursion_created' => 'Excursion “:name” created. The parents have been invited to respond.',
     'excursion_saved' => 'Excursion “:name” saved.',

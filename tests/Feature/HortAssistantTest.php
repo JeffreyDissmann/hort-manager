@@ -14,9 +14,11 @@ use App\Models\Child;
 use App\Models\DailyDeparture;
 use App\Models\Excursion;
 use App\Models\User;
+use App\Notifications\CompanionRequest;
 use App\Services\HortAssistant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
@@ -92,6 +94,38 @@ class HortAssistantTest extends TestCase
         $this->assertSame(DepartureMethod::PickedUp, $departure->planned_method);
         $this->assertStringContainsString('Wird abgeholt', $reply);
         $this->assertStringNotContainsString('keine Abholzeit', $reply);
+    }
+
+    public function test_changing_a_companion_to_alone_reopens_a_dependent(): void
+    {
+        Notification::fake();
+        Carbon::setTestNow('2026-06-22'); // Monday
+        [$parent, $tom] = $this->parentWithTom();
+        $anna = Child::factory()->create(['name' => 'Anna']);
+
+        // Tom is picked up on Wednesday, so Anna's „geht mit Tom mit" is auto-approved.
+        DailyDeparture::create([
+            'child_id' => $tom->id, 'date' => '2026-06-24',
+            'status' => DepartureStatus::Present, 'planned_time' => '15:00',
+            'planned_method' => DepartureMethod::PickedUp,
+        ]);
+        DailyDeparture::create([
+            'child_id' => $anna->id, 'date' => '2026-06-24',
+            'status' => DepartureStatus::Present,
+            'planned_method' => DepartureMethod::WithChild, 'companion_child_id' => $tom->id,
+            'companion_confirmed' => true, // auto-approved (system), no confirmer
+        ]);
+
+        // Tom's parent tells the assistant Tom goes home alone that day.
+        $this->fakeIntent(['intent' => 'abholzeit', 'kind' => 'Tom', 'datum' => '2026-06-24', 'art' => 'allein']);
+        app(HortAssistant::class)->reply($parent, 'Tom geht Mittwoch allein');
+
+        // Anna's auto-approval is reopened, and Tom's family is asked.
+        $this->assertDatabaseHas('daily_departures', [
+            'child_id' => $anna->id,
+            'companion_confirmed' => null,
+        ]);
+        Notification::assertSentTo($parent, CompanionRequest::class);
     }
 
     public function test_a_pickup_change_without_details_asks_for_them(): void

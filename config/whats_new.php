@@ -16,6 +16,19 @@ declare(strict_types=1);
 
 return [
     [
+        'version' => '2026.07.08',
+        'date' => '2026-07-08',
+        'title' => 'Mit einem anderen Kind nach Hause 🧒🧒',
+        'items' => [
+            '🧒 Neu im Wochenplan: „Geht mit einem anderen Kind mit". Wähl das Kind aus – die Abholzeit wird automatisch übernommen und bleibt mit ihm verknüpft.',
+            '🙋 Geht das andere Kind allein nach Hause, wird dessen Familie um Erlaubnis gefragt (per Slack oder direkt in der App). Wird es abgeholt, ist alles sofort erledigt.',
+            '🕒 Bei „Geht allein" kannst du jetzt sagen, ob die Uhrzeit „bis", „genau um" oder „ab" gemeint ist.',
+            '📋 Oben auf „Heute" und im Wochenplan siehst du eine Übersicht „Mit anderen nach Hause" – mit dem Stand der Zusage.',
+            '🤒 Meldest du dein Kind krank oder als „kommt nicht", brauchen wir jetzt einen kurzen Grund dazu.',
+            '🙌 Idee dazu von Andrea, Ezgi und Vio – vielen Dank!',
+        ],
+    ],
+    [
         'version' => '2026.07.07',
         'date' => '2026-07-07',
         'title' => 'Dunkelmodus 🌙 & übersichtlichere Pläne',
@@ -24,6 +37,7 @@ return [
             '⚙️ Stell es unter „Profil → Darstellung" ein: Hell, Dunkel oder „Automatisch" (folgt der Einstellung deines Geräts).',
             'ℹ️ Die Auswahl gilt pro Gerät – so kann dein Handy dunkel und dein Rechner hell sein.',
             '👀 Wochenplan und Stammplan sind klarer: Wer allein nach Hause geht, ist jetzt deutlich zu erkennen (🚶 und eigene Farbe), der Name ist kräftiger und die Schrift etwas größer.',
+            '🙌 Idee zum Dunkelmodus von Stepan!',
         ],
     ],
     [

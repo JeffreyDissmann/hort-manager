@@ -17,4 +17,6 @@ return [
     'logout' => 'Log out',
     'pending_polls' => ':n open excursion poll – please respond',
     'pending_polls_plural' => ':n open excursion polls – please respond',
+    'pending_companions' => ':n child wants to go home with yours – please confirm',
+    'pending_companions_plural' => ':n children want to go home with yours – please confirm',
 ];

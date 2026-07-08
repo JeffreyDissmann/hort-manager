@@ -6,16 +6,21 @@ namespace App\Http\Controllers;
 
 use App\Enums\DepartureMethod;
 use App\Enums\DepartureStatus;
+use App\Enums\TimeQualifier;
+use App\Http\Requests\MarkDepartureRequest;
+use App\Http\Requests\OverrideDepartureRequest;
 use App\Models\Absence;
 use App\Models\Child;
 use App\Models\DailyDeparture;
 use App\Models\DailyProgram;
 use App\Models\Excursion;
 use App\Models\HomeworkDefault;
+use App\Support\CompanionNotes;
+use App\Support\CompanionReconciler;
+use App\Support\EffectivePlan;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
-use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -109,21 +114,49 @@ class DailyBoardController extends Controller
             ? null
             : $user->children()->pluck('children.id');
 
+        $childNames = Child::query()->pluck('name', 'id'); // companion name lookup
+
         $departures = DailyDeparture::query()
             ->with(['child:id,name,date_of_birth', 'markedBy:id,name'])
             ->where('date', $date->toDateString())
             ->whereNotIn('child_id', $absentChildIds)
-            ->get()
-            ->sortBy(fn (DailyDeparture $d) => [$d->planned_time ?? '99:99', $d->child->name])
+            ->get();
+
+        // Each row's effective time — mirrored from the companion for „geht mit … mit".
+        $effectiveTime = [];
+        foreach ($departures as $d) {
+            $effectiveTime[$d->id] = $d->planned_method === DepartureMethod::WithChild && $d->companion_child_id
+                ? EffectivePlan::for($d->companion_child_id, $date->toDateString())['time']
+                : ($d->planned_time ? substr((string) $d->planned_time, 0, 5) : null);
+        }
+
+        $departures = $departures
+            ->sortBy(fn (DailyDeparture $d) => [$effectiveTime[$d->id] ?? '99:99', $d->child->name])
             ->values();
 
-        $rows = $departures->map(function (DailyDeparture $d) use ($standard, $user, $myChildIds, $excursionByChild, $date) {
+        $rows = $departures->map(function (DailyDeparture $d) use ($standard, $user, $myChildIds, $excursionByChild, $date, $childNames, $effectiveTime) {
             $dob = $d->child->date_of_birth;
             $birthday = $dob && $dob->format('m-d') === $date->format('m-d')
                 ? $date->year - $dob->year
                 : null;
-            $plannedTime = $d->planned_time ? substr((string) $d->planned_time, 0, 5) : null;
+            // For „geht mit … mit" the time is mirrored from the companion (see $effectiveTime).
+            $plannedTime = $effectiveTime[$d->id] ?? null;
             $plannedMethod = $d->planned_method?->value;
+
+            // The „geht mit … mit" arrangement is only shown once the companion's family
+            // has confirmed; until then the board sees a normal pickup at the synced time.
+            $companion = null;
+            if ($plannedMethod === DepartureMethod::WithChild->value && $d->companion_child_id) {
+                if ($d->companion_confirmed === true) {
+                    $companion = ['name' => $childNames[$d->companion_child_id] ?? '', 'confirmed' => true];
+                } else {
+                    $plannedMethod = DepartureMethod::PickedUp->value;
+                }
+            }
+
+            // „geht allein" prefix (bis/ab); the default „genau um" stays implicit.
+            $qualifier = $plannedMethod === DepartureMethod::SentHome->value ? $d->time_qualifier : null;
+
             $std = $standard[$d->child_id] ?? null;
             $overridden = $std === null
                 || $std['time'] !== $plannedTime
@@ -135,6 +168,10 @@ class DailyBoardController extends Controller
                 'name' => $d->child->name,
                 'planned_time' => $plannedTime,
                 'planned_method' => $plannedMethod,
+                'qualifier_prefix' => $qualifier && $qualifier !== TimeQualifier::At
+                    ? $qualifier->prefix()
+                    : null,
+                'companion' => $companion,
                 'status' => $d->status->value,
                 'status_label' => $d->status->label(),
                 'left_at' => $d->left_at?->format('H:i'),
@@ -165,10 +202,13 @@ class DailyBoardController extends Controller
                 'is_today' => $date->isToday(),
             ],
             'rows' => $rows,
+            // Parent-facing „geht mit … mit" summary for today (staff use the plan display).
+            'companionNotes' => CompanionNotes::for($user, [$date->toDateString()]),
             'absent' => $absences->map(fn (Absence $a) => [
                 'name' => $a->child->name,
                 'reason' => $a->reason->value,
                 'reason_label' => $a->reason->label(),
+                'comment' => $a->comment,
             ])->values(),
             'excursions' => $excursionList,
             'program' => $hasProgram ? [
@@ -178,26 +218,22 @@ class DailyBoardController extends Controller
                 'homework_end' => $homeworkEnd ? substr((string) $homeworkEnd, 0, 5) : null,
             ] : null,
             'canMark' => $user->isStaff(),
+            // The board's same-day override has no companion picker, so „geht mit … mit"
+            // is only offered on the Wochenplan — exclude it here.
             'methodOptions' => collect(DepartureMethod::cases())
+                ->reject(fn (DepartureMethod $m) => $m === DepartureMethod::WithChild)
                 ->map(fn (DepartureMethod $m) => ['value' => $m->value, 'label' => $m->label()])
+                ->values()
                 ->all(),
         ]);
     }
 
     /** Staff record (or undo) a child's departure. */
-    public function mark(Request $request, DailyDeparture $departure): RedirectResponse
+    public function mark(MarkDepartureRequest $request, DailyDeparture $departure): RedirectResponse
     {
         $this->authorize('mark', $departure);
 
-        $validated = $request->validate([
-            'status' => ['required', Rule::in([
-                DepartureStatus::Present->value,
-                DepartureStatus::PickedUp->value,
-                DepartureStatus::SentHome->value,
-            ])],
-        ]);
-
-        $status = DepartureStatus::from($validated['status']);
+        $status = DepartureStatus::from($request->validated('status'));
 
         // Marking off (left_at) triggers the guardian Slack DM via the observer.
         $departure->update($status->hasLeft()
@@ -208,21 +244,27 @@ class DailyBoardController extends Controller
     }
 
     /** Same-day change to the plan — by staff or the child's own parent. */
-    public function override(Request $request, DailyDeparture $departure): RedirectResponse
+    public function override(OverrideDepartureRequest $request, DailyDeparture $departure): RedirectResponse
     {
         $this->authorize('update', $departure->child);
 
-        $validated = $request->validate([
-            'planned_time' => ['required', 'date_format:H:i'],
-            'planned_method' => ['nullable', Rule::enum(DepartureMethod::class)],
-            'note' => ['nullable', 'string', 'max:255'],
-        ]);
+        $validated = $request->validated();
 
+        // A same-day board override always sets a concrete time, so any previous
+        // companion arrangement no longer applies — clear it.
         $departure->update([
             'planned_time' => $validated['planned_time'],
             'planned_method' => $validated['planned_method'] ?? null,
             'note' => $validated['note'] ?? null,
+            'companion_child_id' => null,
+            'companion_confirmed' => null,
+            'companion_confirmed_by' => null,
+            'companion_confirmed_at' => null,
         ]);
+
+        // This child may be another child's companion — re-evaluate those arrangements
+        // (e.g. the override just switched them to going home alone).
+        CompanionReconciler::reconcile($departure->child_id, $departure->date->toDateString());
 
         return back()->with('status', __('flash.plan_updated', ['name' => $departure->child->name]));
     }

@@ -24,7 +24,11 @@ const slackPoints = computed(() => [0, 1, 2, 3].map((i) => t(`help.slack_points.
 // Free-text examples the Slack assistant understands.
 const assistantExamples = computed(() => [0, 1, 2, 3, 4].map((i) => t(`help.assistant_examples.${i}`)));
 
-const glossary = computed(() => ['stammplan', 'pickup_plan', 'departure', 'absence'].map((key) => [
+const companionPoints = computed(() => [0, 1, 2, 3].map((i) => t(`help.companion_points.${i}`)));
+
+const notificationPoints = computed(() => [0, 1, 2, 3, 4].map((i) => t(`help.notifications_points.${i}`)));
+
+const glossary = computed(() => ['stammplan', 'pickup_plan', 'departure', 'companion', 'absence'].map((key) => [
     t(`help.glossary.${key}.term`),
     t(`help.glossary.${key}.def`),
 ]));
@@ -125,7 +129,44 @@ const glossary = computed(() => ['stammplan', 'pickup_plan', 'departure', 'absen
             </p>
         </section>
 
-        <!-- Install as app / notifications -->
+        <!-- Mit einem anderen Kind mitgehen -->
+        <section class="space-y-3">
+            <h3 class="text-lg font-semibold text-ink">{{ $t('help.companion_title') }}</h3>
+            <p class="text-ink/70">
+                {{ $t('help.companion_intro') }}
+            </p>
+            <ul class="space-y-2">
+                <li
+                    v-for="(point, i) in companionPoints"
+                    :key="i"
+                    class="flex gap-2 text-sm text-ink/70"
+                >
+                    <span class="text-hort-teal-dark">✓</span>
+                    <span v-html="point" />
+                </li>
+            </ul>
+        </section>
+
+        <!-- Notifications -->
+        <section class="space-y-3">
+            <h3 class="text-lg font-semibold text-ink">{{ $t('help.notifications_title') }}</h3>
+            <p class="text-ink/70" v-html="$t('help.notifications_intro')" />
+            <ul class="space-y-2">
+                <li
+                    v-for="(point, i) in notificationPoints"
+                    :key="i"
+                    class="flex gap-2 text-sm text-ink/70"
+                >
+                    <span class="text-hort-teal-dark">🔔</span>
+                    <span v-html="point" />
+                </li>
+            </ul>
+            <p class="text-sm text-ink/60">
+                {{ $t('help.notifications_note') }}
+            </p>
+        </section>
+
+        <!-- Install as app -->
         <section class="space-y-3">
             <h3 class="text-lg font-semibold text-ink">{{ $t('help.install_title') }}</h3>
             <p class="text-ink/70">

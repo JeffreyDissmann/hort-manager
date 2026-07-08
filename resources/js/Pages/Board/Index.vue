@@ -4,20 +4,29 @@ import { store as absenceStore } from '@/routes/absences';
 import { live as excursionLive } from '@/routes/excursions';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import CollapsibleChips from '@/Components/CollapsibleChips.vue';
+import CompanionNotes from '@/Components/CompanionNotes.vue';
 import TimeSelect from '@/Components/TimeSelect.vue';
 import { PencilSquareIcon } from '@heroicons/vue/24/outline';
+import { confirm as companionConfirm } from '@/routes/companion';
 import { Head, router, usePage } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
+import { t } from '@/i18n';
 
 const props = defineProps({
     date: { type: Object, required: true },
     rows: { type: Array, default: () => [] },
+    companionNotes: { type: Array, default: () => [] },
     absent: { type: Array, default: () => [] },
     excursions: { type: Array, default: () => [] },
     program: { type: Object, default: null },
     canMark: { type: Boolean, default: false },
     methodOptions: { type: Array, default: () => [] },
 });
+
+// Confirm/decline another child going home with one of ours (from the notes panel).
+function answerCompanion(id, confirmed) {
+    router.patch(companionConfirm(id).url, { confirmed }, { preserveScroll: true });
+}
 
 const flash = computed(() => usePage().props.flash?.status);
 const isParent = computed(() => usePage().props.auth?.user?.role === 'parent');
@@ -62,12 +71,19 @@ function methodIcon(method) {
 }
 
 function planLabel(row) {
+    // „geht mit … mit": show the mirrored time + „mit B" rather than the long label.
+    if (row.planned_method === 'with_child' && row.companion) {
+        const withText = t('weekly.companion_with', { name: row.companion.name });
+        return row.planned_time ? `${row.planned_time} · ${withText}` : withText;
+    }
     const method = methodLabels.value[row.planned_method];
     if (!method) {
         return row.planned_time;
     }
     const icon = methodIcon(row.planned_method);
-    return `${icon ? icon + ' ' : ''}${row.planned_time} · ${method}`;
+    // „geht allein" may carry a bis/ab prefix on the time (default „um" stays implicit).
+    const time = row.qualifier_prefix ? `${row.qualifier_prefix} ${row.planned_time}` : row.planned_time;
+    return `${icon ? icon + ' ' : ''}${time} · ${method}`;
 }
 
 function toMinutes(time) {
@@ -241,6 +257,9 @@ function saveEdit(row) {
                 {{ flash }}
             </div>
 
+            <!-- „Geht mit … mit" overview for the parent (staff use the plan display). -->
+            <CompanionNotes :notes="companionNotes" @confirm="answerCompanion" />
+
             <!-- Today's program (lunch + activity) -->
             <!-- Lunch + activity; homework now appears inline in the pickup list. -->
             <div
@@ -316,7 +335,7 @@ function saveEdit(row) {
                         :key="i"
                         class="rounded-lg bg-amber-100 px-2 py-1 text-xs font-medium"
                     >
-                        {{ a.name }} · {{ a.reason_label }}
+                        {{ a.name }} · {{ a.reason_label }}<span v-if="a.comment" class="font-normal opacity-80"> · {{ a.comment }}</span>
                     </span>
                 </div>
             </div>

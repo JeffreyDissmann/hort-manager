@@ -5,7 +5,8 @@ const model = defineModel({ type: String, default: '' });
 const emit = defineEmits(['change']);
 
 const props = defineProps({
-    from: { type: String, default: '06:00' },
+    // The Hort runs from ~11:30, so pickup times never start before 11:00.
+    from: { type: String, default: '11:00' },
     to: { type: String, default: '18:00' },
     step: { type: Number, default: 15 },
 });

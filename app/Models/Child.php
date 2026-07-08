@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Observers\ChildObserver;
 use Database\Factories\ChildFactory;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+#[ObservedBy([ChildObserver::class])]
 class Child extends Model
 {
     /** @use HasFactory<ChildFactory> */
@@ -42,6 +45,16 @@ class Child extends Model
     public function absences(): HasMany
     {
         return $this->hasMany(Absence::class);
+    }
+
+    /**
+     * Departures of *other* children set to go home with this one („geht mit … mit").
+     *
+     * @return HasMany<DailyDeparture, $this>
+     */
+    public function accompaniedDepartures(): HasMany
+    {
+        return $this->hasMany(DailyDeparture::class, 'companion_child_id');
     }
 
     /**

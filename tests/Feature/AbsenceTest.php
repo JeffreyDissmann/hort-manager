@@ -43,6 +43,29 @@ class AbsenceTest extends TestCase
         ]);
     }
 
+    public function test_an_absence_can_carry_a_comment(): void
+    {
+        $this->travelTo(Carbon::parse('2026-06-22')); // Monday
+        $parent = User::factory()->create(['role' => UserRole::Parent]);
+        $child = Child::factory()->create();
+        $parent->children()->attach($child);
+
+        $this->actingAs($parent)->post(route('absences.store'), [
+            'child_id' => $child->id,
+            'from' => '2026-06-22',
+            'to' => '2026-06-22',
+            'reason' => 'away',
+            'comment' => 'Urlaub',
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('absences', [
+            'child_id' => $child->id,
+            'date' => '2026-06-22',
+            'reason' => 'away',
+            'comment' => 'Urlaub',
+        ]);
+    }
+
     public function test_reporting_absence_removes_a_pending_pickup(): void
     {
         $this->travelTo(Carbon::parse('2026-06-22'));

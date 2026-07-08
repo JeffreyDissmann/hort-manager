@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Models\DailyDeparture;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -64,6 +65,9 @@ class HandleInertiaRequests extends Middleware
             'whatsNew' => array_slice((array) config('whats_new'), 0, 5),
             // Open excursion polls still awaiting an answer for this parent's children.
             'pendingPolls' => fn () => $this->pendingPollsCount($request->user()),
+            // „Geht mit … mit" arrangements still awaiting this parent's confirmation
+            // (their child is the companion another child wants to go home with).
+            'pendingCompanions' => fn () => $this->pendingCompanionCount($request->user()),
         ];
     }
 
@@ -110,6 +114,24 @@ class HandleInertiaRequests extends Middleware
             ->whereNull('child_excursion.response')
             ->where(fn ($q) => $q->whereNull('excursions.rsvp_deadline')
                 ->orWhereDate('excursions.rsvp_deadline', '>=', now()->toDateString()))
+            ->count();
+    }
+
+    /**
+     * How many „geht mit … mit" arrangements still await this parent's confirmation —
+     * one of their children is the companion, and the answer is still open (from today
+     * on). Staff get 0: they aren't asked personally (they see every request on the plan).
+     */
+    private function pendingCompanionCount(?User $user): int
+    {
+        if (! $user || $user->isStaff()) {
+            return 0;
+        }
+
+        return DailyDeparture::query()
+            ->pendingCompanion()
+            ->whereDate('date', '>=', now()->toDateString())
+            ->whereIn('companion_child_id', $user->children()->pluck('children.id'))
             ->count();
     }
 }

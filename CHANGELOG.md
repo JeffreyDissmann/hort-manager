@@ -8,6 +8,25 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **„Geht mit einem anderen Kind mit"**: a child can be set (per day, on the
+  Wochenplan) to go home with another child; the pickup time mirrors that child's
+  and follows it live. When the companion goes home alone, their family must confirm
+  (an interactive Ja/Nein — web-push + an in-app card, plus a Slack DM that stays in
+  sync across all guardians); when the companion is picked up by their own parents,
+  it's approved automatically. Until confirmed, staff/board see a normal pickup at
+  the synced time. The requesting family is told the outcome (Slack + push), and if
+  the companion is later reported away the arrangement is unwound with a heads-up to
+  re-plan. Guards against chains, self- and mutual arrangements. Idea by Andrea,
+  Ezgi and Vio.
+- **„Geht allein" time qualifier**: a „geht allein" pickup can say the time means
+  *bis* / *genau um* / *ab* — shown as „bis 15:30" / „ab 15:30" on the plans + board.
+- **Parent pickup-arrangement overview**: the Wochenplan and Heute show parents a
+  „Mit anderen nach Hause" panel — their child tagging along (with the confirmation
+  status), or a child coming home with theirs (confirm inline).
+- **Absence needs a reason**: reporting a child krank/„kommt nicht" in the Wochenplan
+  editor now stages it and requires a short comment before saving; the reason is
+  stored and shown. Absent children drop off the whole-week grid and appear in a
+  per-day „nicht da" summary below it.
 - **Dark mode** with a per-device Light/Dark/Automatic switch under „Profil →
   Darstellung" (Automatic follows the OS `prefers-color-scheme`). The scheme is
   applied before first paint by a tiny inline script (no flash) and stored in
@@ -18,7 +37,7 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   borders) — while brand hues are tunable per theme (teal lifted slightly in dark
   for legibility; `hort-navy` stays dark as it is both the app chrome and the text
   colour on solid accent surfaces). Convention: text on a neutral surface uses
-  `ink`, text on a brand background uses `hort-navy`/`white`.
+  `ink`, text on a brand background uses `hort-navy`/`white`. Idea by Stepan.
 - **TRMNL staff-room dashboard**: a read-only JSON feed (`GET /trmnl/dashboard`,
   authenticated by a Laravel signed URL) that drives an e-ink display of today's
   pickup timeline and the Mo–Fr week — focused on who leaves when, plus present
@@ -71,6 +90,11 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **Time pickers start at 11:00** (the Hort opens around 11:30) — earlier options
+  were dropped.
+- **„Abwesend" renamed to „Kommt nicht"** across the plans and board.
+- The whole-week grid now has faint horizontal lines between the time slots
+  (matching the Stammplan), and the „Heute" column is tinted its full height.
 - **Clearer departure-method distinction on the plans and board.** Per staff
   feedback, the two methods were too close at a glance and the child's name shared
   the method colour. Now the name/time is always solid `ink`, and the method reads

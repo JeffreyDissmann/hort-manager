@@ -11,7 +11,7 @@ return [
     ],
     'absence_reason' => [
         'sick' => 'Sick',
-        'away' => 'Away',
+        'away' => 'Not coming',
     ],
     'departure_status' => [
         'present' => 'Still here',
@@ -22,5 +22,16 @@ return [
     'departure_method' => [
         'picked_up' => 'Picked up',
         'sent_home' => 'Walks home alone',
+        'with_child' => 'Goes with another child',
+    ],
+    'time_qualifier' => [
+        'by' => 'By this time',
+        'at' => 'Exactly at this time',
+        'from' => 'From this time (or later)',
+    ],
+    'time_qualifier_prefix' => [
+        'by' => 'by',
+        'at' => 'at',
+        'from' => 'from',
     ],
 ];

@@ -18,6 +18,7 @@ use App\Models\Excursion;
 use App\Models\HomeworkDefault;
 use App\Models\User;
 use App\Models\WeeklySchedule;
+use App\Support\CompanionReconciler;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Laravel\Ai\Enums\Lab;
@@ -138,7 +139,16 @@ class HortAssistant
         if (! $departure->exists) {
             $departure->status = DepartureStatus::Present;
         }
+        // The assistant sets a concrete pickup, so any „geht mit … mit" arrangement no
+        // longer applies — clear it (the assistant can't create one).
+        $departure->companion_child_id = null;
+        $departure->companion_confirmed = null;
+        $departure->companion_confirmed_by = null;
+        $departure->companion_confirmed_at = null;
         $departure->save();
+
+        // This child may be another child's companion — re-evaluate those arrangements.
+        CompanionReconciler::reconcile($child->id, $date);
 
         $how = match (true) {
             $time !== null && $method !== null => "um {$time} Uhr ({$method->label()})",

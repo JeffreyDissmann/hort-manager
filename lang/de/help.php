@@ -34,9 +34,9 @@ return [
             'text' => 'Die Übersicht für den heutigen Tag: Wer wird wann abgeholt, wer geht allein nach Hause, wer ist auf einem Ausflug. Erzieher:innen haken jedes Kind ab, sobald es geht.',
         ],
         'pickup_plan' => [
-            'title' => 'Abholplan',
+            'title' => 'Wochenplan',
             'audience' => 'Für alle',
-            'text' => 'Ganz oben siehst du die ganze Woche auf einen Blick – alle Kinder mit ihren Abholzeiten und den Zeiten für Essen, Aktivität, Hausaufgaben und Ausflüge. Brauchst du an einem Tag ausnahmsweise eine andere Zeit, kannst du genau diesen Tag anpassen oder dein Kind krank melden.',
+            'text' => 'Die ganze Woche auf einen Blick – mit Essen, Aktivität, Hausaufgaben und Ausflügen. Tippe auf einen Tag, um ihn anzupassen: Uhrzeit, ob dein Kind abgeholt wird, allein geht (auch „bis / genau um / ab“ einer Uhrzeit) oder mit einem anderen Kind mitgeht – oder melde es krank bzw. „kommt nicht“.',
         ],
         'excursions' => [
             'title' => 'Ausflüge',
@@ -67,7 +67,7 @@ return [
 
     // Assistant & sick reports
     'assistant_title' => 'Krank melden & schnelle Änderungen',
-    'assistant_text_1' => 'Ist dein Kind krank oder kommt an einem Tag nicht? Tippe auf <strong>„Krank“</strong> bzw. <strong>„Abwesend“</strong> – auf der Seite „Heute“ oder beim jeweiligen Tag im Abholplan. Genauso trägst du dort kurzfristig eine andere Abholzeit ein.',
+    'assistant_text_1' => 'Ist dein Kind krank oder kommt an einem Tag nicht? Tippe auf <strong>„Krank“</strong> bzw. <strong>„Kommt nicht“</strong> – auf der Seite „Heute“ oder beim jeweiligen Tag im Wochenplan. Genauso trägst du dort kurzfristig eine andere Abholzeit ein.',
     'assistant_text_2' => 'Noch einfacher: <strong>Schreib es dem Hort-Manager direkt in Slack.</strong> Er versteht ganz normale Sätze – zum Beispiel:',
     'assistant_examples' => [
         'Mein Kind ist heute krank.',
@@ -78,9 +78,31 @@ return [
     ],
     'assistant_note' => 'Das geht per Direktnachricht an den „Hort-Manager“ in Slack oder mit „/hort …“. Er kümmert sich nur um deine eigenen Kinder und bestätigt dir kurz, was er eingetragen hat. Prüf die Antwort – bei einem Missverständnis schreib einfach die richtige Angabe nach.',
 
+    // Mit einem anderen Kind mitgehen
+    'companion_title' => 'Mit einem anderen Kind nach Hause',
+    'companion_intro' => 'Manchmal geht ein Kind mit einem anderen mit nach Hause – zum Spielen oder weil eine Familie beide mitnimmt. So funktioniert es:',
+    'companion_points' => [
+        'Wähl im Wochenplan bei „Art“ die Option <strong>„Geht mit einem anderen Kind mit“</strong> und dann das Kind. Die Abholzeit wird automatisch von diesem Kind übernommen – ändert sich dessen Zeit, ändert sich deine mit.',
+        'Wird das andere Kind selbst <strong>abgeholt</strong>, ist alles sofort erledigt – ein Erwachsener ist ja dabei.',
+        'Geht das andere Kind <strong>allein</strong>, muss dessen Familie erst zustimmen. Bis dahin steht bei allen anderen nur die normale Abholzeit – das „Mitgehen“ erscheint erst nach dem Ja.',
+        'Oben auf „Heute“ und im Wochenplan siehst du eine Übersicht „Mit anderen nach Hause“ – mit dem Stand der Zusage, und zum Bestätigen, wenn ein Kind mit deinem mitgehen möchte.',
+    ],
+
+    // Notifications
+    'notifications_title' => 'Welche Benachrichtigungen bekomme ich?',
+    'notifications_intro' => 'Der Hort-Manager meldet sich bei dir, wenn etwas Wichtiges passiert – als <strong>Push-Nachricht</strong> auf deinem Gerät und, wenn dein Konto mit Slack verbunden ist, zusätzlich als <strong>Slack-Nachricht</strong>. Beide zeigen dasselbe; ein Kanal genügt.',
+    'notifications_points' => [
+        '<strong>Kind abgeholt / allein gegangen:</strong> Sobald das Hort-Team dein Kind abhakt, bekommst du Bescheid.',
+        '<strong>Neuer Ausflug:</strong> Du wirst zur Abstimmung eingeladen – mit einer Erinnerung, falls du noch nicht geantwortet hast.',
+        '<strong>Ein Kind möchte mit deinem mitgehen:</strong> Geht dein Kind allein und ein anderes soll mitkommen, fragt dich dessen Familie um Erlaubnis – direkt mit „Ja/Nein“ in Slack oder in der App.',
+        '<strong>Antwort aufs Mitgehen:</strong> Hast du gefragt, ob dein Kind mit einem anderen mitgehen darf, erfährst du, sobald die andere Familie zu- oder abgesagt hat.',
+        '<strong>Mitgehen nicht möglich:</strong> Wird das andere Kind krank oder abwesend gemeldet, sagen wir dir Bescheid, damit du die Abholung neu planen kannst.',
+    ],
+    'notifications_note' => 'Antworten kannst du überall – in Slack oder in der App; beide Seiten bleiben automatisch auf demselben Stand.',
+
     // Install as app
-    'install_title' => 'Als App installieren & Benachrichtigungen',
-    'install_text' => 'Du kannst den Hort-Manager wie eine echte App auf dein Handy legen – dann startet er im Vollbild und kann dir Benachrichtigungen schicken (z. B. „Kind wurde abgeholt“ oder eine Erinnerung an einen Ausflug).',
+    'install_title' => 'Als App installieren',
+    'install_text' => 'Du kannst den Hort-Manager wie eine echte App auf dein Handy legen – dann startet er im Vollbild und kann dir Benachrichtigungen schicken.',
     'install_ios' => '<strong>iPhone (Safari):</strong> Teilen-Symbol antippen → „Zum Home-Bildschirm“.',
     'install_android' => '<strong>Android (Chrome):</strong> oben auf das Banner „Installieren“ tippen (oder Menü → „App installieren“).',
     'install_enable' => 'Danach im Menü oben rechts auf <strong>🔔 Benachrichtigungen an</strong> tippen und erlauben.',
@@ -100,15 +122,19 @@ return [
             'def' => 'Die festen, wöchentlich gleichen Abholzeiten eines Kindes – die Grundlage für den Abholplan.',
         ],
         'pickup_plan' => [
-            'term' => 'Abholplan',
+            'term' => 'Wochenplan',
             'def' => 'Der konkrete Plan für eine bestimmte Woche. Er kommt aus dem Stammplan, kann aber pro Tag angepasst werden.',
         ],
         'departure' => [
-            'term' => 'abgeholt / allein gegangen',
-            'def' => 'Die zwei Arten, wie ein Kind nach Hause kommt: von jemandem abgeholt oder allein nach Hause gegangen.',
+            'term' => 'abgeholt / allein / mit einem Kind',
+            'def' => 'Die drei Arten, wie ein Kind nach Hause kommt: abgeholt, allein nach Hause, oder gemeinsam mit einem anderen Kind.',
+        ],
+        'companion' => [
+            'term' => 'Mit einem anderen Kind mitgehen',
+            'def' => 'Ein Kind geht mit einem anderen mit nach Hause und übernimmt dessen Abholzeit. Geht das andere Kind allein, muss dessen Familie zustimmen.',
         ],
         'absence' => [
-            'term' => 'Krankmeldung / Abwesenheit',
+            'term' => 'Krank / Kommt nicht',
             'def' => 'Ein Kind ist für einen Tag als krank oder abwesend gemeldet – dann ist es an dem Tag nicht auf der Abholliste.',
         ],
     ],

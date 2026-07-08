@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Http\Controllers\AbsenceController;
 use App\Http\Controllers\Auth\SlackController;
 use App\Http\Controllers\ChildController;
+use App\Http\Controllers\CompanionConfirmationController;
 use App\Http\Controllers\DailyBoardController;
 use App\Http\Controllers\DailyProgramController;
 use App\Http\Controllers\ExcursionController;
@@ -99,6 +100,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/wochenplan', WeeklyOverviewController::class)->name('weekly-plan');
     Route::patch('/wochenplan/anpassung', [WeeklyAdjustmentController::class, 'update'])->name('weekly-plan.adjust');
     Route::patch('/wochenplan/zuruecksetzen', [WeeklyAdjustmentController::class, 'reset'])->name('weekly-plan.reset');
+    // The companion's parent (or staff) confirms another child going home with theirs.
+    Route::patch('/begleitung/{departure}/bestaetigen', [CompanionConfirmationController::class, 'update'])->name('companion.confirm');
     Route::get('/stammplan', StandardPlanController::class)->name('standard-plan');
 
     // Krankmeldung / Abwesenheit — staff or the child's parent.

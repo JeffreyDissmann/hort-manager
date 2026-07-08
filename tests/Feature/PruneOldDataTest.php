@@ -6,6 +6,7 @@ namespace Tests\Feature;
 
 use App\Models\Absence;
 use App\Models\Child;
+use App\Models\CompanionSlackMessage;
 use App\Models\DailyDeparture;
 use App\Models\DailyProgram;
 use App\Models\Excursion;
@@ -45,6 +46,14 @@ class PruneOldDataTest extends TestCase
             'ts' => '1.1',
         ]);
 
+        // A tracked companion Slack DM on the old departure — must cascade away too.
+        CompanionSlackMessage::create([
+            'daily_departure_id' => $oldDeparture->id,
+            'user_id' => User::factory()->create()->id,
+            'channel' => 'D2',
+            'ts' => '2.2',
+        ]);
+
         $this->artisan('hort:prune-old-data')->assertSuccessful();
 
         $this->assertModelMissing($oldDeparture);
@@ -56,8 +65,9 @@ class PruneOldDataTest extends TestCase
         $this->assertModelMissing($oldAbsence);
         $this->assertModelExists($recentAbsence);
 
-        // The old excursion's tracked message cascaded away with it.
+        // The old excursion's + old departure's tracked messages cascaded away with them.
         $this->assertDatabaseMissing('excursion_slack_messages', ['excursion_id' => $oldExcursion->id]);
+        $this->assertDatabaseMissing('companion_slack_messages', ['daily_departure_id' => $oldDeparture->id]);
     }
 
     public function test_pruning_old_excursions_sends_no_slack_messages(): void
