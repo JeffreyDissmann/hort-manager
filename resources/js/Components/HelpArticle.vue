@@ -182,6 +182,15 @@ const glossary = computed(() => ['stammplan', 'pickup_plan', 'departure', 'compa
             </p>
         </section>
 
+        <!-- Appearance & language -->
+        <section class="space-y-3">
+            <h3 class="text-lg font-semibold text-ink">{{ $t('help.appearance_title') }}</h3>
+            <ul class="space-y-2 text-sm text-ink/70">
+                <li v-html="$t('help.appearance_theme')" />
+                <li v-html="$t('help.appearance_language')" />
+            </ul>
+        </section>
+
         <!-- Roles -->
         <section class="space-y-3">
             <h3 class="text-lg font-semibold text-ink">{{ $t('help.roles_title') }}</h3>

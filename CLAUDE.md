@@ -55,7 +55,7 @@ Creating an excursion invites **every** child (a pending `child_excursion` row).
 
 ### Authorization (ChildPolicy + inline checks)
 - **Reads are open to everyone** (open information policy) — never scope read queries per-parent. The parent↔child link only identifies whose kid is whose.
-- **Children:** create/delete = staff; **edit (incl. Stammplan) = staff _or_ the child's own parent**; guardian links = staff only.
+- **Children:** create = anyone (trust-based, Slack-SSO identity); **edit (incl. Stammplan), delete, and guardian links = staff _or_ the child's own guardian** (`ChildPolicy::update/delete/manageGuardians`).
 - **Tagesboard:** marking departures = **staff only**; same-day plan override (`board.override`) = staff _or_ the child's parent.
 - **Ausflug:** managing trips = staff only (ExcursionController guards with `ensureStaff()`); answering the **poll** = the child's parent (while open) or staff (anytime), via ExcursionRsvpController.
 

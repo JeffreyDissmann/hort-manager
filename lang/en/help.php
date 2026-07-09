@@ -31,7 +31,7 @@ return [
         'today' => [
             'title' => 'Today',
             'audience' => 'For everyone',
-            'text' => 'The overview for today: who is picked up when, who goes home alone, who is on an excursion. Staff check off each child as soon as it leaves.',
+            'text' => 'The overview for today: who is picked up when, who goes home alone, who is on an excursion. Staff check off each child as soon as it leaves. If a child has a birthday, you’ll see it here with a 🎂.',
         ],
         'pickup_plan' => [
             'title' => 'Weekly plan',
@@ -67,7 +67,7 @@ return [
 
     // Assistant & sick reports
     'assistant_title' => 'Report sick & quick changes',
-    'assistant_text_1' => 'Is your child sick or not coming on a certain day? Tap <strong>“Sick”</strong> or <strong>“Not coming”</strong> – on the “Today” page or on the respective day in the weekly plan. That’s also how you enter a different pickup time at short notice.',
+    'assistant_text_1' => 'Is your child sick or not coming on a certain day? Tap <strong>“Sick”</strong> or <strong>“Not coming”</strong> – on the “Today” page or on the respective day in the weekly plan – and add a short reason (e.g. “a cold” or “family visit”). That’s also how you enter a different pickup time at short notice.',
     'assistant_text_2' => 'Even easier: <strong>Just write it to Hort-Manager directly in Slack.</strong> It understands plain sentences – for example:',
     'assistant_examples' => [
         'My child is sick today.',
@@ -107,6 +107,11 @@ return [
     'install_android' => '<strong>Android (Chrome):</strong> tap the “Install” banner at the top (or menu → “Install app”).',
     'install_enable' => 'Then tap <strong>🔔 Notifications on</strong> in the menu at the top right and allow them.',
     'install_note' => 'Note: On the iPhone notifications only work if the app was added to the home screen beforehand.',
+
+    // Appearance & language
+    'appearance_title' => 'Appearance & language',
+    'appearance_theme' => '<strong>Light or dark:</strong> under <strong>Profile → Appearance</strong> you can choose Light, Dark or “Automatic” (follows your device setting). The choice is per device.',
+    'appearance_language' => '<strong>Language:</strong> under <strong>Profile → Language</strong> you can switch between German and English. German is the default.',
 
     // Roles
     'roles_title' => 'Who is allowed to do what?',
