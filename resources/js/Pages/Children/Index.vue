@@ -89,6 +89,16 @@ function destroy(child) {
                             >
                                 {{ child.note }}
                             </p>
+                            <p v-if="child.guardians.length" class="mt-1 flex flex-wrap items-center gap-1">
+                                <span class="text-xs text-ink/40">{{ $t('children.parents_title') }}:</span>
+                                <span
+                                    v-for="name in child.guardians"
+                                    :key="name"
+                                    class="rounded bg-hort-teal/15 px-1.5 py-0.5 text-xs font-medium text-hort-teal-dark"
+                                >
+                                    {{ name }}
+                                </span>
+                            </p>
                         </div>
                         <button
                             v-if="child.can_delete"

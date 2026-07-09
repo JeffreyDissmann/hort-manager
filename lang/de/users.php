@@ -8,6 +8,7 @@ return [
     'import_from_slack' => 'Aus Slack importieren',
     'self_suffix' => 'du',
     'admin' => 'Admin',
+    'children_label' => 'Kinder',
     'delete_confirm' => '„:name“ wirklich löschen?',
     'delete_aria' => 'Benutzer löschen',
 ];
