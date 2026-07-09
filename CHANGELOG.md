@@ -8,6 +8,9 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Linked people are visible in the admin lists**: the Benutzer page shows each
+  user's children, and the Kinder page shows each child's guardians (chips under
+  the name).
 - **Always-fresh installed app**: a drag-down **pull-to-refresh** on Heute and the
   plans (the spinner trails the pull at half speed and spins while loading); a
   **silent reload** onto the newest version after a deploy; and a **stale-content

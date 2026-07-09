@@ -21,7 +21,8 @@ class UserController extends Controller
         $this->authorize('viewAny', User::class);
 
         return Inertia::render('Users/Index', [
-            'users' => User::orderBy('name')
+            'users' => User::with('children:id,name')
+                ->orderBy('name')
                 ->get(['id', 'name', 'email', 'avatar', 'role', 'is_admin'])
                 ->map(fn (User $user) => [
                     'id' => $user->id,
@@ -31,6 +32,8 @@ class UserController extends Controller
                     'role' => $user->role->value,
                     'is_admin' => $user->is_admin,
                     'is_self' => $user->is($request->user()),
+                    // The children this user is a guardian of (shown on the card).
+                    'children' => $user->children->sortBy('name')->pluck('name')->values(),
                 ]),
             'roleOptions' => collect(UserRole::cases())
                 ->map(fn (UserRole $role) => ['value' => $role->value, 'label' => $role->label()])

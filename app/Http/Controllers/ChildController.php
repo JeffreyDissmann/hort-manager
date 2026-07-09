@@ -31,6 +31,7 @@ class ChildController extends Controller
 
         return Inertia::render('Children/Index', [
             'children' => $query
+                ->with('guardians:id,name')
                 ->orderBy('name')
                 ->get(['children.id', 'name', 'date_of_birth', 'note'])
                 ->map(fn (Child $child) => [
@@ -39,6 +40,8 @@ class ChildController extends Controller
                     'date_of_birth' => $child->date_of_birth?->format('Y-m-d'),
                     'note' => $child->note,
                     'can_delete' => $user->can('delete', $child),
+                    // Guardians linked to this child (open-information policy).
+                    'guardians' => $child->guardians->sortBy('name')->pluck('name')->values(),
                 ]),
             'canManage' => $user->isStaff(),
             'canCreate' => $user->can('create', Child::class),

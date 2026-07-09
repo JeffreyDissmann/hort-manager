@@ -98,6 +98,16 @@ function save(user, changes) {
                             <span v-if="user.is_self" class="text-hort-teal-dark">· {{ $t('users.self_suffix') }}</span>
                         </p>
                         <p class="truncate text-sm text-ink/50">{{ user.email }}</p>
+                        <p v-if="user.children.length" class="mt-1 flex flex-wrap items-center gap-1">
+                            <span class="text-xs text-ink/40">{{ $t('users.children_label') }}:</span>
+                            <span
+                                v-for="name in user.children"
+                                :key="name"
+                                class="rounded bg-hort-teal/15 px-1.5 py-0.5 text-xs font-medium text-hort-teal-dark"
+                            >
+                                {{ name }}
+                            </span>
+                        </p>
                     </div>
 
                     <select

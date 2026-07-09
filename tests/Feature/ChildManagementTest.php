@@ -63,6 +63,20 @@ class ChildManagementTest extends TestCase
             );
     }
 
+    public function test_the_child_list_shows_each_childs_guardians(): void
+    {
+        $child = Child::factory()->create(['name' => 'Emma']);
+        $child->guardians()->attach(User::factory()->create(['name' => 'Mum', 'role' => UserRole::Parent]));
+        $child->guardians()->attach(User::factory()->create(['name' => 'Dad', 'role' => UserRole::Parent]));
+
+        $this->actingAs($this->staff())
+            ->get(route('children.index'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('children.0.name', 'Emma')
+                ->where('children.0.guardians', ['Dad', 'Mum']) // sorted
+            );
+    }
+
     public function test_staff_can_create_a_child(): void
     {
         $response = $this->actingAs($this->staff())

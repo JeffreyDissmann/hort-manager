@@ -40,6 +40,20 @@ class UserManagementTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page->component('Users/Index')->has('users'));
     }
 
+    public function test_the_user_list_shows_each_users_children(): void
+    {
+        $parent = User::factory()->create(['name' => 'Parent', 'role' => UserRole::Parent]);
+        $parent->children()->attach(Child::factory()->create(['name' => 'Emma']));
+        $parent->children()->attach(Child::factory()->create(['name' => 'Ben']));
+
+        $this->actingAs($this->admin())
+            ->get(route('users.index'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('users', fn ($users) => collect($users)
+                    ->firstWhere('name', 'Parent')['children'] === ['Ben', 'Emma']) // sorted
+            );
+    }
+
     public function test_admin_can_change_a_users_role(): void
     {
         $parent = User::factory()->create(['role' => UserRole::Parent]);
