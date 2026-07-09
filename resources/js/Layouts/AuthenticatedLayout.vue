@@ -7,6 +7,7 @@ import Dropdown from '@/Components/Dropdown.vue';
 import DropdownLink from '@/Components/DropdownLink.vue';
 import InstallBanner from '@/Components/InstallBanner.vue';
 import NotifyPrompt from '@/Components/NotifyPrompt.vue';
+import PullToRefresh from '@/Components/PullToRefresh.vue';
 import WhatsNewModal from '@/Components/WhatsNewModal.vue';
 import {
     SunIcon,
@@ -231,7 +232,9 @@ function isActive(href) {
             :class="contentMax"
             class="mx-auto px-4 pb-28 pt-6 sm:px-6 sm:pb-12"
         >
-            <slot />
+            <PullToRefresh>
+                <slot />
+            </PullToRefresh>
         </main>
 
         <!-- Mobile bottom tab bar -->

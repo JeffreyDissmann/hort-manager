@@ -6,19 +6,17 @@ import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createApp, h } from 'vue';
 import { i18n } from './i18n';
 import { initTheme } from './theme';
+import { initFreshness } from './freshness';
 
 // Keep the runtime theme (OS-change listener + PWA colour) in sync; the pre-paint
 // `.dark` class is already set by the inline script in app.blade.php.
 initTheme();
 
-// Register the PWA service worker, served from the site root for "/" scope.
-// Register immediately (not on `load`): this module is deferred, so `load` may
-// already have fired by the time it runs, and the listener would never trigger.
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker
-        .register('/sw.js', { scope: '/' })
-        .catch((error) => console.error('Service worker registration failed:', error));
-}
+// Register the PWA service worker (served from the site root for "/" scope) and
+// keep the installed app fresh: silent reload on a new deploy + a stale-content
+// refresh after a long time in the background. Run immediately (not on `load`):
+// this module is deferred, so `load` may already have fired.
+initFreshness();
 
 const appName = import.meta.env.VITE_APP_NAME || 'Hort-Manager';
 
