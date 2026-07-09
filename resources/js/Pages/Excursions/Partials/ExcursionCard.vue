@@ -1,5 +1,6 @@
 <script setup>
 import { edit as excursionsEdit, destroy as excursionsDestroy } from '@/routes/excursions';
+import ChildStatusBadge from '@/Components/ChildStatusBadge.vue';
 import { t } from '@/i18n';
 import { TrashIcon } from '@heroicons/vue/24/outline';
 import { Link, router } from '@inertiajs/vue3';
@@ -83,17 +84,18 @@ function destroy() {
             </span>
         </div>
 
+        <!-- Whole invited group, always expanded (joining → undecided → not coming). -->
         <div
-            v-if="excursion.participants.length"
+            v-if="excursion.all_children.length"
             class="mt-2 flex flex-wrap gap-1.5"
         >
-            <span
-                v-for="name in excursion.participants"
-                :key="name"
-                class="rounded-md bg-hort-teal/15 px-2 py-0.5 text-xs font-medium text-hort-teal-dark"
-            >
-                {{ name }}
-            </span>
+            <ChildStatusBadge
+                v-for="child in excursion.all_children"
+                :key="child.id"
+                :name="child.name"
+                :response="child.response"
+                :pending-label="past ? $t('excursions.no_response') : null"
+            />
         </div>
 
         <Link

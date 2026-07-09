@@ -45,8 +45,9 @@ class ExcursionRsvpController extends Controller
                     'poll_open' => $e->pollIsOpen(),
                     // The parent's own children — the ones with answer buttons.
                     'children' => $e->children->whereIn('id', $childIds)->values()->map($toRow),
-                    // Everyone invited, with their status (for the "Alle Kinder" list).
-                    'all_children' => $e->children->map($toRow)->values(),
+                    // Everyone invited, with their status (for the "Alle Kinder" list),
+                    // ordered joining → undecided → not coming.
+                    'all_children' => $e->childrenByStatus()->map($toRow),
                 ];
             });
 

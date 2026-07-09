@@ -257,6 +257,43 @@ class CompanionDepartureTest extends TestCase
                 ->where('rows.0.companion.name', 'Tom'));
     }
 
+    public function test_a_board_override_of_the_companion_reconciles_the_arrangement(): void
+    {
+        Notification::fake();
+        Carbon::setTestNow(Carbon::parse('2026-06-24')); // a Wednesday (weekday 3)
+        $date = '2026-06-24';
+        $anna = Child::factory()->create(['name' => 'Anna']);
+        $tom = Child::factory()->create(['name' => 'Tom']);
+        WeeklySchedule::create(['child_id' => $tom->id, 'weekday' => 3, 'planned_time' => '15:00', 'method' => DepartureMethod::SentHome]);
+        $staff = $this->staff();
+
+        // Anna → geht mit Tom mit; Tom goes home alone, so the arrangement is pending.
+        $this->actingAs($staff)->patch(route('weekly-plan.adjust'), [
+            'child_id' => $anna->id,
+            'date' => $date,
+            'planned_method' => DepartureMethod::WithChild->value,
+            'companion_child_id' => $tom->id,
+        ])->assertRedirect();
+
+        $anna->refresh();
+        $this->assertNull(DailyDeparture::where('child_id', $anna->id)->firstOrFail()->companion_confirmed);
+
+        // Load the board so Tom's row is seeded, then override it to „picked up".
+        $this->actingAs($staff)->get(route('board'));
+        $tomDeparture = DailyDeparture::where('child_id', $tom->id)->where('date', $date)->firstOrFail();
+
+        $this->actingAs($staff)->patch(route('board.override', $tomDeparture), [
+            'planned_time' => '15:00',
+            'planned_method' => DepartureMethod::PickedUp->value,
+        ])->assertRedirect();
+
+        // Tom is now picked up → Anna needs no confirmation; the arrangement auto-confirms
+        // (system, i.e. no human confirmer) via the board's reconcile call.
+        $arrangement = DailyDeparture::where('child_id', $anna->id)->firstOrFail();
+        $this->assertTrue($arrangement->companion_confirmed);
+        $this->assertNull($arrangement->companion_confirmed_by);
+    }
+
     public function test_a_stranger_cannot_confirm(): void
     {
         $date = $this->wednesday();

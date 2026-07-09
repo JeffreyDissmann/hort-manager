@@ -41,7 +41,13 @@ class ExcursionController extends Controller
                     'joining_count' => $joining->count(),
                     'declined_count' => $declined->count(),
                     'pending_count' => $pending->count(),
-                    'participants' => $joining->pluck('name')->values(),
+                    // Everyone invited, with their status, ordered joining → undecided
+                    // → not coming (the teacher view shows this list always expanded).
+                    'all_children' => $e->childrenByStatus()->map(fn (Child $c) => [
+                        'id' => $c->id,
+                        'name' => $c->name,
+                        'response' => $c->pivot->response === null ? null : (bool) $c->pivot->response,
+                    ]),
                 ];
             });
 

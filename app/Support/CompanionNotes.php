@@ -42,10 +42,17 @@ class CompanionNotes
             ->orderBy('date')
             ->get();
 
-        return $arrangements->map(function (DailyDeparture $d) use ($myChildIds) {
+        // Resolve every companion's effective plan up front (one batch, no per-row query).
+        $companionPlans = EffectivePlan::forMany(
+            $arrangements->pluck('companion_child_id')->all(),
+            $arrangements->pluck('date')->map(fn ($date) => $date->toDateString())->all(),
+        );
+
+        return $arrangements->map(function (DailyDeparture $d) use ($myChildIds, $companionPlans) {
             // Confirmation is only needed when the companion goes home alone; otherwise
             // both are picked up by the companion's family.
-            $required = EffectivePlan::for($d->companion_child_id, $d->date->toDateString())['method'] === DepartureMethod::SentHome->value;
+            $plan = $companionPlans[$d->companion_child_id.'|'.$d->date->toDateString()] ?? null;
+            $required = ($plan['method'] ?? null) === DepartureMethod::SentHome->value;
 
             $status = match (true) {
                 ! $required => 'pickup',

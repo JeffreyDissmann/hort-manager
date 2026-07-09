@@ -108,6 +108,7 @@ function cellClass(day) {
 const editing = ref(null); // { childId, childName, date, label }
 const form = reactive({ planned_time: '', planned_method: '', time_qualifier: 'at', companion_child_id: '', note: '', absence_reason: '' });
 const saveError = ref(''); // server validation message shown in the modal on a failed save
+const saving = ref(false); // guards the save button against a double-submit while in flight
 
 // Surface the first server error (e.g. an invalid companion) so a failed save isn't silent.
 function showFirstError(errors) {
@@ -120,16 +121,29 @@ const stagingAbsence = computed(() => form.absence_reason !== '');
 
 // „Geht mit … mit": pick any other child; the companion picker replaces the time.
 const goingWithChild = computed(() => form.planned_method === 'with_child');
+// Every other child, flagged with whether they can actually be a companion that day
+// (i.e. they have an own pickup and aren't away / tagging along themselves — the same
+// rule the server enforces). Unavailable ones are shown but disabled, so the parent
+// sees why rather than only learning on a failed save.
 const companionChoices = computed(() =>
-    props.children.filter((c) => c.id !== editing.value?.childId),
+    props.children
+        .filter((c) => c.id !== editing.value?.childId)
+        .map((c) => ({
+            id: c.id,
+            name: c.name,
+            time: c.times?.[editing.value?.date] ?? '',
+            available: !!c.times?.[editing.value?.date],
+        })),
 );
 const selectedCompanion = computed(() =>
-    props.children.find((c) => c.id === form.companion_child_id),
+    companionChoices.value.find((c) => c.id === form.companion_child_id),
 );
 const selectedCompanionName = computed(() => selectedCompanion.value?.name ?? '');
 // The companion's own pickup time on the edited day — shown in the mirror hint.
-const selectedCompanionTime = computed(
-    () => selectedCompanion.value?.times?.[editing.value?.date] ?? '',
+const selectedCompanionTime = computed(() => selectedCompanion.value?.time ?? '');
+// A chosen companion who isn't being picked up that day can't be a companion.
+const selectedCompanionUnavailable = computed(
+    () => !!selectedCompanion.value && !selectedCompanion.value.available,
 );
 
 const canSave = computed(() => {
@@ -137,7 +151,8 @@ const canSave = computed(() => {
         return !!form.note.trim();
     }
     if (goingWithChild.value) {
-        return !!form.companion_child_id; // a companion must be chosen
+        // a valid, still-available companion must be chosen
+        return !!form.companion_child_id && !selectedCompanionUnavailable.value;
     }
     return true;
 });
@@ -172,13 +187,20 @@ function closeEditor() {
 }
 
 function save() {
+    if (saving.value || !canSave.value) {
+        return;
+    }
     saveError.value = '';
+    const opts = {
+        preserveScroll: true,
+        onStart: () => { saving.value = true; },
+        onFinish: () => { saving.value = false; },
+        onSuccess: closeEditor,
+        onError: showFirstError,
+    };
 
     // Staged absence: report it (with the now-required comment) instead of a plan.
     if (stagingAbsence.value) {
-        if (!canSave.value) {
-            return;
-        }
         router.post(
             absenceStore().url,
             {
@@ -188,7 +210,7 @@ function save() {
                 reason: form.absence_reason,
                 comment: form.note || null,
             },
-            { preserveScroll: true, onSuccess: closeEditor, onError: showFirstError },
+            opts,
         );
         return;
     }
@@ -204,7 +226,7 @@ function save() {
             companion_child_id: goingWithChild.value ? form.companion_child_id || null : null,
             note: form.note || null,
         },
-        { preserveScroll: true, onSuccess: closeEditor, onError: showFirstError },
+        opts,
     );
 }
 
@@ -329,7 +351,11 @@ function cancelAbsence() {
                                     <span
                                         v-if="day.companion"
                                         class="mt-0.5 block truncate text-[10px] font-normal leading-tight"
-                                        :class="day.companion.confirmed === true ? 'opacity-70' : 'font-medium text-hort-orange-dark'"
+                                        :class="[
+                                            day.companion.confirmed === true ? 'opacity-70' : 'font-medium',
+                                            day.companion.confirmed === false ? 'text-red-700' : '',
+                                            day.companion.confirmed === null ? 'text-hort-orange-dark' : '',
+                                        ]"
                                     >
                                         {{ $t('weekly.companion_with', { name: day.companion.name }) }}<template v-if="day.companion.confirmed === null"> · {{ $t('weekly.companion_pending') }}</template><template v-else-if="day.companion.confirmed === false"> · {{ $t('weekly.companion_declined') }}</template>
                                     </span>
@@ -579,13 +605,35 @@ function cancelAbsence() {
                             class="mt-1 block w-full rounded-md border-ink/20 shadow-sm focus:border-hort-teal focus:ring-hort-teal"
                         >
                             <option value="">{{ $t('weekly.companion_open') }}</option>
-                            <option v-for="c in companionChoices" :key="c.id" :value="c.id">
-                                {{ c.name }}
+                            <option
+                                v-for="c in companionChoices"
+                                :key="c.id"
+                                :value="c.id"
+                                :disabled="!c.available"
+                            >
+                                {{ c.name }}{{ c.available ? '' : ` — ${$t('weekly.companion_not_pickedup')}` }}
                             </option>
                         </select>
-                        <p v-if="selectedCompanionName" class="mt-1 text-xs text-ink/50">
-                            {{ $t('weekly.companion_mirror_hint', { name: selectedCompanionName }) }}<span v-if="selectedCompanionTime"> ({{ selectedCompanionTime }})</span>
+                        <!-- Empty state: explain where the time went before a child is chosen. -->
+                        <p v-if="!selectedCompanionName" class="mt-1 text-xs text-ink/50">
+                            {{ $t('weekly.companion_empty_hint') }}
                         </p>
+                        <template v-else>
+                            <p
+                                v-if="selectedCompanionUnavailable"
+                                class="mt-1 text-xs font-medium text-red-700"
+                            >
+                                {{ $t('weekly.companion_unavailable') }}
+                            </p>
+                            <template v-else>
+                                <p class="mt-1 text-xs text-ink/50">
+                                    {{ $t('weekly.companion_mirror_hint', { name: selectedCompanionName }) }}<span v-if="selectedCompanionTime"> ({{ selectedCompanionTime }})</span>
+                                </p>
+                                <p class="mt-0.5 text-xs font-medium text-hort-orange-dark">
+                                    {{ $t('weekly.companion_confirm_hint', { name: selectedCompanionName }) }}
+                                </p>
+                            </template>
+                        </template>
                     </div>
 
                     <!-- „Geht allein": what the time means (bis / genau um / ab) -->
@@ -647,7 +695,7 @@ function cancelAbsence() {
                         <SecondaryButton @click="closeEditor">
                             {{ $t('common.cancel') }}
                         </SecondaryButton>
-                        <PrimaryButton :disabled="!canSave" @click="save">{{ $t('common.save') }}</PrimaryButton>
+                        <PrimaryButton :disabled="!canSave || saving" @click="save">{{ saving ? $t('common.saving') : $t('common.save') }}</PrimaryButton>
                     </div>
                 </div>
             </div>

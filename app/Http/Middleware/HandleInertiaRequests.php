@@ -130,7 +130,7 @@ class HandleInertiaRequests extends Middleware
 
         return DailyDeparture::query()
             ->pendingCompanion()
-            ->whereDate('date', '>=', now()->toDateString())
+            ->where('date', '>=', now()->toDateString())
             ->whereIn('companion_child_id', $user->children()->pluck('children.id'))
             ->count();
     }

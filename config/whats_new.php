@@ -16,6 +16,16 @@ declare(strict_types=1);
 
 return [
     [
+        'version' => '2026.07.09',
+        'date' => '2026-07-09',
+        'title' => 'Zum Aktualisieren nach unten ziehen 🔄',
+        'items' => [
+            '🔄 Zieh „Heute" oder den Wochenplan nach unten, um zu aktualisieren – wie in Social-Apps. Die App holt sich neue Infos außerdem von selbst, wenn du sie nach einer Weile wieder öffnest.',
+            '🤒 „Krank melden" / „Kommt nicht" auf „Heute" fragt jetzt kurz nach dem Grund – und du kannst es direkt wieder aufheben.',
+            '🚌 Bei den Ausflügen stehen die Kinder jetzt sortiert: erst „dabei", dann „noch offen", dann „nicht dabei". Das Hort-Team sieht die ganze Liste immer aufgeklappt.',
+        ],
+    ],
+    [
         'version' => '2026.07.08',
         'date' => '2026-07-08',
         'title' => 'Mit einem anderen Kind nach Hause 🧒🧒',

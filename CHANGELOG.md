@@ -8,6 +8,14 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Always-fresh installed app**: a drag-down **pull-to-refresh** on Heute and the
+  plans (the spinner trails the pull at half speed and spins while loading); a
+  **silent reload** onto the newest version after a deploy; and a **stale-content
+  refresh** that re-fetches the current page when the app is reopened after 15+
+  minutes in the background — each guarded so it never interrupts an active edit.
+- **Whole invited group on the staff excursion cards**: each Ausflug card now lists
+  every invited child with their status, always expanded (parents keep the
+  collapsible „Alle Kinder" list).
 - **„Geht mit einem anderen Kind mit"**: a child can be set (per day, on the
   Wochenplan) to go home with another child; the pickup time mirrors that child's
   and follows it live. When the companion goes home alone, their family must confirm
@@ -90,6 +98,20 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **Excursion group list is ordered by status** — joining first, then still-undecided,
+  then not coming (alphabetical within each) — on both the parent poll and the staff
+  cards.
+- **The Heute board's absence report asks for a reason and is undoable.** Tapping
+  „Krank"/„Kommt nicht" now opens a required-reason field and only fires on confirm
+  (a mis-tap no longer silently unwinds a „geht mit … mit" arrangement), and the
+  „Heute abwesend" strip gains an „aufheben" undo.
+- **Clearer companion picker**: children who can't be a companion that day are shown
+  disabled with a reason, a hint explains the mirrored time and that the other family
+  must still confirm, and a declined arrangement now reads red (not the same orange as
+  pending) on the grid.
+- **Fewer queries on the board and weekly views**: pickup-time resolution is batched
+  (`EffectivePlan::forMany`), removing per-row/per-cell N+1s; the confirm-companion
+  side effects are consolidated in one place used by both the app and Slack.
 - **Time pickers start at 11:00** (the Hort opens around 11:30) — earlier options
   were dropped.
 - **„Abwesend" renamed to „Kommt nicht"** across the plans and board.

@@ -48,6 +48,8 @@ return [
     'not_here' => 'Not here?',
     'report_sick' => 'Report sick',
     'report_away' => 'Not coming',
+    'report_button' => 'Report',
+    'clear_absence' => 'undo',
 
     'empty_own' => 'None of your children are at the Hort today.',
     'empty_all' => 'No children at the Hort for this day.',

@@ -121,6 +121,38 @@ class AbsenceTest extends TestCase
             ])->assertSessionHasErrors('from');
     }
 
+    public function test_a_reason_is_required(): void
+    {
+        $this->travelTo(Carbon::parse('2026-06-22'));
+        $parent = User::factory()->create(['role' => UserRole::Parent]);
+        $child = Child::factory()->create();
+        $parent->children()->attach($child);
+
+        $this->actingAs($parent)->post(route('absences.store'), [
+            'child_id' => $child->id,
+            'from' => '2026-06-22',
+            'to' => '2026-06-22',
+            // no reason
+        ])->assertSessionHasErrors('reason');
+
+        $this->assertDatabaseCount('absences', 0);
+    }
+
+    public function test_an_invalid_reason_is_rejected(): void
+    {
+        $this->travelTo(Carbon::parse('2026-06-22'));
+        $parent = User::factory()->create(['role' => UserRole::Parent]);
+        $child = Child::factory()->create();
+        $parent->children()->attach($child);
+
+        $this->actingAs($parent)->post(route('absences.store'), [
+            'child_id' => $child->id,
+            'from' => '2026-06-22',
+            'to' => '2026-06-22',
+            'reason' => 'on_holiday_forever',
+        ])->assertSessionHasErrors('reason');
+    }
+
     public function test_an_absurdly_long_date_range_is_rejected(): void
     {
         $this->travelTo(Carbon::parse('2026-06-22'));

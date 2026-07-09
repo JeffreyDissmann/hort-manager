@@ -361,6 +361,26 @@ class ExcursionManagementTest extends TestCase
             );
     }
 
+    public function test_the_group_list_is_ordered_joining_then_undecided_then_declined(): void
+    {
+        $excursion = Excursion::factory()->create(['date' => Carbon::tomorrow()->toDateString()]);
+        // Names deliberately fight the desired order, so only the status ranking can win.
+        $declined = Child::factory()->create(['name' => 'Anna']);
+        $joining = Child::factory()->create(['name' => 'Zoe']);
+        $pending = Child::factory()->create(['name' => 'Mia']);
+        $excursion->children()->attach($declined->id, ['response' => false]);
+        $excursion->children()->attach($joining->id, ['response' => true]);
+        $excursion->children()->attach($pending->id); // null → undecided
+
+        $this->actingAs($this->staff())
+            ->get(route('excursions.index'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('upcoming.0.all_children.0.name', 'Zoe')  // joining
+                ->where('upcoming.0.all_children.1.name', 'Mia')  // undecided
+                ->where('upcoming.0.all_children.2.name', 'Anna') // not coming
+            );
+    }
+
     public function test_deleting_an_excursion_removes_its_links(): void
     {
         $excursion = Excursion::factory()->create();

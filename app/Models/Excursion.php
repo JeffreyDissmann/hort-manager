@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Support\Collection;
 
 #[ObservedBy([ExcursionObserver::class])]
 class Excursion extends Model
@@ -85,5 +86,27 @@ class Excursion extends Model
     {
         return $this->rsvp_deadline === null
             || $this->rsvp_deadline->endOfDay()->isFuture();
+    }
+
+    /**
+     * The invited children ordered for display: joining first, then still-undecided,
+     * then not coming — each group alphabetical. Reads the loaded `children` relation.
+     *
+     * @return Collection<int, Child>
+     */
+    public function childrenByStatus(): Collection
+    {
+        $rank = fn (Child $c) => match (true) {
+            $c->pivot->response === null => 1,
+            (bool) $c->pivot->response => 0,
+            default => 2,
+        };
+
+        return $this->children
+            ->sortBy([
+                fn (Child $a, Child $b) => $rank($a) <=> $rank($b),
+                fn (Child $a, Child $b) => mb_strtolower($a->name) <=> mb_strtolower($b->name),
+            ])
+            ->values();
     }
 }

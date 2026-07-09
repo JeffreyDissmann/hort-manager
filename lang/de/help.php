@@ -31,7 +31,7 @@ return [
         'today' => [
             'title' => 'Heute',
             'audience' => 'Für alle',
-            'text' => 'Die Übersicht für den heutigen Tag: Wer wird wann abgeholt, wer geht allein nach Hause, wer ist auf einem Ausflug. Erzieher:innen haken jedes Kind ab, sobald es geht.',
+            'text' => 'Die Übersicht für den heutigen Tag: Wer wird wann abgeholt, wer geht allein nach Hause, wer ist auf einem Ausflug. Erzieher:innen haken jedes Kind ab, sobald es geht. Hat ein Kind Geburtstag, siehst du das hier mit einem 🎂.',
         ],
         'pickup_plan' => [
             'title' => 'Wochenplan',
@@ -67,7 +67,7 @@ return [
 
     // Assistant & sick reports
     'assistant_title' => 'Krank melden & schnelle Änderungen',
-    'assistant_text_1' => 'Ist dein Kind krank oder kommt an einem Tag nicht? Tippe auf <strong>„Krank“</strong> bzw. <strong>„Kommt nicht“</strong> – auf der Seite „Heute“ oder beim jeweiligen Tag im Wochenplan. Genauso trägst du dort kurzfristig eine andere Abholzeit ein.',
+    'assistant_text_1' => 'Ist dein Kind krank oder kommt an einem Tag nicht? Tippe auf <strong>„Krank“</strong> bzw. <strong>„Kommt nicht“</strong> – auf der Seite „Heute“ oder beim jeweiligen Tag im Wochenplan – und gib einen kurzen Grund an (z. B. „Erkältung“ oder „Familienbesuch“). Genauso trägst du dort kurzfristig eine andere Abholzeit ein.',
     'assistant_text_2' => 'Noch einfacher: <strong>Schreib es dem Hort-Manager direkt in Slack.</strong> Er versteht ganz normale Sätze – zum Beispiel:',
     'assistant_examples' => [
         'Mein Kind ist heute krank.',
@@ -108,6 +108,11 @@ return [
     'install_enable' => 'Danach im Menü oben rechts auf <strong>🔔 Benachrichtigungen an</strong> tippen und erlauben.',
     'install_note' => 'Hinweis: Auf dem iPhone funktionieren Benachrichtigungen nur, wenn die App vorher zum Home-Bildschirm hinzugefügt wurde.',
 
+    // Appearance & language
+    'appearance_title' => 'Darstellung & Sprache',
+    'appearance_theme' => '<strong>Hell oder dunkel:</strong> Unter <strong>Profil → Darstellung</strong> wählst du zwischen Hell, Dunkel und „Automatisch“ (folgt der Einstellung deines Geräts). Die Auswahl gilt pro Gerät.',
+    'appearance_language' => '<strong>Sprache:</strong> Unter <strong>Profil → Sprache</strong> kannst du zwischen Deutsch und Englisch wechseln. Deutsch ist die Standardsprache.',
+
     // Roles
     'roles_title' => 'Wer darf was?',
     'role_parents' => '<strong>Eltern</strong> sehen alles, pflegen ihre eigenen Kinder und antworten auf Ausflüge.',
@@ -119,7 +124,7 @@ return [
     'glossary' => [
         'stammplan' => [
             'term' => 'Stammplan',
-            'def' => 'Die festen, wöchentlich gleichen Abholzeiten eines Kindes – die Grundlage für den Abholplan.',
+            'def' => 'Die festen, wöchentlich gleichen Abholzeiten eines Kindes – die Grundlage für den Wochenplan.',
         ],
         'pickup_plan' => [
             'term' => 'Wochenplan',
