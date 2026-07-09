@@ -1,6 +1,6 @@
 <script setup>
 import { mark as boardMark, override as boardOverride } from '@/routes/board';
-import { store as absenceStore } from '@/routes/absences';
+import { store as absenceStore, destroy as absenceDestroy } from '@/routes/absences';
 import { live as excursionLive } from '@/routes/excursions';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import CollapsibleChips from '@/Components/CollapsibleChips.vue';
@@ -181,29 +181,77 @@ function excursionConflict(row) {
     return pickup >= depart && pickup < toMinutes(ex.return_at);
 }
 
+// Guards every board mutation so a double-tap on a phone can't fire it twice.
+const submitting = ref(false);
+const guard = {
+    preserveScroll: true,
+    onStart: () => { submitting.value = true; },
+    onFinish: () => { submitting.value = false; },
+};
+
 function mark(row, status) {
-    router.patch(
-        boardMark(row.id).url,
-        { status },
-        { preserveScroll: true },
-    );
+    if (submitting.value) {
+        return;
+    }
+    router.patch(boardMark(row.id).url, { status }, guard);
 }
 
 function liveEvent(excursion, event) {
-    router.patch(
-        excursionLive(excursion.id).url,
-        { event },
-        { preserveScroll: true },
+    if (submitting.value) {
+        return;
+    }
+    router.patch(excursionLive(excursion.id).url, { event }, guard);
+}
+
+// Report a child away for today straight from the board. Like the Wochenplan
+// editor, this is staged: tapping Krank/Kommt nicht reveals a required reason
+// field, and nothing is sent until the user confirms — reporting a child away
+// also unwinds any „geht mit … mit" arrangement, so it shouldn't fire on a mis-tap.
+const absenceRow = ref(null);
+const absenceReason = ref('');
+const absenceComment = ref('');
+const absenceSaving = ref(false);
+
+function stageAbsence(row, reason) {
+    absenceRow.value = row.id;
+    absenceReason.value = reason;
+    absenceComment.value = '';
+}
+
+function cancelAbsence() {
+    absenceRow.value = null;
+    absenceReason.value = '';
+    absenceComment.value = '';
+}
+
+function submitAbsence(row) {
+    if (!absenceComment.value.trim()) {
+        return;
+    }
+    router.post(
+        absenceStore().url,
+        {
+            child_id: row.child_id,
+            from: props.date.iso,
+            to: props.date.iso,
+            reason: absenceReason.value,
+            comment: absenceComment.value.trim(),
+        },
+        {
+            preserveScroll: true,
+            onStart: () => { absenceSaving.value = true; },
+            onFinish: () => { absenceSaving.value = false; },
+            onSuccess: cancelAbsence,
+        },
     );
 }
 
-// Report a child away for today straight from the board.
-function reportAbsent(row, reason) {
-    router.post(
-        absenceStore().url,
-        { child_id: row.child_id, from: props.date.iso, to: props.date.iso, reason },
-        { preserveScroll: true },
-    );
+// Undo an absence from the „Heute abwesend" strip (staff or the child's parent).
+function clearAbsence(a) {
+    router.delete(absenceDestroy().url, {
+        data: { child_id: a.child_id, from: props.date.iso, to: props.date.iso },
+        preserveScroll: true,
+    });
 }
 
 // --- Same-day override (inline editor) ---
@@ -224,6 +272,9 @@ function cancelEdit() {
 }
 
 function saveEdit(row) {
+    if (submitting.value) {
+        return;
+    }
     router.patch(
         boardOverride(row.id).url,
         {
@@ -231,7 +282,7 @@ function saveEdit(row) {
             planned_method: editMethod.value || null,
             note: editNote.value || null,
         },
-        { preserveScroll: true, onSuccess: () => (editingId.value = null) },
+        { ...guard, onSuccess: () => (editingId.value = null) },
     );
 }
 </script>
@@ -333,9 +384,17 @@ function saveEdit(row) {
                     <span
                         v-for="(a, i) in absent"
                         :key="i"
-                        class="rounded-lg bg-amber-100 px-2 py-1 text-xs font-medium"
+                        class="inline-flex items-center gap-1.5 rounded-lg bg-amber-100 px-2 py-1 text-xs font-medium"
                     >
                         {{ a.name }} · {{ a.reason_label }}<span v-if="a.comment" class="font-normal opacity-80"> · {{ a.comment }}</span>
+                        <button
+                            v-if="a.can_manage"
+                            type="button"
+                            class="text-amber-700/70 underline-offset-2 hover:text-amber-900 hover:underline"
+                            @click="clearAbsence(a)"
+                        >
+                            {{ $t('board.clear_absence') }}
+                        </button>
                     </span>
                 </div>
             </div>
@@ -553,6 +612,7 @@ function saveEdit(row) {
                         <TimeSelect v-model="editTime" class="text-sm" />
                         <select
                             v-model="editMethod"
+                            :aria-label="$t('weekly.method_label')"
                             class="block w-full rounded-lg border-ink/20 text-sm focus:border-hort-teal focus:ring-hort-teal"
                         >
                             <option value="">{{ $t('board.method_open') }}</option>
@@ -568,6 +628,7 @@ function saveEdit(row) {
                             v-model="editNote"
                             type="text"
                             maxlength="255"
+                            :aria-label="$t('common.note')"
                             :placeholder="$t('board.comment_placeholder')"
                             class="block w-full rounded-lg border-ink/20 text-sm focus:border-hort-teal focus:ring-hort-teal"
                         />
@@ -607,14 +668,16 @@ function saveEdit(row) {
                             >
                                 <button
                                     type="button"
-                                    class="rounded-xl bg-hort-teal py-3 font-semibold text-hort-navy transition hover:bg-hort-teal-dark active:scale-[0.98]"
+                                    :disabled="submitting"
+                                    class="rounded-xl bg-hort-teal py-3 font-semibold text-hort-navy transition hover:bg-hort-teal-dark active:scale-[0.98] disabled:opacity-50"
                                     @click="mark(row, 'picked_up')"
                                 >
                                     {{ $t('board.picked_up_button') }}
                                 </button>
                                 <button
                                     type="button"
-                                    class="rounded-xl bg-hort-orange py-3 font-semibold text-hort-navy transition hover:opacity-90 active:scale-[0.98]"
+                                    :disabled="submitting"
+                                    class="rounded-xl bg-hort-orange py-3 font-semibold text-hort-navy transition hover:opacity-90 active:scale-[0.98] disabled:opacity-50"
                                     @click="mark(row, 'sent_home')"
                                 >
                                     {{ $t('board.sent_home_button') }}
@@ -632,24 +695,58 @@ function saveEdit(row) {
 
                             <div
                                 v-if="row.can_override && row.excursion?.state !== 'away'"
-                                class="flex items-center gap-2 text-sm"
+                                class="text-sm"
                             >
-                                <span class="text-ink/40">{{ $t('board.not_here') }}</span>
-                                <button
-                                    type="button"
-                                    class="font-semibold text-amber-700 underline-offset-2 hover:underline"
-                                    @click="reportAbsent(row, 'sick')"
+                                <div v-if="absenceRow !== row.id" class="flex items-center gap-2">
+                                    <span class="text-ink/40">{{ $t('board.not_here') }}</span>
+                                    <button
+                                        type="button"
+                                        class="font-semibold text-amber-700 underline-offset-2 hover:underline"
+                                        @click="stageAbsence(row, 'sick')"
+                                    >
+                                        {{ $t('board.report_sick') }}
+                                    </button>
+                                    <span class="text-ink/20">·</span>
+                                    <button
+                                        type="button"
+                                        class="font-semibold text-amber-700 underline-offset-2 hover:underline"
+                                        @click="stageAbsence(row, 'away')"
+                                    >
+                                        {{ $t('board.report_away') }}
+                                    </button>
+                                </div>
+                                <form
+                                    v-else
+                                    class="space-y-2 rounded-xl bg-amber-50 p-3"
+                                    @submit.prevent="submitAbsence(row)"
                                 >
-                                    {{ $t('board.report_sick') }}
-                                </button>
-                                <span class="text-ink/20">·</span>
-                                <button
-                                    type="button"
-                                    class="font-semibold text-amber-700 underline-offset-2 hover:underline"
-                                    @click="reportAbsent(row, 'away')"
-                                >
-                                    {{ $t('board.report_away') }}
-                                </button>
+                                    <label class="block font-medium text-amber-800">
+                                        {{ absenceReason === 'sick' ? $t('board.report_sick') : $t('board.report_away') }} · {{ $t('weekly.reason_label') }}
+                                    </label>
+                                    <input
+                                        v-model="absenceComment"
+                                        type="text"
+                                        maxlength="255"
+                                        :placeholder="$t('weekly.reason_placeholder')"
+                                        class="w-full rounded-lg border-amber-200 bg-surface text-sm text-ink focus:border-amber-400 focus:ring-amber-400"
+                                    />
+                                    <div class="flex items-center gap-2">
+                                        <button
+                                            type="submit"
+                                            :disabled="!absenceComment.trim() || absenceSaving"
+                                            class="rounded-lg bg-amber-600 px-3 py-1.5 font-semibold text-white transition hover:bg-amber-700 disabled:opacity-40"
+                                        >
+                                            {{ $t('board.report_button') }}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            class="text-ink/50 underline-offset-2 hover:underline"
+                                            @click="cancelAbsence"
+                                        >
+                                            {{ $t('common.cancel') }}
+                                        </button>
+                                    </div>
+                                </form>
                             </div>
                         </div>
 

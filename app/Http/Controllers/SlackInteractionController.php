@@ -5,17 +5,15 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Enums\DepartureMethod;
-use App\Jobs\SyncCompanionConfirmation;
 use App\Jobs\SyncExcursionRsvp;
 use App\Models\Child;
 use App\Models\DailyDeparture;
 use App\Models\Excursion;
 use App\Models\User;
-use App\Notifications\CompanionAnswered;
+use App\Support\CompanionAnswer;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Notification;
 
 class SlackInteractionController extends Controller
 {
@@ -84,16 +82,7 @@ class SlackInteractionController extends Controller
             return;
         }
 
-        $confirmed = (bool) (int) $answer;
-        $departure->update([
-            'companion_confirmed' => $confirmed,
-            'companion_confirmed_by' => $user->id,
-            'companion_confirmed_at' => now(),
-        ]);
-
-        // Tell the requesting family and keep every companion-guardian's DM in sync.
-        Notification::send($departure->child->guardians()->get(), new CompanionAnswered($departure, $confirmed));
-        SyncCompanionConfirmation::dispatch($departure);
+        CompanionAnswer::record($departure, (bool) (int) $answer, $user->id);
     }
 
     /** Post a confirmation back into the same Slack DM via the interaction's response_url. */

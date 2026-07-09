@@ -60,6 +60,15 @@ class WeeklyOverviewController extends Controller
             ->get()
             ->keyBy(fn (DailyDeparture $d) => $d->child_id.'|'.$d->date->toDateString());
 
+        // Companions referenced by any „geht mit … mit" override this week (a companion
+        // may be a child the user doesn't manage) — resolve their effective plans once so
+        // the per-day loop can mirror the companion's time without a per-cell query.
+        $companionPlans = EffectivePlan::forMany(
+            $departures->where('planned_method', DepartureMethod::WithChild)
+                ->pluck('companion_child_id')->filter()->all(),
+            $weekDates,
+        );
+
         $absences = Absence::query()
             ->whereIn('child_id', $weekChildren->pluck('id'))
             ->whereIn('date', $weekDates)
@@ -119,11 +128,11 @@ class WeeklyOverviewController extends Controller
             }
         }
 
-        $currentWeek = $weekChildren->map(function (Child $child) use ($weekDays, $departures, $absences, $todayString, $excursionByChildDate, $toMinutes, $childNames) {
+        $currentWeek = $weekChildren->map(function (Child $child) use ($weekDays, $departures, $absences, $todayString, $excursionByChildDate, $toMinutes, $childNames, $companionPlans) {
             $byWeekday = $child->weeklySchedules->keyBy('weekday');
             $canManage = true;
 
-            $days = $weekDays->values()->map(function (array $day, int $i) use ($child, $byWeekday, $departures, $absences, $todayString, $canManage, $excursionByChildDate, $toMinutes, $childNames) {
+            $days = $weekDays->values()->map(function (array $day, int $i) use ($child, $byWeekday, $departures, $absences, $todayString, $canManage, $excursionByChildDate, $toMinutes, $childNames, $companionPlans) {
                 $schedule = $byWeekday->get($i + 1);
                 $stdTime = $schedule && $schedule->planned_time ? substr((string) $schedule->planned_time, 0, 5) : null;
                 $stdMethod = $schedule?->method?->value;
@@ -143,7 +152,7 @@ class WeeklyOverviewController extends Controller
                         'name' => $childNames[$departure->companion_child_id] ?? '',
                         'confirmed' => $departure->companion_confirmed,
                     ];
-                    $time = EffectivePlan::for($departure->companion_child_id, $day['date'])['time'];
+                    $time = $companionPlans[$departure->companion_child_id.'|'.$day['date']]['time'] ?? null;
                 }
 
                 $departed = $status !== null && $status !== DepartureStatus::Present;
@@ -218,17 +227,26 @@ class WeeklyOverviewController extends Controller
             ->all();
 
         // Each child's effective pickup time per date this week (override → Stammplan),
-        // so the companion picker can show „… wird übernommen (15:30)". A with_child
-        // override has no own time (it mirrors someone else), so it stays blank.
+        // so the companion picker can show „… wird übernommen (15:30)" and only offer
+        // children who can actually be a companion. A with_child override has no own
+        // time (it mirrors someone else) and an absent child has no pickup — both stay
+        // blank, mirroring the AdjustDayRequest::after() „companion_unavailable" check.
         $allOverrides = DailyDeparture::query()
             ->whereIn('date', $weekDates)
             ->get()
             ->keyBy(fn (DailyDeparture $d) => $d->child_id.'|'.$d->date->toDateString());
 
-        $childTimes = $allChildren->mapWithKeys(function (Child $c) use ($weekDays, $allOverrides) {
+        $absentKeys = $absencesByDate->flatMap(
+            fn ($absences, string $date) => $absences->map(fn (Absence $a) => $a->child_id.'|'.$date)
+        )->flip();
+
+        $childTimes = $allChildren->mapWithKeys(function (Child $c) use ($weekDays, $allOverrides, $absentKeys) {
             $byWeekday = $c->weeklySchedules->keyBy('weekday');
             $times = [];
             foreach ($weekDays->values() as $i => $day) {
+                if ($absentKeys->has($c->id.'|'.$day['date'])) {
+                    continue;
+                }
                 $override = $allOverrides->get($c->id.'|'.$day['date']);
                 $raw = $override
                     ? $override->planned_time
@@ -284,6 +302,13 @@ class WeeklyOverviewController extends Controller
             ->get()
             ->keyBy(fn (DailyDeparture $d) => $d->child_id.'|'.$d->date->toDateString());
 
+        // Companions' effective plans, resolved once — the loop mirrors their time.
+        $companionPlans = EffectivePlan::forMany(
+            $departures->where('planned_method', DepartureMethod::WithChild)
+                ->pluck('companion_child_id')->filter()->all(),
+            $weekDates,
+        );
+
         // Reported-away child-days are off the timeline (their override row is gone,
         // so without this they'd fall back to the Stammplan and reappear).
         $absentKeys = Absence::query()
@@ -321,7 +346,7 @@ class WeeklyOverviewController extends Controller
                 // synced time (see the board for the same rule).
                 $companion = null;
                 if ($departure && $method === DepartureMethod::WithChild && $departure->companion_child_id) {
-                    $time = EffectivePlan::for($departure->companion_child_id, $day['date'])['time'];
+                    $time = $companionPlans[$departure->companion_child_id.'|'.$day['date']]['time'] ?? null;
                     if ($departure->companion_confirmed === true) {
                         $companion = ['name' => $names[$departure->companion_child_id] ?? '', 'confirmed' => true];
                     } else {

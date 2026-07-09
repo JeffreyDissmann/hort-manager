@@ -1,4 +1,5 @@
 <script setup>
+import { t } from '@/i18n';
 import { computed, ref, watch } from 'vue';
 
 const model = defineModel({ type: String, default: '' });
@@ -58,12 +59,12 @@ const selectClass =
 
 <template>
     <div class="flex items-center gap-1">
-        <select v-model="hour" :class="selectClass" @change="update">
+        <select v-model="hour" :class="selectClass" :aria-label="t('common.hour')" @change="update">
             <option value="">––</option>
             <option v-for="h in hours" :key="h" :value="h">{{ h }}</option>
         </select>
         <span class="font-semibold text-ink/40">:</span>
-        <select v-model="minute" :class="selectClass" @change="update">
+        <select v-model="minute" :class="selectClass" :aria-label="t('common.minute')" @change="update">
             <option value="">––</option>
             <option v-for="m in minutes" :key="m" :value="m">{{ m }}</option>
         </select>

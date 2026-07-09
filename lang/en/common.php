@@ -23,6 +23,8 @@ return [
     'today' => 'Today',
     'tomorrow' => 'Tomorrow',
     'time' => 'Time',
+    'hour' => 'Hour',
+    'minute' => 'Minute',
     'oclock' => '',
     'note' => 'Note',
     'optional' => 'optional',

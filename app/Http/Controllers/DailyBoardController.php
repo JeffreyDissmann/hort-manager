@@ -78,7 +78,7 @@ class DailyBoardController extends Controller
         $excursionList = [];
         $excursions = Excursion::query()
             ->with('participants:id,name')
-            ->whereDate('date', $date->toDateString())
+            ->where('date', $date->toDateString())
             ->orderBy('depart_at')
             ->get();
         foreach ($excursions as $excursion) {
@@ -123,10 +123,16 @@ class DailyBoardController extends Controller
             ->get();
 
         // Each row's effective time — mirrored from the companion for „geht mit … mit".
+        // Resolve all companions' plans in one batch to avoid a per-row query.
+        $companionPlans = EffectivePlan::forMany(
+            $departures->where('planned_method', DepartureMethod::WithChild)
+                ->pluck('companion_child_id')->filter()->all(),
+            [$date->toDateString()],
+        );
         $effectiveTime = [];
         foreach ($departures as $d) {
             $effectiveTime[$d->id] = $d->planned_method === DepartureMethod::WithChild && $d->companion_child_id
-                ? EffectivePlan::for($d->companion_child_id, $date->toDateString())['time']
+                ? ($companionPlans[$d->companion_child_id.'|'.$date->toDateString()]['time'] ?? null)
                 : ($d->planned_time ? substr((string) $d->planned_time, 0, 5) : null);
         }
 
@@ -205,10 +211,12 @@ class DailyBoardController extends Controller
             // Parent-facing „geht mit … mit" summary for today (staff use the plan display).
             'companionNotes' => CompanionNotes::for($user, [$date->toDateString()]),
             'absent' => $absences->map(fn (Absence $a) => [
+                'child_id' => $a->child_id,
                 'name' => $a->child->name,
                 'reason' => $a->reason->value,
                 'reason_label' => $a->reason->label(),
                 'comment' => $a->comment,
+                'can_manage' => $user->isStaff() || ($myChildIds?->contains($a->child_id) ?? false),
             ])->values(),
             'excursions' => $excursionList,
             'program' => $hasProgram ? [

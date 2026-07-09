@@ -48,6 +48,8 @@ return [
     'not_here' => 'Nicht da?',
     'report_sick' => 'Krank melden',
     'report_away' => 'Kommt nicht',
+    'report_button' => 'Melden',
+    'clear_absence' => 'aufheben',
 
     'empty_own' => 'Heute ist keins deiner Kinder im Hort.',
     'empty_all' => 'Für diesen Tag sind keine Kinder im Hort.',
