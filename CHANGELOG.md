@@ -8,6 +8,19 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Explicit „Kommt nicht" in the Stammplan**: each weekday is now one clear choice —
+  Kommt nicht / Wird abgeholt / Geht allein — instead of leaving a blank time. The
+  „geht mit einem anderen Kind mit" option is gone from the Stammplan (it's a per-day
+  Wochenplan choice, and it's rejected server-side there).
+- **„Geht allein" time qualifier on the Stammplan and the Heute board**: a „geht
+  allein" time can say it means *bis* / *genau um* / *ab* — previously only on the
+  Wochenplan, now also in the Stammplan editor and the board's same-day override, and
+  seeded onto the board from the Stammplan. The Wochenplan grid, „Ganze Woche"
+  timeline and Stammplan page show the bis/ab prefix on standard days too.
+- **„Wochenplan fehlt"-Erinnerung**: parents whose child has no Stammplan yet see a
+  warning bar linking straight to that child's schedule, and a new
+  `wochenplan:remind-unset` command DMs those guardians (Slack and/or push) — with a
+  `--dry-run` that shows who would be nudged without sending.
 - **Linked people are visible in the admin lists**: the Benutzer page shows each
   user's children, and the Kinder page shows each child's guardians (chips under
   the name).
