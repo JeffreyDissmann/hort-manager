@@ -99,8 +99,12 @@ class ChildController extends Controller
                 'note' => $child->note,
             ],
             'schedule' => $schedule,
+            // „Geht mit einem anderen Kind mit" is a per-day Wochenplan choice, never
+            // part of the fixed Stammplan — so only picked-up / goes-home-alone here.
             'methodOptions' => collect(DepartureMethod::cases())
+                ->reject(fn (DepartureMethod $m) => $m === DepartureMethod::WithChild)
                 ->map(fn (DepartureMethod $m) => ['value' => $m->value, 'label' => $m->label()])
+                ->values()
                 ->all(),
             'canDelete' => $request->user()->can('delete', $child),
             'canManageGuardians' => $canManageGuardians,
@@ -126,7 +130,8 @@ class ChildController extends Controller
             'schedule' => ['array'],
             'schedule.*.weekday' => ['required', 'integer', 'between:1,5'],
             'schedule.*.planned_time' => ['nullable', 'date_format:H:i'],
-            'schedule.*.method' => ['nullable', Rule::enum(DepartureMethod::class)],
+            // Companion („with_child") is Wochenplan-only; the Stammplan can't set it.
+            'schedule.*.method' => ['nullable', Rule::enum(DepartureMethod::class)->except([DepartureMethod::WithChild])],
             'schedule.*.comment' => ['nullable', 'string', 'max:255'],
         ])['schedule'] ?? [];
 

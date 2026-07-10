@@ -177,6 +177,23 @@ class ChildManagementTest extends TestCase
         $this->assertSame(2, $child->weeklySchedules()->count());
     }
 
+    public function test_the_stammplan_rejects_the_companion_method(): void
+    {
+        $child = Child::factory()->create();
+
+        // „Geht mit einem anderen Kind mit" is a per-day Wochenplan choice only.
+        $this->actingAs($this->staff())
+            ->patch(route('children.update', $child), [
+                'name' => $child->name,
+                'schedule' => [
+                    ['weekday' => 1, 'planned_time' => '15:00', 'method' => DepartureMethod::WithChild->value],
+                ],
+            ])
+            ->assertSessionHasErrors('schedule.0.method');
+
+        $this->assertDatabaseMissing('weekly_schedules', ['child_id' => $child->id, 'weekday' => 1]);
+    }
+
     public function test_an_invalid_schedule_does_not_persist_the_name_change(): void
     {
         $child = Child::factory()->create(['name' => 'Original']);

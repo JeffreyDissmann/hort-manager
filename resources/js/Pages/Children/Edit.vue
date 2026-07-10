@@ -8,6 +8,7 @@ import TimeSelect from '@/Components/TimeSelect.vue';
 import InputError from '@/Components/InputError.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
+import { computed } from 'vue';
 import { t } from '@/i18n';
 
 const currentUserId = usePage().props.auth?.user?.id;
@@ -51,6 +52,11 @@ const weekdayNames = {
     5: t('children.weekdays.friday'),
 };
 
+// A weekday is either „kommt nicht" (no Hort that day) or a real pickup with a time
+// and a method. We model that as a single per-day `mode`; „geht mit … mit" is
+// deliberately not an option here — that's a per-day Wochenplan choice only.
+const NOT_COMING = 'not_coming';
+
 const form = useForm({
     name: props.child.name,
     date_of_birth: props.child.date_of_birth ?? '',
@@ -58,19 +64,39 @@ const form = useForm({
     schedule: props.schedule.map((day) => ({
         weekday: day.weekday,
         planned_time: day.planned_time ? day.planned_time.slice(0, 5) : '',
-        method: day.method ?? '',
+        // No time → not coming; otherwise the stored method (any legacy „with_child"
+        // falls back to „picked up", since the Stammplan can't mirror another child).
+        mode: day.planned_time
+            ? (day.method && day.method !== 'with_child' ? day.method : 'picked_up')
+            : NOT_COMING,
         comment: day.comment ?? '',
     })),
     guardians: [...props.guardianIds],
 });
 
+// A „coming" day needs a time before it can be saved.
+const scheduleComplete = computed(() =>
+    form.schedule.every((day) => day.mode === NOT_COMING || !!day.planned_time),
+);
+
+function onModeChange(day) {
+    if (day.mode === NOT_COMING) {
+        day.planned_time = '';
+        day.comment = '';
+    }
+}
+
 function submit() {
     form.transform((data) => ({
         ...data,
-        schedule: data.schedule.map((day) => ({
-            ...day,
-            method: day.method || null,
-        })),
+        schedule: data.schedule.map((day) => (day.mode === NOT_COMING
+            ? { weekday: day.weekday, planned_time: null, method: null, comment: null }
+            : {
+                weekday: day.weekday,
+                planned_time: day.planned_time || null,
+                method: day.mode,
+                comment: day.comment || null,
+            })),
     })).patch(childrenUpdate(props.child.id).url);
 }
 
@@ -167,32 +193,21 @@ function destroy() {
                                     {{ weekdayNames[day.weekday] }}
                                 </div>
 
+                                <!-- „Kommt nicht" or a real pickup method (no companion here). -->
                                 <div>
                                     <InputLabel
-                                        :for="`time-${day.weekday}`"
-                                        :value="$t('common.time')"
-                                        class="sr-only"
-                                    />
-                                    <TimeSelect
-                                        :id="`time-${day.weekday}`"
-                                        v-model="day.planned_time"
-                                        class="block w-full"
-                                    />
-                                </div>
-
-                                <div>
-                                    <InputLabel
-                                        :for="`method-${day.weekday}`"
+                                        :for="`mode-${day.weekday}`"
                                         :value="$t('children.method_label')"
                                         class="sr-only"
                                     />
                                     <select
-                                        :id="`method-${day.weekday}`"
-                                        v-model="day.method"
-                                        :disabled="!day.planned_time"
-                                        class="block w-full rounded-md border-ink/20 text-sm shadow-sm focus:border-hort-teal focus:ring-hort-teal disabled:bg-ink/5 disabled:text-ink/40"
+                                        :id="`mode-${day.weekday}`"
+                                        v-model="day.mode"
+                                        @change="onModeChange(day)"
+                                        class="block w-full rounded-md border-ink/20 text-sm shadow-sm focus:border-hort-teal focus:ring-hort-teal"
+                                        :class="day.mode === 'not_coming' ? 'text-ink/50' : ''"
                                     >
-                                        <option value="">{{ $t('children.method_placeholder') }}</option>
+                                        <option value="not_coming">{{ $t('children.not_coming') }}</option>
                                         <option
                                             v-for="option in methodOptions"
                                             :key="option.value"
@@ -203,14 +218,28 @@ function destroy() {
                                     </select>
                                 </div>
 
-                                <input
-                                    v-if="day.planned_time"
-                                    v-model="day.comment"
-                                    type="text"
-                                    maxlength="255"
-                                    :placeholder="$t('children.comment_placeholder')"
-                                    class="block w-full rounded-md border-ink/20 text-sm shadow-sm focus:border-hort-teal focus:ring-hort-teal"
-                                />
+                                <template v-if="day.mode !== 'not_coming'">
+                                    <div>
+                                        <InputLabel
+                                            :for="`time-${day.weekday}`"
+                                            :value="$t('common.time')"
+                                            class="sr-only"
+                                        />
+                                        <TimeSelect
+                                            :id="`time-${day.weekday}`"
+                                            v-model="day.planned_time"
+                                            class="block w-full"
+                                        />
+                                    </div>
+
+                                    <input
+                                        v-model="day.comment"
+                                        type="text"
+                                        maxlength="255"
+                                        :placeholder="$t('children.comment_placeholder')"
+                                        class="block w-full rounded-md border-ink/20 text-sm shadow-sm focus:border-hort-teal focus:ring-hort-teal"
+                                    />
+                                </template>
                             </div>
                         </div>
                     </section>
@@ -285,13 +314,16 @@ function destroy() {
                         <span v-else></span>
 
                         <div class="flex items-center gap-4">
+                            <span v-if="!scheduleComplete" class="text-sm text-hort-orange-dark">
+                                {{ $t('children.schedule_needs_time') }}
+                            </span>
                             <Link
                                 :href="childrenIndex().url"
                                 class="text-sm text-ink/70 hover:text-ink"
                             >
                                 {{ $t('common.cancel') }}
                             </Link>
-                            <PrimaryButton :disabled="form.processing">
+                            <PrimaryButton :disabled="form.processing || !scheduleComplete">
                                 {{ $t('common.save') }}
                             </PrimaryButton>
                         </div>
