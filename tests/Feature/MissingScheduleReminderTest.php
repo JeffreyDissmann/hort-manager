@@ -74,6 +74,21 @@ class MissingScheduleReminderTest extends TestCase
         Notification::assertNotSentTo($plannedGuardian, ScheduleMissingReminder::class);
     }
 
+    public function test_a_dry_run_reports_but_sends_nothing(): void
+    {
+        Notification::fake();
+
+        $child = Child::factory()->create(['name' => 'Emma']);
+        $guardian = User::factory()->create(['name' => 'Mum', 'role' => UserRole::Parent, 'slack_id' => 'U1']);
+        $child->guardians()->attach($guardian);
+
+        $this->artisan('wochenplan:remind-unset', ['--dry-run' => true])
+            ->expectsOutputToContain('Emma → Mum')
+            ->assertSuccessful();
+
+        Notification::assertNothingSent();
+    }
+
     public function test_the_command_skips_unreachable_guardians(): void
     {
         Notification::fake();
