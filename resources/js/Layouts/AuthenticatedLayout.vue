@@ -7,6 +7,7 @@ import Dropdown from '@/Components/Dropdown.vue';
 import DropdownLink from '@/Components/DropdownLink.vue';
 import InstallBanner from '@/Components/InstallBanner.vue';
 import NotifyPrompt from '@/Components/NotifyPrompt.vue';
+import PlanReminderBanner from '@/Components/PlanReminderBanner.vue';
 import PullToRefresh from '@/Components/PullToRefresh.vue';
 import WhatsNewModal from '@/Components/WhatsNewModal.vue';
 import {
@@ -233,6 +234,7 @@ function isActive(href) {
             class="mx-auto px-4 pb-28 pt-6 sm:px-6 sm:pb-12"
         >
             <PullToRefresh>
+                <PlanReminderBanner class="mb-4" />
                 <slot />
             </PullToRefresh>
         </main>

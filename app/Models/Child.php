@@ -7,6 +7,7 @@ namespace App\Models;
 use App\Observers\ChildObserver;
 use Database\Factories\ChildFactory;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -39,6 +40,17 @@ class Child extends Model
     public function weeklySchedules(): HasMany
     {
         return $this->hasMany(WeeklySchedule::class);
+    }
+
+    /**
+     * Children whose Stammplan hasn't been set up yet (no weekday entries at all),
+     * so their Wochenplan is still empty.
+     *
+     * @param  Builder<Child>  $query
+     */
+    public function scopeWithoutSchedule(Builder $query): void
+    {
+        $query->whereDoesntHave('weeklySchedules');
     }
 
     /** @return HasMany<Absence, $this> */

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Models\Child;
 use App\Models\DailyDeparture;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -68,7 +69,29 @@ class HandleInertiaRequests extends Middleware
             // „Geht mit … mit" arrangements still awaiting this parent's confirmation
             // (their child is the companion another child wants to go home with).
             'pendingCompanions' => fn () => $this->pendingCompanionCount($request->user()),
+            // This parent's children whose Stammplan isn't set up yet (drives a banner).
+            'childrenWithoutPlan' => fn () => $this->childrenWithoutPlan($request->user()),
         ];
+    }
+
+    /**
+     * This parent's own children that still have no Stammplan — nudged with a banner
+     * to set it. Staff manage every child, so they get no such reminder.
+     *
+     * @return list<array{id: int, name: string}>
+     */
+    private function childrenWithoutPlan(?User $user): array
+    {
+        if (! $user || $user->isStaff()) {
+            return [];
+        }
+
+        return $user->children()
+            ->withoutSchedule()
+            ->orderBy('name')
+            ->get(['children.id', 'name'])
+            ->map(fn (Child $child) => ['id' => $child->id, 'name' => $child->name])
+            ->all();
     }
 
     /**
