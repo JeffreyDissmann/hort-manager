@@ -100,7 +100,7 @@ function chipClass(method) {
                         :title="kid.comment || undefined"
                     >
                         <span class="block truncate">
-                            <span v-if="kid.excursion">🚌&nbsp;</span><span v-if="kid.method === 'sent_home'">🚶&nbsp;</span>{{ kid.name }}
+                            <span v-if="kid.excursion">🚌&nbsp;</span><span v-if="kid.method === 'sent_home'">🚶&nbsp;</span>{{ kid.name }}<span v-if="kid.qualifier_prefix" class="font-normal opacity-70">&nbsp;· {{ kid.qualifier_prefix }}</span>
                         </span>
                         <span
                             v-if="kid.comment"

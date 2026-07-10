@@ -60,6 +60,7 @@ class DailyBoardController extends Controller
             $standard[$child->id] = [
                 'time' => substr((string) $schedule->planned_time, 0, 5),
                 'method' => $schedule->method?->value,
+                'qualifier' => $schedule->time_qualifier?->value,
                 'comment' => $schedule->comment,
             ];
 
@@ -68,6 +69,7 @@ class DailyBoardController extends Controller
                 [
                     'planned_time' => $schedule->planned_time,
                     'planned_method' => $schedule->method,
+                    'time_qualifier' => $schedule->time_qualifier,
                     'status' => DepartureStatus::Present,
                 ],
             );
@@ -166,7 +168,8 @@ class DailyBoardController extends Controller
             $std = $standard[$d->child_id] ?? null;
             $overridden = $std === null
                 || $std['time'] !== $plannedTime
-                || $std['method'] !== $plannedMethod;
+                || $std['method'] !== $plannedMethod
+                || ($std['qualifier'] ?? null) !== ($qualifier?->value);
 
             return [
                 'id' => $d->id,
@@ -177,6 +180,8 @@ class DailyBoardController extends Controller
                 'qualifier_prefix' => $qualifier && $qualifier !== TimeQualifier::At
                     ? $qualifier->prefix()
                     : null,
+                // Raw value to pre-fill the override editor (defaults to „genau um").
+                'qualifier' => $d->time_qualifier?->value ?? TimeQualifier::At->value,
                 'companion' => $companion,
                 'status' => $d->status->value,
                 'status_label' => $d->status->label(),
@@ -233,6 +238,10 @@ class DailyBoardController extends Controller
                 ->map(fn (DepartureMethod $m) => ['value' => $m->value, 'label' => $m->label()])
                 ->values()
                 ->all(),
+            // „Geht allein" bis / genau um / ab, for the same-day override editor.
+            'qualifierOptions' => collect(TimeQualifier::cases())
+                ->map(fn (TimeQualifier $q) => ['value' => $q->value, 'label' => $q->label()])
+                ->all(),
         ]);
     }
 
@@ -260,9 +269,13 @@ class DailyBoardController extends Controller
 
         // A same-day board override always sets a concrete time, so any previous
         // companion arrangement no longer applies — clear it.
+        // The qualifier only qualifies a „geht allein" time.
+        $isSentHome = ($validated['planned_method'] ?? null) === DepartureMethod::SentHome->value;
+
         $departure->update([
             'planned_time' => $validated['planned_time'],
             'planned_method' => $validated['planned_method'] ?? null,
+            'time_qualifier' => $isSentHome ? ($validated['time_qualifier'] ?? null) : null,
             'note' => $validated['note'] ?? null,
             'companion_child_id' => null,
             'companion_confirmed' => null,

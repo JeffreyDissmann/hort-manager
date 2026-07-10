@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Enums\DepartureMethod;
+use App\Enums\TimeQualifier;
 use App\Models\WeeklySchedule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -55,6 +57,11 @@ class StandardPlanController extends Controller
                         'id' => $s->child->id,
                         'name' => $s->child->name,
                         'method' => $s->method?->value,
+                        // „geht allein" bis/ab label; the default „genau um" stays implicit.
+                        'qualifier_prefix' => $s->method === DepartureMethod::SentHome
+                            && $s->time_qualifier && $s->time_qualifier !== TimeQualifier::At
+                            ? $s->time_qualifier->prefix()
+                            : null,
                         'comment' => $s->comment,
                     ])
                     ->values();

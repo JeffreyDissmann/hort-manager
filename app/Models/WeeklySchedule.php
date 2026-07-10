@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Enums\DepartureMethod;
+use App\Enums\TimeQualifier;
 use Database\Factories\WeeklyScheduleFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -20,6 +21,7 @@ class WeeklySchedule extends Model
         'weekday',
         'planned_time',
         'method',
+        'time_qualifier',
         'comment',
     ];
 
@@ -28,6 +30,7 @@ class WeeklySchedule extends Model
         return [
             'weekday' => 'integer',
             'method' => DepartureMethod::class,
+            'time_qualifier' => TimeQualifier::class,
         ];
     }
 

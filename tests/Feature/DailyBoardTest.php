@@ -6,6 +6,7 @@ namespace Tests\Feature;
 
 use App\Enums\DepartureMethod;
 use App\Enums\DepartureStatus;
+use App\Enums\TimeQualifier;
 use App\Enums\UserRole;
 use App\Models\Child;
 use App\Models\DailyDeparture;
@@ -155,6 +156,73 @@ class DailyBoardTest extends TestCase
         $this->actingAs($this->parent())
             ->patch(route('board.mark', $departure), ['status' => DepartureStatus::PickedUp->value])
             ->assertForbidden();
+    }
+
+    public function test_the_board_seeds_the_stammplan_time_qualifier(): void
+    {
+        $this->travelTo(Carbon::parse('2026-06-22')); // Monday
+        $child = Child::factory()->create();
+        WeeklySchedule::create([
+            'child_id' => $child->id,
+            'weekday' => 1,
+            'planned_time' => '15:00',
+            'method' => DepartureMethod::SentHome,
+            'time_qualifier' => TimeQualifier::By, // „bis"
+        ]);
+
+        $this->actingAs($this->staff())
+            ->get(route('board'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('rows.0.name', $child->name)
+                ->where('rows.0.qualifier', TimeQualifier::By->value)
+                ->where('rows.0.qualifier_prefix', TimeQualifier::By->prefix())
+            );
+
+        $this->assertDatabaseHas('daily_departures', [
+            'child_id' => $child->id,
+            'time_qualifier' => TimeQualifier::By->value,
+        ]);
+    }
+
+    public function test_a_board_override_can_set_a_time_qualifier(): void
+    {
+        $parent = $this->parent();
+        $child = Child::factory()->create();
+        $parent->children()->attach($child);
+        $departure = DailyDeparture::factory()->create(['child_id' => $child->id, 'planned_time' => '16:00']);
+
+        $this->actingAs($parent)
+            ->patch(route('board.override', $departure), [
+                'planned_time' => '15:30',
+                'planned_method' => DepartureMethod::SentHome->value,
+                'time_qualifier' => TimeQualifier::From->value,
+            ])
+            ->assertRedirect();
+
+        $this->assertSame(TimeQualifier::From, $departure->refresh()->time_qualifier);
+    }
+
+    public function test_a_picked_up_override_clears_any_time_qualifier(): void
+    {
+        $parent = $this->parent();
+        $child = Child::factory()->create();
+        $parent->children()->attach($child);
+        $departure = DailyDeparture::factory()->create([
+            'child_id' => $child->id,
+            'planned_time' => '15:00',
+            'planned_method' => DepartureMethod::SentHome,
+            'time_qualifier' => TimeQualifier::From,
+        ]);
+
+        $this->actingAs($parent)
+            ->patch(route('board.override', $departure), [
+                'planned_time' => '16:00',
+                'planned_method' => DepartureMethod::PickedUp->value,
+                'time_qualifier' => TimeQualifier::By->value, // ignored for picked_up
+            ])
+            ->assertRedirect();
+
+        $this->assertNull($departure->refresh()->time_qualifier);
     }
 
     public function test_a_parent_can_override_their_own_childs_plan_today(): void
