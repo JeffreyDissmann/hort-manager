@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Enums\DepartureMethod;
+use App\Enums\TimeQualifier;
 use App\Enums\UserRole;
 use App\Models\Child;
 use App\Models\User;
@@ -85,6 +86,7 @@ class ChildController extends Controller
             'weekday' => $weekday,
             'planned_time' => $byWeekday->get($weekday)?->planned_time,
             'method' => $byWeekday->get($weekday)?->method?->value,
+            'time_qualifier' => $byWeekday->get($weekday)?->time_qualifier?->value,
             'comment' => $byWeekday->get($weekday)?->comment,
         ])->all();
 
@@ -105,6 +107,10 @@ class ChildController extends Controller
                 ->reject(fn (DepartureMethod $m) => $m === DepartureMethod::WithChild)
                 ->map(fn (DepartureMethod $m) => ['value' => $m->value, 'label' => $m->label()])
                 ->values()
+                ->all(),
+            // „Geht allein" may say the time means bis / genau um / ab.
+            'qualifierOptions' => collect(TimeQualifier::cases())
+                ->map(fn (TimeQualifier $q) => ['value' => $q->value, 'label' => $q->label()])
                 ->all(),
             'canDelete' => $request->user()->can('delete', $child),
             'canManageGuardians' => $canManageGuardians,
@@ -132,6 +138,7 @@ class ChildController extends Controller
             'schedule.*.planned_time' => ['nullable', 'date_format:H:i'],
             // Companion („with_child") is Wochenplan-only; the Stammplan can't set it.
             'schedule.*.method' => ['nullable', Rule::enum(DepartureMethod::class)->except([DepartureMethod::WithChild])],
+            'schedule.*.time_qualifier' => ['nullable', Rule::enum(TimeQualifier::class)],
             'schedule.*.comment' => ['nullable', 'string', 'max:255'],
         ])['schedule'] ?? [];
 
@@ -161,11 +168,15 @@ class ChildController extends Controller
                     continue;
                 }
 
+                // The qualifier only qualifies a „geht allein" time.
+                $isSentHome = ($row['method'] ?? null) === DepartureMethod::SentHome->value;
+
                 $child->weeklySchedules()->updateOrCreate(
                     ['weekday' => $row['weekday']],
                     [
                         'planned_time' => $row['planned_time'],
                         'method' => $row['method'] ?? null,
+                        'time_qualifier' => $isSentHome ? ($row['time_qualifier'] ?? null) : null,
                         'comment' => $row['comment'] ?? null,
                     ],
                 );

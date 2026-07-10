@@ -21,6 +21,7 @@ const props = defineProps({
     program: { type: Object, default: null },
     canMark: { type: Boolean, default: false },
     methodOptions: { type: Array, default: () => [] },
+    qualifierOptions: { type: Array, default: () => [] },
 });
 
 // Confirm/decline another child going home with one of ours (from the notes panel).
@@ -258,12 +259,14 @@ function clearAbsence(a) {
 const editingId = ref(null);
 const editTime = ref('');
 const editMethod = ref('');
+const editQualifier = ref('at');
 const editNote = ref('');
 
 function openEdit(row) {
     editingId.value = row.id;
     editTime.value = row.planned_time ?? '';
     editMethod.value = row.planned_method ?? '';
+    editQualifier.value = row.qualifier ?? 'at';
     editNote.value = row.note ?? '';
 }
 
@@ -280,6 +283,8 @@ function saveEdit(row) {
         {
             planned_time: editTime.value,
             planned_method: editMethod.value || null,
+            // The qualifier only applies to a „geht allein" time.
+            time_qualifier: editMethod.value === 'sent_home' ? editQualifier.value : null,
             note: editNote.value || null,
         },
         { ...guard, onSuccess: () => (editingId.value = null) },
@@ -618,6 +623,21 @@ function saveEdit(row) {
                             <option value="">{{ $t('board.method_open') }}</option>
                             <option
                                 v-for="o in methodOptions"
+                                :key="o.value"
+                                :value="o.value"
+                            >
+                                {{ o.label }}
+                            </option>
+                        </select>
+                        <!-- „Geht allein": what the time means (bis / genau um / ab). -->
+                        <select
+                            v-if="editMethod === 'sent_home'"
+                            v-model="editQualifier"
+                            :aria-label="$t('weekly.qualifier_label')"
+                            class="block w-full rounded-lg border-ink/20 text-sm focus:border-hort-teal focus:ring-hort-teal"
+                        >
+                            <option
+                                v-for="o in qualifierOptions"
                                 :key="o.value"
                                 :value="o.value"
                             >

@@ -45,7 +45,7 @@ class EffectivePlan
         return [
             'time' => self::short($schedule?->planned_time),
             'method' => $schedule?->method?->value,
-            'qualifier' => null,
+            'qualifier' => $schedule?->time_qualifier?->value,
             'companion_child_id' => null,
         ];
     }
@@ -98,7 +98,7 @@ class EffectivePlan
                 $plans[$childId.'|'.$date] = [
                     'time' => self::short($schedule?->planned_time),
                     'method' => $schedule?->method?->value,
-                    'qualifier' => null,
+                    'qualifier' => $schedule?->time_qualifier?->value,
                     'companion_child_id' => null,
                 ];
             }

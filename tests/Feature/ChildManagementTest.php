@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Enums\DepartureMethod;
+use App\Enums\TimeQualifier;
 use App\Enums\UserRole;
 use App\Models\Child;
 use App\Models\User;
@@ -175,6 +176,33 @@ class ChildManagementTest extends TestCase
         ]);
         $this->assertDatabaseMissing('weekly_schedules', ['child_id' => $child->id, 'weekday' => 2]);
         $this->assertSame(2, $child->weeklySchedules()->count());
+    }
+
+    public function test_a_sent_home_stammplan_day_keeps_its_time_qualifier(): void
+    {
+        $child = Child::factory()->create();
+
+        $this->actingAs($this->staff())
+            ->patch(route('children.update', $child), [
+                'name' => $child->name,
+                'schedule' => [
+                    ['weekday' => 1, 'planned_time' => '15:00', 'method' => DepartureMethod::SentHome->value, 'time_qualifier' => TimeQualifier::From->value],
+                    // A picked-up day must not keep a qualifier.
+                    ['weekday' => 2, 'planned_time' => '16:00', 'method' => DepartureMethod::PickedUp->value, 'time_qualifier' => TimeQualifier::By->value],
+                ],
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('weekly_schedules', [
+            'child_id' => $child->id,
+            'weekday' => 1,
+            'time_qualifier' => TimeQualifier::From->value,
+        ]);
+        $this->assertDatabaseHas('weekly_schedules', [
+            'child_id' => $child->id,
+            'weekday' => 2,
+            'time_qualifier' => null,
+        ]);
     }
 
     public function test_the_stammplan_rejects_the_companion_method(): void

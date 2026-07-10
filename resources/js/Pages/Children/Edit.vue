@@ -26,6 +26,10 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
+    qualifierOptions: {
+        type: Array,
+        default: () => [],
+    },
     canDelete: {
         type: Boolean,
         default: false,
@@ -69,6 +73,7 @@ const form = useForm({
         mode: day.planned_time
             ? (day.method && day.method !== 'with_child' ? day.method : 'picked_up')
             : NOT_COMING,
+        time_qualifier: day.time_qualifier ?? 'at',
         comment: day.comment ?? '',
     })),
     guardians: [...props.guardianIds],
@@ -90,11 +95,12 @@ function submit() {
     form.transform((data) => ({
         ...data,
         schedule: data.schedule.map((day) => (day.mode === NOT_COMING
-            ? { weekday: day.weekday, planned_time: null, method: null, comment: null }
+            ? { weekday: day.weekday, planned_time: null, method: null, time_qualifier: null, comment: null }
             : {
                 weekday: day.weekday,
                 planned_time: day.planned_time || null,
                 method: day.mode,
+                time_qualifier: day.mode === 'sent_home' ? (day.time_qualifier || null) : null,
                 comment: day.comment || null,
             })),
     })).patch(childrenUpdate(props.child.id).url);
@@ -231,6 +237,22 @@ function destroy() {
                                             class="block w-full"
                                         />
                                     </div>
+
+                                    <!-- „Geht allein": what the time means (bis / genau um / ab). -->
+                                    <select
+                                        v-if="day.mode === 'sent_home'"
+                                        v-model="day.time_qualifier"
+                                        :aria-label="$t('weekly.qualifier_label')"
+                                        class="block w-full rounded-md border-ink/20 text-sm shadow-sm focus:border-hort-teal focus:ring-hort-teal"
+                                    >
+                                        <option
+                                            v-for="option in qualifierOptions"
+                                            :key="option.value"
+                                            :value="option.value"
+                                        >
+                                            {{ option.label }}
+                                        </option>
+                                    </select>
 
                                     <input
                                         v-model="day.comment"

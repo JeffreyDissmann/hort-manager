@@ -180,9 +180,10 @@ class WeeklyOverviewController extends Controller
                     'date' => $day['date'],
                     'time' => $time,
                     'method' => $method,
-                    // The "geht allein" time qualifier (bis/um/ab); only carried by an override.
+                    // The „geht allein" time qualifier (bis/um/ab): from the override if
+                    // there is one, otherwise the Stammplan's.
                     'qualifier' => $method === DepartureMethod::SentHome->value
-                        ? $departure?->time_qualifier?->value
+                        ? ($departure ? $departure->time_qualifier?->value : $schedule?->time_qualifier?->value)
                         : null,
                     // Companion for „geht mit … mit": { name, confirmed: null|true|false }.
                     'companion' => $companion,
@@ -365,8 +366,9 @@ class WeeklyOverviewController extends Controller
                 $departed = $departure?->status !== null && $departure?->status !== DepartureStatus::Present;
 
                 // „geht allein" prefix (bis/ab); the default „genau um" stays implicit.
+                // Use the override's qualifier if there is one, else the Stammplan's.
                 $qualifier = $method?->value === DepartureMethod::SentHome->value
-                    ? $departure?->time_qualifier
+                    ? ($departure ? $departure->time_qualifier : $schedule?->time_qualifier)
                     : null;
 
                 $dayLists[$i][] = [
