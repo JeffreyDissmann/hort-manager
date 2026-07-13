@@ -206,6 +206,18 @@ class DailyBoardController extends Controller
 
         $hasProgram = $program?->lunch || $program?->activity || $homeworkStart;
 
+        // Children who regularly aren't at the Hort today (a Stammplan „Hortfrei"
+        // weekday): they have a plan on other weekdays but none for today — surfaced so
+        // staff know the shorter list is intentional. Unplanned children (no Stammplan
+        // at all) and today's reported absences are excluded.
+        $hortfrei = Child::query()
+            ->whereHas('weeklySchedules', fn ($q) => $q->whereNotNull('planned_time'))
+            ->whereDoesntHave('weeklySchedules', fn ($q) => $q->where('weekday', $weekday)->whereNotNull('planned_time'))
+            ->whereNotIn('id', $absentChildIds)
+            ->orderBy('name')
+            ->pluck('name')
+            ->values();
+
         return Inertia::render('Board/Index', [
             'date' => [
                 'iso' => $date->toDateString(),
@@ -213,6 +225,8 @@ class DailyBoardController extends Controller
                 'is_today' => $date->isToday(),
             ],
             'rows' => $rows,
+            // Regularly not at the Hort today (Stammplan „Hortfrei"), for context.
+            'hortfrei' => $hortfrei,
             // Parent-facing „geht mit … mit" summary for today (staff use the plan display).
             'companionNotes' => CompanionNotes::for($user, [$date->toDateString()]),
             'absent' => $absences->map(fn (Absence $a) => [

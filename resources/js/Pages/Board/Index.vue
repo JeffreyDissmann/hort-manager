@@ -17,6 +17,7 @@ const props = defineProps({
     rows: { type: Array, default: () => [] },
     companionNotes: { type: Array, default: () => [] },
     absent: { type: Array, default: () => [] },
+    hortfrei: { type: Array, default: () => [] },
     excursions: { type: Array, default: () => [] },
     program: { type: Object, default: null },
     canMark: { type: Boolean, default: false },
@@ -379,28 +380,40 @@ function saveEdit(row) {
                 </div>
             </div>
 
-            <!-- Reported away today (krank/abwesend) -->
+            <!-- Not at the Hort today — one block combining reported absences (amber,
+                 needs attention) and regular „Hortfrei" days (muted, expected). -->
             <div
-                v-if="absent.length"
-                class="rounded-2xl bg-amber-50 p-4 text-sm text-amber-800"
+                v-if="absent.length || hortfrei.length"
+                class="space-y-2 rounded-2xl bg-ink/5 p-4 text-sm"
             >
-                <p class="mb-1 font-semibold">{{ $t('board.absent_today') }}</p>
-                <div class="flex flex-wrap gap-1.5">
-                    <span
-                        v-for="(a, i) in absent"
-                        :key="i"
-                        class="inline-flex items-center gap-1.5 rounded-lg bg-amber-100 px-2 py-1 text-xs font-medium"
-                    >
-                        {{ a.name }} · {{ a.reason_label }}<span v-if="a.comment" class="font-normal opacity-80"> · {{ a.comment }}</span>
-                        <button
-                            v-if="a.can_manage"
-                            type="button"
-                            class="text-amber-700/70 underline-offset-2 hover:text-amber-900 hover:underline"
-                            @click="clearAbsence(a)"
+                <div v-if="absent.length">
+                    <p class="mb-1 font-semibold text-amber-800">{{ $t('board.absent_today') }}</p>
+                    <div class="flex flex-wrap gap-1.5">
+                        <span
+                            v-for="(a, i) in absent"
+                            :key="i"
+                            class="inline-flex items-center gap-1.5 rounded-lg bg-amber-100 px-2 py-1 text-xs font-medium text-amber-800"
                         >
-                            {{ $t('board.clear_absence') }}
-                        </button>
-                    </span>
+                            {{ a.name }} · {{ a.reason_label }}<span v-if="a.comment" class="font-normal opacity-80"> · {{ a.comment }}</span>
+                            <button
+                                v-if="a.can_manage"
+                                type="button"
+                                class="text-amber-700/70 underline-offset-2 hover:text-amber-900 hover:underline"
+                                @click="clearAbsence(a)"
+                            >
+                                {{ $t('board.clear_absence') }}
+                            </button>
+                        </span>
+                    </div>
+                </div>
+
+                <div
+                    v-if="hortfrei.length"
+                    class="text-ink/50"
+                    :class="absent.length ? 'border-t border-ink/10 pt-2' : ''"
+                >
+                    <span class="font-medium">{{ $t('board.hortfrei_today') }}:</span>
+                    {{ hortfrei.join(', ') }}
                 </div>
             </div>
 

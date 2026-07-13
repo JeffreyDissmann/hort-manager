@@ -7,7 +7,7 @@ return [
 
     'your_children' => 'Deine Kinder',
     'tap_to_change' => 'Tippen zum Ändern',
-    'free' => 'frei',
+    'free' => 'Hortfrei',
     'birthday_title' => 'Geburtstag',
     'birthday_flag' => '🎂 :day: Geburtstag · wird :age',
     'pickup_conflict' => ':day: Abholung :time liegt im :name',

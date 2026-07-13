@@ -55,6 +55,29 @@ class WeeklyOverviewTest extends TestCase
             );
     }
 
+    public function test_week_hortfrei_lists_children_not_at_the_hort_per_weekday(): void
+    {
+        Carbon::setTestNow('2026-07-06'); // Monday (weekday 1)
+
+        // Comes Tuesdays only → „Hortfrei" on Monday, but has a plan.
+        $tuesday = Child::factory()->create(['name' => 'Tuesday Kid']);
+        $tuesday->weeklySchedules()->create(['weekday' => 2, 'planned_time' => '15:00', 'method' => DepartureMethod::PickedUp]);
+
+        // Comes Mondays → present Monday, not in the Hortfrei list.
+        $monday = Child::factory()->create(['name' => 'Monday Kid']);
+        $monday->weeklySchedules()->create(['weekday' => 1, 'planned_time' => '15:00', 'method' => DepartureMethod::PickedUp]);
+
+        // No Stammplan at all → not „Hortfrei" (that's the „no plan" case).
+        Child::factory()->create(['name' => 'Unplanned Kid']);
+
+        $this->actingAs(User::factory()->create(['role' => UserRole::Staff]))
+            ->get(route('weekly-plan'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('weekHortfrei.0', ['Tuesday Kid'])  // Monday column
+                ->where('weekHortfrei.1', ['Monday Kid'])    // Tuesday column
+            );
+    }
+
     public function test_the_standard_plan_page_lists_every_child(): void
     {
         $emma = Child::factory()->create(['name' => 'Emma']);

@@ -158,6 +158,28 @@ class DailyBoardTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_the_board_lists_children_who_are_hortfrei_today(): void
+    {
+        $this->travelTo(Carbon::parse('2026-06-22')); // Monday (weekday 1)
+
+        // Comes Tuesdays only → „Hortfrei" on Monday, but still has a plan.
+        $tuesdayChild = Child::factory()->create(['name' => 'Tuesday Kid']);
+        WeeklySchedule::create(['child_id' => $tuesdayChild->id, 'weekday' => 2, 'planned_time' => '15:00', 'method' => DepartureMethod::PickedUp]);
+
+        // Comes Mondays → on the board, not in the Hortfrei list.
+        $mondayChild = $this->scheduledChild(weekday: 1);
+
+        // No Stammplan at all → unplanned, not „Hortfrei".
+        Child::factory()->create(['name' => 'Unplanned Kid']);
+
+        $this->actingAs($this->staff())
+            ->get(route('board'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('hortfrei', ['Tuesday Kid'])
+                ->where('rows.0.name', $mondayChild->name)
+            );
+    }
+
     public function test_the_board_seeds_the_stammplan_time_qualifier(): void
     {
         $this->travelTo(Carbon::parse('2026-06-22')); // Monday

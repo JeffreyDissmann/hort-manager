@@ -16,6 +16,7 @@ return [
     'only_mine' => 'Nur meine',
 
     'absent_today' => 'Heute abwesend',
+    'hortfrei_today' => 'Heute hortfrei (Stammplan)',
 
     'children_count' => ':n Kinder',
     'away_since' => 'Unterwegs seit :time',
