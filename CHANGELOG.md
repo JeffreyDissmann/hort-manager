@@ -8,10 +8,15 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
-- **Explicit „Kommt nicht" in the Stammplan**: each weekday is now one clear choice —
-  Kommt nicht / Wird abgeholt / Geht allein — instead of leaving a blank time. The
-  „geht mit einem anderen Kind mit" option is gone from the Stammplan (it's a per-day
-  Wochenplan choice, and it's rejected server-side there).
+- **Explicit „Hortfrei" in the Stammplan**: each weekday is now one clear choice —
+  Hortfrei / Wird abgeholt / Geht allein — instead of leaving a blank time. „Hortfrei"
+  (regularly no Hort that day) is deliberately distinct from a reported per-day absence
+  („Kommt nicht"/„Krank", which carries a reason), and it's now surfaced everywhere it
+  used to be invisible: a muted „Heute hortfrei (Stammplan)" line on the board (in one
+  block with the reported absences), clearer „Hortfrei" cells on the Wochenplan, and a
+  per-weekday list in the „Diese Woche nicht da" summary. The „geht mit einem anderen
+  Kind mit" option is gone from the Stammplan (a per-day Wochenplan choice, rejected
+  server-side there too).
 - **„Geht allein" time qualifier on the Stammplan and the Heute board**: a „geht
   allein" time can say it means *bis* / *genau um* / *ab* — previously only on the
   Wochenplan, now also in the Stammplan editor and the board's same-day override, and

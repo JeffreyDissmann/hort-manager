@@ -18,9 +18,9 @@ return [
     [
         'version' => '2026.07.10',
         'date' => '2026-07-10',
-        'title' => 'Stammplan: „Kommt nicht" & Uhrzeit-Angabe 🗓️',
+        'title' => 'Stammplan: „Hortfrei" & Uhrzeit-Angabe 🗓️',
         'items' => [
-            '🗓️ Im Stammplan wählst du pro Tag jetzt klar: „Kommt nicht", „Wird abgeholt" oder „Geht allein" – kein leeres Feld mehr.',
+            '🗓️ Im Stammplan wählst du pro Tag jetzt klar: „Hortfrei", „Wird abgeholt" oder „Geht allein" – kein leeres Feld mehr. Und du siehst auf „Heute" und im Wochenplan, wer regulär nicht da ist.',
             '🕒 Bei „Geht allein" kannst du auch im Stammplan (und direkt auf „Heute") sagen, ob die Uhrzeit „bis", „genau um" oder „ab" gemeint ist.',
             '⚠️ Fehlt für dein Kind noch ein Wochenplan, erinnert dich künftig ein Hinweis oben – mit direktem Link zum Eintragen.',
         ],
