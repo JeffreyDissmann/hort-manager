@@ -20,10 +20,10 @@ return [
     'schedule_title' => ':name – Stammplan',
     'master_data' => 'Stammdaten',
     'schedule_heading' => 'Stammplan (Mo–Fr)',
-    'schedule_hint' => 'Wähl für jeden Tag, ob das Kind kommt und wie es nach Hause geht – oder „Kommt nicht", wenn es an dem Tag nicht in den Hort kommt.',
+    'schedule_hint' => 'Wähl für jeden Tag, ob das Kind kommt und wie es nach Hause geht – oder „Hortfrei", wenn es an dem Tag regulär nicht in den Hort kommt.',
     'method_label' => 'Art',
     'method_placeholder' => '— bitte wählen —',
-    'not_coming' => 'Kommt nicht',
+    'not_coming' => 'Hortfrei',
     'schedule_needs_time' => 'Bitte für jeden Tag mit Abholung eine Uhrzeit wählen.',
     'comment_placeholder' => 'Kommentar, z. B. wegen Fußball',
 

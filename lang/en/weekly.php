@@ -7,7 +7,7 @@ return [
 
     'your_children' => 'Your children',
     'tap_to_change' => 'Tap to change',
-    'free' => 'off',
+    'free' => 'Day off',
     'birthday_title' => 'Birthday',
     'birthday_flag' => '🎂 :day: Birthday · turns :age',
     'pickup_conflict' => ':day: Pickup :time falls during :name',

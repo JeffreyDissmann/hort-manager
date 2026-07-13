@@ -24,6 +24,7 @@ const props = defineProps({
     program: { type: Array, default: () => [] },
     weekTimetable: { type: Array, default: () => [] },
     weekAbsences: { type: Array, default: () => [] },
+    weekHortfrei: { type: Array, default: () => [] },
     children: { type: Array, default: () => [] },
     companionNotes: { type: Array, default: () => [] },
     methodOptions: { type: Array, default: () => [] },
@@ -36,6 +37,13 @@ function absenceLine(day) {
         .map((a) => (a.comment ? `${a.name} (${a.label} – ${a.comment})` : `${a.name} (${a.label})`))
         .join(', ');
 }
+
+// Per weekday, everyone who isn't at the Hort: reported-absent + regularly „Hortfrei".
+const notThereDays = computed(() =>
+    props.weekAbsences
+        .map((absent, i) => ({ i, absent, hortfrei: props.weekHortfrei[i] ?? [] }))
+        .filter((d) => d.absent.length || d.hortfrei.length),
+);
 
 // Short prefix per „geht allein" time qualifier (bis/um/ab), keyed by value.
 const qualifierPrefix = computed(() =>
@@ -96,8 +104,10 @@ function homeworkConflict(day, i) {
 // Solid `ink` time; the method reads from the warm/cool tint, and the "goes home
 // alone" case additionally gets a 🚶 icon.
 function cellClass(day) {
+    // „Hortfrei" (no Hort that day): a clearly-visible muted slate chip — distinct from
+    // both the coloured pickup days and the amber „reported absent" cells.
     if (!day.time) {
-        return 'bg-ink/5 text-ink/30';
+        return 'bg-ink/10 text-ink/60 ring-1 ring-inset ring-ink/10';
     }
     return day.method === 'sent_home'
         ? 'bg-hort-orange/20 text-ink'
@@ -457,18 +467,25 @@ function cancelAbsence() {
                         {{ $t('weekly.empty_week') }}
                     </p>
 
-                    <!-- Reported away this week (absent kids are off the grid above) -->
+                    <!-- Not at the Hort this week: reported absences (amber) + regularly
+                         „Hortfrei" (muted) — the latter don't appear on the grid above. -->
                     <div
-                        v-if="weekAbsences.some((d) => d.length)"
-                        class="rounded-2xl bg-amber-50 p-3 text-amber-800 shadow-sm"
+                        v-if="notThereDays.length"
+                        class="rounded-2xl bg-ink/5 p-3 shadow-sm"
                     >
-                        <p class="mb-1 text-sm font-semibold">{{ $t('weekly.not_coming_heading') }}</p>
-                        <template v-for="(day, i) in weekAbsences" :key="i">
-                            <p v-if="day.length" class="text-xs leading-relaxed">
-                                <span class="font-semibold">{{ weekColumns[i].label }}:</span>
-                                {{ absenceLine(day) }}
-                            </p>
-                        </template>
+                        <p class="mb-1 text-sm font-semibold text-ink/70">{{ $t('weekly.not_coming_heading') }}</p>
+                        <p
+                            v-for="d in notThereDays"
+                            :key="d.i"
+                            class="flex gap-2 text-xs leading-relaxed"
+                        >
+                            <span class="w-8 shrink-0 font-semibold text-ink/70">{{ weekColumns[d.i].label }}:</span>
+                            <span class="min-w-0">
+                                <span v-if="d.absent.length" class="text-amber-800">{{ absenceLine(d.absent) }}</span>
+                                <span v-if="d.absent.length && d.hortfrei.length" class="text-ink/30"> · </span>
+                                <span v-if="d.hortfrei.length" class="text-ink/50">{{ $t('weekly.free') }}: {{ d.hortfrei.join(', ') }}</span>
+                            </span>
+                        </p>
                     </div>
                 </div>
 

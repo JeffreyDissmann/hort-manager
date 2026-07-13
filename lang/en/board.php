@@ -16,6 +16,7 @@ return [
     'only_mine' => 'Only mine',
 
     'absent_today' => 'Absent today',
+    'hortfrei_today' => 'Day off today (standard plan)',
 
     'children_count' => ':n children',
     'away_since' => 'Away since :time',

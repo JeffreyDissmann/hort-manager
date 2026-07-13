@@ -241,6 +241,28 @@ class WeeklyOverviewController extends Controller
             fn ($absences, string $date) => $absences->map(fn (Absence $a) => $a->child_id.'|'.$date)
         )->flip();
 
+        // Everyone who regularly isn't at the Hort on a given weekday (Stammplan
+        // „Hortfrei"): has a Stammplan, but no plan for that weekday, no same-day
+        // override and no reported absence. On the slot-based timetable such children
+        // simply don't appear, so this makes the „nicht da" summary complete.
+        $weekHortfrei = $weekDays->values()->map(function (array $day, int $i) use ($allChildren, $allOverrides, $absentKeys) {
+            $weekday = $i + 1;
+
+            return $allChildren
+                ->filter(function (Child $c) use ($day, $weekday, $allOverrides, $absentKeys) {
+                    $byWeekday = $c->weeklySchedules->keyBy('weekday');
+
+                    return $c->weeklySchedules->whereNotNull('planned_time')->isNotEmpty()
+                        && $byWeekday->get($weekday)?->planned_time === null
+                        && ! $allOverrides->has($c->id.'|'.$day['date'])
+                        && ! $absentKeys->has($c->id.'|'.$day['date']);
+                })
+                ->sortBy('name')
+                ->pluck('name')
+                ->values()
+                ->all();
+        })->all();
+
         $childTimes = $allChildren->mapWithKeys(function (Child $c) use ($weekDays, $allOverrides, $absentKeys) {
             $byWeekday = $c->weeklySchedules->keyBy('weekday');
             $times = [];
@@ -265,6 +287,7 @@ class WeeklyOverviewController extends Controller
             'weekDays' => $weekDays,
             'currentWeek' => $currentWeek,
             'weekAbsences' => $weekAbsences,
+            'weekHortfrei' => $weekHortfrei,
             'activities' => $activities,
             'program' => $program,
             'weekTimetable' => $this->weekTimetable($weekDays, $excursionByChildDate, $program, $activities),

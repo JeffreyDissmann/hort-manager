@@ -20,10 +20,10 @@ return [
     'schedule_title' => ':name – Schedule',
     'master_data' => 'Details',
     'schedule_heading' => 'Schedule (Mon–Fri)',
-    'schedule_hint' => 'For each day, choose whether the child comes and how they go home – or „Not coming" if they aren’t at the Hort that day.',
+    'schedule_hint' => 'For each day, choose whether the child comes and how they go home – or „Day off" if they’re regularly not at the Hort that day.',
     'method_label' => 'Type',
     'method_placeholder' => '— please choose —',
-    'not_coming' => 'Not coming',
+    'not_coming' => 'Day off',
     'schedule_needs_time' => 'Please choose a time for every day with a pickup.',
     'comment_placeholder' => 'Comment, e.g. because of football',
 
