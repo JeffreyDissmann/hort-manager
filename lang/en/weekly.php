@@ -35,7 +35,7 @@ return [
     'editor_subtitle' => ':label – this week only',
     'time_label' => 'Time',
     'method_label' => 'Type',
-    'method_open' => '— open —',
+    'method_open' => '— please choose —',
     'qualifier_label' => 'The time means …',
     'note_placeholder' => 'e.g. due to a doctor’s appointment',
     'note_hint' => 'Please keep it short.',

@@ -35,7 +35,7 @@ return [
     'editor_subtitle' => ':label – nur für diese Woche',
     'time_label' => 'Uhrzeit',
     'method_label' => 'Art',
-    'method_open' => '— offen —',
+    'method_open' => '— bitte wählen —',
     'qualifier_label' => 'Die Uhrzeit ist …',
     'note_placeholder' => 'z. B. wegen Arzttermin',
     'note_hint' => 'Bitte kurz & knapp.',

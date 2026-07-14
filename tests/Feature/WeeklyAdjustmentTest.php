@@ -73,6 +73,7 @@ class WeeklyAdjustmentTest extends TestCase
                 'child_id' => $child->id,
                 'date' => $date,
                 'planned_time' => '14:30',
+                'planned_method' => DepartureMethod::PickedUp->value,
                 'note' => 'wegen Arzttermin',
             ])
             ->assertRedirect();
@@ -154,6 +155,70 @@ class WeeklyAdjustmentTest extends TestCase
         ]);
     }
 
+    public function test_a_pickup_requires_a_method(): void
+    {
+        $date = $this->upcomingWeekday();
+        $parent = $this->parent();
+        $child = Child::factory()->create();
+        $parent->children()->attach($child);
+
+        $this->actingAs($parent)
+            ->patch(route('weekly-plan.adjust'), [
+                'child_id' => $child->id,
+                'date' => $date,
+                'planned_time' => '14:30',
+                // no method
+            ])
+            ->assertSessionHasErrors('planned_method');
+
+        $this->assertDatabaseMissing('daily_departures', ['child_id' => $child->id, 'date' => $date]);
+    }
+
+    public function test_a_picked_up_pickup_requires_a_time(): void
+    {
+        $date = $this->upcomingWeekday();
+        $parent = $this->parent();
+        $child = Child::factory()->create();
+        $parent->children()->attach($child);
+
+        $this->actingAs($parent)
+            ->patch(route('weekly-plan.adjust'), [
+                'child_id' => $child->id,
+                'date' => $date,
+                'planned_method' => DepartureMethod::PickedUp->value,
+                // no time
+            ])
+            ->assertSessionHasErrors('planned_time');
+    }
+
+    public function test_a_companion_pickup_needs_no_own_time(): void
+    {
+        $date = $this->upcomingWeekday();
+        $parent = $this->parent();
+        $tom = Child::factory()->create(['name' => 'Tom']);
+        $parent->children()->attach($tom);
+        // Emma is picked up that day, so she can be a companion.
+        $emma = Child::factory()->create(['name' => 'Emma']);
+        DailyDeparture::create([
+            'child_id' => $emma->id,
+            'date' => $date,
+            'planned_time' => '15:00',
+            'planned_method' => DepartureMethod::PickedUp,
+            'status' => DepartureStatus::Present,
+        ]);
+
+        $this->actingAs($parent)
+            ->patch(route('weekly-plan.adjust'), [
+                'child_id' => $tom->id,
+                'date' => $date,
+                'planned_method' => DepartureMethod::WithChild->value,
+                'companion_child_id' => $emma->id,
+                // no planned_time — mirrored from Emma
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+    }
+
     public function test_a_parent_cannot_adjust_another_childs_day(): void
     {
         $date = $this->upcomingWeekday();
@@ -164,6 +229,7 @@ class WeeklyAdjustmentTest extends TestCase
                 'child_id' => $child->id,
                 'date' => $date,
                 'planned_time' => '14:30',
+                'planned_method' => DepartureMethod::PickedUp->value,
             ])
             ->assertForbidden();
     }
@@ -180,6 +246,7 @@ class WeeklyAdjustmentTest extends TestCase
                 'child_id' => $child->id,
                 'date' => '2026-06-22', // Monday, already past
                 'planned_time' => '14:30',
+                'planned_method' => DepartureMethod::PickedUp->value,
             ])
             ->assertForbidden();
     }
@@ -218,6 +285,7 @@ class WeeklyAdjustmentTest extends TestCase
                 'child_id' => $child->id,
                 'date' => $date,
                 'planned_time' => '15:00',
+                'planned_method' => DepartureMethod::PickedUp->value,
             ])
             ->assertRedirect();
 
@@ -238,6 +306,7 @@ class WeeklyAdjustmentTest extends TestCase
                 'child_id' => $child->id,
                 'date' => '2026-07-01', // a Wednesday next week
                 'planned_time' => '15:00',
+                'planned_method' => DepartureMethod::PickedUp->value,
             ])
             ->assertRedirect();
 

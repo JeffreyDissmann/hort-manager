@@ -1,11 +1,11 @@
 <script setup>
-import { mark as boardMark, override as boardOverride } from '@/routes/board';
+import { mark as boardMark } from '@/routes/board';
 import { store as absenceStore, destroy as absenceDestroy } from '@/routes/absences';
 import { live as excursionLive } from '@/routes/excursions';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import CollapsibleChips from '@/Components/CollapsibleChips.vue';
 import CompanionNotes from '@/Components/CompanionNotes.vue';
-import TimeSelect from '@/Components/TimeSelect.vue';
+import DayEditor from '@/Components/DayEditor.vue';
 import { PencilSquareIcon } from '@heroicons/vue/24/outline';
 import { confirm as companionConfirm } from '@/routes/companion';
 import { Head, router, usePage } from '@inertiajs/vue3';
@@ -21,6 +21,7 @@ const props = defineProps({
     excursions: { type: Array, default: () => [] },
     program: { type: Object, default: null },
     canMark: { type: Boolean, default: false },
+    children: { type: Array, default: () => [] },
     methodOptions: { type: Array, default: () => [] },
     qualifierOptions: { type: Array, default: () => [] },
 });
@@ -256,39 +257,36 @@ function clearAbsence(a) {
     });
 }
 
-// --- Same-day override (inline editor) ---
-const editingId = ref(null);
-const editTime = ref('');
-const editMethod = ref('');
-const editQualifier = ref('at');
-const editNote = ref('');
+// --- Day editor (shared popup) — edits one child on today's date ---
+const dayEditor = ref(null);
 
-function openEdit(row) {
-    editingId.value = row.id;
-    editTime.value = row.planned_time ?? '';
-    editMethod.value = row.planned_method ?? '';
-    editQualifier.value = row.qualifier ?? 'at';
-    editNote.value = row.note ?? '';
+function todayMeta() {
+    return { label: props.date.label, date_label: '' };
 }
 
-function cancelEdit() {
-    editingId.value = null;
-}
-
-function saveEdit(row) {
-    if (submitting.value) {
-        return;
-    }
-    router.patch(
-        boardOverride(row.id).url,
+// Edit an existing board row (the „Abholzeit ändern" popup).
+function editRow(row) {
+    dayEditor.value?.open(
+        { id: row.child_id, name: row.name },
         {
-            planned_time: editTime.value,
-            planned_method: editMethod.value || null,
-            // The qualifier only applies to a „geht allein" time.
-            time_qualifier: editMethod.value === 'sent_home' ? editQualifier.value : null,
-            note: editNote.value || null,
+            date: props.date.iso,
+            editable: true,
+            time: row.planned_time,
+            method: row.planned_method,
+            qualifier: row.qualifier,
+            companion: row.companion,
+            note: row.note,
         },
-        { ...guard, onSuccess: () => (editingId.value = null) },
+        todayMeta(),
+    );
+}
+
+// Add a „Hortfrei" child to today straight from the summary pill (empty plan).
+function editHortfrei(child) {
+    dayEditor.value?.open(
+        { id: child.id, name: child.name },
+        { date: props.date.iso, editable: true, time: null, method: null, qualifier: 'at', companion: null, note: null },
+        todayMeta(),
     );
 }
 </script>
@@ -409,11 +407,21 @@ function saveEdit(row) {
 
                 <div
                     v-if="hortfrei.length"
-                    class="text-ink/50"
+                    class="flex flex-wrap items-center gap-1.5 text-ink/50"
                     :class="absent.length ? 'border-t border-ink/10 pt-2' : ''"
                 >
                     <span class="font-medium">{{ $t('board.hortfrei_today') }}:</span>
-                    {{ hortfrei.join(', ') }}
+                    <template v-for="c in hortfrei" :key="c.id">
+                        <button
+                            v-if="c.can_manage"
+                            type="button"
+                            class="rounded-md bg-ink/10 px-2 py-0.5 text-xs font-medium text-ink/60 transition hover:bg-ink/20 hover:text-ink"
+                            @click="editHortfrei(c)"
+                        >
+                            {{ c.name }}
+                        </button>
+                        <span v-else class="text-xs">{{ c.name }}</span>
+                    </template>
                 </div>
             </div>
 
@@ -622,69 +630,9 @@ function saveEdit(row) {
                         </div>
                     </div>
 
-                    <!-- Inline same-day override editor -->
-                    <div
-                        v-if="editingId === row.id"
-                        class="mt-3 space-y-3 rounded-xl bg-canvas p-3"
-                    >
-                        <TimeSelect v-model="editTime" class="text-sm" />
-                        <select
-                            v-model="editMethod"
-                            :aria-label="$t('weekly.method_label')"
-                            class="block w-full rounded-lg border-ink/20 text-sm focus:border-hort-teal focus:ring-hort-teal"
-                        >
-                            <option value="">{{ $t('board.method_open') }}</option>
-                            <option
-                                v-for="o in methodOptions"
-                                :key="o.value"
-                                :value="o.value"
-                            >
-                                {{ o.label }}
-                            </option>
-                        </select>
-                        <!-- „Geht allein": what the time means (bis / genau um / ab). -->
-                        <select
-                            v-if="editMethod === 'sent_home'"
-                            v-model="editQualifier"
-                            :aria-label="$t('weekly.qualifier_label')"
-                            class="block w-full rounded-lg border-ink/20 text-sm focus:border-hort-teal focus:ring-hort-teal"
-                        >
-                            <option
-                                v-for="o in qualifierOptions"
-                                :key="o.value"
-                                :value="o.value"
-                            >
-                                {{ o.label }}
-                            </option>
-                        </select>
-                        <input
-                            v-model="editNote"
-                            type="text"
-                            maxlength="255"
-                            :aria-label="$t('common.note')"
-                            :placeholder="$t('board.comment_placeholder')"
-                            class="block w-full rounded-lg border-ink/20 text-sm focus:border-hort-teal focus:ring-hort-teal"
-                        />
-                        <div class="flex justify-end gap-3 text-sm">
-                            <button
-                                type="button"
-                                class="px-2 py-1 text-ink/60"
-                                @click="cancelEdit"
-                            >
-                                {{ $t('common.cancel') }}
-                            </button>
-                            <button
-                                type="button"
-                                class="rounded-lg bg-hort-navy px-4 py-1.5 font-semibold text-white"
-                                @click="saveEdit(row)"
-                            >
-                                {{ $t('common.save') }}
-                            </button>
-                        </div>
-                    </div>
 
                     <!-- Actions -->
-                    <template v-else>
+                    <template>
                         <div
                             v-if="row.status === 'present'"
                             class="mt-3 space-y-2"
@@ -720,7 +668,7 @@ function saveEdit(row) {
                                 v-if="row.can_override && row.excursion?.state !== 'away'"
                                 type="button"
                                 class="inline-flex items-center gap-1.5 rounded-xl border-2 border-ink/10 px-3 py-2 text-sm font-semibold text-ink transition hover:border-hort-teal hover:bg-hort-teal/10 active:scale-[0.98]"
-                                @click="openEdit(row)"
+                                @click="editRow(row)"
                             >
                                 <PencilSquareIcon class="h-4 w-4" />
                                 {{ $t('board.change_pickup_time') }}
@@ -812,5 +760,12 @@ function saveEdit(row) {
                 </template>
             </p>
         </div>
+
+        <DayEditor
+            ref="dayEditor"
+            :children="children"
+            :method-options="methodOptions"
+            :qualifier-options="qualifierOptions"
+        />
     </AuthenticatedLayout>
 </template>

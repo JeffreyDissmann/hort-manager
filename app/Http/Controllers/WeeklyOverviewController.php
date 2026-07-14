@@ -37,6 +37,10 @@ class WeeklyOverviewController extends Controller
         $user = $request->user();
         $today = Carbon::today();
 
+        // Staff manage every child; a parent only their own. Drives which „Hortfrei"
+        // names become clickable pills in the „nicht da" summary.
+        $myChildIds = $user->isStaff() ? null : $user->children()->pluck('children.id');
+
         [$week, $weekDays] = $this->resolveWeek($request);
 
         // "Diese Woche" is the user's editable view: a parent sees only their own
@@ -245,7 +249,7 @@ class WeeklyOverviewController extends Controller
         // „Hortfrei"): has a Stammplan, but no plan for that weekday, no same-day
         // override and no reported absence. On the slot-based timetable such children
         // simply don't appear, so this makes the „nicht da" summary complete.
-        $weekHortfrei = $weekDays->values()->map(function (array $day, int $i) use ($allChildren, $allOverrides, $absentKeys) {
+        $weekHortfrei = $weekDays->values()->map(function (array $day, int $i) use ($allChildren, $allOverrides, $absentKeys, $user, $myChildIds) {
             $weekday = $i + 1;
 
             return $allChildren
@@ -258,7 +262,11 @@ class WeeklyOverviewController extends Controller
                         && ! $absentKeys->has($c->id.'|'.$day['date']);
                 })
                 ->sortBy('name')
-                ->pluck('name')
+                ->map(fn (Child $c) => [
+                    'id' => $c->id,
+                    'name' => $c->name,
+                    'can_manage' => $user->isStaff() || ($myChildIds?->contains($c->id) ?? false),
+                ])
                 ->values()
                 ->all();
         })->all();

@@ -26,8 +26,14 @@ class AdjustDayRequest extends FormRequest
         return [
             'child_id' => ['required', 'integer', 'exists:children,id'],
             'date' => ['required', 'date'],
-            'planned_time' => ['nullable', 'date_format:H:i'],
-            'planned_method' => ['nullable', Rule::enum(DepartureMethod::class)],
+            // A real pickup needs both a method and a time; „geht mit … mit" mirrors the
+            // companion's time, so it needs no own time. (Reverting a day is a separate
+            // endpoint, weekly-plan.reset — this endpoint always sets a complete plan.)
+            'planned_method' => ['required', Rule::enum(DepartureMethod::class)],
+            'planned_time' => [
+                Rule::requiredIf(fn () => $this->input('planned_method') !== DepartureMethod::WithChild->value),
+                'nullable', 'date_format:H:i',
+            ],
             'time_qualifier' => ['nullable', Rule::enum(TimeQualifier::class)],
             // Required only for „geht mit … mit", and never the child itself. Deeper
             // checks (companion actually leaving, no chains) run in after().
