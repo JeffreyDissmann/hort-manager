@@ -19,12 +19,13 @@ import {
     ClipboardDocumentListIcon,
 } from '@heroicons/vue/24/outline';
 import { board, weeklyPlan, standardPlan, program, logout, dashboard, help } from '@/routes';
+import { update as switchRoleRoute } from '@/routes/role';
 import { index as childrenIndex } from '@/routes/children';
 import { index as excursionsIndex } from '@/routes/excursions';
 import { index as usersIndex } from '@/routes/users';
 import { index as pollsIndex } from '@/routes/polls';
 import { edit as profileEdit } from '@/routes/profile';
-import { Link, usePage } from '@inertiajs/vue3';
+import { Link, router, usePage } from '@inertiajs/vue3';
 import { t } from '@/i18n';
 
 // Pages with wide weekly editors (Stammplan, Programm) opt into a roomier
@@ -42,6 +43,14 @@ const userName = computed(() => user.value?.name ?? '');
 const userAvatar = computed(() => user.value?.avatar ?? null);
 const isStaff = computed(() => user.value?.role === 'staff');
 const isAdmin = computed(() => user.value?.is_admin ?? false);
+
+// Admins can switch their own role (staff ↔ parent) right from the menu.
+function switchRole(role) {
+    if ((role === 'staff') === isStaff.value) {
+        return; // already this role
+    }
+    router.post(switchRoleRoute().url, { role }, { preserveScroll: true });
+}
 const pendingPolls = computed(() => usePage().props.pendingPolls ?? 0);
 const pendingCompanions = computed(() => usePage().props.pendingCompanions ?? 0);
 
@@ -144,6 +153,27 @@ function isActive(href) {
                             <DropdownLink :href="usersIndex().url">
                                 {{ $t('nav.users') }}
                             </DropdownLink>
+                            <div class="px-4 py-2">
+                                <p class="mb-1 text-xs font-medium text-ink/50">{{ $t('nav.my_role') }}</p>
+                                <div class="flex gap-0.5 rounded-lg bg-ink/5 p-0.5">
+                                    <button
+                                        type="button"
+                                        class="flex-1 rounded-md px-2 py-1 text-xs font-medium transition"
+                                        :class="isStaff ? 'bg-surface text-ink shadow-sm' : 'text-ink/50 hover:text-ink'"
+                                        @click="switchRole('staff')"
+                                    >
+                                        {{ $t('enums.user_role.staff') }}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="flex-1 rounded-md px-2 py-1 text-xs font-medium transition"
+                                        :class="!isStaff ? 'bg-surface text-ink shadow-sm' : 'text-ink/50 hover:text-ink'"
+                                        @click="switchRole('parent')"
+                                    >
+                                        {{ $t('enums.user_role.parent') }}
+                                    </button>
+                                </div>
+                            </div>
                             <hr class="my-1 border-ink/10" />
                         </template>
                         <DropdownLink

@@ -175,8 +175,35 @@ class DailyBoardTest extends TestCase
         $this->actingAs($this->staff())
             ->get(route('board'))
             ->assertInertia(fn (Assert $page) => $page
-                ->where('hortfrei', ['Tuesday Kid'])
+                ->has('hortfrei', 1)
+                ->where('hortfrei.0.name', 'Tuesday Kid')
+                ->where('hortfrei.0.can_manage', true) // staff can jump to any child
                 ->where('rows.0.name', $mondayChild->name)
+            );
+    }
+
+    public function test_a_hortfrei_child_with_a_same_day_override_is_not_listed_as_hortfrei(): void
+    {
+        $this->travelTo(Carbon::parse('2026-06-22')); // Monday (weekday 1)
+
+        // Comes Tuesdays only → normally „Hortfrei" on Monday …
+        $nora = Child::factory()->create(['name' => 'Nora']);
+        WeeklySchedule::create(['child_id' => $nora->id, 'weekday' => 2, 'planned_time' => '15:00', 'method' => DepartureMethod::PickedUp]);
+
+        // … but a manual override adds her for today, so she IS at the Hort.
+        DailyDeparture::create([
+            'child_id' => $nora->id,
+            'date' => '2026-06-22',
+            'planned_time' => '13:45',
+            'planned_method' => DepartureMethod::PickedUp,
+            'status' => DepartureStatus::Present,
+        ]);
+
+        $this->actingAs($this->staff())
+            ->get(route('board'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('hortfrei', 0)          // not listed as Hortfrei …
+                ->where('rows.0.name', 'Nora') // … she's a board row instead
             );
     }
 

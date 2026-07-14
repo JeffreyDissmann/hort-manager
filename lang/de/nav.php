@@ -14,6 +14,7 @@ return [
     'profile' => 'Profil',
     'help' => 'Hilfe',
     'whats_new' => 'Was ist neu?',
+    'my_role' => 'Meine Rolle',
     'logout' => 'Abmelden',
     'pending_polls' => ':n offene Ausflug-Abstimmung – bitte antworten',
     'pending_polls_plural' => ':n offene Ausflug-Abstimmungen – bitte antworten',

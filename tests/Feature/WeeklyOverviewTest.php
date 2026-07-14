@@ -73,8 +73,9 @@ class WeeklyOverviewTest extends TestCase
         $this->actingAs(User::factory()->create(['role' => UserRole::Staff]))
             ->get(route('weekly-plan'))
             ->assertInertia(fn (Assert $page) => $page
-                ->where('weekHortfrei.0', ['Tuesday Kid'])  // Monday column
-                ->where('weekHortfrei.1', ['Monday Kid'])    // Tuesday column
+                ->where('weekHortfrei.0.0.name', 'Tuesday Kid')  // Monday column
+                ->where('weekHortfrei.0.0.can_manage', true)     // staff manage everyone
+                ->where('weekHortfrei.1.0.name', 'Monday Kid')   // Tuesday column
             );
     }
 

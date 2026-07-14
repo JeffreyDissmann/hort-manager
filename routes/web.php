@@ -17,6 +17,7 @@ use App\Http\Controllers\SlackCommandController;
 use App\Http\Controllers\SlackEventController;
 use App\Http\Controllers\SlackInteractionController;
 use App\Http\Controllers\StandardPlanController;
+use App\Http\Controllers\SwitchRoleController;
 use App\Http\Controllers\TrmnlDashboardController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\WeeklyAdjustmentController;
@@ -88,6 +89,9 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     Route::patch('/profile/language', [LocaleController::class, 'update'])->name('locale.update');
+
+    // Admin-only: switch your own role between staff / parent.
+    Route::post('/rolle', [SwitchRoleController::class, 'update'])->name('role.update');
 
     Route::resource('children', ChildController::class)->except('show');
 

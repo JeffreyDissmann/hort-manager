@@ -1,20 +1,13 @@
 <script setup>
 import { weeklyPlan, standardPlan } from '@/routes';
-import { adjust as weeklyPlanAdjust, reset as weeklyPlanReset } from '@/routes/weekly-plan';
-import { store as absenceStore, destroy as absenceDestroy } from '@/routes/absences';
 import { confirm as companionConfirm } from '@/routes/companion';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import Modal from '@/Components/Modal.vue';
-import InputLabel from '@/Components/InputLabel.vue';
-import TextInput from '@/Components/TextInput.vue';
-import TimeSelect from '@/Components/TimeSelect.vue';
-import PrimaryButton from '@/Components/PrimaryButton.vue';
-import SecondaryButton from '@/Components/SecondaryButton.vue';
+import DayEditor from '@/Components/DayEditor.vue';
 import WeekNav from '@/Components/WeekNav.vue';
 import WeekTimetable from '@/Components/WeekTimetable.vue';
 import CompanionNotes from '@/Components/CompanionNotes.vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
-import { computed, reactive, ref } from 'vue';
+import { computed, ref } from 'vue';
 
 const props = defineProps({
     week: { type: Object, default: () => ({}) },
@@ -114,77 +107,19 @@ function cellClass(day) {
         : 'bg-hort-teal/20 text-ink';
 }
 
-// --- Inline editor (modal) ---
-const editing = ref(null); // { childId, childName, date, label }
-const form = reactive({ planned_time: '', planned_method: '', time_qualifier: 'at', companion_child_id: '', note: '', absence_reason: '' });
-const saveError = ref(''); // server validation message shown in the modal on a failed save
-const saving = ref(false); // guards the save button against a double-submit while in flight
-
-// Surface the first server error (e.g. an invalid companion) so a failed save isn't silent.
-function showFirstError(errors) {
-    saveError.value = errors.companion_child_id || errors.planned_time || Object.values(errors)[0] || '';
-}
-
-// While a fresh absence is staged (Krank/Kommt nicht), the plan is disabled and the
-// comment becomes mandatory — nothing is submitted until the user hits Speichern.
-const stagingAbsence = computed(() => form.absence_reason !== '');
-
-// „Geht mit … mit": pick any other child; the companion picker replaces the time.
-const goingWithChild = computed(() => form.planned_method === 'with_child');
-// Every other child, flagged with whether they can actually be a companion that day
-// (i.e. they have an own pickup and aren't away / tagging along themselves — the same
-// rule the server enforces). Unavailable ones are shown but disabled, so the parent
-// sees why rather than only learning on a failed save.
-const companionChoices = computed(() =>
-    props.children
-        .filter((c) => c.id !== editing.value?.childId)
-        .map((c) => ({
-            id: c.id,
-            name: c.name,
-            time: c.times?.[editing.value?.date] ?? '',
-            available: !!c.times?.[editing.value?.date],
-        })),
-);
-const selectedCompanion = computed(() =>
-    companionChoices.value.find((c) => c.id === form.companion_child_id),
-);
-const selectedCompanionName = computed(() => selectedCompanion.value?.name ?? '');
-// The companion's own pickup time on the edited day — shown in the mirror hint.
-const selectedCompanionTime = computed(() => selectedCompanion.value?.time ?? '');
-// A chosen companion who isn't being picked up that day can't be a companion.
-const selectedCompanionUnavailable = computed(
-    () => !!selectedCompanion.value && !selectedCompanion.value.available,
-);
-
-const canSave = computed(() => {
-    if (stagingAbsence.value) {
-        return !!form.note.trim();
-    }
-    if (goingWithChild.value) {
-        // a valid, still-available companion must be chosen
-        return !!form.companion_child_id && !selectedCompanionUnavailable.value;
-    }
-    return true;
-});
+// --- Day editor (shared popup) ---
+const dayEditor = ref(null);
 
 function openCell(child, day, dayMeta) {
-    if (!day.editable) {
-        return;
+    dayEditor.value?.open(child, day, dayMeta);
+}
+
+// Open the day editor for a „Hortfrei" child straight from the „nicht da" summary.
+function openHortfreiDay(dayIndex, entry) {
+    const child = props.currentWeek.find((c) => c.id === entry.id);
+    if (child) {
+        openCell(child, child.days[dayIndex], props.weekDays[dayIndex]);
     }
-    editing.value = {
-        childId: child.id,
-        childName: child.name,
-        date: day.date,
-        label: `${dayMeta.label} ${dayMeta.date_label}`,
-        absent: day.absent ?? null,
-    };
-    form.planned_time = day.time ?? '';
-    form.planned_method = day.method ?? '';
-    form.time_qualifier = day.qualifier ?? 'at';
-    form.companion_child_id = day.companion?.id ?? '';
-    form.note = day.note ?? '';
-    form.absence_reason = '';
-    saveError.value = '';
 }
 
 // Staff editing a pickup from the Ganze-Woche timeline (kid carries the day data).
@@ -192,88 +127,9 @@ function openFromTimeline(kid, column) {
     openCell(kid, kid, { label: column.label, date_label: column.sublabel });
 }
 
-function closeEditor() {
-    editing.value = null;
-}
-
-function save() {
-    if (saving.value || !canSave.value) {
-        return;
-    }
-    saveError.value = '';
-    const opts = {
-        preserveScroll: true,
-        onStart: () => { saving.value = true; },
-        onFinish: () => { saving.value = false; },
-        onSuccess: closeEditor,
-        onError: showFirstError,
-    };
-
-    // Staged absence: report it (with the now-required comment) instead of a plan.
-    if (stagingAbsence.value) {
-        router.post(
-            absenceStore().url,
-            {
-                child_id: editing.value.childId,
-                from: editing.value.date,
-                to: editing.value.date,
-                reason: form.absence_reason,
-                comment: form.note || null,
-            },
-            opts,
-        );
-        return;
-    }
-
-    router.patch(
-        weeklyPlanAdjust().url,
-        {
-            child_id: editing.value.childId,
-            date: editing.value.date,
-            planned_time: form.planned_time || null,
-            planned_method: form.planned_method || null,
-            time_qualifier: form.planned_method === 'sent_home' ? form.time_qualifier || null : null,
-            companion_child_id: goingWithChild.value ? form.companion_child_id || null : null,
-            note: form.note || null,
-        },
-        opts,
-    );
-}
-
 // Confirm/decline another child going home with one of ours (companion's guardian/staff).
 function answerCompanion(id, confirmed) {
     router.patch(companionConfirm(id).url, { confirmed }, { preserveScroll: true });
-}
-
-function resetDay() {
-    router.patch(
-        weeklyPlanReset().url,
-        { child_id: editing.value.childId, date: editing.value.date },
-        { preserveScroll: true, onSuccess: closeEditor },
-    );
-}
-
-// Stage/unstage a fresh absence locally — committed only on Speichern (see save()).
-// Staging clears the note so a fresh (required) reason is typed, not the plan comment.
-function stageAbsence(reason) {
-    if (form.absence_reason === reason) {
-        form.absence_reason = '';
-    } else {
-        form.absence_reason = reason;
-        form.note = '';
-    }
-}
-
-function cancelAbsence() {
-    router.delete(absenceDestroy().url, {
-        data: {
-            child_id: editing.value.childId,
-            from: editing.value.date,
-            to: editing.value.date,
-        },
-        preserveScroll: true,
-        onSuccess: closeEditor,
-    });
 }
 </script>
 
@@ -479,11 +335,24 @@ function cancelAbsence() {
                             :key="d.i"
                             class="flex gap-2 text-xs leading-relaxed"
                         >
-                            <span class="w-8 shrink-0 font-semibold text-ink/70">{{ weekColumns[d.i].label }}:</span>
-                            <span class="min-w-0">
+                            <span class="w-8 shrink-0 pt-0.5 font-semibold text-ink/70">{{ weekColumns[d.i].label }}:</span>
+                            <span class="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1">
                                 <span v-if="d.absent.length" class="text-amber-800">{{ absenceLine(d.absent) }}</span>
-                                <span v-if="d.absent.length && d.hortfrei.length" class="text-ink/30"> · </span>
-                                <span v-if="d.hortfrei.length" class="text-ink/50">{{ $t('weekly.free') }}: {{ d.hortfrei.join(', ') }}</span>
+                                <span v-if="d.absent.length && d.hortfrei.length" class="text-ink/30">·</span>
+                                <template v-if="d.hortfrei.length">
+                                    <span class="text-ink/50">{{ $t('weekly.free') }}:</span>
+                                    <template v-for="c in d.hortfrei" :key="c.id">
+                                        <button
+                                            v-if="c.can_manage"
+                                            type="button"
+                                            class="rounded-md bg-ink/10 px-1.5 py-0.5 font-medium text-ink/60 transition hover:bg-ink/20 hover:text-ink"
+                                            @click="openHortfreiDay(d.i, c)"
+                                        >
+                                            {{ c.name }}
+                                        </button>
+                                        <span v-else class="text-ink/50">{{ c.name }}</span>
+                                    </template>
+                                </template>
                             </span>
                         </p>
                     </div>
@@ -520,202 +389,11 @@ function cancelAbsence() {
             </p>
         </div>
 
-        <!-- Day editor -->
-        <Modal :show="editing !== null" max-width="sm" @close="closeEditor">
-            <div v-if="editing" class="space-y-5 p-6">
-                <div>
-                    <h2 class="text-lg font-semibold text-ink">
-                        {{ editing.childName }}
-                    </h2>
-                    <p class="text-sm text-ink/50">
-                        {{ $t('weekly.editor_subtitle', { label: editing.label }) }}
-                    </p>
-                </div>
-
-                <!-- Krankmeldung / Abwesenheit — first: it overrides the plan below -->
-                <div class="rounded-lg bg-canvas p-3">
-                    <template v-if="editing.absent">
-                        <p class="text-sm font-medium text-amber-700">
-                            {{ $t('weekly.reported_as', { label: editing.absent.label }) }}
-                        </p>
-                        <p v-if="editing.absent.comment" class="mt-0.5 text-sm text-ink/60">
-                            {{ editing.absent.comment }}
-                        </p>
-                        <button
-                            type="button"
-                            class="mt-2 text-sm font-medium text-hort-teal-dark underline-offset-2 hover:underline"
-                            @click="cancelAbsence"
-                        >
-                            {{ $t('weekly.cancel_absence') }}
-                        </button>
-                    </template>
-                    <template v-else>
-                        <p class="text-sm text-ink/60">{{ $t('weekly.not_here_today') }}</p>
-                        <div class="mt-2 flex gap-2">
-                            <button
-                                type="button"
-                                class="rounded-md border px-4 py-2 text-xs font-semibold uppercase tracking-widest transition"
-                                :class="form.absence_reason === 'sick'
-                                    ? 'border-hort-orange bg-hort-orange/15 text-ink ring-1 ring-hort-orange'
-                                    : 'border-ink/20 text-ink/80 hover:bg-ink/5'"
-                                @click="stageAbsence('sick')"
-                            >
-                                {{ $t('weekly.report_sick') }}
-                            </button>
-                            <button
-                                type="button"
-                                class="rounded-md border px-4 py-2 text-xs font-semibold uppercase tracking-widest transition"
-                                :class="form.absence_reason === 'away'
-                                    ? 'border-hort-orange bg-hort-orange/15 text-ink ring-1 ring-hort-orange'
-                                    : 'border-ink/20 text-ink/80 hover:bg-ink/5'"
-                                @click="stageAbsence('away')"
-                            >
-                                {{ $t('weekly.report_away') }}
-                            </button>
-                        </div>
-                        <p v-if="stagingAbsence" class="mt-2 text-xs font-medium text-hort-orange-dark">
-                            {{ $t('weekly.absence_needs_comment') }}
-                        </p>
-                    </template>
-                </div>
-
-                <!-- Pickup plan — disabled while the child is (or is being) reported away -->
-                <fieldset
-                    :disabled="!!editing.absent || stagingAbsence"
-                    class="space-y-5"
-                    :class="editing.absent || stagingAbsence ? 'opacity-40' : ''"
-                >
-                    <!-- The time is hidden for „geht mit … mit" (mirrored from the companion). -->
-                    <div v-if="!goingWithChild">
-                        <InputLabel for="time" :value="$t('weekly.time_label')" />
-                        <TimeSelect
-                            id="time"
-                            v-model="form.planned_time"
-                            class="mt-1 block w-full"
-                        />
-                    </div>
-
-                    <div>
-                        <InputLabel for="method" :value="$t('weekly.method_label')" />
-                        <select
-                            id="method"
-                            v-model="form.planned_method"
-                            class="mt-1 block w-full rounded-md border-ink/20 shadow-sm focus:border-hort-teal focus:ring-hort-teal disabled:bg-ink/5 disabled:text-ink/40"
-                        >
-                            <option value="">{{ $t('weekly.method_open') }}</option>
-                            <option
-                                v-for="o in methodOptions"
-                                :key="o.value"
-                                :value="o.value"
-                            >
-                                {{ o.label }}
-                            </option>
-                        </select>
-                    </div>
-
-                    <!-- „Geht mit … mit": pick the companion; the time is taken from them. -->
-                    <div v-if="goingWithChild">
-                        <InputLabel for="companion" :value="$t('weekly.companion_label')" />
-                        <select
-                            id="companion"
-                            v-model="form.companion_child_id"
-                            class="mt-1 block w-full rounded-md border-ink/20 shadow-sm focus:border-hort-teal focus:ring-hort-teal"
-                        >
-                            <option value="">{{ $t('weekly.companion_open') }}</option>
-                            <option
-                                v-for="c in companionChoices"
-                                :key="c.id"
-                                :value="c.id"
-                                :disabled="!c.available"
-                            >
-                                {{ c.name }}{{ c.available ? '' : ` — ${$t('weekly.companion_not_pickedup')}` }}
-                            </option>
-                        </select>
-                        <!-- Empty state: explain where the time went before a child is chosen. -->
-                        <p v-if="!selectedCompanionName" class="mt-1 text-xs text-ink/50">
-                            {{ $t('weekly.companion_empty_hint') }}
-                        </p>
-                        <template v-else>
-                            <p
-                                v-if="selectedCompanionUnavailable"
-                                class="mt-1 text-xs font-medium text-red-700"
-                            >
-                                {{ $t('weekly.companion_unavailable') }}
-                            </p>
-                            <template v-else>
-                                <p class="mt-1 text-xs text-ink/50">
-                                    {{ $t('weekly.companion_mirror_hint', { name: selectedCompanionName }) }}<span v-if="selectedCompanionTime"> ({{ selectedCompanionTime }})</span>
-                                </p>
-                                <p class="mt-0.5 text-xs font-medium text-hort-orange-dark">
-                                    {{ $t('weekly.companion_confirm_hint', { name: selectedCompanionName }) }}
-                                </p>
-                            </template>
-                        </template>
-                    </div>
-
-                    <!-- „Geht allein": what the time means (bis / genau um / ab) -->
-                    <div v-if="form.planned_method === 'sent_home'">
-                        <InputLabel for="qualifier" :value="$t('weekly.qualifier_label')" />
-                        <select
-                            id="qualifier"
-                            v-model="form.time_qualifier"
-                            class="mt-1 block w-full rounded-md border-ink/20 shadow-sm focus:border-hort-teal focus:ring-hort-teal"
-                        >
-                            <option
-                                v-for="o in qualifierOptions"
-                                :key="o.value"
-                                :value="o.value"
-                            >
-                                {{ o.label }}
-                            </option>
-                        </select>
-                    </div>
-                </fieldset>
-
-                <div>
-                    <InputLabel
-                        for="note"
-                        :value="stagingAbsence ? $t('weekly.reason_label') : $t('common.note')"
-                    />
-                    <TextInput
-                        id="note"
-                        v-model="form.note"
-                        type="text"
-                        maxlength="255"
-                        class="mt-1 block w-full"
-                        :placeholder="stagingAbsence ? $t('weekly.reason_placeholder') : $t('weekly.note_placeholder')"
-                    />
-                    <p
-                        class="mt-1 text-xs"
-                        :class="stagingAbsence ? 'font-medium text-hort-orange-dark' : 'text-ink/50'"
-                    >
-                        {{ stagingAbsence ? $t('weekly.reason_hint') : $t('weekly.note_hint') }}
-                    </p>
-                </div>
-
-                <p
-                    v-if="saveError"
-                    class="rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-700"
-                >
-                    {{ saveError }}
-                </p>
-
-                <div class="flex items-center justify-between gap-3 pt-2">
-                    <button
-                        type="button"
-                        class="text-sm font-medium text-ink/50 underline-offset-2 hover:underline"
-                        @click="resetDay"
-                    >
-                        {{ $t('weekly.reset_to_standard') }}
-                    </button>
-                    <div class="flex gap-3">
-                        <SecondaryButton @click="closeEditor">
-                            {{ $t('common.cancel') }}
-                        </SecondaryButton>
-                        <PrimaryButton :disabled="!canSave || saving" @click="save">{{ saving ? $t('common.saving') : $t('common.save') }}</PrimaryButton>
-                    </div>
-                </div>
-            </div>
-        </Modal>
+        <DayEditor
+            ref="dayEditor"
+            :children="children"
+            :method-options="methodOptions"
+            :qualifier-options="qualifierOptions"
+        />
     </AuthenticatedLayout>
 </template>

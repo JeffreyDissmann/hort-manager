@@ -8,6 +8,17 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **One shared edit popup everywhere** (`DayEditor.vue`): editing a child on a day is
+  now the exact same dialog on the Heute board and the Wochenplan — Krank/„Kommt nicht",
+  Uhrzeit, Art (incl. „geht mit einem anderen Kind mit"), bis/genau um/ab, Kommentar,
+  „Auf Standard". The board's old inline editor is gone; the board also gained the
+  companion picker and the Krank/„Kommt nicht" flow it lacked.
+- **Clickable „Hortfrei" pills**: the names of children who aren't at the Hort — on the
+  Heute board and in the Wochenplan „Diese Woche nicht da" summary — are now buttons that
+  open the day editor to add a one-off pickup (own children for parents, all for staff).
+- **Admin role switch from the menu**: an admin can flip their own role between Erzieher
+  and Elternteil straight from the avatar menu — a real, persisted change that stays on
+  the current page.
 - **Explicit „Hortfrei" in the Stammplan**: each weekday is now one clear choice —
   Hortfrei / Wird abgeholt / Geht allein — instead of leaving a blank time. „Hortfrei"
   (regularly no Hort that day) is deliberately distinct from a reported per-day absence
@@ -119,6 +130,10 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **A pickup now needs a method and a time.** The „— offen —" placeholder can't be
+  saved: the day editor disables „Speichern" until a real method and time are chosen
+  („geht mit … mit" mirrors the other child's time), and the server (`AdjustDayRequest`)
+  enforces the same. The placeholder now reads „— bitte wählen —" to match the Stammplan.
 - **Excursion group list is ordered by status** — joining first, then still-undecided,
   then not coming (alphabetical within each) — on both the parent poll and the staff
   cards.
@@ -165,6 +180,8 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- A child with a same-day override no longer *also* shows in the board's „Heute
+  hortfrei" list — a manual pickup for today means they're on the board, not Hortfrei.
 - Wayfinder now generates **relative** route URLs, so the published image is
   domain-agnostic and no instance domain is baked into the repo or the image.
 

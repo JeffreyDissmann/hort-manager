@@ -156,7 +156,7 @@ class DailyBoardController extends Controller
             $companion = null;
             if ($plannedMethod === DepartureMethod::WithChild->value && $d->companion_child_id) {
                 if ($d->companion_confirmed === true) {
-                    $companion = ['name' => $childNames[$d->companion_child_id] ?? '', 'confirmed' => true];
+                    $companion = ['id' => $d->companion_child_id, 'name' => $childNames[$d->companion_child_id] ?? '', 'confirmed' => true];
                 } else {
                     $plannedMethod = DepartureMethod::PickedUp->value;
                 }
@@ -208,15 +208,43 @@ class DailyBoardController extends Controller
 
         // Children who regularly aren't at the Hort today (a Stammplan „Hortfrei"
         // weekday): they have a plan on other weekdays but none for today — surfaced so
-        // staff know the shorter list is intentional. Unplanned children (no Stammplan
-        // at all) and today's reported absences are excluded.
+        // staff know the shorter list is intentional. Excluded: unplanned children (no
+        // Stammplan at all), today's reported absences, and anyone with a same-day
+        // override (a manual pickup for today means they ARE here — they're on the board).
         $hortfrei = Child::query()
             ->whereHas('weeklySchedules', fn ($q) => $q->whereNotNull('planned_time'))
             ->whereDoesntHave('weeklySchedules', fn ($q) => $q->where('weekday', $weekday)->whereNotNull('planned_time'))
             ->whereNotIn('id', $absentChildIds)
+            ->whereNotIn('id', $departures->pluck('child_id')->all())
             ->orderBy('name')
-            ->pluck('name')
+            ->get(['id', 'name'])
+            ->map(fn (Child $c) => [
+                'id' => $c->id,
+                'name' => $c->name,
+                // Staff can jump to any child's plan; a parent only to their own.
+                'can_manage' => $user->isStaff() || ($myChildIds?->contains($c->id) ?? false),
+            ])
             ->values();
+
+        // Companion-picker source for the day editor: each child's effective time today,
+        // only for those who can actually be a companion (have a pickup, aren't away and
+        // aren't themselves tagging along) — mirroring the Wochenplan.
+        $pickerChildren = Child::query()->orderBy('name')->get(['id', 'name']);
+        $pickerPlans = EffectivePlan::forMany($pickerChildren->pluck('id')->all(), [$date->toDateString()]);
+        $companionChildren = $pickerChildren->map(function (Child $c) use ($pickerPlans, $date, $absentChildIds) {
+            $plan = $pickerPlans[$c->id.'|'.$date->toDateString()] ?? null;
+            $companionable = $plan
+                && $plan['time'] !== null
+                && $plan['method'] !== null
+                && $plan['method'] !== DepartureMethod::WithChild->value
+                && ! in_array($c->id, $absentChildIds, true);
+
+            return [
+                'id' => $c->id,
+                'name' => $c->name,
+                'times' => $companionable ? [$date->toDateString() => $plan['time']] : [],
+            ];
+        })->values();
 
         return Inertia::render('Board/Index', [
             'date' => [
@@ -245,14 +273,12 @@ class DailyBoardController extends Controller
                 'homework_end' => $homeworkEnd ? substr((string) $homeworkEnd, 0, 5) : null,
             ] : null,
             'canMark' => $user->isStaff(),
-            // The board's same-day override has no companion picker, so „geht mit … mit"
-            // is only offered on the Wochenplan — exclude it here.
+            // The board uses the shared day editor (same as the Wochenplan), so it offers
+            // the full method set incl. „geht mit … mit"; $children feeds its companion picker.
+            'children' => $companionChildren,
             'methodOptions' => collect(DepartureMethod::cases())
-                ->reject(fn (DepartureMethod $m) => $m === DepartureMethod::WithChild)
                 ->map(fn (DepartureMethod $m) => ['value' => $m->value, 'label' => $m->label()])
-                ->values()
                 ->all(),
-            // „Geht allein" bis / genau um / ab, for the same-day override editor.
             'qualifierOptions' => collect(TimeQualifier::cases())
                 ->map(fn (TimeQualifier $q) => ['value' => $q->value, 'label' => $q->label()])
                 ->all(),

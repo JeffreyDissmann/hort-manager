@@ -14,6 +14,7 @@ return [
     'profile' => 'Profile',
     'help' => 'Help',
     'whats_new' => "What's new?",
+    'my_role' => 'My role',
     'logout' => 'Log out',
     'pending_polls' => ':n open excursion poll – please respond',
     'pending_polls_plural' => ':n open excursion polls – please respond',
