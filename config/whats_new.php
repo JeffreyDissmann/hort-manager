@@ -16,6 +16,16 @@ declare(strict_types=1);
 
 return [
     [
+        'version' => '2026.07.14',
+        'date' => '2026-07-14',
+        'title' => 'Überall gleich bearbeiten ✏️',
+        'items' => [
+            '✏️ Ein Kind für einen Tag ändern geht jetzt überall gleich: Tippe auf „Heute" oder im Wochenplan auf das Kind – dasselbe Fenster für Uhrzeit, Art, „krank melden" und mehr.',
+            '👆 Namen in „Heute hortfrei" (und im Wochenplan) sind jetzt antippbar: Kommt dein Kind an einem eigentlich freien Tag doch, trägst du es mit einem Tipp für heute ein.',
+            '✅ Beim Eintragen wählst du jetzt immer eine Uhrzeit und eine Art – so bleibt kein halbfertiger Plan stehen.',
+        ],
+    ],
+    [
         'version' => '2026.07.10',
         'date' => '2026-07-10',
         'title' => 'Stammplan: „Hortfrei" & Uhrzeit-Angabe 🗓️',

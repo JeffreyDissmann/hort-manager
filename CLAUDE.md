@@ -34,13 +34,20 @@ This project runs in Docker via Sail. **Never run `php`/`composer`/`npm`/`artisa
 User            role: staff | parent  (App\Enums\UserRole)   — isStaff() helper
   ⇄ children    child_user pivot (guardians)                  User::children / Child::guardians
 Child           name, date_of_birth?, note   (flat list — NO groups)
-WeeklySchedule  (Stammplan)  child + weekday 1–5 → planned_time + method + comment?
-                method = App\Enums\DepartureMethod: picked_up | sent_home
-                comment = optional reason, e.g. „wegen Fußball" (shown on Wochenplan + board when not overridden)
+WeeklySchedule  (Stammplan)  child + weekday 1–5 → planned_time + method + time_qualifier? + comment?
+                method = App\Enums\DepartureMethod: picked_up | sent_home (companion `with_child` is
+                Wochenplan/per-day only, NEVER the Stammplan — rejected server-side there)
+                time_qualifier = App\Enums\TimeQualifier: by | at | from (bis / genau um / ab); only for
+                sent_home, null = the implicit „genau um"
+                NO row for a weekday = „Hortfrei" (structurally not a Hort day) — see „Hortfrei vs Absence"
 DailyDeparture  (Tagesboard) one row per child+date (unique):
                 status (App\Enums\DepartureStatus: present|picked_up|sent_home|excursion),
-                planned_time/planned_method (seeded from Stammplan, same-day overridable),
+                planned_time/planned_method/time_qualifier (seeded from Stammplan, same-day overridable),
+                companion (planned_method = with_child): companion_child_id + companion_confirmed
+                (null=pending|true|false) + companion_confirmed_by (null=system-auto) + _at
                 left_at + marked_by (set when staff marks them off), note
+Absence         (Krank/„Kommt nicht") one row per child+date with a required reason
+                (App\Enums\AbsenceReason: sick|away) + comment; the child is off the board/plan that day
 DailyProgram    (Tagesprogramm) one row per date: lunch + activity + homework_start/end (Hort-wide)
                 staff edit weekly at /programm; read-only on board + Abholplan
 HomeworkDefault per-weekday default homework slot; DailyProgram homework overrides it
@@ -58,15 +65,23 @@ Creating an excursion invites **every** child (a pending `child_excursion` row).
 - **Children:** create = anyone (trust-based, Slack-SSO identity); **edit (incl. Stammplan), delete, and guardian links = staff _or_ the child's own guardian** (`ChildPolicy::update/delete/manageGuardians`).
 - **Tagesboard:** marking departures = **staff only**; same-day plan override (`board.override`) = staff _or_ the child's parent.
 - **Ausflug:** managing trips = staff only (ExcursionController guards with `ensureStaff()`); answering the **poll** = the child's parent (while open) or staff (anytime), via ExcursionRsvpController.
+- **Admin role self-switch:** an admin can flip their own `role` (staff↔parent) from the avatar menu via `role.update` (`SwitchRoleController`, admin-only). It's a real, persisted change (admin status untouched) — no impersonation/session-override machinery.
 
 ### Wochenplan
 Two parts: **Diese Woche** = effective plan per child for the selected week (Stammplan merged with any `DailyDeparture` overrides; adjusted days flagged, past days greyed), scoped to the user's **own** children (staff see all); week navigation via `?week=YYYY-MM-DD` (arrows + swipe). Editable per day by staff / the child's parent via `weekly-plan.adjust` (+ `weekly-plan.reset`) — any weekday from today on, not-yet-departed. An override comment lives on `DailyDeparture.note` and defaults to the day's Stammplan comment. Below: the read-only **Standard** Stammplan timetable (all children).
 
+### Editing a day — the shared `DayEditor` popup
+**One component, `resources/js/Components/DayEditor.vue`, edits any child on any date — used by BOTH the Wochenplan (grid cells, timeline, „nicht da" pills) and the Heute board („Abholzeit ändern" + „Hortfrei" pills). Do NOT add a second inline editor.** Open it with `dayEditor.value.open(child, day, dayMeta)`; it always posts to `weekly-plan.adjust` (set a plan), `absences.store` (Krank/„Kommt nicht"), or `weekly-plan.reset` (revert to Stammplan). Companion („geht mit … mit") is offered here too — the board feeds its picker via a `children` prop (each child's effective time today). A **complete plan is required**: a real pickup needs BOTH a method and a time; `with_child` needs a companion (its time mirrors them). Enforced in the popup (Speichern disabled) **and** server-side in `AdjustDayRequest` (`planned_method` required; `planned_time` required unless `with_child`). The board's older `board.override` endpoint still exists but the UI now edits through `DayEditor`/`weekly-plan.adjust`.
+
+### Hortfrei vs. Absence — two different „not there"
+- **Hortfrei** = *structural* non-attendance: the child's Stammplan simply has no entry for that weekday (no `WeeklySchedule` row). No reason, no record. Surfaced explicitly as a muted „Heute hortfrei (Stammplan)" line on the board and per-weekday in the Wochenplan „Diese Woche nicht da" summary; names are **clickable pills** (own children for parents, all for staff) that open `DayEditor` to add a one-off pickup. A child with a same-day override is NOT listed as Hortfrei (they're on the board). Unplanned children (zero `WeeklySchedule` rows) are the „Wochenplan fehlt" case, not Hortfrei.
+- **„Kommt nicht" / „Krank"** = a *reported* `Absence` for a specific date, **with a required reason** — amber, undoable, and a separate flow. The Stammplan editor's non-attendance option is deliberately named **„Hortfrei"** (not „Kommt nicht") to keep the two apart.
+
 ### Tagesboard mechanics
-`DailyBoardController` targets **today, or the next weekday on weekends**. It lazily `firstOrCreate`s a `DailyDeparture` per scheduled child from the Stammplan. A row is "overridden" when its plan differs from the Stammplan (shown as „heute geändert"). Excursions are an **overlay** (`rows[].excursion`), not a status swap — a child on a trip still gets marked picked up after returning.
+`DailyBoardController` targets **today, or the next weekday on weekends**. It lazily `firstOrCreate`s a `DailyDeparture` per scheduled child from the Stammplan (carrying `time_qualifier`). A row is "overridden" when its plan differs from the Stammplan (shown as „heute geändert"). Excursions are an **overlay** (`rows[].excursion`), not a status swap — a child on a trip still gets marked picked up after returning.
 
 ## Routes / nav (German URLs, English route names)
-`board` (/tagesboard, "Heute") · `weekly-plan` (/wochenplan) · `children` (/children) · `excursions` (/ausfluege, staff only) · `program` (/programm, staff only). Nav lives in `AuthenticatedLayout.vue` (role-aware; bottom tab bar on mobile). Demo logins: `erzieher@hort.test` / `eltern@hort.test`, both `password`.
+`board` (/tagesboard, "Heute") · `weekly-plan` (/wochenplan) · `standard-plan` (/stammplan, read-only) · `children` (/children) · `excursions` (/ausfluege, staff only) · `program` (/programm, staff only). Also `role.update` (/rolle, admin self role-switch). Nav lives in `AuthenticatedLayout.vue` (role-aware; bottom tab bar on mobile; the admin „Meine Rolle" toggle sits under Benutzer). Demo logins: `erzieher@hort.test` (staff+admin) / `eltern@hort.test`, both `password`. Extra demo data via `sail artisan db:seed --class=DemoExtrasSeeder` (Hortfrei days, bis/ab qualifiers, a no-plan child).
 
 **Links use [Laravel Wayfinder](https://github.com/laravel/wayfinder), not Ziggy.** Import typed helpers and call `.url` — e.g. `import { index as childrenIndex } from '@/routes/children'` → `:href="childrenIndex().url"`; args `childrenEdit(child.id).url`; query `weeklyPlan({ query: { week: date } }).url`. Generated files under `resources/js/{routes,actions,wayfinder}` are gitignored (regenerated by the Vite plugin on build). Watch for clashes with local symbols — alias the import (e.g. `import { mark as boardMark }`). Active-nav state is plain URL-prefix matching in `AuthenticatedLayout.vue` (Ziggy is gone).
 
@@ -78,15 +93,16 @@ Three directions; **production setup is documented in [`docs/slack-setup.md`](do
   - Departures: `DailyDepartureObserver` (on `left_at`) → `ChildDeparted` notification to the child's Slack guardians.
   - Excursions: `SlackRsvp` service (not a notification) posts per-child Ja/Nein buttons and **remembers each DM** in `excursion_slack_messages` (channel+ts). Answering anywhere (Slack button or app) `chat.update`s **every** guardian's copy to show the result + who answered (+ „Ändern" link); deleting an excursion marks them cancelled. Wired via `ExcursionObserver` (created/deleting) and both RSVP entry points.
   - Daily reminder: `excursions:remind-rsvps` (`ExcursionRsvpReminder`), scheduled 08:00 — needs `schedule:run` cron in prod.
+  - Missing Stammplan: `wochenplan:remind-unset` (`ScheduleMissingReminder`) DMs the guardians of any child with no Stammplan yet; **`--dry-run`** lists who would be nudged without sending. Not scheduled (run manually after onboarding). A parent-facing „Wochenplan fehlt" banner (shared `childrenWithoutPlan` prop) nudges the same in-app.
   - App Home tab: `SlackHome` publishes a welcome + quick links on `app_home_opened`.
 - **Inbound** (all `POST`, signature-verified): `/slack/interactions` (`SlackInteractionController` — RSVP buttons), `/slack/commands` (`SlackCommandController` — `/hort` quick links), `/slack/events` (`SlackEventController` — url_verification + `app_home_opened`).
 - Notifications extend `SlackNotification` (base gates `via()` on the token). `SlackNotification`/`SlackRsvp`/`SlackHome` share the same Block Kit style; links use `route('slack.enter', …)` so `forceRootUrl(APP_URL)` keeps them correct behind the tunnel/proxy.
 
 ## Status
 
-App is German end-to-end (`APP_LOCALE=de`, `lang/de/*` validation/auth messages; `Europe/Berlin` timezone). Built & tested: Kinder+Stammplan, parent↔child roles, Wochenplan/Abholplan timetable, Tagesboard, Ausflug poll, Tagesprogramm + Hausaufgaben, birthdays surfaced on Heute/Abholplan/Programm, role-aware Start page, **full Slack integration** (SSO, departure/RSVP DMs, interactive RSVP with cross-guardian sync, `/hort` + App Home), **installable PWA + web push** (VAPID via `laravel-notification-channels/webpush`; opt-in toggle + install banner; SW served from `/sw.js`; pushes for departures, RSVP reminders, new excursions).
+App is German end-to-end (`APP_LOCALE=de`, `lang/de/*` validation/auth messages; `Europe/Berlin` timezone). Built & tested: Kinder+Stammplan (with **„Hortfrei"** per weekday + **bis/genau um/ab** time qualifier), parent↔child roles + **admin user management** + admin self role-switch, Wochenplan/Stammplan timetable, Tagesboard, the **shared `DayEditor` popup** (Wochenplan + board), **companion pickups** („geht mit einem anderen Kind mit" with confirmation + cross-guardian Slack sync), Ausflug poll, Tagesprogramm + Hausaufgaben, birthdays, dark mode + de/en language switch, **full Slack integration** (SSO, departure/RSVP/companion/missing-plan DMs, interactive answers, `/hort` + App Home + free-text assistant), **installable PWA + web push** plus **freshness** (silent post-deploy reload, 15-min idle refresh, drag-down pull-to-refresh in `freshness.js` / `PullToRefresh.vue`). Self-hosted via a multi-arch GHCR image on a CalVer tag (see [`docs/deployment.md`](docs/deployment.md)).
 
-**Planned (not built):** Richer admin control over users & children (managing which parents belong to which child, user management).
+**Planned (not built):** Richer admin control over which parents belong to which child (guardian management UI beyond the current per-child links).
 
 ---
 
