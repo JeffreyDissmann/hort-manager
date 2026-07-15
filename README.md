@@ -48,8 +48,22 @@ App: <http://localhost>. Demo logins: `erzieher@hort.test` / `eltern@hort.test` 
 | Task | Command |
 |------|---------|
 | Dev server (HMR) | `./vendor/bin/sail npm run dev` |
-| Run tests | `./vendor/bin/sail artisan test` |
+| Run fast tests (Unit + Feature) | `./vendor/bin/sail artisan test` |
+| Run everything, incl. browser | `bin/test` |
 | Format (PHP) | `./vendor/bin/sail pint` |
+
+## Testing
+
+Two layers, both [Pest](https://pestphp.com):
+
+- **Fast suite** — `tests/Unit` + `tests/Feature`, run in Sail: `./vendor/bin/sail artisan test`.
+- **Browser suite** — `tests/Browser`, **Pest 4 + Playwright**. It runs on the **host**
+  (Playwright's browsers live there) via `bin/test --browser`; one-time setup is
+  `npm install playwright && npx playwright install chromium`. It serves the app in-process
+  against the testing `:memory:` database, so `RefreshDatabase` works and your dev data is
+  never touched. It is **not** part of the default `artisan test` run.
+
+`bin/test` runs both layers (fast in Sail, browser on the host).
 
 ## Configuration
 
@@ -79,5 +93,6 @@ docker compose -f docker-compose.prod.yml up -d
 
 ## Contributing
 
-CI (GitHub Actions) runs Pint and the full test suite on every push and pull request;
-changes must be green before merging. See [`CHANGELOG.md`](CHANGELOG.md) for history.
+CI (GitHub Actions) runs Pint and the fast test suite on every push and pull request;
+the Pest 4 browser suite runs before releases (on a CalVer tag) and via manual dispatch.
+Changes must be green before merging. See [`CHANGELOG.md`](CHANGELOG.md) for history.
