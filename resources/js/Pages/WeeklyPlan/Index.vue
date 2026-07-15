@@ -204,6 +204,7 @@ function answerCompanion(id, confirmed) {
                                 <component
                                     :is="day.editable ? 'button' : 'div'"
                                     type="button"
+                                    :data-testid="`wp-cell-${child.id}-${day.date}`"
                                     class="relative mt-1 w-full rounded-lg py-2 text-sm font-semibold"
                                     :class="[
                                         day.absent ? 'bg-amber-100 text-amber-700' : cellClass(day),

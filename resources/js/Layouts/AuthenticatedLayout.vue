@@ -140,6 +140,7 @@ function isActive(href) {
                     <template #trigger>
                         <button
                             type="button"
+                            data-testid="user-menu"
                             class="flex items-center gap-2 rounded-full bg-ink/5 py-1.5 pl-1.5 pr-3 text-sm font-medium text-ink transition hover:bg-ink/10"
                         >
                             <Avatar :src="userAvatar" :name="userName" />
@@ -158,6 +159,7 @@ function isActive(href) {
                                 <div class="flex gap-0.5 rounded-lg bg-ink/5 p-0.5">
                                     <button
                                         type="button"
+                                        data-testid="role-staff"
                                         class="flex-1 rounded-md px-2 py-1 text-xs font-medium transition"
                                         :class="isStaff ? 'bg-surface text-ink shadow-sm' : 'text-ink/50 hover:text-ink'"
                                         @click="switchRole('staff')"
@@ -166,6 +168,7 @@ function isActive(href) {
                                     </button>
                                     <button
                                         type="button"
+                                        data-testid="role-parent"
                                         class="flex-1 rounded-md px-2 py-1 text-xs font-medium transition"
                                         :class="!isStaff ? 'bg-surface text-ink shadow-sm' : 'text-ink/50 hover:text-ink'"
                                         @click="switchRole('parent')"

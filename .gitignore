@@ -33,3 +33,8 @@ Thumbs.db
 /resources/js/actions
 /resources/js/routes
 /resources/js/wayfinder
+
+
+
+# Pest browser testing
+tests/Browser/Screenshots

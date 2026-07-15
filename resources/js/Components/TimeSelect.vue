@@ -10,6 +10,8 @@ const props = defineProps({
     from: { type: String, default: '11:00' },
     to: { type: String, default: '18:00' },
     step: { type: Number, default: 15 },
+    // Optional test hook: gives the hour/minute selects `<testId>-hour` / `-minute`.
+    testId: { type: String, default: null },
 });
 
 const hour = ref('');
@@ -59,12 +61,12 @@ const selectClass =
 
 <template>
     <div class="flex items-center gap-1">
-        <select v-model="hour" :class="selectClass" :aria-label="t('common.hour')" @change="update">
+        <select v-model="hour" :class="selectClass" :aria-label="t('common.hour')" :data-testid="testId ? `${testId}-hour` : undefined" @change="update">
             <option value="">––</option>
             <option v-for="h in hours" :key="h" :value="h">{{ h }}</option>
         </select>
         <span class="font-semibold text-ink/40">:</span>
-        <select v-model="minute" :class="selectClass" :aria-label="t('common.minute')" @change="update">
+        <select v-model="minute" :class="selectClass" :aria-label="t('common.minute')" :data-testid="testId ? `${testId}-minute` : undefined" @change="update">
             <option value="">––</option>
             <option v-for="m in minutes" :key="m" :value="m">{{ m }}</option>
         </select>

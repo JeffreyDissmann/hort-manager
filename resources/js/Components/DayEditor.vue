@@ -223,7 +223,7 @@ function cancelAbsence() {
             >
                 <div v-if="!goingWithChild">
                     <InputLabel for="time" :value="$t('weekly.time_label')" />
-                    <TimeSelect id="time" v-model="form.planned_time" class="mt-1 block w-full" />
+                    <TimeSelect id="time" v-model="form.planned_time" test-id="time" class="mt-1 block w-full" />
                 </div>
 
                 <div>
@@ -231,6 +231,7 @@ function cancelAbsence() {
                     <select
                         id="method"
                         v-model="form.planned_method"
+                        data-testid="method"
                         class="mt-1 block w-full rounded-md border-ink/20 shadow-sm focus:border-hort-teal focus:ring-hort-teal disabled:bg-ink/5 disabled:text-ink/40"
                     >
                         <option value="">{{ $t('weekly.method_open') }}</option>
@@ -243,6 +244,7 @@ function cancelAbsence() {
                     <InputLabel for="companion" :value="$t('weekly.companion_label')" />
                     <select
                         id="companion"
+                        data-testid="companion"
                         v-model="form.companion_child_id"
                         class="mt-1 block w-full rounded-md border-ink/20 shadow-sm focus:border-hort-teal focus:ring-hort-teal"
                     >
@@ -309,6 +311,7 @@ function cancelAbsence() {
             <div class="flex items-center justify-between gap-3 pt-2">
                 <button
                     type="button"
+                    data-testid="reset"
                     class="text-sm font-medium text-ink/50 underline-offset-2 hover:underline"
                     @click="resetDay"
                 >
@@ -316,7 +319,7 @@ function cancelAbsence() {
                 </button>
                 <div class="flex gap-3">
                     <SecondaryButton @click="close">{{ $t('common.cancel') }}</SecondaryButton>
-                    <PrimaryButton :disabled="!canSave || saving" @click="save">{{ saving ? $t('common.saving') : $t('common.save') }}</PrimaryButton>
+                    <PrimaryButton data-testid="save" :disabled="!canSave || saving" @click="save">{{ saving ? $t('common.saving') : $t('common.save') }}</PrimaryButton>
                 </div>
             </div>
         </div>

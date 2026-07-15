@@ -27,4 +27,13 @@ class ExcursionFactory extends Factory
             'note' => null,
         ];
     }
+
+    /** Upcoming trip whose RSVP poll is still open (deadline in the future). */
+    public function pollOpen(): static
+    {
+        return $this->state(fn () => [
+            'date' => now()->addWeek()->toDateString(),
+            'rsvp_deadline' => now()->addDays(3)->toDateString(),
+        ]);
+    }
 }

@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+#
+# One command for the whole test suite.
+#
+#   bin/test              run everything (fast PHPUnit/Pest + browser tests)
+#   bin/test --fast       fast suite only (Unit + Feature, in Sail)
+#   bin/test --browser    Pest 4 browser tests only (host Chrome via Playwright)
+#   bin/test --filter=Foo  extra args pass through to the fast suite
+#
+# The fast suite runs inside Sail. The browser suite (Pest 4 + Playwright) runs on the
+# HOST — Playwright's browsers live there — and uses the testing :memory: database, so
+# your dev data is never touched. No manual server or throwaway db needed: Pest serves
+# the app in-process and RefreshDatabase just works.
+#
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+green() { printf '\033[32m%s\033[0m\n' "$1"; }
+yellow() { printf '\033[33m%s\033[0m\n' "$1"; }
+
+run_fast() {
+    green "▶ Fast suite (Unit + Feature)"
+    ./vendor/bin/sail artisan test "$@"
+}
+
+run_browser() {
+    green "▶ Browser (Pest 4 + Playwright)"
+
+    if [ ! -f public/build/manifest.json ]; then
+        yellow "  Front-end assets missing — building first…"
+        ./vendor/bin/sail npm run build
+    fi
+
+    if [ ! -d node_modules/playwright ]; then
+        yellow "  Playwright missing — run: npm install playwright && npx playwright install chromium"
+        exit 1
+    fi
+
+    php ./vendor/bin/pest tests/Browser
+}
+
+case "${1:-}" in
+    --fast)
+        shift
+        run_fast "$@"
+        ;;
+    --browser)
+        run_browser
+        ;;
+    *)
+        run_fast "$@"
+        run_browser
+        ;;
+esac
