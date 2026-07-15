@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Models\Concerns\LogsChanges;
 use App\Observers\ExcursionObserver;
 use Database\Factories\ExcursionFactory;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
@@ -17,7 +18,18 @@ use Illuminate\Support\Collection;
 class Excursion extends Model
 {
     /** @use HasFactory<ExcursionFactory> */
-    use HasFactory;
+    use HasFactory, LogsChanges;
+
+    /** @return list<string> */
+    protected function activityAttributes(): array
+    {
+        return ['name', 'date', 'depart_at', 'return_at', 'rsvp_deadline'];
+    }
+
+    protected function activityLabel(): string
+    {
+        return $this->name;
+    }
 
     /**
      * Excursions whose RSVP deadline falls today.

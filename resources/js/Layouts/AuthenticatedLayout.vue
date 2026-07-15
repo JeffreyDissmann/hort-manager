@@ -18,7 +18,7 @@ import {
     MapIcon,
     ClipboardDocumentListIcon,
 } from '@heroicons/vue/24/outline';
-import { board, weeklyPlan, standardPlan, program, logout, dashboard, help } from '@/routes';
+import { board, weeklyPlan, standardPlan, program, logout, dashboard, help, activityLog } from '@/routes';
 import { update as switchRoleRoute } from '@/routes/role';
 import { index as childrenIndex } from '@/routes/children';
 import { index as excursionsIndex } from '@/routes/excursions';
@@ -153,6 +153,9 @@ function isActive(href) {
                         <template v-if="isAdmin">
                             <DropdownLink :href="usersIndex().url">
                                 {{ $t('nav.users') }}
+                            </DropdownLink>
+                            <DropdownLink :href="activityLog().url" data-testid="nav-activity-log">
+                                {{ $t('nav.activity_log') }}
                             </DropdownLink>
                             <div class="px-4 py-2">
                                 <p class="mb-1 text-xs font-medium text-ink/50">{{ $t('nav.my_role') }}</p>

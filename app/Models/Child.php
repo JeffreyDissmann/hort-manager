@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Models\Concerns\LogsChanges;
 use App\Observers\ChildObserver;
 use Database\Factories\ChildFactory;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
@@ -17,7 +18,18 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Child extends Model
 {
     /** @use HasFactory<ChildFactory> */
-    use HasFactory;
+    use HasFactory, LogsChanges;
+
+    /** @return list<string> */
+    protected function activityAttributes(): array
+    {
+        return ['name', 'date_of_birth', 'note'];
+    }
+
+    protected function activityLabel(): string
+    {
+        return $this->name;
+    }
 
     protected $fillable = [
         'name',

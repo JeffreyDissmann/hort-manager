@@ -297,6 +297,12 @@ class DailyBoardController extends Controller
             ? ['status' => $status, 'left_at' => now(), 'marked_by' => $request->user()->id]
             : ['status' => $status, 'left_at' => null, 'marked_by' => null]);
 
+        activity()
+            ->causedBy($request->user())
+            ->performedOn($departure)
+            ->event($status->value)
+            ->log($departure->child->name);
+
         return back();
     }
 
