@@ -185,6 +185,7 @@ function answer(excursion, child, response) {
                                 >
                                     <button
                                         type="button"
+                                        :data-testid="`rsvp-yes-${child.id}`"
                                         class="rounded-lg px-4 py-2 text-sm font-semibold transition active:scale-[0.97]"
                                         :class="child.response === true
                                             ? 'bg-hort-teal text-hort-navy'

@@ -223,7 +223,7 @@ function cancelAbsence() {
             >
                 <div v-if="!goingWithChild">
                     <InputLabel for="time" :value="$t('weekly.time_label')" />
-                    <TimeSelect id="time" v-model="form.planned_time" class="mt-1 block w-full" />
+                    <TimeSelect id="time" v-model="form.planned_time" test-id="time" class="mt-1 block w-full" />
                 </div>
 
                 <div>
@@ -231,6 +231,7 @@ function cancelAbsence() {
                     <select
                         id="method"
                         v-model="form.planned_method"
+                        data-testid="method"
                         class="mt-1 block w-full rounded-md border-ink/20 shadow-sm focus:border-hort-teal focus:ring-hort-teal disabled:bg-ink/5 disabled:text-ink/40"
                     >
                         <option value="">{{ $t('weekly.method_open') }}</option>
@@ -316,7 +317,7 @@ function cancelAbsence() {
                 </button>
                 <div class="flex gap-3">
                     <SecondaryButton @click="close">{{ $t('common.cancel') }}</SecondaryButton>
-                    <PrimaryButton :disabled="!canSave || saving" @click="save">{{ saving ? $t('common.saving') : $t('common.save') }}</PrimaryButton>
+                    <PrimaryButton data-testid="save" :disabled="!canSave || saving" @click="save">{{ saving ? $t('common.saving') : $t('common.save') }}</PrimaryButton>
                 </div>
             </div>
         </div>

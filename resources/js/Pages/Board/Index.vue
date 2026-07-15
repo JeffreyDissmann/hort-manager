@@ -415,6 +415,7 @@ function editHortfrei(child) {
                         <button
                             v-if="c.can_manage"
                             type="button"
+                            :data-testid="`hortfrei-pill-${c.id}`"
                             class="rounded-md bg-ink/10 px-2 py-0.5 text-xs font-medium text-ink/60 transition hover:bg-ink/20 hover:text-ink"
                             @click="editHortfrei(c)"
                         >
@@ -649,6 +650,7 @@ function editHortfrei(child) {
                                 <button
                                     type="button"
                                     :disabled="submitting"
+                                    :data-testid="`mark-picked-up-${row.child_id}`"
                                     class="rounded-xl bg-hort-teal py-3 font-semibold text-hort-navy transition hover:bg-hort-teal-dark active:scale-[0.98] disabled:opacity-50"
                                     @click="mark(row, 'picked_up')"
                                 >
@@ -657,6 +659,7 @@ function editHortfrei(child) {
                                 <button
                                     type="button"
                                     :disabled="submitting"
+                                    :data-testid="`mark-sent-home-${row.child_id}`"
                                     class="rounded-xl bg-hort-orange py-3 font-semibold text-hort-navy transition hover:opacity-90 active:scale-[0.98] disabled:opacity-50"
                                     @click="mark(row, 'sent_home')"
                                 >
@@ -681,6 +684,7 @@ function editHortfrei(child) {
                                     <span class="text-ink/40">{{ $t('board.not_here') }}</span>
                                     <button
                                         type="button"
+                                        :data-testid="`report-sick-${row.child_id}`"
                                         class="font-semibold text-amber-700 underline-offset-2 hover:underline"
                                         @click="stageAbsence(row, 'sick')"
                                     >
@@ -707,12 +711,14 @@ function editHortfrei(child) {
                                         v-model="absenceComment"
                                         type="text"
                                         maxlength="255"
+                                        :data-testid="`absence-comment-${row.child_id}`"
                                         :placeholder="$t('weekly.reason_placeholder')"
                                         class="w-full rounded-lg border-amber-200 bg-surface text-sm text-ink focus:border-amber-400 focus:ring-amber-400"
                                     />
                                     <div class="flex items-center gap-2">
                                         <button
                                             type="submit"
+                                            :data-testid="`absence-submit-${row.child_id}`"
                                             :disabled="!absenceComment.trim() || absenceSaving"
                                             class="rounded-lg bg-amber-600 px-3 py-1.5 font-semibold text-white transition hover:bg-amber-700 disabled:opacity-40"
                                         >
@@ -733,6 +739,7 @@ function editHortfrei(child) {
                         <div v-else-if="canMark" class="mt-3">
                             <button
                                 type="button"
+                                :data-testid="`undo-${row.child_id}`"
                                 class="text-sm font-medium text-ink/50 underline-offset-2 hover:underline"
                                 @click="mark(row, 'present')"
                             >
