@@ -632,11 +632,10 @@ function editHortfrei(child) {
 
 
                     <!-- Actions -->
-                    <template>
-                        <div
-                            v-if="row.status === 'present'"
-                            class="mt-3 space-y-2"
-                        >
+                    <div
+                        v-if="row.status === 'present'"
+                        class="mt-3 space-y-2"
+                    >
                             <p
                                 v-if="row.excursion?.state === 'away'"
                                 class="rounded-xl bg-hort-purple/10 py-2.5 text-center text-sm font-medium text-hort-purple"
@@ -740,7 +739,6 @@ function editHortfrei(child) {
                                 {{ $t('common.undo') }}
                             </button>
                         </div>
-                    </template>
                             </div>
                         </div>
                         </template>
