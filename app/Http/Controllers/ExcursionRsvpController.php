@@ -87,6 +87,12 @@ class ExcursionRsvpController extends Controller
             ],
         ]);
 
+        activity()
+            ->causedBy($user)
+            ->performedOn($excursion)
+            ->event($validated['response'] ? 'rsvp_yes' : 'rsvp_no')
+            ->log($child->name.' · '.$excursion->name);
+
         // Keep the Slack DMs in sync (buttons → result) for both guardians, queued.
         SyncExcursionRsvp::dispatch($excursion, $child);
 

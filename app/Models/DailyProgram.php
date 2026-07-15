@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Models\Concerns\LogsChanges;
 use Database\Factories\DailyProgramFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -13,7 +14,18 @@ use Illuminate\Database\Eloquent\Model;
 class DailyProgram extends Model
 {
     /** @use HasFactory<DailyProgramFactory> */
-    use HasFactory;
+    use HasFactory, LogsChanges;
+
+    /** @return list<string> */
+    protected function activityAttributes(): array
+    {
+        return ['date', 'lunch', 'activity', 'homework_start', 'homework_end', 'homework_none'];
+    }
+
+    protected function activityLabel(): string
+    {
+        return $this->date?->format('d.m.Y') ?? '?';
+    }
 
     protected $fillable = [
         'date',

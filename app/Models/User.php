@@ -6,6 +6,7 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Enums\UserRole;
+use App\Models\Concerns\LogsChanges;
 use Database\Factories\UserFactory;
 use Illuminate\Contracts\Translation\HasLocalePreference;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -25,7 +26,18 @@ use NotificationChannels\WebPush\HasPushSubscriptions;
 class User extends Authenticatable implements HasLocalePreference
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, HasPushSubscriptions, Notifiable;
+    use HasFactory, HasPushSubscriptions, LogsChanges, Notifiable;
+
+    /** @return list<string> */
+    protected function activityAttributes(): array
+    {
+        return ['name', 'email', 'role', 'is_admin'];
+    }
+
+    protected function activityLabel(): string
+    {
+        return $this->name;
+    }
 
     /**
      * Default attribute values (mirroring the migration column defaults).

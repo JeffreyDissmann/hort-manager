@@ -10,6 +10,7 @@ return [
     'program' => 'Program',
     'children' => 'Children',
     'users' => 'Users',
+    'activity_log' => 'Activity log',
     'my_children' => 'My children',
     'profile' => 'Profile',
     'help' => 'Help',

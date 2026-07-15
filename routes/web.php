@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\AbsenceController;
+use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\Auth\SlackController;
 use App\Http\Controllers\ChildController;
 use App\Http\Controllers\CompanionConfirmationController;
@@ -100,6 +101,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/benutzer/sync', [UserController::class, 'sync'])->name('users.sync');
     Route::patch('/benutzer/{user}', [UserController::class, 'update'])->name('users.update');
     Route::delete('/benutzer/{user}', [UserController::class, 'destroy'])->name('users.destroy');
+
+    // Admin-only: the activity log / audit trail (the controller guards it).
+    Route::get('/protokoll', [ActivityLogController::class, 'index'])->name('activity-log');
 
     Route::get('/wochenplan', WeeklyOverviewController::class)->name('weekly-plan');
     Route::patch('/wochenplan/anpassung', [WeeklyAdjustmentController::class, 'update'])->name('weekly-plan.adjust');

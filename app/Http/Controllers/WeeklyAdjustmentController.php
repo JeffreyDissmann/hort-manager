@@ -62,6 +62,10 @@ class WeeklyAdjustmentController extends Controller
             $fields['companion_confirmed_at'] = $needsConfirmation ? null : now();
         }
 
+        // Snapshot the plan before the change (save() re-syncs the original, so we
+        // can't read the old values afterwards).
+        $before = $this->planSnapshot($departure);
+
         $departure->fill($fields);
 
         if (! $departure->exists) {
@@ -69,6 +73,13 @@ class WeeklyAdjustmentController extends Controller
         }
 
         $departure->save();
+
+        activity()
+            ->causedBy($request->user())
+            ->performedOn($departure)
+            ->event('adjusted')
+            ->withChanges($this->diff($before, $this->planSnapshot($departure)))
+            ->log($child->name.' · '.$validated['date']);
 
         // Ask this row's companion family, if their confirmation is now pending.
         if ($departure->awaitingCompanionConfirmation()) {
@@ -96,6 +107,12 @@ class WeeklyAdjustmentController extends Controller
 
         // Deleting the override row makes the board fall back to the Stammplan.
         if ($departure->exists) {
+            activity()
+                ->causedBy($request->user())
+                ->performedOn($departure)
+                ->event('reset')
+                ->log($child->name.' · '.$validated['date']);
+
             $departure->delete();
         }
 
@@ -131,5 +148,56 @@ class WeeklyAdjustmentController extends Controller
         );
 
         return $departure;
+    }
+
+    /**
+     * The plan fields shown in the activity log, as display strings, keyed by the
+     * (translated) field key. „Art"/„Begleitkind" let it show geht-allein vs -mit.
+     *
+     * @return array<string, ?string>
+     */
+    private function planSnapshot(DailyDeparture $departure): array
+    {
+        return [
+            'planned_time' => $this->planValue('planned_time', $departure->planned_time),
+            'method' => $this->planValue('planned_method', $departure->planned_method),
+            'time_qualifier' => $this->planValue('time_qualifier', $departure->time_qualifier),
+            'companion' => $this->planValue('companion_child_id', $departure->companion_child_id),
+        ];
+    }
+
+    /**
+     * Keep only the fields that actually changed, split into new/old.
+     *
+     * @param  array<string, ?string>  $before
+     * @param  array<string, ?string>  $after
+     * @return array{attributes: array<string, ?string>, old: array<string, ?string>}
+     */
+    private function diff(array $before, array $after): array
+    {
+        $new = [];
+        $old = [];
+
+        foreach ($after as $key => $value) {
+            if (($before[$key] ?? null) !== $value) {
+                $new[$key] = $value;
+                $old[$key] = $before[$key] ?? null;
+            }
+        }
+
+        return ['attributes' => $new, 'old' => $old];
+    }
+
+    private function planValue(string $column, mixed $value): ?string
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        if ($column === 'companion_child_id') {
+            return Child::find($value)?->name;
+        }
+
+        return $value instanceof \BackedEnum ? $value->value : (string) $value;
     }
 }

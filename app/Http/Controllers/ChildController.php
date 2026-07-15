@@ -187,6 +187,14 @@ class ChildController extends Controller
             }
         });
 
+        if ($guardianIds !== null) {
+            activity()
+                ->causedBy($request->user())
+                ->performedOn($child)
+                ->event('guardians')
+                ->log($child->name);
+        }
+
         return redirect()
             ->route('children.index')
             ->with('status', __('flash.schedule_saved', ['name' => $child->name]));

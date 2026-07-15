@@ -8,6 +8,14 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Activity log (Protokoll)**: an admin-only audit trail at `/protokoll` (linked in the
+  avatar menu) recording who changed what — children, Stammplan, absences, excursions,
+  the Tagesprogramm and users/roles are auto-logged via `spatie/laravel-activitylog`,
+  plus explicit entries for departures marked, day-plan adjust/reset (with the before/
+  after: Uhrzeit, „geht allein" vs „geht mit … mit", Begleitkind), guardian links and
+  excursion RSVPs. Fully de/en — each row is composed in the frontend from structured
+  data (event + subject + neutral label), so nouns, field names and enum values follow
+  the language toggle. Sign-ins are deliberately not logged (noise).
 - **One shared edit popup everywhere** (`DayEditor.vue`): editing a child on a day is
   now the exact same dialog on the Heute board and the Wochenplan — Krank/„Kommt nicht",
   Uhrzeit, Art (incl. „geht mit einem anderen Kind mit"), bis/genau um/ab, Kommentar,
