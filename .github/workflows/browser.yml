@@ -1,11 +1,13 @@
 name: Browser tests (Pest)
 
-# The browser suite is slower than the unit/feature suite, so it does NOT run on every
-# push. It runs before a release (on a CalVer tag) and can be triggered manually.
+# Runs on PRs into main and on main itself, so main is always browser-green and any
+# release tag cut from it is safe. (Not on every feature-branch push — only what's
+# heading into main.) Can also be dispatched manually.
 on:
+  pull_request:
+    branches: [main]
   push:
-    tags:
-      - "20[0-9][0-9].[0-1][0-9].*"
+    branches: [main]
   workflow_dispatch:
 
 jobs:

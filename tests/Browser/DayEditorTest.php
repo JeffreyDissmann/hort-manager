@@ -22,7 +22,8 @@ it('requires a method and a time before saving', function () {
         ->select('@time-hour', '16')
         ->select('@time-minute', '00')
         ->assertEnabled('@save')             // complete
-        ->click('@save');
+        ->click('@save')
+        ->assertMissing('@save');            // dialog closes once the POST lands
 
     expect(DailyDeparture::where('child_id', $child->id)->whereDate('date', today())->value('planned_method'))
         ->toBe(DepartureMethod::PickedUp);
@@ -41,7 +42,8 @@ it('sets up a companion pickup („geht mit … mit")', function () {
         ->select('@method', 'with_child')
         ->select('@companion', (string) $mia->id)
         ->assertEnabled('@save')            // with_child needs a companion, not a time
-        ->click('@save');
+        ->click('@save')
+        ->assertMissing('@save');           // dialog closes once the POST lands
 
     expect(DailyDeparture::where('child_id', $theo->id)->whereDate('date', today())->first())
         ->planned_method->toBe(DepartureMethod::WithChild)

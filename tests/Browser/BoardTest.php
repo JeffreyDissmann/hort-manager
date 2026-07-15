@@ -65,7 +65,8 @@ it('lets staff report a child sick from the board', function () {
     actAndVisit($staff, '/tagesboard')
         ->click("@report-sick-{$child->id}")
         ->fill("@absence-comment-{$child->id}", 'Fieber')
-        ->click("@absence-submit-{$child->id}");
+        ->click("@absence-submit-{$child->id}")
+        ->assertMissing("@absence-submit-{$child->id}"); // wait for the POST to land
 
     expect(Absence::where('child_id', $child->id)->whereDate('date', today())->first())
         ->reason->value->toBe('sick')
@@ -79,7 +80,8 @@ it('lets staff report a child as away („Kommt nicht") from the board', functio
     actAndVisit($staff, '/tagesboard')
         ->click("@report-away-{$child->id}")
         ->fill("@absence-comment-{$child->id}", 'Termin')
-        ->click("@absence-submit-{$child->id}");
+        ->click("@absence-submit-{$child->id}")
+        ->assertMissing("@absence-submit-{$child->id}"); // wait for the POST to land
 
     expect(Absence::where('child_id', $child->id)->whereDate('date', today())->first())
         ->reason->value->toBe('away')
