@@ -244,6 +244,7 @@ function cancelAbsence() {
                     <InputLabel for="companion" :value="$t('weekly.companion_label')" />
                     <select
                         id="companion"
+                        data-testid="companion"
                         v-model="form.companion_child_id"
                         class="mt-1 block w-full rounded-md border-ink/20 shadow-sm focus:border-hort-teal focus:ring-hort-teal"
                     >
@@ -310,6 +311,7 @@ function cancelAbsence() {
             <div class="flex items-center justify-between gap-3 pt-2">
                 <button
                     type="button"
+                    data-testid="reset"
                     class="text-sm font-medium text-ink/50 underline-offset-2 hover:underline"
                     @click="resetDay"
                 >

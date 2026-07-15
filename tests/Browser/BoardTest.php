@@ -6,6 +6,7 @@ use App\Enums\DepartureStatus;
 use App\Models\Absence;
 use App\Models\Child;
 use App\Models\DailyDeparture;
+use App\Models\Excursion;
 use App\Models\User;
 
 /**
@@ -69,4 +70,34 @@ it('lets staff report a child sick from the board', function () {
     expect(Absence::where('child_id', $child->id)->whereDate('date', today())->first())
         ->reason->value->toBe('sick')
         ->comment->toBe('Fieber');
+});
+
+it('lets staff report a child as away („Kommt nicht") from the board', function () {
+    $staff = User::factory()->staff()->create();
+    $child = scheduledChild('Paul');
+
+    actAndVisit($staff, '/tagesboard')
+        ->click("@report-away-{$child->id}")
+        ->fill("@absence-comment-{$child->id}", 'Termin')
+        ->click("@absence-submit-{$child->id}");
+
+    expect(Absence::where('child_id', $child->id)->whereDate('date', today())->first())
+        ->reason->value->toBe('away')
+        ->comment->toBe('Termin');
+});
+
+it('shows a confirmed excursion participant on the board', function () {
+    $staff = User::factory()->staff()->create();
+    $child = scheduledChild('Frida');
+
+    $excursion = Excursion::factory()->create([
+        'name' => 'Waldtag',
+        'date' => boardDate()->toDateString(),
+        'rsvp_deadline' => boardDate()->toDateString(),
+    ]);
+    $excursion->children()->attach($child->id, ['response' => true]);
+
+    actAndVisit($staff, '/tagesboard')
+        ->assertSee('Frida')
+        ->assertSee('Waldtag'); // the excursion overlay badge
 });

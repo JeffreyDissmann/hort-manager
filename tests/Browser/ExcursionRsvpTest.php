@@ -24,3 +24,21 @@ it('lets a parent answer the poll for their child', function () {
         'response' => true,
     ]);
 });
+
+it('lets a parent decline the poll for their child', function () {
+    $parent = User::factory()->parent()->create();
+    $child = Child::factory()->withGuardian($parent)->create(['name' => 'Jonas']);
+
+    $excursion = Excursion::factory()->pollOpen()->create(['name' => 'Museums-Ausflug']);
+    $excursion->children()->attach($child->id);
+
+    actAndVisit($parent, '/umfragen')
+        ->assertSee('Museums-Ausflug')
+        ->click("@rsvp-no-{$child->id}")
+        ->assertSee('abgesagt'); // the row flips to the declined state
+
+    $this->assertDatabaseHas('child_excursion', [
+        'child_id' => $child->id,
+        'response' => false,
+    ]);
+});

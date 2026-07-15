@@ -693,6 +693,7 @@ function editHortfrei(child) {
                                     <span class="text-ink/20">·</span>
                                     <button
                                         type="button"
+                                        :data-testid="`report-away-${row.child_id}`"
                                         class="font-semibold text-amber-700 underline-offset-2 hover:underline"
                                         @click="stageAbsence(row, 'away')"
                                     >

@@ -159,6 +159,7 @@ function isActive(href) {
                                 <div class="flex gap-0.5 rounded-lg bg-ink/5 p-0.5">
                                     <button
                                         type="button"
+                                        data-testid="role-staff"
                                         class="flex-1 rounded-md px-2 py-1 text-xs font-medium transition"
                                         :class="isStaff ? 'bg-surface text-ink shadow-sm' : 'text-ink/50 hover:text-ink'"
                                         @click="switchRole('staff')"

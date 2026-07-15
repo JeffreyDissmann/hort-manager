@@ -68,8 +68,8 @@ function actAndVisit(User $user, string $url)
     return $page;
 }
 
-/** The weekday the Heute board targets (today, or the next weekday on weekends). */
-function boardWeekday(): int
+/** The date the Heute board targets (today, or the next weekday on weekends). */
+function boardDate(): Carbon
 {
     $date = Carbon::today();
 
@@ -77,5 +77,11 @@ function boardWeekday(): int
         $date->addDay();
     }
 
-    return $date->isoWeekday();
+    return $date;
+}
+
+/** The weekday the Heute board targets (today, or the next weekday on weekends). */
+function boardWeekday(): int
+{
+    return boardDate()->isoWeekday();
 }

@@ -19,3 +19,26 @@ it('lets an admin switch from staff to parent from the menu', function () {
 
     expect($admin->refresh()->role)->toBe(UserRole::Parent);
 });
+
+it('lets an admin switch from parent to staff from the menu', function () {
+    $admin = User::factory()->parent()->admin()->create();
+    $child = scheduledChild('Kai');
+
+    actAndVisit($admin, '/tagesboard')
+        ->assertSee('Kai')
+        ->assertMissing("@mark-picked-up-{$child->id}") // parent: no mark buttons
+        ->click('@user-menu')
+        ->click('@role-staff')
+        ->assertPresent("@mark-picked-up-{$child->id}"); // staff: buttons appear
+
+    expect($admin->refresh()->role)->toBe(UserRole::Staff);
+});
+
+it('hides the role toggle from non-admins', function () {
+    $staff = User::factory()->staff()->create();
+
+    actAndVisit($staff, '/tagesboard')
+        ->click('@user-menu')
+        ->assertMissing('@role-staff')
+        ->assertMissing('@role-parent');
+});
