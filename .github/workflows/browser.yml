@@ -1,0 +1,58 @@
+name: Browser tests (Pest)
+
+# The browser suite is slower than the unit/feature suite, so it does NOT run on every
+# push. It runs before a release (on a CalVer tag) and can be triggered manually.
+on:
+  push:
+    tags:
+      - "20[0-9][0-9].[0-1][0-9].*"
+  workflow_dispatch:
+
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: sqlite3, pdo_sqlite, mbstring, bcmath
+          coverage: none
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Prepare environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Install front-end deps & Playwright
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Build front-end
+        run: npm run build
+
+      # Pest serves the app in-process and uses the testing :memory: database (phpunit.xml),
+      # so no separate server or database setup is needed.
+      - name: Run browser tests
+        run: ./vendor/bin/pest tests/Browser
+
+      - name: Upload failure screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pest-browser-screenshots
+          path: tests/Browser/Screenshots
+          if-no-files-found: ignore
