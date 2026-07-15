@@ -19,12 +19,20 @@ This project runs in Docker via Sail. **Never run `php`/`composer`/`npm`/`artisa
 | Vite dev server (HMR) | `./vendor/bin/sail npm run dev` |
 | Build assets | `./vendor/bin/sail npm run build` |
 | Migrate | `./vendor/bin/sail artisan migrate` (fresh: `migrate:fresh`) |
-| Run all tests | `./vendor/bin/sail artisan test` |
+| Run fast tests (Unit + Feature) | `./vendor/bin/sail artisan test` |
 | Run one test | `./vendor/bin/sail artisan test --filter=TestMethodName` |
+| Run everything (fast + browser) | `bin/test` (browser part runs on host — see Testing) |
 | Format PHP (do before finishing) | `./vendor/bin/sail pint --dirty` |
 | Tinker / REPL | `./vendor/bin/sail artisan tinker` |
 
 **Database is SQLite** (`database/database.sqlite`) — there is no MySQL service. Backups are a file copy.
+
+## Testing
+
+Two layers, both **Pest** (the fast suite is Pest running the existing PHPUnit-style test classes — they coexist):
+
+- **Fast suite** — `tests/Unit` + `tests/Feature`, run in Sail via `./vendor/bin/sail artisan test`. Uses the `:memory:` sqlite from `phpunit.xml`.
+- **Browser suite** — `tests/Browser`, **Pest 4 + Playwright** (not Dusk). It runs on the **host** (`php ./vendor/bin/pest tests/Browser`) because Playwright's browsers live there; needs `npm install playwright && npx playwright install chromium` once, and built assets (`sail npm run build`). Pest serves the app **in-process** and uses the testing `:memory:` db, so `RefreshDatabase` works and dev data is never touched — no server/throwaway-db juggling. Auth via `$this->actingAs($user)` before `visit()`. Selectors are `data-testid="…"` in the DOM → `@…` in tests (helper `actAndVisit()` in `tests/Pest.php` acts + visits + closes the auto-opening „Was ist neu?" popup). Browser tests are **not** in the default `artisan test` run; use `bin/test --browser` or the release-only `browser.yml` CI workflow (CalVer tag / manual dispatch).
 
 ## Domain model
 
@@ -117,19 +125,26 @@ The Laravel Boost guidelines are specifically curated by Laravel maintainers for
 
 This application is a Laravel application and its main Laravel ecosystems package & versions are below. You are an expert with them all. Ensure you abide by these specific packages & versions.
 
-- php - 8.4
+- php - 8.5
+- inertiajs/inertia-laravel (INERTIA_LARAVEL) - v2
+- laravel/ai (AI) - v0
 - laravel/framework (LARAVEL) - v13
 - laravel/prompts (PROMPTS) - v0
+- laravel/sanctum (SANCTUM) - v4
+- laravel/socialite (SOCIALITE) - v5
+- laravel/wayfinder (WAYFINDER) - v0
 - laravel/boost (BOOST) - v2
+- laravel/breeze (BREEZE) - v2
 - laravel/mcp (MCP) - v0
 - laravel/pail (PAIL) - v1
 - laravel/pint (PINT) - v1
 - laravel/sail (SAIL) - v1
+- pestphp/pest (PEST) - v4
 - phpunit/phpunit (PHPUNIT) - v12
-
-## Skills Activation
-
-This project has domain-specific skills available in `**/skills/**`. You MUST activate the relevant skill whenever you work in that domain—don't wait until you're stuck.
+- @inertiajs/vue3 (INERTIA_VUE) - v2
+- @laravel/vite-plugin-wayfinder (WAYFINDER_VITE) - v0
+- tailwindcss (TAILWINDCSS) - v3
+- vue (VUE) - v3
 
 ## Conventions
 
@@ -213,6 +228,28 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 
 - Laravel can be deployed using [Laravel Cloud](https://cloud.laravel.com/), which is the fastest way to deploy and scale production Laravel applications.
 
+=== tests rules ===
+
+# Test Enforcement
+
+- Every change must be programmatically tested. Write a new test or update an existing test, then run the affected tests to make sure they pass.
+- Run the minimum number of tests needed to ensure code quality and speed. Use `php artisan test --compact` with a specific filename or filter.
+
+=== inertia-laravel/core rules ===
+
+# Inertia
+
+- Inertia creates fully client-side rendered SPAs without modern SPA complexity, leveraging existing server-side patterns.
+- Components live in `resources/js/Pages` (unless specified in `vite.config.js`). Use `Inertia::render()` for server-side routing instead of Blade views.
+- ALWAYS use `search-docs` tool for version-specific Inertia documentation and updated code examples.
+- IMPORTANT: Activate `inertia-vue-development` when working with Inertia Vue client-side patterns.
+
+# Inertia v2
+
+- Use all Inertia features from v1 and v2. Check the documentation before making changes to ensure the correct approach.
+- New features: deferred props, infinite scroll, merging props, polling, prefetching, once props, flash data.
+- When using deferred props, add an empty state with a pulsing or animated skeleton.
+
 === laravel/core rules ===
 
 # Do Things the Laravel Way
@@ -243,6 +280,12 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 
 - If you receive an "Illuminate\Foundation\ViteException: Unable to locate file in Vite manifest" error, you can run `npm run build` or ask the user to run `npm run dev` or `composer run dev`.
 
+=== wayfinder/core rules ===
+
+# Laravel Wayfinder
+
+Use Wayfinder to generate TypeScript functions for Laravel routes. Import from `@/actions/` (controllers) or `@/routes/` (named routes).
+
 === pint/core rules ===
 
 # Laravel Pint Code Formatter
@@ -250,22 +293,20 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 - If you have modified any PHP files, you must run `vendor/bin/pint --dirty --format agent` before finalizing changes to ensure your code matches the project's expected style.
 - Do not run `vendor/bin/pint --test --format agent`, simply run `vendor/bin/pint --format agent` to fix any formatting issues.
 
-=== phpunit/core rules ===
+=== pest/core rules ===
 
-# PHPUnit
+## Pest
 
-- This application uses PHPUnit for testing. All tests must be written as PHPUnit classes. Use `php artisan make:test --phpunit {name}` to create a new test.
-- If you see a test using "Pest", convert it to PHPUnit.
-- Every time a test has been updated, run that singular test.
-- When the tests relating to your feature are passing, ask the user if they would like to also run the entire test suite to make sure everything is still passing.
-- Tests should cover all happy paths, failure paths, and edge cases.
-- You must not remove any tests or test files from the tests directory without approval. These are not temporary or helper files; these are core to the application.
+- This project uses Pest for testing. Create tests: `php artisan make:test --pest {name}`.
+- The `{name}` argument should not include the test suite directory. Use `php artisan make:test --pest SomeFeatureTest` instead of `php artisan make:test --pest Feature/SomeFeatureTest`.
+- Run tests: `php artisan test --compact` or filter: `php artisan test --compact --filter=testName`.
+- Do NOT delete tests without approval.
 
-## Running Tests
+=== inertia-vue/core rules ===
 
-- Run the minimal number of tests, using an appropriate filter, before finalizing.
-- To run all tests: `php artisan test --compact`.
-- To run all tests in a file: `php artisan test --compact tests/Feature/ExampleTest.php`.
-- To filter on a particular test name: `php artisan test --compact --filter=testName` (recommended after making a change to a related file).
+# Inertia + Vue
+
+Vue components must have a single root element.
+- IMPORTANT: Activate `inertia-vue-development` when working with Inertia Vue client-side patterns.
 
 </laravel-boost-guidelines>
