@@ -1,4 +1,5 @@
 <script setup>
+import DatePicker from '@/Components/DatePicker.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import TextInput from '@/Components/TextInput.vue';
 import TimeSelect from '@/Components/TimeSelect.vue';
@@ -80,12 +81,11 @@ function pickFriday() {
             >
                 {{ $t('excursions.next_friday', { date: shortDate(suggestedDate) }) }}
             </button>
-            <TextInput
+            <DatePicker
                 id="date"
                 v-model="form.date"
-                type="date"
                 :min="today"
-                class="mt-2 block w-full"
+                class="mt-2"
             />
             <InputError :message="form.errors.date" class="mt-2" />
         </div>
@@ -113,15 +113,14 @@ function pickFriday() {
 
         <div>
             <InputLabel for="rsvp_deadline" :value="$t('excursions.field_deadline')" />
-            <TextInput
+            <DatePicker
                 id="rsvp_deadline"
                 v-model="form.rsvp_deadline"
-                type="date"
                 :min="today"
-                :max="form.date || undefined"
-                class="mt-1 block w-full"
-                @input="deadlineTouched = true"
-                @change="deadlineTouched = true"
+                :max="form.date || null"
+                clearable
+                class="mt-1"
+                @update:model-value="deadlineTouched = true"
             />
             <p class="mt-1 text-sm text-ink/60">
                 {{ $t('excursions.field_deadline_hint') }}

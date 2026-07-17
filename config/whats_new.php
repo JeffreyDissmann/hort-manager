@@ -16,6 +16,19 @@ declare(strict_types=1);
 
 return [
     [
+        'version' => '2026.07.17',
+        'date' => '2026-07-17',
+        'title' => 'Jeden Tag ansehen 📅 – Danke, Julia!',
+        'items' => [
+            '📅 „Heute" zeigt jetzt jeden Tag: Blättere mit den Pfeilen oder tippe auf das Datum, um einen Tag auszuwählen – mit Essen, Aktivität, Ausflügen und dem Abholplan für genau diesen Tag.',
+            '✏️ Kommende Tage kannst du direkt anpassen, vergangene Tage siehst du zum Nachschauen.',
+            '↔️ Im Wochenplan bringt dich ein Tipp auf einen Wochentag direkt zur „Heute"-Ansicht dieses Tages.',
+            '🗓️ Ein Datum auswählen geht jetzt überall gleich – über einen übersichtlichen Kalender, z. B. fürs Geburtsdatum oder das Ausflugsdatum.',
+            '💛 Danke für die Idee, Julia!',
+
+        ],
+    ],
+    [
         'version' => '2026.07.14',
         'date' => '2026-07-14',
         'title' => 'Überall gleich bearbeiten ✏️',

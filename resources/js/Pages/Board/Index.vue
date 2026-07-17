@@ -1,11 +1,13 @@
 <script setup>
 import { mark as boardMark } from '@/routes/board';
+import { board } from '@/routes';
 import { store as absenceStore, destroy as absenceDestroy } from '@/routes/absences';
 import { live as excursionLive } from '@/routes/excursions';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import CollapsibleChips from '@/Components/CollapsibleChips.vue';
 import CompanionNotes from '@/Components/CompanionNotes.vue';
 import DayEditor from '@/Components/DayEditor.vue';
+import DayNav from '@/Components/DayNav.vue';
 import { PencilSquareIcon } from '@heroicons/vue/24/outline';
 import { confirm as companionConfirm } from '@/routes/companion';
 import { Head, router, usePage } from '@inertiajs/vue3';
@@ -29,6 +31,11 @@ const props = defineProps({
 // Confirm/decline another child going home with one of ours (from the notes panel).
 function answerCompanion(id, confirmed) {
     router.patch(companionConfirm(id).url, { confirmed }, { preserveScroll: true });
+}
+
+// Day navigation: null → back to today (no ?date), else ?date=YYYY-MM-DD.
+function goDay(iso) {
+    router.get(board(iso ? { query: { date: iso } } : {}).url, {}, { preserveScroll: true });
 }
 
 const flash = computed(() => usePage().props.flash?.status);
@@ -216,7 +223,9 @@ const absenceComment = ref('');
 const absenceSaving = ref(false);
 
 function stageAbsence(row, reason) {
-    absenceRow.value = row.id;
+    // Track by child_id: synthesized (non-today) rows have a null id that would
+    // collide with the default and wrongly expand the form on every such row.
+    absenceRow.value = row.child_id;
     absenceReason.value = reason;
     absenceComment.value = '';
 }
@@ -270,7 +279,7 @@ function editRow(row) {
         { id: row.child_id, name: row.name },
         {
             date: props.date.iso,
-            editable: true,
+            editable: props.date.editable,
             time: row.planned_time,
             method: row.planned_method,
             qualifier: row.qualifier,
@@ -281,11 +290,11 @@ function editRow(row) {
     );
 }
 
-// Add a „Hortfrei" child to today straight from the summary pill (empty plan).
+// Add a „Hortfrei" child to the selected day straight from the summary pill (empty plan).
 function editHortfrei(child) {
     dayEditor.value?.open(
         { id: child.id, name: child.name },
-        { date: props.date.iso, editable: true, time: null, method: null, qualifier: 'at', companion: null, note: null },
+        { date: props.date.iso, editable: props.date.editable, time: null, method: null, qualifier: 'at', companion: null, note: null },
         todayMeta(),
     );
 }
@@ -296,12 +305,7 @@ function editHortfrei(child) {
 
     <AuthenticatedLayout>
         <template #header>
-            <div>
-                <h2 class="text-xl font-semibold text-ink">
-                    {{ date.is_today ? $t('common.today') : $t('board.next_hort_day') }}
-                </h2>
-                <p class="text-sm text-ink/50">{{ date.label }}</p>
-            </div>
+            <DayNav :day="date" class="mx-auto w-full max-w-sm" @navigate="goDay" />
         </template>
 
         <div class="space-y-4">
@@ -547,7 +551,7 @@ function editHortfrei(child) {
                         <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
                             <div
                                 v-for="row in block.rows"
-                                :key="row.id"
+                                :key="row.child_id"
                                 class="rounded-2xl bg-surface p-4 shadow-sm transition"
                                 :class="[
                                     { 'opacity-60': row.status === 'picked_up' || row.status === 'sent_home' },
@@ -680,7 +684,7 @@ function editHortfrei(child) {
                                 v-if="row.can_override && row.excursion?.state !== 'away'"
                                 class="text-sm"
                             >
-                                <div v-if="absenceRow !== row.id" class="flex items-center gap-2">
+                                <div v-if="absenceRow !== row.child_id" class="flex items-center gap-2">
                                     <span class="text-ink/40">{{ $t('board.not_here') }}</span>
                                     <button
                                         type="button"

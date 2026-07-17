@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\Enums\DepartureMethod;
 use App\Enums\DepartureStatus;
 use App\Enums\TimeQualifier;
+use App\Http\Controllers\Concerns\ResolvesDay;
 use App\Http\Requests\MarkDepartureRequest;
 use App\Http\Requests\OverrideDepartureRequest;
 use App\Models\Absence;
@@ -20,21 +21,18 @@ use App\Support\CompanionReconciler;
 use App\Support\EffectivePlan;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class DailyBoardController extends Controller
 {
-    private const WEEKDAYS_DE = [
-        1 => 'Montag', 2 => 'Dienstag', 3 => 'Mittwoch',
-        4 => 'Donnerstag', 5 => 'Freitag',
-    ];
+    use ResolvesDay;
 
-    /** The live daily board for today (or the next weekday on weekends). */
+    /** The daily board for a selected day (defaults to today / next weekday). */
     public function index(Request $request): Response
     {
-        $date = $this->targetDate();
+        [$date, $day] = $this->resolveDay($request);
+        $isToday = $date->isToday();
         $weekday = $date->dayOfWeekIso;
         $user = $request->user();
 
@@ -64,15 +62,19 @@ class DailyBoardController extends Controller
                 'comment' => $schedule->comment,
             ];
 
-            DailyDeparture::firstOrCreate(
-                ['child_id' => $child->id, 'date' => $date->toDateString()],
-                [
-                    'planned_time' => $schedule->planned_time,
-                    'planned_method' => $schedule->method,
-                    'time_qualifier' => $schedule->time_qualifier,
-                    'status' => DepartureStatus::Present,
-                ],
-            );
+            // Only today persists a row (so marking has a real id). Other days are
+            // rendered read-only/preview from the Stammplan (see synthesized rows below).
+            if ($isToday) {
+                DailyDeparture::firstOrCreate(
+                    ['child_id' => $child->id, 'date' => $date->toDateString()],
+                    [
+                        'planned_time' => $schedule->planned_time,
+                        'planned_method' => $schedule->method,
+                        'time_qualifier' => $schedule->time_qualifier,
+                        'status' => DepartureStatus::Present,
+                    ],
+                );
+            }
         }
 
         // Excursions today: a group list (with live state) plus a per-child overlay.
@@ -138,11 +140,9 @@ class DailyBoardController extends Controller
                 : ($d->planned_time ? substr((string) $d->planned_time, 0, 5) : null);
         }
 
-        $departures = $departures
-            ->sortBy(fn (DailyDeparture $d) => [$effectiveTime[$d->id] ?? '99:99', $d->child->name])
-            ->values();
+        $editable = $day['editable'];
 
-        $rows = $departures->map(function (DailyDeparture $d) use ($standard, $user, $myChildIds, $excursionByChild, $date, $childNames, $effectiveTime) {
+        $rows = $departures->map(function (DailyDeparture $d) use ($standard, $user, $myChildIds, $excursionByChild, $date, $childNames, $effectiveTime, $editable) {
             $dob = $d->child->date_of_birth;
             $birthday = $dob && $dob->format('m-d') === $date->format('m-d')
                 ? $date->year - $dob->year
@@ -192,13 +192,62 @@ class DailyBoardController extends Controller
                 // Pre-fills the override editor; defaults to the standard comment.
                 'note' => $d->note ?? ($std['comment'] ?? null),
                 'is_overridden' => $overridden,
-                'can_override' => $user->isStaff() || ($myChildIds?->contains($d->child_id) ?? false),
+                'can_override' => $editable && ($user->isStaff() || ($myChildIds?->contains($d->child_id) ?? false)),
                 'is_own' => $myChildIds?->contains($d->child_id) ?? false,
                 'excursion' => $excursionByChild[$d->child_id] ?? null,
                 // Age the child turns today, or null if it's not their birthday.
                 'birthday' => $birthday,
             ];
         });
+
+        // Non-today days don't persist rows: synthesize a read-only/preview row from the
+        // Stammplan for each scheduled child that has no DailyDeparture for the date.
+        if (! $isToday) {
+            $withRow = $departures->pluck('child_id')->all();
+            foreach ($scheduled as $child) {
+                if (in_array($child->id, $absentChildIds, true) || in_array($child->id, $withRow, true)) {
+                    continue;
+                }
+                $std = $standard[$child->id] ?? null;
+                if ($std === null) {
+                    continue;
+                }
+
+                $own = $myChildIds?->contains($child->id) ?? false;
+                $dob = $child->date_of_birth;
+
+                $rows->push([
+                    'id' => null,
+                    'child_id' => $child->id,
+                    'name' => $child->name,
+                    'planned_time' => $std['time'],
+                    'planned_method' => $std['method'],
+                    'qualifier_prefix' => $std['method'] === DepartureMethod::SentHome->value
+                        && $std['qualifier'] && $std['qualifier'] !== TimeQualifier::At->value
+                        ? TimeQualifier::from($std['qualifier'])->prefix()
+                        : null,
+                    'qualifier' => $std['qualifier'] ?? TimeQualifier::At->value,
+                    'companion' => null, // the Stammplan carries no companion
+                    'status' => DepartureStatus::Present->value,
+                    'status_label' => DepartureStatus::Present->label(),
+                    'left_at' => null,
+                    'marked_by' => null,
+                    'comment' => $std['comment'],
+                    'note' => $std['comment'],
+                    'is_overridden' => false,
+                    'can_override' => $editable && ($user->isStaff() || $own),
+                    'is_own' => $own,
+                    'excursion' => $excursionByChild[$child->id] ?? null,
+                    'birthday' => $dob && $dob->format('m-d') === $date->format('m-d')
+                        ? $date->year - $dob->year
+                        : null,
+                ]);
+            }
+        }
+
+        $rows = $rows
+            ->sortBy(fn (array $r) => [$r['planned_time'] ?? '99:99', $r['name']])
+            ->values();
 
         $program = DailyProgram::where('date', $date->toDateString())->first();
         $homeworkDefault = HomeworkDefault::where('weekday', $weekday)->first();
@@ -247,11 +296,8 @@ class DailyBoardController extends Controller
         })->values();
 
         return Inertia::render('Board/Index', [
-            'date' => [
-                'iso' => $date->toDateString(),
-                'label' => self::WEEKDAYS_DE[$weekday].', '.$date->format('d.m.Y'),
-                'is_today' => $date->isToday(),
-            ],
+            // Selected day + navigation meta (iso, label, is_today, editable, prev/next, offset).
+            'date' => $day,
             'rows' => $rows,
             // Regularly not at the Hort today (Stammplan „Hortfrei"), for context.
             'hortfrei' => $hortfrei,
@@ -272,7 +318,7 @@ class DailyBoardController extends Controller
                 'homework_start' => $homeworkStart ? substr((string) $homeworkStart, 0, 5) : null,
                 'homework_end' => $homeworkEnd ? substr((string) $homeworkEnd, 0, 5) : null,
             ] : null,
-            'canMark' => $user->isStaff(),
+            'canMark' => $user->isStaff() && $isToday,
             // The board uses the shared day editor (same as the Wochenplan), so it offers
             // the full method set incl. „geht mit … mit"; $children feeds its companion picker.
             'children' => $companionChildren,
@@ -289,6 +335,8 @@ class DailyBoardController extends Controller
     public function mark(MarkDepartureRequest $request, DailyDeparture $departure): RedirectResponse
     {
         $this->authorize('mark', $departure);
+        // Marking is a live, same-day action — never rewrite a past/future date.
+        abort_unless($departure->date->isToday(), 403);
 
         $status = DepartureStatus::from($request->validated('status'));
 
@@ -310,6 +358,8 @@ class DailyBoardController extends Controller
     public function override(OverrideDepartureRequest $request, DailyDeparture $departure): RedirectResponse
     {
         $this->authorize('update', $departure->child);
+        // A board override is same-day only; future days edit via weekly-plan.adjust.
+        abort_unless($departure->date->isToday(), 403);
 
         $validated = $request->validated();
 
@@ -334,17 +384,5 @@ class DailyBoardController extends Controller
         CompanionReconciler::reconcile($departure->child_id, $departure->date->toDateString());
 
         return back()->with('status', __('flash.plan_updated', ['name' => $departure->child->name]));
-    }
-
-    /** Today, advancing across the weekend to the next weekday. */
-    private function targetDate(): Carbon
-    {
-        $date = Carbon::today();
-
-        while ($date->isWeekend()) {
-            $date->addDay();
-        }
-
-        return $date;
     }
 }

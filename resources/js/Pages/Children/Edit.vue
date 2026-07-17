@@ -2,6 +2,7 @@
 import { update as childrenUpdate, index as childrenIndex, destroy as childrenDestroy } from '@/routes/children';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import Avatar from '@/Components/Avatar.vue';
+import DatePicker from '@/Components/DatePicker.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import TextInput from '@/Components/TextInput.vue';
 import TimeSelect from '@/Components/TimeSelect.vue';
@@ -149,11 +150,11 @@ function destroy() {
 
                         <div>
                             <InputLabel for="date_of_birth" :value="$t('children.date_of_birth')" />
-                            <TextInput
+                            <DatePicker
                                 id="date_of_birth"
                                 v-model="form.date_of_birth"
-                                type="date"
-                                class="mt-1 block w-full"
+                                clearable
+                                class="mt-1"
                             />
                             <InputError
                                 :message="form.errors.date_of_birth"

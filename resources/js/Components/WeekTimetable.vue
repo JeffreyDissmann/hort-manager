@@ -1,5 +1,7 @@
 <script setup>
 import { computed } from 'vue';
+import { Link } from '@inertiajs/vue3';
+import { board } from '@/routes';
 
 const props = defineProps({
     // Rows: [{ time, days: [ [ {id,name,method,comment,adjusted?,excursion?} ] × 5 ] }]
@@ -95,19 +97,28 @@ function chipClass(method) {
                 :class="col.is_today ? 'border-b-2 border-hort-teal' : 'border-b border-ink/10'"
                 :style="{ gridRow: 1, gridColumn: `${bandCol(j)} / ${bandCol(j) + 2}` }"
             >
-                <div
-                    class="text-xs font-semibold"
-                    :class="col.is_today ? 'text-hort-teal-dark' : 'text-ink/50'"
+                <!-- The header links to that day's board (Heute). -->
+                <component
+                    :is="col.date ? Link : 'div'"
+                    :href="col.date ? board({ query: { date: col.date } }).url : undefined"
+                    :data-testid="col.date ? `wp-day-link-${col.date}` : undefined"
+                    class="block rounded transition"
+                    :class="col.date ? 'hover:bg-hort-teal/10' : ''"
                 >
-                    {{ col.label }}<span v-if="col.is_today"> · {{ $t('common.today') }}</span>
-                </div>
-                <div
-                    v-if="col.sublabel"
-                    class="text-[11px]"
-                    :class="col.is_today ? 'font-semibold text-hort-teal-dark' : 'text-ink/30'"
-                >
-                    {{ col.sublabel }}
-                </div>
+                    <div
+                        class="text-xs font-semibold"
+                        :class="col.is_today ? 'text-hort-teal-dark' : 'text-ink/50'"
+                    >
+                        {{ col.label }}<span v-if="col.is_today"> · {{ $t('common.today') }}</span>
+                    </div>
+                    <div
+                        v-if="col.sublabel"
+                        class="text-[11px]"
+                        :class="col.is_today ? 'font-semibold text-hort-teal-dark' : 'text-ink/30'"
+                    >
+                        {{ col.sublabel }}
+                    </div>
+                </component>
                 <div
                     v-if="program[j] && program[j].lunch"
                     class="mt-0.5 truncate text-[11px] text-ink/70"

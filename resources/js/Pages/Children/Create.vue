@@ -1,6 +1,7 @@
 <script setup>
 import { store as childrenStore, index as childrenIndex } from '@/routes/children';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import DatePicker from '@/Components/DatePicker.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import TextInput from '@/Components/TextInput.vue';
 import InputError from '@/Components/InputError.vue';
@@ -48,11 +49,11 @@ function submit() {
 
                     <div>
                         <InputLabel for="date_of_birth" :value="$t('children.date_of_birth')" />
-                        <TextInput
+                        <DatePicker
                             id="date_of_birth"
                             v-model="form.date_of_birth"
-                            type="date"
-                            class="mt-1 block w-full"
+                            clearable
+                            class="mt-1"
                         />
                         <InputError
                             :message="form.errors.date_of_birth"

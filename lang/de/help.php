@@ -31,7 +31,7 @@ return [
         'today' => [
             'title' => 'Heute',
             'audience' => 'Für alle',
-            'text' => 'Die Übersicht für den heutigen Tag: Wer wird wann abgeholt, wer geht allein nach Hause, wer ist auf einem Ausflug. Erzieher:innen haken jedes Kind ab, sobald es geht. Hat ein Kind Geburtstag, siehst du das hier mit einem 🎂.',
+            'text' => 'Die Übersicht für einen Tag: Wer wird wann abgeholt, wer geht allein nach Hause, wer ist auf einem Ausflug. Erzieher:innen haken jedes Kind ab, sobald es geht. Hat ein Kind Geburtstag, siehst du das hier mit einem 🎂. Mit den Pfeilen oder per Tipp auf das Datum kannst du auch jeden anderen Tag ansehen – z. B. was am Freitag mit Essen und Aktivität geplant ist.',
         ],
         'pickup_plan' => [
             'title' => 'Wochenplan',

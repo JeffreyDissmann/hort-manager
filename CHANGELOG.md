@@ -8,6 +8,17 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Any-day Heute board** — 💛 **thanks to Julia**, whose idea this was: the daily board
+  is now navigable to any
+  weekday via `?date=` — a `DayNav` with prev/next arrows and a jump-to-any-day date
+  picker. Today stays live (staff marking); future weekdays are an editable preview
+  computed read-only from the Stammplan (`EffectivePlan`, no `DailyDeparture` rows
+  persisted on view); past days are read-only history, and the same-day `board.mark` /
+  `board.override` endpoints now 403 off-today. Past navigation is capped at the
+  data-retention floor. The Wochenplan's weekday headers link straight to that day's
+  board. Backed by a new reusable `DatePicker.vue` (hand-rolled month calendar with
+  month/year dropdowns, min/max, weekend-disabling, clearable, Escape/backdrop-to-close)
+  that also replaces the native date inputs on the child and excursion forms.
 - **Activity log (Protokoll)**: an admin-only audit trail at `/protokoll` (linked in the
   avatar menu) recording who changed what — children, Stammplan, absences, excursions,
   the Tagesprogramm and users/roles are auto-logged via `spatie/laravel-activitylog`,

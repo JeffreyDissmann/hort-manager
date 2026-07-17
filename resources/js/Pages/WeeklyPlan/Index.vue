@@ -54,7 +54,7 @@ function timePrefix(method, qualifier) {
 
 // The picked week's column headers show the weekday + its date; today is flagged.
 const weekColumns = computed(() =>
-    props.weekDays.map((d) => ({ label: d.label, sublabel: d.date_label, is_today: d.is_today })),
+    props.weekDays.map((d) => ({ label: d.label, sublabel: d.date_label, is_today: d.is_today, date: d.date })),
 );
 
 function goWeek(date) {

@@ -32,3 +32,12 @@ it('adjusts a day from the Wochenplan and resets it back to the Stammplan', func
     expect(DailyDeparture::where('child_id', $child->id)->whereDate('date', $date)->exists())
         ->toBeFalse();
 });
+
+it('links each weekday header to that day\'s board', function () {
+    $staff = User::factory()->staff()->create();
+    Child::factory()->scheduledOn(boardWeekday(), '15:00')->create(['name' => 'Nils']);
+    $date = boardDate()->toDateString();
+
+    actAndVisit($staff, '/wochenplan')
+        ->assertPresent("@wp-day-link-{$date}"); // the timetable header links to Heute for that date
+});
