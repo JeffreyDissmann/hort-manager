@@ -35,6 +35,18 @@ return [
         'weeks_ago' => 'vor :n Wochen',
     ],
 
+    'day' => [
+        'today' => 'Heute',
+        'tomorrow' => 'Morgen',
+        'yesterday' => 'Gestern',
+        'in_days' => 'in :n Tagen',
+        'days_ago' => 'vor :n Tagen',
+        'go_current' => 'Zu heute',
+        'prev' => 'Voriger Tag',
+        'next' => 'Nächster Tag',
+        'clear' => 'Löschen',
+    ],
+
     'timetable' => [
         'homework_range' => 'Hausaufgaben :start–:end',
     ],
