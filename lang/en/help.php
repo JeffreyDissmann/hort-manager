@@ -31,7 +31,7 @@ return [
         'today' => [
             'title' => 'Today',
             'audience' => 'For everyone',
-            'text' => 'The overview for today: who is picked up when, who goes home alone, who is on an excursion. Staff check off each child as soon as it leaves. If a child has a birthday, you’ll see it here with a 🎂.',
+            'text' => 'The overview for a day: who is picked up when, who goes home alone, who is on an excursion. Staff check off each child as soon as it leaves. If a child has a birthday, you’ll see it here with a 🎂. Use the arrows or tap the date to view any other day too — e.g. what’s planned for Friday, with lunch and activity.',
         ],
         'pickup_plan' => [
             'title' => 'Weekly plan',

@@ -9,6 +9,7 @@ The UI is in German; code, identifiers and docs are in English.
 ## Features
 
 - **Tagesboard (Heute)** — the day's departure overview; staff tick each child off.
+  Navigable to any weekday (past = read-only history, future = editable preview).
 - **Abholplan / Wochenplan** — the weekly pickup plan per child (Stammplan), adjustable per day.
 - **Ausflüge** — excursions with a per-child parent RSVP poll.
 - **Tagesprogramm** — lunch, activity and homework times for the week.
