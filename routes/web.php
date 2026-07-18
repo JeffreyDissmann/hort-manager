@@ -12,6 +12,7 @@ use App\Http\Controllers\DailyProgramController;
 use App\Http\Controllers\ExcursionController;
 use App\Http\Controllers\ExcursionRsvpController;
 use App\Http\Controllers\LocaleController;
+use App\Http\Controllers\NotificationSettingsController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\SlackCommandController;
@@ -90,6 +91,9 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     Route::patch('/profile/language', [LocaleController::class, 'update'])->name('locale.update');
+
+    Route::get('/benachrichtigungen', [NotificationSettingsController::class, 'edit'])->name('notifications.edit');
+    Route::patch('/benachrichtigungen', [NotificationSettingsController::class, 'update'])->name('notifications.update');
 
     // Admin-only: switch your own role between staff / parent.
     Route::post('/rolle', [SwitchRoleController::class, 'update'])->name('role.update');
