@@ -11,6 +11,10 @@ return [
     'channel_slack' => 'Slack',
     'channel_push' => 'Push',
 
+    'push_device_title' => 'Push-Benachrichtigungen auf diesem Gerät',
+    'push_device_description' => 'Push-Benachrichtigungen erreichen dich nur auf Geräten, auf denen du sie aktiviert hast. Schalte sie hier für dieses Gerät ein oder aus.',
+    'push_device_toggle' => 'Auf diesem Gerät',
+
     'matrix_title' => 'Was und wie',
     'matrix_description' => 'Schalte einzelne Benachrichtigungen pro Kanal an oder aus. Standardmäßig ist alles an.',
 

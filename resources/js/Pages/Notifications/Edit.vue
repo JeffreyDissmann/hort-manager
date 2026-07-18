@@ -51,14 +51,14 @@ function save() {
                 <div class="bg-surface p-4 shadow sm:rounded-lg sm:p-8">
                     <section class="max-w-xl">
                         <header>
-                            <h2 class="text-lg font-medium text-ink">{{ $t('profile.push') }}</h2>
-                            <p class="mt-1 text-sm text-ink/70">{{ $t('notifications.description') }}</p>
+                            <h2 class="text-lg font-medium text-ink">{{ $t('notifications.push_device_title') }}</h2>
+                            <p class="mt-1 text-sm text-ink/70">{{ $t('notifications.push_device_description') }}</p>
                         </header>
 
                         <div class="mt-6">
                             <div v-if="supported" class="flex items-center justify-between gap-4">
                                 <span class="text-sm font-medium text-ink">
-                                    {{ $t('profile.push') }}
+                                    {{ $t('notifications.push_device_toggle') }}
                                     <span
                                         class="ml-1 text-xs font-normal"
                                         :class="subscribed ? 'text-hort-teal-dark' : 'text-ink/40'"
@@ -135,9 +135,10 @@ function save() {
                                     <td class="px-3 py-4 text-center">
                                         <div class="flex justify-center">
                                             <NotificationToggle
-                                                v-model="prefs[category].slack"
+                                                :model-value="slackConnected && prefs[category].slack"
                                                 :disabled="!slackConnected"
                                                 :aria-label="$t('notifications.channel_slack')"
+                                                @update:model-value="(v) => (prefs[category].slack = v)"
                                                 @change="save"
                                             />
                                         </div>

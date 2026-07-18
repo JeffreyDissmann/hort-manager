@@ -3,7 +3,6 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import DeleteUserForm from './Partials/DeleteUserForm.vue';
 import UpdateLanguageForm from './Partials/UpdateLanguageForm.vue';
 import UpdateThemeForm from './Partials/UpdateThemeForm.vue';
-import UpdateNotificationsForm from './Partials/UpdateNotificationsForm.vue';
 import UpdatePasswordForm from './Partials/UpdatePasswordForm.vue';
 import UpdateProfileInformationForm from './Partials/UpdateProfileInformationForm.vue';
 import { Head } from '@inertiajs/vue3';
@@ -56,12 +55,6 @@ defineProps({
                     class="bg-surface p-4 shadow sm:rounded-lg sm:p-8"
                 >
                     <UpdateThemeForm />
-                </div>
-
-                <div
-                    class="bg-surface p-4 shadow sm:rounded-lg sm:p-8"
-                >
-                    <UpdateNotificationsForm />
                 </div>
 
                 <div

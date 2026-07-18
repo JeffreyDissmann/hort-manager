@@ -11,6 +11,10 @@ return [
     'channel_slack' => 'Slack',
     'channel_push' => 'Push',
 
+    'push_device_title' => 'Push notifications on this device',
+    'push_device_description' => 'Push notifications only reach you on devices where you have enabled them. Turn them on or off for this device here.',
+    'push_device_toggle' => 'On this device',
+
     'matrix_title' => 'What and how',
     'matrix_description' => 'Turn individual notifications on or off per channel. Everything is on by default.',
 
