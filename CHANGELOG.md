@@ -8,6 +8,18 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Notification settings + weekly digest**: a „Benachrichtigungen" page (avatar menu)
+  with a per-category × per-channel opt-out matrix — each notification type (departures,
+  excursions, companion, missing plan, weekly digest) toggles independently for Slack
+  and Push. Stored as a default-on
+  `notification_preferences` JSON column and enforced in both send paths (the
+  `SlackNotification::via()` classes and the direct `SlackRsvp`/`SlackCompanion`
+  services). The Slack column disables (and shows off) without a linked Slack account,
+  and the device-push master now lives here instead of on the profile page. Plus a new
+  Monday 12:00 **weekly digest** DM (`weekly:digest`, scheduled): the week's Hort-wide
+  program (food, activities, homework) and each parent's per-child summary — pickup per
+  day, absences and excursions — on Slack and/or push, gated by the digest preference.
+
 - **Any-day Heute board** — 💛 **thanks to Julia**, whose idea this was: the daily board
   is now navigable to any
   weekday via `?date=` — a `DayNav` with prev/next arrows and a jump-to-any-day date
