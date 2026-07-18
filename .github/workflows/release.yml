@@ -30,7 +30,7 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Lowercase image name (GHCR rejects mixed case)
         id: img
@@ -67,7 +67,7 @@ jobs:
 
       - name: Upload digest
         if: github.event_name == 'push'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: digest-${{ matrix.arch }}
           path: /tmp/digests/*
@@ -86,7 +86,7 @@ jobs:
         id: img
         run: echo "name=$(echo "$REGISTRY/$IMAGE_NAME" | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v5
         with:
           path: /tmp/digests
           pattern: digest-*
