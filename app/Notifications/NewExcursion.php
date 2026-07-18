@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Notifications;
 
+use App\Enums\NotificationCategory;
 use App\Models\Excursion;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -24,7 +25,10 @@ class NewExcursion extends Notification implements ShouldQueue
     /** @return array<int, class-string> */
     public function via(object $notifiable): array
     {
-        return [WebPushChannel::class];
+        // Push-only, and only if the user hasn't turned excursion push off.
+        return $notifiable->wantsNotification(NotificationCategory::Excursions->value, 'push')
+            ? [WebPushChannel::class]
+            : [];
     }
 
     public function toWebPush(object $notifiable, object $notification): WebPushMessage
