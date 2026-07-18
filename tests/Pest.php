@@ -24,8 +24,21 @@ pest()->extend(TestCase::class)
 
 // Browser tests (Pest 4 + Playwright). Unlike Dusk, the browser shares the app
 // process, so RefreshDatabase works and no throwaway db / served instance is needed.
+// The Heute board only allows live marking on the real "today"; on weekends its
+// default day rolls to the next weekday and renders as a read-only preview (no mark
+// buttons), which the board/plan tests aren't written for. Freeze the clock to that
+// weekday on weekend runs so they behave exactly like a normal weekday; weekday runs
+// keep the real clock untouched.
 pest()->extend(TestCase::class)
     ->use(RefreshDatabase::class)
+    ->beforeEach(function () {
+        if (Carbon::now()->isWeekend()) {
+            Carbon::setTestNow(boardDate()->setTime(9, 0));
+        }
+    })
+    ->afterEach(function () {
+        Carbon::setTestNow();
+    })
     ->in('Browser');
 
 /*

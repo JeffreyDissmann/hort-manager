@@ -16,16 +16,19 @@ declare(strict_types=1);
 
 return [
     [
-        'version' => '2026.07.17',
-        'date' => '2026-07-17',
-        'title' => 'Jeden Tag ansehen 📅 – Danke, Julia!',
+        'version' => '2026.07.18',
+        'date' => '2026-07-18',
+        'title' => 'Jeden Tag ansehen 📅 & Benachrichtigungen 🔔 – Danke, Julia & Stepan!',
         'items' => [
             '📅 „Heute" zeigt jetzt jeden Tag: Blättere mit den Pfeilen oder tippe auf das Datum, um einen Tag auszuwählen – mit Essen, Aktivität, Ausflügen und dem Abholplan für genau diesen Tag.',
             '✏️ Kommende Tage kannst du direkt anpassen, vergangene Tage siehst du zum Nachschauen.',
             '↔️ Im Wochenplan bringt dich ein Tipp auf einen Wochentag direkt zur „Heute"-Ansicht dieses Tages.',
             '🗓️ Ein Datum auswählen geht jetzt überall gleich – über einen übersichtlichen Kalender, z. B. fürs Geburtsdatum oder das Ausflugsdatum.',
             '💛 Danke für die Idee, Julia!',
-
+            '🔔 Neu im Menü unter „Benachrichtigungen": Du entscheidest jetzt selbst, worüber du informiert wirst – und ob per Slack oder als Push auf dein Gerät. Für jede Art einzeln (Abholung, Ausflüge, Mitgehen, fehlender Wochenplan, Wochenüberblick).',
+            '📱 Push aktivierst du dabei pro Gerät – auf jedem Handy oder Rechner, auf dem du benachrichtigt werden möchtest.',
+            '🗓️ Jeden Montagmittag bekommst du außerdem einen Wochenüberblick: Essen, Aktivitäten und Hausaufgaben der Woche plus eine kurze Zusammenfassung für dein Kind – Abholzeiten, Krank-Tage und Ausflüge.',
+            '💙 Danke für die Idee, Stepan!',
         ],
     ],
     [

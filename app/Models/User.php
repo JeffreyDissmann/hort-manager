@@ -61,6 +61,7 @@ class User extends Authenticatable implements HasLocalePreference
             'password' => 'hashed',
             'role' => UserRole::class,
             'is_admin' => 'boolean',
+            'notification_preferences' => 'array',
         ];
     }
 
@@ -68,6 +69,15 @@ class User extends Authenticatable implements HasLocalePreference
     public function preferredLocale(): ?string
     {
         return $this->locale;
+    }
+
+    /**
+     * Whether this user wants a notification category on a channel ('slack' | 'push').
+     * Opt-out model: a missing preference means the channel is ON.
+     */
+    public function wantsNotification(string $category, string $channel): bool
+    {
+        return (bool) ($this->notification_preferences[$category][$channel] ?? true);
     }
 
     /** Staff member (Erzieher:in) — may manage children, schedules and the board. */

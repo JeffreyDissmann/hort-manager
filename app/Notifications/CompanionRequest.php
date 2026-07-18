@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Notifications;
 
+use App\Enums\NotificationCategory;
 use App\Models\DailyDeparture;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -25,7 +26,9 @@ class CompanionRequest extends Notification implements ShouldQueue
     /** @return array<int, class-string> */
     public function via(object $notifiable): array
     {
-        return [WebPushChannel::class];
+        return $notifiable->wantsNotification(NotificationCategory::Companion->value, 'push')
+            ? [WebPushChannel::class]
+            : [];
     }
 
     public function toWebPush(object $notifiable, object $notification): WebPushMessage

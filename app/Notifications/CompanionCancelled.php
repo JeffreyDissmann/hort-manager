@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Notifications;
 
+use App\Enums\NotificationCategory;
 use Illuminate\Notifications\Slack\BlockKit\Blocks\ActionsBlock;
 use Illuminate\Notifications\Slack\BlockKit\Blocks\SectionBlock;
 use Illuminate\Notifications\Slack\SlackMessage;
@@ -23,6 +24,11 @@ class CompanionCancelled extends SlackNotification
         public string $companionName,
         public string $date,
     ) {}
+
+    public function category(): string
+    {
+        return NotificationCategory::Companion->value;
+    }
 
     public function toSlack(object $notifiable): SlackMessage
     {

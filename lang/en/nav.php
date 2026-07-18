@@ -13,6 +13,7 @@ return [
     'activity_log' => 'Activity log',
     'my_children' => 'My children',
     'profile' => 'Profile',
+    'notifications' => 'Notifications',
     'help' => 'Help',
     'whats_new' => "What's new?",
     'my_role' => 'My role',

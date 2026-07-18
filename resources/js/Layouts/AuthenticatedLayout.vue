@@ -25,6 +25,7 @@ import { index as excursionsIndex } from '@/routes/excursions';
 import { index as usersIndex } from '@/routes/users';
 import { index as pollsIndex } from '@/routes/polls';
 import { edit as profileEdit } from '@/routes/profile';
+import { edit as notificationsEdit } from '@/routes/notifications';
 import { Link, router, usePage } from '@inertiajs/vue3';
 import { t } from '@/i18n';
 
@@ -190,6 +191,9 @@ function isActive(href) {
                         </DropdownLink>
                         <DropdownLink :href="profileEdit().url">
                             {{ $t('nav.profile') }}
+                        </DropdownLink>
+                        <DropdownLink :href="notificationsEdit().url">
+                            {{ $t('nav.notifications') }}
                         </DropdownLink>
                         <DropdownLink :href="help().url">
                             {{ $t('nav.help') }}
