@@ -38,4 +38,8 @@ return [
     'category_updated' => 'Kategorie gespeichert.',
     'category_deleted' => 'Kategorie „:name“ gelöscht.',
     'category_has_bookings' => 'Kategorie „:name“ (oder eine Unterkategorie) hat Buchungen und kann nicht gelöscht werden. Deaktiviere sie stattdessen.',
+
+    'booking_created' => 'Buchung angelegt.',
+    'booking_updated' => 'Buchung gespeichert.',
+    'booking_deleted' => 'Buchung gelöscht.',
 ];

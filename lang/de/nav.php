@@ -14,6 +14,7 @@ return [
     'accounting' => 'Buchhaltung',
     'accounts' => 'Konten',
     'categories' => 'Kategorien',
+    'bookings' => 'Buchungen',
     'my_children' => 'Meine Kinder',
     'profile' => 'Profil',
     'notifications' => 'Benachrichtigungen',

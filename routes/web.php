@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Http\Controllers\AbsenceController;
 use App\Http\Controllers\Accounting\AccountController;
+use App\Http\Controllers\Accounting\BookingController;
 use App\Http\Controllers\Accounting\CategoryController;
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\Auth\SlackController;
@@ -141,6 +142,7 @@ Route::middleware('auth')->group(function () {
     Route::middleware('admin')->prefix('accounting')->name('accounting.')->group(function () {
         Route::resource('accounts', AccountController::class)->except('show');
         Route::resource('categories', CategoryController::class)->only(['index', 'store', 'update', 'destroy']);
+        Route::resource('bookings', BookingController::class)->except('show');
     });
 });
 

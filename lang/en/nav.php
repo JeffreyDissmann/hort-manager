@@ -14,6 +14,7 @@ return [
     'accounting' => 'Accounting',
     'accounts' => 'Accounts',
     'categories' => 'Categories',
+    'bookings' => 'Bookings',
     'my_children' => 'My children',
     'profile' => 'Profile',
     'notifications' => 'Notifications',

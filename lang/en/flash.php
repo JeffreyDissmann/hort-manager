@@ -38,4 +38,8 @@ return [
     'category_updated' => 'Category saved.',
     'category_deleted' => 'Category “:name” deleted.',
     'category_has_bookings' => 'Category “:name” (or a subcategory) has bookings and cannot be deleted. Deactivate it instead.',
+
+    'booking_created' => 'Booking created.',
+    'booking_updated' => 'Booking saved.',
+    'booking_deleted' => 'Booking deleted.',
 ];

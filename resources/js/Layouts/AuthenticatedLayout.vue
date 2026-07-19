@@ -23,6 +23,7 @@ import { update as switchRoleRoute } from '@/routes/role';
 import { index as childrenIndex } from '@/routes/children';
 import { index as excursionsIndex } from '@/routes/excursions';
 import { index as usersIndex } from '@/routes/users';
+import { index as bookingsIndex } from '@/routes/accounting/bookings';
 import { index as accountsIndex } from '@/routes/accounting/accounts';
 import { index as categoriesIndex } from '@/routes/accounting/categories';
 import { index as pollsIndex } from '@/routes/polls';
@@ -186,6 +187,9 @@ function isActive(href) {
                             </DropdownLink>
                             <hr class="my-1 border-ink/10" />
                             <p class="px-4 pb-1 pt-2 text-xs font-medium text-ink/50">{{ $t('nav.accounting') }}</p>
+                            <DropdownLink :href="bookingsIndex().url" data-testid="nav-bookings">
+                                {{ $t('nav.bookings') }}
+                            </DropdownLink>
                             <DropdownLink :href="accountsIndex().url" data-testid="nav-accounts">
                                 {{ $t('nav.accounts') }}
                             </DropdownLink>

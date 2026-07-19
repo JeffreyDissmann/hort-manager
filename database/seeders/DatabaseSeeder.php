@@ -172,5 +172,6 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $this->call(AccountingCategorySeeder::class);
+        $this->call(AccountingBookingSeeder::class);
     }
 }
