@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\AbsenceController;
+use App\Http\Controllers\Accounting\AccountController;
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\Auth\SlackController;
 use App\Http\Controllers\ChildController;
@@ -134,6 +135,11 @@ Route::middleware('auth')->group(function () {
     // Parent participation poll.
     Route::get('polls', [ExcursionRsvpController::class, 'index'])->name('polls.index');
     Route::patch('excursions/{excursion}/rsvp', [ExcursionRsvpController::class, 'update'])->name('polls.update');
+
+    // Buchhaltung — admin-only accounting module.
+    Route::middleware('admin')->prefix('accounting')->name('accounting.')->group(function () {
+        Route::resource('accounts', AccountController::class)->except('show');
+    });
 });
 
 require __DIR__.'/auth.php';

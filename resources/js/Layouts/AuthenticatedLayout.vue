@@ -23,6 +23,7 @@ import { update as switchRoleRoute } from '@/routes/role';
 import { index as childrenIndex } from '@/routes/children';
 import { index as excursionsIndex } from '@/routes/excursions';
 import { index as usersIndex } from '@/routes/users';
+import { index as accountsIndex } from '@/routes/accounting/accounts';
 import { index as pollsIndex } from '@/routes/polls';
 import { edit as profileEdit } from '@/routes/profile';
 import { edit as notificationsEdit } from '@/routes/notifications';
@@ -152,12 +153,6 @@ function isActive(href) {
                     </template>
                     <template #content>
                         <template v-if="isAdmin">
-                            <DropdownLink :href="usersIndex().url">
-                                {{ $t('nav.users') }}
-                            </DropdownLink>
-                            <DropdownLink :href="activityLog().url" data-testid="nav-activity-log">
-                                {{ $t('nav.activity_log') }}
-                            </DropdownLink>
                             <div class="px-4 py-2">
                                 <p class="mb-1 text-xs font-medium text-ink/50">{{ $t('nav.my_role') }}</p>
                                 <div class="flex gap-0.5 rounded-lg bg-ink/5 p-0.5">
@@ -181,6 +176,18 @@ function isActive(href) {
                                     </button>
                                 </div>
                             </div>
+                            <hr class="my-1 border-ink/10" />
+                            <DropdownLink :href="usersIndex().url">
+                                {{ $t('nav.users') }}
+                            </DropdownLink>
+                            <DropdownLink :href="activityLog().url" data-testid="nav-activity-log">
+                                {{ $t('nav.activity_log') }}
+                            </DropdownLink>
+                            <hr class="my-1 border-ink/10" />
+                            <p class="px-4 pb-1 pt-2 text-xs font-medium text-ink/50">{{ $t('nav.accounting') }}</p>
+                            <DropdownLink :href="accountsIndex().url" data-testid="nav-accounts">
+                                {{ $t('nav.accounts') }}
+                            </DropdownLink>
                             <hr class="my-1 border-ink/10" />
                         </template>
                         <DropdownLink

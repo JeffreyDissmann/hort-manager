@@ -28,4 +28,9 @@ return [
 
     'program_saved' => 'Programm gespeichert.',
     'homework_defaults_saved' => 'Standard-Hausaufgabenzeiten gespeichert.',
+
+    'account_created' => 'Konto „:name“ angelegt.',
+    'account_updated' => 'Konto „:name“ gespeichert.',
+    'account_deleted' => 'Konto „:name“ gelöscht.',
+    'account_has_bookings' => 'Konto „:name“ hat Buchungen und kann nicht gelöscht werden. Deaktiviere es stattdessen.',
 ];

@@ -11,6 +11,8 @@ return [
     'children' => 'Kinder',
     'users' => 'Benutzer',
     'activity_log' => 'Protokoll',
+    'accounting' => 'Buchhaltung',
+    'accounts' => 'Konten',
     'my_children' => 'Meine Kinder',
     'profile' => 'Profil',
     'notifications' => 'Benachrichtigungen',

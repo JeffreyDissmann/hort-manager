@@ -28,4 +28,9 @@ return [
 
     'program_saved' => 'Program saved.',
     'homework_defaults_saved' => 'Default homework times saved.',
+
+    'account_created' => 'Account “:name” created.',
+    'account_updated' => 'Account “:name” saved.',
+    'account_deleted' => 'Account “:name” deleted.',
+    'account_has_bookings' => 'Account “:name” has bookings and cannot be deleted. Deactivate it instead.',
 ];
