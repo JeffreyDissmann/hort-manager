@@ -34,4 +34,17 @@ return [
         'at' => 'um',
         'from' => 'ab',
     ],
+    'category_direction' => [
+        'income' => 'Einnahme',
+        'expense' => 'Ausgabe',
+    ],
+    'booking_kind' => [
+        'income' => 'Einnahme',
+        'expense' => 'Ausgabe',
+        'transfer' => 'Umbuchung',
+    ],
+    'booking_status' => [
+        'draft' => 'Entwurf',
+        'confirmed' => 'Bestätigt',
+    ],
 ];

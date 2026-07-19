@@ -34,4 +34,17 @@ return [
         'at' => 'at',
         'from' => 'from',
     ],
+    'category_direction' => [
+        'income' => 'Income',
+        'expense' => 'Expense',
+    ],
+    'booking_kind' => [
+        'income' => 'Income',
+        'expense' => 'Expense',
+        'transfer' => 'Transfer',
+    ],
+    'booking_status' => [
+        'draft' => 'Draft',
+        'confirmed' => 'Confirmed',
+    ],
 ];
