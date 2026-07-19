@@ -15,6 +15,7 @@ return [
     'accounts' => 'Konten',
     'categories' => 'Kategorien',
     'bookings' => 'Buchungen',
+    'import' => 'Import',
     'my_children' => 'Meine Kinder',
     'profile' => 'Profil',
     'notifications' => 'Benachrichtigungen',

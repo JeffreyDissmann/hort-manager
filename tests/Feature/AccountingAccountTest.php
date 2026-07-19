@@ -92,6 +92,6 @@ it('rejects a non-IBAN with a friendly message', function () {
     $admin = User::factory()->admin()->create();
 
     $this->actingAs($admin)
-        ->post('/accounting/accounts', ['name' => 'Konto', 'iban' => '6470297113', 'active' => true])
+        ->post('/accounting/accounts', ['name' => 'Konto', 'iban' => 'not-an-iban', 'active' => true])
         ->assertSessionHasErrors(['iban' => __('accounting.accounts.iban_invalid')]);
 });

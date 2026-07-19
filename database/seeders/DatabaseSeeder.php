@@ -172,6 +172,7 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $this->call(AccountingCategorySeeder::class);
-        $this->call(AccountingBookingSeeder::class);
+        // Commented out so you can test importing/adding bookings into an empty ledger.
+        // $this->call(AccountingBookingSeeder::class);
     }
 }

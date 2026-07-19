@@ -11,6 +11,8 @@ const props = defineProps({
     accounts: { type: Array, required: true },
     categories: { type: Array, required: true },
     users: { type: Array, required: true },
+    // Optional: restrict the category picker to one direction (used during review).
+    direction: { type: String, default: null },
 });
 
 // Counterparty is either a linked user, a free-text name, or nothing.
@@ -64,7 +66,7 @@ const modes = [
 
         <div>
             <InputLabel :value="$t('accounting.bookings.category')" />
-            <CategorySelect v-model="form.category_id" :categories="categories" class="mt-1" />
+            <CategorySelect v-model="form.category_id" :categories="categories" :direction="direction" class="mt-1" />
             <InputError :message="form.errors.category_id" class="mt-2" />
         </div>
 

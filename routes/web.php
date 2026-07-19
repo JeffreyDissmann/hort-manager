@@ -6,6 +6,7 @@ use App\Http\Controllers\AbsenceController;
 use App\Http\Controllers\Accounting\AccountController;
 use App\Http\Controllers\Accounting\BookingController;
 use App\Http\Controllers\Accounting\CategoryController;
+use App\Http\Controllers\Accounting\ImportController;
 use App\Http\Controllers\Accounting\TransferController;
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\Auth\SlackController;
@@ -143,9 +144,17 @@ Route::middleware('auth')->group(function () {
     Route::middleware('admin')->prefix('accounting')->name('accounting.')->group(function () {
         Route::resource('accounts', AccountController::class)->except('show');
         Route::resource('categories', CategoryController::class)->only(['index', 'store', 'update', 'destroy']);
+        // Step-through review of draft bookings (before the resource's {booking} routes).
+        Route::get('bookings/review', [BookingController::class, 'review'])->name('bookings.review');
+        Route::patch('bookings/{booking}/review', [BookingController::class, 'reviewSave'])->name('bookings.review-save');
         Route::resource('bookings', BookingController::class)->except('show');
+
         Route::get('transfers/create', [TransferController::class, 'create'])->name('transfers.create');
         Route::post('transfers', [TransferController::class, 'store'])->name('transfers.store');
+
+        Route::get('import', [ImportController::class, 'create'])->name('import.create');
+        Route::post('import', [ImportController::class, 'store'])->name('import.store');
+        Route::get('import/{import}', [ImportController::class, 'show'])->name('import.show');
     });
 });
 

@@ -12,18 +12,22 @@ import { PlusIcon, CheckIcon, XMarkIcon } from '@heroicons/vue/24/outline';
 const props = defineProps({
     modelValue: { type: [Number, String, null], default: null },
     categories: { type: Array, required: true },
+    // When set ('income'|'expense'), only that direction is offered.
+    direction: { type: String, default: null },
 });
 const emit = defineEmits(['update:modelValue']);
 
 const adding = ref(false);
 const newName = ref('');
-const newDirection = ref('expense');
+const newDirection = ref(props.direction ?? 'expense');
 const nameInput = ref(null);
 
-const groups = computed(() => [
-    { direction: 'income', label: t('accounting.categories.income') },
-    { direction: 'expense', label: t('accounting.categories.expense') },
-]);
+const groups = computed(() =>
+    [
+        { direction: 'income', label: t('accounting.categories.income') },
+        { direction: 'expense', label: t('accounting.categories.expense') },
+    ].filter((g) => !props.direction || g.direction === props.direction),
+);
 
 function optionsFor(direction) {
     return props.categories.filter((c) => c.direction === direction);
@@ -106,6 +110,7 @@ function saveNew() {
                 @keyup.esc="adding = false"
             />
             <select
+                v-if="!direction"
                 v-model="newDirection"
                 class="rounded-md border-ink/20 py-1 text-sm focus:border-hort-teal focus:ring-hort-teal"
             >

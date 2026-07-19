@@ -43,4 +43,8 @@ return [
     'booking_updated' => 'Buchung gespeichert.',
     'booking_deleted' => 'Buchung gelöscht.',
     'transfer_created' => 'Umbuchung angelegt.',
+
+    'import_done' => ':imported Buchungen importiert, :duplicates Duplikate übersprungen. Bitte prüfen.',
+    'import_saved' => 'Gespeichert. Es sind noch Entwürfe zu prüfen.',
+    'import_complete' => 'Alle importierten Buchungen bestätigt.',
 ];

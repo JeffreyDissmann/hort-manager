@@ -43,14 +43,14 @@ it('creates an income booking as a positive confirmed amount', function () {
         'category_id' => $category->id,
         'amount' => '50.00',
         'booking_date' => '2026-04-01',
-        'counterparty_name' => 'Familie Ostojic',
+        'counterparty_name' => 'Familie Muster',
     ])->assertRedirect('/accounting/bookings');
 
     $booking = Booking::first();
     expect($booking->amount_cents)->toBe(5000)
         ->and($booking->kind)->toBe(BookingKind::Income)
         ->and($booking->status)->toBe(BookingStatus::Confirmed)
-        ->and($booking->counterparty_name)->toBe('Familie Ostojic');
+        ->and($booking->counterparty_name)->toBe('Familie Muster');
 });
 
 it('creates an expense booking as a negative amount', function () {
@@ -168,4 +168,84 @@ it('deletes a booking', function () {
 
     $this->delete("/accounting/bookings/{$booking->id}")->assertRedirect();
     expect(Booking::find($booking->id))->toBeNull();
+});
+
+it('can flip a booking back to draft from the edit form', function () {
+    $admin = User::factory()->admin()->create();
+    $this->actingAs($admin);
+    $booking = Booking::factory()->create(['status' => BookingStatus::Confirmed]);
+    $category = Category::factory()->income()->create();
+
+    $this->put("/accounting/bookings/{$booking->id}", [
+        'account_id' => $booking->account_id,
+        'category_id' => $category->id,
+        'amount' => '10',
+        'booking_date' => '2026-04-02',
+        'status' => 'draft',
+    ])->assertRedirect();
+
+    expect($booking->refresh()->status)->toBe(BookingStatus::Draft);
+});
+
+it('reviews drafts oldest first', function () {
+    $admin = User::factory()->admin()->create();
+    $this->actingAs($admin);
+    $older = Booking::factory()->draft()->create(['booking_date' => '2026-04-01']);
+    Booking::factory()->draft()->create(['booking_date' => '2026-04-10']);
+
+    $this->get('/accounting/bookings/review')
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->component('Accounting/Bookings/Review')
+            ->where('booking.id', $older->id)
+            ->where('remaining', 2));
+});
+
+it('confirms the current draft with the full form and keeps the sign', function () {
+    $admin = User::factory()->admin()->create();
+    $this->actingAs($admin);
+    $draft = Booking::factory()->draft()->expense()->create(['amount_cents' => -1000, 'category_id' => null]);
+    $category = Category::factory()->expense()->create();
+
+    $this->patch("/accounting/bookings/{$draft->id}/review", [
+        'action' => 'confirm',
+        'account_id' => $draft->account_id,
+        'category_id' => $category->id,
+        'amount' => '35.20',
+        'booking_date' => '2026-04-01',
+        'comment' => 'Miete',
+    ])->assertRedirect();
+
+    $draft->refresh();
+    expect($draft->status)->toBe(BookingStatus::Confirmed)
+        ->and($draft->category_id)->toBe($category->id)
+        ->and($draft->amount_cents)->toBe(-3520) // magnitude re-signed to expense
+        ->and($draft->comment)->toBe('Miete');
+});
+
+it('rejects a review category with the wrong direction', function () {
+    $admin = User::factory()->admin()->create();
+    $this->actingAs($admin);
+    $draft = Booking::factory()->draft()->expense()->create(['amount_cents' => -1000, 'category_id' => null]);
+    $income = Category::factory()->income()->create();
+
+    $this->patch("/accounting/bookings/{$draft->id}/review", [
+        'action' => 'confirm',
+        'account_id' => $draft->account_id,
+        'category_id' => $income->id,
+        'amount' => '10',
+        'booking_date' => '2026-04-01',
+    ])->assertSessionHasErrors('category_id');
+
+    expect($draft->refresh()->status)->toBe(BookingStatus::Draft);
+});
+
+it('discards a draft during review', function () {
+    $admin = User::factory()->admin()->create();
+    $this->actingAs($admin);
+    $draft = Booking::factory()->draft()->create();
+
+    $this->patch("/accounting/bookings/{$draft->id}/review", ['action' => 'discard'])
+        ->assertRedirect();
+
+    expect(Booking::find($draft->id))->toBeNull();
 });

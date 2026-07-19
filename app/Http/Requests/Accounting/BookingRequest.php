@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests\Accounting;
 
 use App\Enums\BookingKind;
+use App\Enums\BookingStatus;
 use App\Models\Accounting\Category;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -31,6 +32,8 @@ class BookingRequest extends FormRequest
             'comment' => ['nullable', 'string', 'max:2000'],
             'counterparty_user_id' => ['nullable', Rule::exists('users', 'id')],
             'counterparty_name' => ['nullable', 'string', 'max:255'],
+            // Only used by the edit form's review-status toggle.
+            'status' => ['nullable', Rule::enum(BookingStatus::class)],
         ];
     }
 

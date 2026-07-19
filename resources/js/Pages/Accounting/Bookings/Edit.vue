@@ -1,6 +1,7 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
+import InputLabel from '@/Components/InputLabel.vue';
 import BookingFields from './Partials/BookingFields.vue';
 import { update as bookingsUpdate, index as bookingsIndex } from '@/routes/accounting/bookings';
 import { Head, Link, useForm } from '@inertiajs/vue3';
@@ -10,6 +11,7 @@ const props = defineProps({
     accounts: { type: Array, required: true },
     categories: { type: Array, required: true },
     users: { type: Array, required: true },
+    statuses: { type: Array, required: true },
 });
 
 const form = useForm({
@@ -22,6 +24,7 @@ const form = useForm({
     comment: props.booking.comment ?? '',
     counterparty_user_id: props.booking.counterparty_user_id,
     counterparty_name: props.booking.counterparty_name ?? '',
+    status: props.booking.status,
 });
 
 function submit() {
@@ -41,6 +44,17 @@ function submit() {
         <div class="mx-auto max-w-2xl">
             <form @submit.prevent="submit" class="rounded-2xl bg-surface p-6 shadow-sm">
                 <BookingFields :form="form" :accounts="accounts" :categories="categories" :users="users" />
+
+                <div class="mt-6 border-t border-ink/10 pt-4">
+                    <InputLabel for="status" :value="$t('accounting.bookings.status')" />
+                    <select
+                        id="status"
+                        v-model="form.status"
+                        class="mt-1 block w-full max-w-xs rounded-md border-ink/20 shadow-sm focus:border-hort-teal focus:ring-hort-teal"
+                    >
+                        <option v-for="s in statuses" :key="s.value" :value="s.value">{{ s.label }}</option>
+                    </select>
+                </div>
 
                 <div class="mt-6 flex items-center justify-end gap-4">
                     <Link :href="bookingsIndex().url" class="text-sm text-ink/70 hover:text-ink">

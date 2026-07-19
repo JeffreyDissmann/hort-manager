@@ -30,24 +30,24 @@ class AccountingBookingSeeder extends Seeder
 
         // [account, category name, euros (positive), date, purpose, counterparty?, status?]
         $rows = [
-            [$bank, 'Essensgeld', 50.00, '2026-04-01', 'SEPA-GUTSCHRIFT Essensgeld Nora D.', 'Familie Dimitrijevic'],
-            [$bank, 'Vereinsbeitrag', 110.00, '2026-04-01', 'SEPA-GUTSCHRIFT Vereinsbeitrag', 'Familie Ostojic'],
+            [$bank, 'Essensgeld', 50.00, '2026-04-01', 'SEPA-GUTSCHRIFT Essensgeld', 'Familie Müller'],
+            [$bank, 'Vereinsbeitrag', 110.00, '2026-04-01', 'SEPA-GUTSCHRIFT Vereinsbeitrag', 'Familie Klein'],
             [$bank, 'Elternbeitrag', 180.00, '2026-04-02', 'SEPA-GUTSCHRIFT Elternbeitrag', $parent],
             [$bank, 'Essensgeld', 50.00, '2026-04-03', 'SEPA-GUTSCHRIFT Essensgeld', $parent],
-            [$bank, 'Beitrag für Hortfreizeit', 75.00, '2026-04-08', 'Überweisung Hortfreizeit Juni', 'Familie Bauer'],
+            [$bank, 'Beitrag für Hortfreizeit', 75.00, '2026-04-08', 'Überweisung Hortfreizeit Juni', 'Familie Wagner'],
 
-            [$bank, 'Raumkosten', 3520.00, '2026-04-01', 'DAUERAUFTRAG Miete + NK-Vorauszahlung', 'Angelika Stark'],
-            [$bank, 'Ausflüge', 14.00, '2026-03-31', 'EC-POS Staatliche Museen Bayern München', null],
-            [$bank, 'Lebensmittel', 68.42, '2026-04-04', 'EC-POS REWE München', null],
-            [$bank, 'Drogerie', 23.90, '2026-04-04', 'EC-POS dm-drogerie markt', null],
-            [$bank, 'Versicherung', 42.30, '2026-04-01', 'ABSCHLUSS / Beitrag Haftpflicht', null],
-            [$bank, 'Telefon', 39.99, '2026-04-15', 'Lastschrift Telekom', null],
-            [$bank, 'Zeitschriften Abo', 12.90, '2026-04-10', 'Abo GEO mini', null],
+            [$bank, 'Raumkosten', 3520.00, '2026-04-01', 'DAUERAUFTRAG Miete + NK-Vorauszahlung', 'Vermietung Musterstraße'],
+            [$bank, 'Ausflüge', 14.00, '2026-03-31', 'Kartenzahlung Museumsbesuch', null],
+            [$bank, 'Lebensmittel', 68.42, '2026-04-04', 'Kartenzahlung Supermarkt', null],
+            [$bank, 'Drogerie', 23.90, '2026-04-04', 'Kartenzahlung Drogeriemarkt', null],
+            [$bank, 'Versicherung', 42.30, '2026-04-01', 'Beitrag Haftpflichtversicherung', null],
+            [$bank, 'Telefon', 39.99, '2026-04-15', 'Lastschrift Telefonanbieter', null],
+            [$bank, 'Zeitschriften Abo', 12.90, '2026-04-10', 'Abo Kinderzeitschrift', null],
             [$cash, 'Basteln', 18.50, '2026-04-09', 'Bastelbedarf bar bezahlt', null],
             [$cash, 'Büromaterial', 9.95, '2026-04-11', 'Druckerpapier', null],
 
             // Two drafts (as if freshly imported, awaiting review).
-            [$bank, 'Lebensmittel', 51.20, '2026-04-18', 'EC-POS EDEKA', null, BookingStatus::Draft],
+            [$bank, 'Lebensmittel', 51.20, '2026-04-18', 'Kartenzahlung Supermarkt', null, BookingStatus::Draft],
             [$bank, 'Essensgeld', 50.00, '2026-04-18', 'SEPA-GUTSCHRIFT Essensgeld', null, BookingStatus::Draft],
         ];
 

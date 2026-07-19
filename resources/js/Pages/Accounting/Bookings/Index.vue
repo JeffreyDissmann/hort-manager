@@ -10,14 +10,17 @@ import {
     create as bookingsCreate,
     edit as bookingsEdit,
     destroy as bookingsDestroy,
+    review as bookingsReview,
 } from '@/routes/accounting/bookings';
 import { create as transfersCreate } from '@/routes/accounting/transfers';
-import { PencilSquareIcon, TrashIcon, PlusIcon, ArrowsRightLeftIcon } from '@heroicons/vue/24/outline';
+import { create as importCreate } from '@/routes/accounting/import';
+import { PencilSquareIcon, TrashIcon, PlusIcon, ArrowsRightLeftIcon, ArrowDownTrayIcon, ClipboardDocumentCheckIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
     bookings: { type: Object, required: true }, // paginator
     filters: { type: Object, required: true },
     filterOptions: { type: Object, required: true },
+    draftCount: { type: Number, default: 0 },
 });
 
 const filters = reactive({
@@ -68,7 +71,23 @@ function destroy(booking) {
                     <p class="text-xs font-semibold uppercase tracking-wide text-ink/40">{{ $t('accounting.title') }}</p>
                     <h2 class="text-xl font-semibold text-ink">{{ $t('accounting.bookings.title') }}</h2>
                 </div>
-                <div class="flex items-center gap-2">
+                <div class="flex flex-wrap items-center justify-end gap-2">
+                    <Link
+                        v-if="draftCount > 0"
+                        :href="bookingsReview().url"
+                        class="flex items-center gap-1 rounded-lg bg-amber-100 px-3 py-2 text-sm font-medium text-amber-800 transition hover:bg-amber-200"
+                        data-testid="bookings-review"
+                    >
+                        <ClipboardDocumentCheckIcon class="h-4 w-4" />
+                        {{ $t('accounting.bookings.review_button') }} ({{ draftCount }})
+                    </Link>
+                    <Link
+                        :href="importCreate().url"
+                        class="flex items-center gap-1 rounded-lg bg-ink/5 px-3 py-2 text-sm font-medium text-ink transition hover:bg-ink/10"
+                        data-testid="bookings-import"
+                    >
+                        <ArrowDownTrayIcon class="h-4 w-4" /> {{ $t('nav.import') }}
+                    </Link>
                     <Link
                         :href="transfersCreate().url"
                         class="flex items-center gap-1 rounded-lg bg-ink/5 px-3 py-2 text-sm font-medium text-ink transition hover:bg-ink/10"

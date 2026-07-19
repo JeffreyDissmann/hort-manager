@@ -43,4 +43,8 @@ return [
     'booking_updated' => 'Booking saved.',
     'booking_deleted' => 'Booking deleted.',
     'transfer_created' => 'Transfer created.',
+
+    'import_done' => ':imported bookings imported, :duplicates duplicates skipped. Please review.',
+    'import_saved' => 'Saved. There are still drafts to review.',
+    'import_complete' => 'All imported bookings confirmed.',
 ];

@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Accounting;
 
 use App\Enums\BookingKind;
 use App\Enums\BookingStatus;
+use App\Enums\CategoryDirection;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Accounting\BookingRequest;
 use App\Models\Accounting\Account;
@@ -15,6 +16,8 @@ use App\Models\User;
 use App\Support\Accounting\CategoryOptions;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -77,6 +80,8 @@ class BookingController extends Controller
         return Inertia::render('Accounting/Bookings/Index', [
             'bookings' => $bookings,
             'filters' => $filters,
+            // Drives the „Entwürfe prüfen" button (resume the review workflow anytime).
+            'draftCount' => Booking::draft()->count(),
             'filterOptions' => [
                 'accounts' => Account::orderBy('name')->get(['id', 'name']),
                 'categories' => CategoryOptions::flat(onlyActive: false),
@@ -116,14 +121,21 @@ class BookingController extends Controller
                 'comment' => $booking->comment,
                 'counterparty_user_id' => $booking->counterparty_user_id,
                 'counterparty_name' => $booking->counterparty_name,
+                'status' => $booking->status->value,
             ],
+            'statuses' => $this->enumOptions(BookingStatus::cases()),
         ]);
     }
 
     public function update(BookingRequest $request, Booking $booking): RedirectResponse
     {
-        // Status is preserved (a reviewed booking stays confirmed; a draft stays draft).
-        $booking->update($request->toAttributes());
+        $attributes = $request->toAttributes();
+        // The edit form may flip the review status (mark confirmed / back to draft).
+        if ($request->filled('status')) {
+            $attributes['status'] = BookingStatus::from($request->string('status')->value());
+        }
+
+        $booking->update($attributes);
 
         return redirect()
             ->route('accounting.bookings.index')
@@ -142,6 +154,121 @@ class BookingController extends Controller
         return redirect()
             ->route('accounting.bookings.index')
             ->with('status', __('flash.booking_deleted'));
+    }
+
+    /**
+     * Step-through review of unconfirmed drafts across the whole ledger, oldest
+     * first. Renders one booking at a time; a cursor keeps the place across skips.
+     */
+    public function review(Request $request): Response|RedirectResponse
+    {
+        $drafts = Booking::draft()->orderBy('booking_date')->orderBy('id');
+
+        $cursor = $request->integer('cursor');
+        $booking = (clone $drafts)->when($cursor, fn ($q) => $q->where('id', $cursor))->first()
+            ?? (clone $drafts)->first();
+
+        if (! $booking) {
+            return redirect()->route('accounting.bookings.index')->with('status', __('flash.import_complete'));
+        }
+
+        return Inertia::render('Accounting/Bookings/Review', [
+            'booking' => [
+                'id' => $booking->id,
+                'account' => $booking->account?->name,
+                'account_id' => $booking->account_id,
+                'booking_date' => $booking->booking_date?->format('Y-m-d'),
+                'valuta_date' => $booking->valuta_date?->format('Y-m-d'),
+                'purpose' => $booking->purpose,
+                'comment' => $booking->comment,
+                'amount_cents' => $booking->amount_cents,
+                // Positive magnitude for the input; the bank sign fixes the direction.
+                'amount' => abs($booking->amount_cents) / 100,
+                'direction' => $booking->amount_cents >= 0 ? CategoryDirection::Income->value : CategoryDirection::Expense->value,
+                'category_id' => $booking->category_id,
+                'counterparty_user_id' => $booking->counterparty_user_id,
+                'counterparty_name' => $booking->counterparty_name,
+            ],
+            'remaining' => (clone $drafts)->count(),
+            'accounts' => Account::where('active', true)->orderBy('name')->get(['id', 'name']),
+            'categories' => CategoryOptions::flat(),
+            'users' => User::orderBy('name')->get(['id', 'name']),
+        ]);
+    }
+
+    /**
+     * Confirm / discard / skip the current draft, then advance to the next.
+     * Confirm validates and saves the full (possibly edited) booking, just like
+     * the normal booking form; the bank sign fixes the income/expense direction.
+     */
+    public function reviewSave(Request $request, Booking $booking): RedirectResponse
+    {
+        abort_unless($booking->status === BookingStatus::Draft, 404);
+
+        $action = $request->validate(['action' => ['required', 'in:confirm,discard,skip']])['action'];
+
+        if ($action === 'discard') {
+            $booking->delete();
+        } elseif ($action === 'confirm') {
+            $this->confirmDraft($request, $booking);
+        }
+
+        return redirect()->route('accounting.bookings.review', ['cursor' => $this->nextDraftId($booking)]);
+    }
+
+    /** Validate the full form and confirm a draft (kind/sign from the category). */
+    private function confirmDraft(Request $request, Booking $booking): void
+    {
+        $data = $request->validate([
+            'account_id' => ['required', Rule::exists('accounting_accounts', 'id')],
+            'category_id' => ['required', Rule::exists('accounting_categories', 'id')],
+            'amount' => ['required', 'numeric', 'gt:0', 'max:99999999.99'],
+            'booking_date' => ['required', 'date'],
+            'valuta_date' => ['nullable', 'date'],
+            'purpose' => ['nullable', 'string', 'max:2000'],
+            'comment' => ['nullable', 'string', 'max:2000'],
+            'counterparty_user_id' => ['nullable', Rule::exists('users', 'id')],
+            'counterparty_name' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $category = Category::findOrFail($data['category_id']);
+        // The real cash-flow sign is fixed by the bank; the category must match it.
+        $expected = $booking->amount_cents >= 0 ? CategoryDirection::Income : CategoryDirection::Expense;
+
+        if ($category->direction !== $expected) {
+            throw ValidationException::withMessages(['category_id' => __('accounting.import.wrong_direction')]);
+        }
+
+        $userId = ! empty($data['counterparty_user_id']) ? (int) $data['counterparty_user_id'] : null;
+
+        $booking->update([
+            'account_id' => (int) $data['account_id'],
+            'category_id' => $category->id,
+            'kind' => BookingKind::from($category->direction->value),
+            'amount_cents' => (int) round((float) $data['amount'] * 100) * $category->direction->sign(),
+            'booking_date' => $data['booking_date'],
+            'valuta_date' => ($data['valuta_date'] ?? null) ?: $data['booking_date'],
+            'purpose' => $data['purpose'] ?? null,
+            'comment' => $data['comment'] ?? null,
+            'counterparty_user_id' => $userId,
+            'counterparty_name' => $userId ? null : ($data['counterparty_name'] ?? null),
+            'status' => BookingStatus::Confirmed,
+        ]);
+    }
+
+    /** The next draft after the given one in (booking_date, id) order, if any. */
+    private function nextDraftId(Booking $current): ?int
+    {
+        return Booking::draft()
+            ->where(function ($q) use ($current): void {
+                $q->where('booking_date', '>', $current->booking_date)
+                    ->orWhere(function ($q2) use ($current): void {
+                        $q2->where('booking_date', $current->booking_date)->where('id', '>', $current->id);
+                    });
+            })
+            ->orderBy('booking_date')
+            ->orderBy('id')
+            ->value('id');
     }
 
     /**
