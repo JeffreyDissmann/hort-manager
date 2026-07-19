@@ -78,3 +78,29 @@ it('records what changed when a day plan is adjusted (time + method)', function 
         ->and(data_get($entry->attribute_changes, 'attributes.method'))->toBe('sent_home')
         ->and(data_get($entry->attribute_changes, 'old.method'))->toBe('picked_up');
 });
+
+it('does not log a day-plan adjustment that changes nothing', function () {
+    $staff = User::factory()->staff()->create();
+    $child = Child::factory()->create();
+    $date = boardDate()->toDateString();
+
+    DailyDeparture::create([
+        'child_id' => $child->id,
+        'date' => $date,
+        'status' => DepartureStatus::Present,
+        'planned_time' => '15:00',
+        'planned_method' => 'picked_up',
+    ]);
+
+    // Re-save the exact same plan (a common no-op from the DayEditor).
+    $this->actingAs($staff)
+        ->patch('/wochenplan/anpassung', [
+            'child_id' => $child->id,
+            'date' => $date,
+            'planned_method' => 'picked_up',
+            'planned_time' => '15:00',
+        ])
+        ->assertRedirect();
+
+    expect(Activity::where('event', 'adjusted')->count())->toBe(0);
+});
