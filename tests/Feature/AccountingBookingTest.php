@@ -187,11 +187,12 @@ it('can flip a booking back to draft from the edit form', function () {
     expect($booking->refresh()->status)->toBe(BookingStatus::Draft);
 });
 
-it('reviews drafts oldest first', function () {
+it('reviews AI-ready bookings oldest first, skipping un-analysed drafts', function () {
     $admin = User::factory()->admin()->create();
     $this->actingAs($admin);
-    $older = Booking::factory()->draft()->create(['booking_date' => '2026-04-01']);
-    Booking::factory()->draft()->create(['booking_date' => '2026-04-10']);
+    $older = Booking::factory()->suggested()->create(['booking_date' => '2026-04-01']);
+    Booking::factory()->suggested()->create(['booking_date' => '2026-04-10']);
+    Booking::factory()->draft()->create(['booking_date' => '2026-03-01']); // not analysed → excluded
 
     $this->get('/accounting/bookings/review')
         ->assertInertia(fn (AssertableInertia $page) => $page

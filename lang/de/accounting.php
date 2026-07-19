@@ -81,6 +81,8 @@ return [
         'pick_user' => 'Benutzer wählen …',
         'transfer' => 'Umbuchung',
         'review_button' => 'Entwürfe prüfen',
+        'reanalyse' => 'Neu analysieren',
+        'reanalyse_confirm' => 'Alle nicht bestätigten Buchungen von der KI neu bewerten lassen?',
         'status' => 'Prüfstatus',
     ],
 
@@ -122,6 +124,9 @@ return [
         'start_review' => 'Entwürfe prüfen',
         'all_done' => 'Es gibt keine offenen Entwürfe.',
         'view_bookings' => 'Zu den Buchungen',
+        'analysing' => 'KI analysiert …',
+        'analysed_done' => 'Analyse abgeschlossen',
+        'waiting_ai' => 'Warte auf die erste KI-Analyse …',
     ],
 
     'review' => [

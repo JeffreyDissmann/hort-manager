@@ -14,14 +14,22 @@ import {
 } from '@/routes/accounting/bookings';
 import { create as transfersCreate } from '@/routes/accounting/transfers';
 import { create as importCreate } from '@/routes/accounting/import';
-import { PencilSquareIcon, TrashIcon, PlusIcon, ArrowsRightLeftIcon, ArrowDownTrayIcon, ClipboardDocumentCheckIcon } from '@heroicons/vue/24/outline';
+import { reanalyse as bookingsReanalyse } from '@/routes/accounting/bookings';
+import { PencilSquareIcon, TrashIcon, PlusIcon, ArrowsRightLeftIcon, ArrowDownTrayIcon, ClipboardDocumentCheckIcon, SparklesIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
     bookings: { type: Object, required: true }, // paginator
     filters: { type: Object, required: true },
     filterOptions: { type: Object, required: true },
-    draftCount: { type: Number, default: 0 },
+    reviewCount: { type: Number, default: 0 },
+    unconfirmedCount: { type: Number, default: 0 },
 });
+
+function reanalyse() {
+    if (confirm(t('accounting.bookings.reanalyse_confirm'))) {
+        router.post(bookingsReanalyse().url, {}, { preserveScroll: true });
+    }
+}
 
 const filters = reactive({
     account: props.filters.account ?? '',
@@ -72,14 +80,23 @@ function destroy(booking) {
                     <h2 class="text-xl font-semibold text-ink">{{ $t('accounting.bookings.title') }}</h2>
                 </div>
                 <div class="flex flex-wrap items-center justify-end gap-2">
+                    <button
+                        v-if="unconfirmedCount > 0"
+                        type="button"
+                        class="flex items-center gap-1 rounded-lg bg-ink/5 px-3 py-2 text-sm font-medium text-ink transition hover:bg-ink/10"
+                        data-testid="bookings-reanalyse"
+                        @click="reanalyse"
+                    >
+                        <SparklesIcon class="h-4 w-4" /> {{ $t('accounting.bookings.reanalyse') }}
+                    </button>
                     <Link
-                        v-if="draftCount > 0"
+                        v-if="reviewCount > 0"
                         :href="bookingsReview().url"
                         class="flex items-center gap-1 rounded-lg bg-amber-100 px-3 py-2 text-sm font-medium text-amber-800 transition hover:bg-amber-200"
                         data-testid="bookings-review"
                     >
                         <ClipboardDocumentCheckIcon class="h-4 w-4" />
-                        {{ $t('accounting.bookings.review_button') }} ({{ draftCount }})
+                        {{ $t('accounting.bookings.review_button') }} ({{ reviewCount }})
                     </Link>
                     <Link
                         :href="importCreate().url"

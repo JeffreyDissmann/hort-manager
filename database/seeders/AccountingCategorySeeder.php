@@ -19,12 +19,18 @@ class AccountingCategorySeeder extends Seeder
      */
     private array $tree = [
         'income' => [
-            'Beiträge der Eltern' => [
+            'Elternbeitrag' => [
                 'Elternbeitrag',
                 'Essensgeld',
                 'Kaution',
                 'Vereinsbeitrag',
                 'Beitrag für Hortfreizeit',
+            ],
+            'Erträge' => [
+                'EKI Förderung',
+                'Baykibig',
+                'Untervermietung',
+                'Ekiplus',
             ],
         ],
         'expense' => [
@@ -38,10 +44,35 @@ class AccountingCategorySeeder extends Seeder
                 'Drogerie',
                 'Büromaterial',
             ],
-            'Personalkosten' => [],
-            'Raumkosten' => [],
-            'Telefon' => [],
-            'Versicherung' => [],
+            'Personalkosten' => [
+                'Krankenkasse',
+                'Altersversorgung',
+                'Gehalt',
+                'Lohnsteuer',
+                'Fortbildung',
+                'Lohnbuchhaltung',
+            ],
+            'Raumkosten' => [
+                'Reinigung',
+                'Miete',
+                'GEZ',
+                'Strom',
+                'Handwerker und Prüfungen',
+            ],
+            'Kommunikation' => [
+                'Internet',
+                'Telefon',
+            ],
+            'Versicherung' => [
+                'Gewerbeversicherung',
+                'Rechtsschutz',
+                'D&O',
+                'Haftpflicht',
+            ],
+            'Bankgebühren' => [],
+            'Investitionen in den Hort' => [],
+            'KKT' => [],
+            'Justizkase' => [],
         ],
     ];
 

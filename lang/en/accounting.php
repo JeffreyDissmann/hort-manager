@@ -81,6 +81,8 @@ return [
         'pick_user' => 'Choose user …',
         'transfer' => 'Transfer',
         'review_button' => 'Review drafts',
+        'reanalyse' => 'Re-analyse',
+        'reanalyse_confirm' => 'Have the AI re-assess all unconfirmed bookings?',
         'status' => 'Review status',
     ],
 
@@ -122,6 +124,9 @@ return [
         'start_review' => 'Review drafts',
         'all_done' => 'There are no open drafts.',
         'view_bookings' => 'Go to bookings',
+        'analysing' => 'AI analysing …',
+        'analysed_done' => 'Analysis complete',
+        'waiting_ai' => 'Waiting for the first AI analysis …',
     ],
 
     'review' => [

@@ -87,7 +87,7 @@ class ImportController extends Controller
         return redirect()->route('accounting.import.show', $import);
     }
 
-    /** Post-upload summary: what was imported, skipped, and how much awaits review. */
+    /** Post-upload summary: what was imported, skipped, and AI-analysis progress. */
     public function show(Import $import): Response
     {
         return Inertia::render('Accounting/Import/Summary', [
@@ -99,6 +99,12 @@ class ImportController extends Controller
             ],
             // Total bookings awaiting review across the whole ledger (not just this file).
             'draftTotal' => Booking::needsReview()->count(),
+            // Live AI progress for this import (polled by the summary page).
+            'progress' => [
+                'total' => $import->imported_count,
+                'analyzed' => $import->bookings()->where('status', BookingStatus::Suggested)->count(),
+                'pending' => $import->bookings()->where('status', BookingStatus::Draft)->count(),
+            ],
         ]);
     }
 

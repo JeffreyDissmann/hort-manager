@@ -147,6 +147,8 @@ Route::middleware('auth')->group(function () {
         // Step-through review of draft bookings (before the resource's {booking} routes).
         Route::get('bookings/review', [BookingController::class, 'review'])->name('bookings.review');
         Route::patch('bookings/{booking}/review', [BookingController::class, 'reviewSave'])->name('bookings.review-save');
+        // Re-run the AI over all unconfirmed bookings.
+        Route::post('bookings/reanalyse', [BookingController::class, 'reanalyse'])->name('bookings.reanalyse');
         Route::resource('bookings', BookingController::class)->except('show');
 
         Route::get('transfers/create', [TransferController::class, 'create'])->name('transfers.create');

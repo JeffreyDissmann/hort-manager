@@ -9,6 +9,7 @@ use App\Enums\BookingStatus;
 use App\Enums\CategoryDirection;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Accounting\BookingRequest;
+use App\Jobs\SuggestBookingCategory;
 use App\Models\Accounting\Account;
 use App\Models\Accounting\Booking;
 use App\Models\Accounting\Category;
@@ -82,8 +83,10 @@ class BookingController extends Controller
         return Inertia::render('Accounting/Bookings/Index', [
             'bookings' => $bookings,
             'filters' => $filters,
-            // Drives the „Entwürfe prüfen" button (resume the review workflow anytime).
-            'draftCount' => Booking::needsReview()->count(),
+            // Drives the „Entwürfe prüfen" button — only AI-ready (suggested) bookings.
+            'reviewCount' => Booking::suggested()->count(),
+            // Drives the „Neu analysieren" button — all unconfirmed bookings.
+            'unconfirmedCount' => Booking::needsReview()->count(),
             'filterOptions' => [
                 'accounts' => Account::orderBy('name')->get(['id', 'name']),
                 'categories' => CategoryOptions::flat(onlyActive: false),
@@ -165,7 +168,8 @@ class BookingController extends Controller
      */
     public function review(Request $request): Response|RedirectResponse
     {
-        $drafts = Booking::needsReview()->orderBy('booking_date')->orderBy('id');
+        // Only AI-ready bookings are walked; raw drafts still awaiting the AI wait.
+        $drafts = Booking::suggested()->orderBy('booking_date')->orderBy('id');
 
         $cursor = $request->integer('cursor');
         $booking = (clone $drafts)->when($cursor, fn ($q) => $q->where('id', $cursor))->first()
@@ -221,6 +225,27 @@ class BookingController extends Controller
         }
 
         return redirect()->route('accounting.bookings.review', ['cursor' => $this->nextDraftId($booking)]);
+    }
+
+    /**
+     * Reset every unconfirmed booking to draft and re-queue the AI, so it
+     * re-assesses them (e.g. after category hints changed). Confirmed bookings
+     * are left untouched.
+     */
+    public function reanalyse(): RedirectResponse
+    {
+        if (! config('accounting.ai_suggestions')) {
+            return back()->with('status', __('flash.ai_disabled'));
+        }
+
+        $bookings = Booking::needsReview()->get();
+
+        foreach ($bookings as $booking) {
+            $booking->update(['status' => BookingStatus::Draft]);
+            SuggestBookingCategory::dispatch($booking->id);
+        }
+
+        return back()->with('status', __('flash.bookings_reanalysing', ['count' => $bookings->count()]));
     }
 
     /** Validate the full form and confirm a draft (kind/sign from the category). */
@@ -280,10 +305,10 @@ class BookingController extends Controller
         ];
     }
 
-    /** The next unconfirmed booking after the given one in (booking_date, id) order. */
+    /** The next AI-ready booking after the given one in (booking_date, id) order. */
     private function nextDraftId(Booking $current): ?int
     {
-        return Booking::needsReview()
+        return Booking::suggested()
             ->where(function ($q) use ($current): void {
                 $q->where('booking_date', '>', $current->booking_date)
                     ->orWhere(function ($q2) use ($current): void {

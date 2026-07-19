@@ -10,6 +10,7 @@ use App\Models\Accounting\Booking;
 use App\Models\Accounting\Category;
 use App\Models\Child;
 use App\Models\User;
+use App\Services\Accounting\BookingSuggester;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Queue;
@@ -107,4 +108,38 @@ it('queues one suggestion job per imported draft', function () {
         ->post('/accounting/import', ['account_id' => $account->id, 'file' => suggestionCsv()]);
 
     Queue::assertPushed(SuggestBookingCategory::class, 2);
+});
+
+it('re-analyses unconfirmed bookings and leaves confirmed ones alone', function () {
+    Queue::fake();
+    $admin = User::factory()->admin()->create();
+    $suggested = Booking::factory()->suggested()->create();
+    $confirmed = Booking::factory()->create(); // factory default = confirmed
+
+    $this->actingAs($admin)->post('/accounting/bookings/reanalyse')->assertRedirect();
+
+    expect($suggested->refresh()->status)->toBe(BookingStatus::Draft)
+        ->and($confirmed->refresh()->status)->toBe(BookingStatus::Confirmed);
+    Queue::assertPushed(SuggestBookingCategory::class, 1); // only the unconfirmed one
+});
+
+it('never overwrites a booking confirmed while the AI was running', function () {
+    $admin = User::factory()->admin()->create();
+    $this->actingAs($admin);
+
+    $keep = Category::factory()->expense()->create();
+    $other = Category::factory()->expense()->create();
+    $booking = Booking::factory()->draft()->create(['amount_cents' => -1000, 'category_id' => null]);
+
+    // The job captured the booking while it was a draft…
+    $stale = $booking->fresh();
+    // …but a reviewer confirmed it (with a category) before the AI returned.
+    $booking->update(['status' => BookingStatus::Confirmed, 'category_id' => $keep->id]);
+
+    BookingCategorizer::fake([['category_id' => $other->id]]);
+    app(BookingSuggester::class)->suggest($stale);
+
+    // The confirmed booking + its category are untouched.
+    expect($booking->refresh()->status)->toBe(BookingStatus::Confirmed)
+        ->and($booking->category_id)->toBe($keep->id);
 });

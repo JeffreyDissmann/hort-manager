@@ -42,6 +42,8 @@ return [
     'booking_created' => 'Buchung angelegt.',
     'booking_updated' => 'Buchung gespeichert.',
     'booking_deleted' => 'Buchung gelöscht.',
+    'bookings_reanalysing' => ':count Buchungen werden von der KI neu analysiert.',
+    'ai_disabled' => 'Die KI-Analyse ist aktuell deaktiviert.',
     'transfer_created' => 'Umbuchung angelegt.',
 
     'import_done' => ':imported Buchungen importiert, :duplicates Duplikate übersprungen. Bitte prüfen.',

@@ -42,6 +42,8 @@ return [
     'booking_created' => 'Booking created.',
     'booking_updated' => 'Booking saved.',
     'booking_deleted' => 'Booking deleted.',
+    'bookings_reanalysing' => ':count bookings are being re-analysed by the AI.',
+    'ai_disabled' => 'AI analysis is currently disabled.',
     'transfer_created' => 'Transfer created.',
 
     'import_done' => ':imported bookings imported, :duplicates duplicates skipped. Please review.',

@@ -63,13 +63,19 @@ class BookingSuggester
         $childId = $this->pickId($response['counterparty_child_id'] ?? null, $childIds);
         $userId = $childId ? null : $this->pickId($response['counterparty_user_id'] ?? null, $userIds);
 
-        $booking->forceFill([
-            'category_id' => $this->validCategory($response['category_id'] ?? null, $booking, $categoryDirection),
-            'counterparty_child_id' => $childId,
-            'counterparty_user_id' => $userId,
-            'counterparty_name' => ($childId || $userId) ? null : ($response['counterparty_name'] ?? null),
-            'status' => BookingStatus::Suggested,
-        ])->save();
+        // Write only while the booking is STILL a draft. The Ollama call takes
+        // seconds, so a reviewer may have confirmed it meanwhile — this conditional
+        // update guarantees a confirmed (or already re-suggested) booking is never
+        // overwritten by a stale AI result.
+        Booking::whereKey($booking->id)
+            ->where('status', BookingStatus::Draft)
+            ->update([
+                'category_id' => $this->validCategory($response['category_id'] ?? null, $booking, $categoryDirection),
+                'counterparty_child_id' => $childId,
+                'counterparty_user_id' => $userId,
+                'counterparty_name' => ($childId || $userId) ? null : ($response['counterparty_name'] ?? null),
+                'status' => BookingStatus::Suggested,
+            ]);
     }
 
     /**
