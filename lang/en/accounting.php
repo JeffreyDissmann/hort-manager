@@ -24,4 +24,22 @@ return [
         'empty' => 'No accounts yet.',
         'delete_confirm' => 'Really delete account “:name”?',
     ],
+
+    'categories' => [
+        'title' => 'Categories',
+        'intro' => 'Booking categories as a tree. The direction (income/expense) is set at the top level and inherited by every subcategory.',
+        'income' => 'Income',
+        'expense' => 'Expenses',
+        'new_root' => 'New top-level category',
+        'add_child' => 'Subcategory',
+        'name_placeholder' => 'Category name',
+        'active' => 'Active',
+        'inactive' => 'Inactive',
+        'bookings_count' => 'Bookings',
+        'empty' => 'No categories yet.',
+        'delete_confirm' => 'Really delete category “:name”?',
+        'rename' => 'Rename',
+        'deactivate' => 'Deactivate',
+        'activate' => 'Activate',
+    ],
 ];

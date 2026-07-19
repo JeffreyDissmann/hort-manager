@@ -24,6 +24,7 @@ import { index as childrenIndex } from '@/routes/children';
 import { index as excursionsIndex } from '@/routes/excursions';
 import { index as usersIndex } from '@/routes/users';
 import { index as accountsIndex } from '@/routes/accounting/accounts';
+import { index as categoriesIndex } from '@/routes/accounting/categories';
 import { index as pollsIndex } from '@/routes/polls';
 import { edit as profileEdit } from '@/routes/profile';
 import { edit as notificationsEdit } from '@/routes/notifications';
@@ -187,6 +188,9 @@ function isActive(href) {
                             <p class="px-4 pb-1 pt-2 text-xs font-medium text-ink/50">{{ $t('nav.accounting') }}</p>
                             <DropdownLink :href="accountsIndex().url" data-testid="nav-accounts">
                                 {{ $t('nav.accounts') }}
+                            </DropdownLink>
+                            <DropdownLink :href="categoriesIndex().url" data-testid="nav-categories">
+                                {{ $t('nav.categories') }}
                             </DropdownLink>
                             <hr class="my-1 border-ink/10" />
                         </template>

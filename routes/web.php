@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Http\Controllers\AbsenceController;
 use App\Http\Controllers\Accounting\AccountController;
+use App\Http\Controllers\Accounting\CategoryController;
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\Auth\SlackController;
 use App\Http\Controllers\ChildController;
@@ -139,6 +140,7 @@ Route::middleware('auth')->group(function () {
     // Buchhaltung — admin-only accounting module.
     Route::middleware('admin')->prefix('accounting')->name('accounting.')->group(function () {
         Route::resource('accounts', AccountController::class)->except('show');
+        Route::resource('categories', CategoryController::class)->only(['index', 'store', 'update', 'destroy']);
     });
 });
 

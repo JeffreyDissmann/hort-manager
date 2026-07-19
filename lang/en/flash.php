@@ -33,4 +33,9 @@ return [
     'account_updated' => 'Account “:name” saved.',
     'account_deleted' => 'Account “:name” deleted.',
     'account_has_bookings' => 'Account “:name” has bookings and cannot be deleted. Deactivate it instead.',
+
+    'category_created' => 'Category created.',
+    'category_updated' => 'Category saved.',
+    'category_deleted' => 'Category “:name” deleted.',
+    'category_has_bookings' => 'Category “:name” (or a subcategory) has bookings and cannot be deleted. Deactivate it instead.',
 ];

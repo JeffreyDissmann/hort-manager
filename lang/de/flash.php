@@ -33,4 +33,9 @@ return [
     'account_updated' => 'Konto „:name“ gespeichert.',
     'account_deleted' => 'Konto „:name“ gelöscht.',
     'account_has_bookings' => 'Konto „:name“ hat Buchungen und kann nicht gelöscht werden. Deaktiviere es stattdessen.',
+
+    'category_created' => 'Kategorie angelegt.',
+    'category_updated' => 'Kategorie gespeichert.',
+    'category_deleted' => 'Kategorie „:name“ gelöscht.',
+    'category_has_bookings' => 'Kategorie „:name“ (oder eine Unterkategorie) hat Buchungen und kann nicht gelöscht werden. Deaktiviere sie stattdessen.',
 ];

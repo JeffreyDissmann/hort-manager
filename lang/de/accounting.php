@@ -24,4 +24,22 @@ return [
         'empty' => 'Noch keine Konten angelegt.',
         'delete_confirm' => 'Konto „:name“ wirklich löschen?',
     ],
+
+    'categories' => [
+        'title' => 'Kategorien',
+        'intro' => 'Buchungskategorien als Baum. Die Richtung (Einnahme/Ausgabe) legt die oberste Ebene fest und vererbt sich an alle Unterkategorien.',
+        'income' => 'Einnahmen',
+        'expense' => 'Ausgaben',
+        'new_root' => 'Neue Hauptkategorie',
+        'add_child' => 'Unterkategorie',
+        'name_placeholder' => 'Name der Kategorie',
+        'active' => 'Aktiv',
+        'inactive' => 'Inaktiv',
+        'bookings_count' => 'Buchungen',
+        'empty' => 'Noch keine Kategorien.',
+        'delete_confirm' => 'Kategorie „:name“ wirklich löschen?',
+        'rename' => 'Umbenennen',
+        'deactivate' => 'Deaktivieren',
+        'activate' => 'Aktivieren',
+    ],
 ];

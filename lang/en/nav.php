@@ -13,6 +13,7 @@ return [
     'activity_log' => 'Activity log',
     'accounting' => 'Accounting',
     'accounts' => 'Accounts',
+    'categories' => 'Categories',
     'my_children' => 'My children',
     'profile' => 'Profile',
     'notifications' => 'Notifications',

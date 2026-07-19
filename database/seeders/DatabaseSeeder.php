@@ -170,5 +170,7 @@ class DatabaseSeeder extends Seeder
             'opening_balance_cents' => 15000,
             'opening_balance_date' => now()->startOfYear()->toDateString(),
         ]);
+
+        $this->call(AccountingCategorySeeder::class);
     }
 }

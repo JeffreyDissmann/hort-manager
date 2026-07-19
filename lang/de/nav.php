@@ -13,6 +13,7 @@ return [
     'activity_log' => 'Protokoll',
     'accounting' => 'Buchhaltung',
     'accounts' => 'Konten',
+    'categories' => 'Kategorien',
     'my_children' => 'Meine Kinder',
     'profile' => 'Profil',
     'notifications' => 'Benachrichtigungen',
