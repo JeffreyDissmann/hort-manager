@@ -60,7 +60,7 @@ Route::get('/auth/slack/redirect', [SlackController::class, 'redirect'])->name('
 Route::get('/auth/slack/callback', [SlackController::class, 'callback'])->name('slack.callback');
 
 // User-facing help/manual — reachable before login and from inside the app.
-Route::get('/hilfe', fn () => Inertia::render('Help'))->name('help');
+Route::get('/help', fn () => Inertia::render('Help'))->name('help');
 
 // Deep-link from a Slack message into the app, signing in via Slack if needed.
 Route::get('/slack/enter', [SlackController::class, 'enter'])->name('slack.enter');
@@ -92,51 +92,48 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     Route::patch('/profile/language', [LocaleController::class, 'update'])->name('locale.update');
 
-    Route::get('/benachrichtigungen', [NotificationSettingsController::class, 'edit'])->name('notifications.edit');
-    Route::patch('/benachrichtigungen', [NotificationSettingsController::class, 'update'])->name('notifications.update');
+    Route::get('/notifications', [NotificationSettingsController::class, 'edit'])->name('notifications.edit');
+    Route::patch('/notifications', [NotificationSettingsController::class, 'update'])->name('notifications.update');
 
     // Admin-only: switch your own role between staff / parent.
-    Route::post('/rolle', [SwitchRoleController::class, 'update'])->name('role.update');
+    Route::post('/role', [SwitchRoleController::class, 'update'])->name('role.update');
 
     Route::resource('children', ChildController::class)->except('show');
 
     // User management (admin only — the controller guards every action).
-    Route::get('/benutzer', [UserController::class, 'index'])->name('users.index');
-    Route::post('/benutzer/sync', [UserController::class, 'sync'])->name('users.sync');
-    Route::patch('/benutzer/{user}', [UserController::class, 'update'])->name('users.update');
-    Route::delete('/benutzer/{user}', [UserController::class, 'destroy'])->name('users.destroy');
+    Route::get('/users', [UserController::class, 'index'])->name('users.index');
+    Route::post('/users/sync', [UserController::class, 'sync'])->name('users.sync');
+    Route::patch('/users/{user}', [UserController::class, 'update'])->name('users.update');
+    Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
 
     // Admin-only: the activity log / audit trail (the controller guards it).
-    Route::get('/protokoll', [ActivityLogController::class, 'index'])->name('activity-log');
+    Route::get('/activity-log', [ActivityLogController::class, 'index'])->name('activity-log');
 
-    Route::get('/wochenplan', WeeklyOverviewController::class)->name('weekly-plan');
-    Route::patch('/wochenplan/anpassung', [WeeklyAdjustmentController::class, 'update'])->name('weekly-plan.adjust');
-    Route::patch('/wochenplan/zuruecksetzen', [WeeklyAdjustmentController::class, 'reset'])->name('weekly-plan.reset');
+    Route::get('/weekly-plan', WeeklyOverviewController::class)->name('weekly-plan');
+    Route::patch('/weekly-plan/adjust', [WeeklyAdjustmentController::class, 'update'])->name('weekly-plan.adjust');
+    Route::patch('/weekly-plan/reset', [WeeklyAdjustmentController::class, 'reset'])->name('weekly-plan.reset');
     // The companion's parent (or staff) confirms another child going home with theirs.
-    Route::patch('/begleitung/{departure}/bestaetigen', [CompanionConfirmationController::class, 'update'])->name('companion.confirm');
-    Route::get('/stammplan', StandardPlanController::class)->name('standard-plan');
+    Route::patch('/companion/{departure}/confirm', [CompanionConfirmationController::class, 'update'])->name('companion.confirm');
+    Route::get('/standard-plan', StandardPlanController::class)->name('standard-plan');
 
     // Krankmeldung / Abwesenheit — staff or the child's parent.
-    Route::post('/abwesenheiten', [AbsenceController::class, 'store'])->name('absences.store');
-    Route::delete('/abwesenheiten', [AbsenceController::class, 'destroy'])->name('absences.destroy');
+    Route::post('/absences', [AbsenceController::class, 'store'])->name('absences.store');
+    Route::delete('/absences', [AbsenceController::class, 'destroy'])->name('absences.destroy');
 
-    Route::get('/programm', [DailyProgramController::class, 'index'])->name('program');
-    Route::patch('/programm', [DailyProgramController::class, 'update'])->name('program.update');
-    Route::patch('/programm/standard', [DailyProgramController::class, 'updateDefaults'])->name('program.defaults');
+    Route::get('/program', [DailyProgramController::class, 'index'])->name('program');
+    Route::patch('/program', [DailyProgramController::class, 'update'])->name('program.update');
+    Route::patch('/program/defaults', [DailyProgramController::class, 'updateDefaults'])->name('program.defaults');
 
-    Route::get('/tagesboard', [DailyBoardController::class, 'index'])->name('board');
-    Route::patch('/tagesboard/{departure}/status', [DailyBoardController::class, 'mark'])->name('board.mark');
-    Route::patch('/tagesboard/{departure}/plan', [DailyBoardController::class, 'override'])->name('board.override');
+    Route::get('/board', [DailyBoardController::class, 'index'])->name('board');
+    Route::patch('/board/{departure}/status', [DailyBoardController::class, 'mark'])->name('board.mark');
+    Route::patch('/board/{departure}/plan', [DailyBoardController::class, 'override'])->name('board.override');
 
-    Route::resource('ausfluege', ExcursionController::class)
-        ->parameters(['ausfluege' => 'excursion'])
-        ->names('excursions')
-        ->except('show');
-    Route::patch('ausfluege/{excursion}/live', [ExcursionController::class, 'live'])->name('excursions.live');
+    Route::resource('excursions', ExcursionController::class)->except('show');
+    Route::patch('excursions/{excursion}/live', [ExcursionController::class, 'live'])->name('excursions.live');
 
     // Parent participation poll.
-    Route::get('umfragen', [ExcursionRsvpController::class, 'index'])->name('polls.index');
-    Route::patch('ausfluege/{excursion}/rsvp', [ExcursionRsvpController::class, 'update'])->name('polls.update');
+    Route::get('polls', [ExcursionRsvpController::class, 'index'])->name('polls.index');
+    Route::patch('excursions/{excursion}/rsvp', [ExcursionRsvpController::class, 'update'])->name('polls.update');
 });
 
 require __DIR__.'/auth.php';

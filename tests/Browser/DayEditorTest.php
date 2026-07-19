@@ -14,7 +14,7 @@ it('requires a method and a time before saving', function () {
     $otherWeekday = (boardWeekday() % 5) + 1;
     $child = Child::factory()->scheduledOn($otherWeekday, '15:00')->create(['name' => 'Theo']);
 
-    actAndVisit($staff, '/tagesboard')
+    actAndVisit($staff, '/board')
         ->click("@hortfrei-pill-{$child->id}")
         ->assertDisabled('@save')            // empty plan → can't save
         ->select('@method', 'picked_up')
@@ -37,7 +37,7 @@ it('sets up a companion pickup („geht mit … mit")', function () {
     // Mia is here today → she's an eligible companion in the picker.
     $mia = Child::factory()->scheduledOn(boardWeekday(), '15:00')->create(['name' => 'Mia']);
 
-    actAndVisit($staff, '/tagesboard')
+    actAndVisit($staff, '/board')
         ->click("@hortfrei-pill-{$theo->id}")
         ->select('@method', 'with_child')
         ->select('@companion', (string) $mia->id)

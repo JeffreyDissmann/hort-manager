@@ -24,7 +24,7 @@ it('shows the activity log to admins', function () {
     activity()->log('Testeintrag');
 
     $this->actingAs($admin)
-        ->get('/protokoll')
+        ->get('/activity-log')
         ->assertOk()
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->component('ActivityLog/Index')
@@ -34,7 +34,7 @@ it('shows the activity log to admins', function () {
 it('forbids non-admins from the activity log', function () {
     $staff = User::factory()->staff()->create(); // staff, but not an admin
 
-    $this->actingAs($staff)->get('/protokoll')->assertForbidden();
+    $this->actingAs($staff)->get('/activity-log')->assertForbidden();
 });
 
 it('records model changes as activity, with the causer and a label', function () {
@@ -69,7 +69,7 @@ it('records what changed when a day plan is adjusted (time + method)', function 
     ]);
 
     $this->actingAs($staff)
-        ->patch('/wochenplan/anpassung', [
+        ->patch('/weekly-plan/adjust', [
             'child_id' => $child->id,
             'date' => $date,
             'planned_method' => 'sent_home',
@@ -101,7 +101,7 @@ it('does not log a day-plan adjustment that changes nothing', function () {
 
     // Re-save the exact same plan (a common no-op from the DayEditor).
     $this->actingAs($staff)
-        ->patch('/wochenplan/anpassung', [
+        ->patch('/weekly-plan/adjust', [
             'child_id' => $child->id,
             'date' => $date,
             'planned_method' => 'picked_up',
@@ -142,7 +142,7 @@ it('logs when a reported absence is cleared', function () {
     Absence::report($child, $date, AbsenceReason::Sick, $staff->id, null);
 
     $this->actingAs($staff)
-        ->delete('/abwesenheiten', ['child_id' => $child->id, 'from' => $date, 'to' => $date])
+        ->delete('/absences', ['child_id' => $child->id, 'from' => $date, 'to' => $date])
         ->assertRedirect();
 
     expect(Activity::where('subject_type', Absence::class)->where('event', 'deleted')->count())->toBe(1);
@@ -152,7 +152,7 @@ it('logs homework-default changes', function () {
     $staff = User::factory()->staff()->create();
 
     $this->actingAs($staff)
-        ->patch('/programm/standard', ['defaults' => [['weekday' => 1, 'start' => '14:00', 'end' => '15:00']]])
+        ->patch('/program/defaults', ['defaults' => [['weekday' => 1, 'start' => '14:00', 'end' => '15:00']]])
         ->assertRedirect();
 
     expect(Activity::where('subject_type', HomeworkDefault::class)->where('event', 'created')->count())->toBe(1);
