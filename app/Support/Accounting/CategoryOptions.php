@@ -13,7 +13,7 @@ class CategoryOptions
     /**
      * Tree-ordered category options with depth and a „Parent › Child" path label.
      *
-     * @return list<array{id:int, name:string, path:string, direction:string, depth:int, active:bool}>
+     * @return list<array{id:int, name:string, comment:?string, path:string, direction:string, depth:int, active:bool}>
      */
     public static function flat(bool $onlyActive = true): array
     {
@@ -42,6 +42,7 @@ class CategoryOptions
             $options[] = [
                 'id' => $category->id,
                 'name' => $category->name,
+                'comment' => $category->comment,
                 'path' => implode(' › ', $path),
                 'direction' => $category->direction->value,
                 'depth' => count($trail),

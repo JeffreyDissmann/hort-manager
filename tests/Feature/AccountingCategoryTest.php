@@ -6,6 +6,7 @@ use App\Enums\CategoryDirection;
 use App\Models\Accounting\Booking;
 use App\Models\Accounting\Category;
 use App\Models\User;
+use App\Support\Accounting\CategoryOptions;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia;
 
@@ -77,6 +78,24 @@ it('renames and deactivates a category', function () {
 
     expect($category->refresh()->name)->toBe('Neu')
         ->and($category->active)->toBeFalse();
+});
+
+it('stores a category comment and exposes it to the options helper', function () {
+    $admin = User::factory()->admin()->create();
+    $category = Category::factory()->income()->create(['name' => 'Essensgeld']);
+
+    $this->actingAs($admin)
+        ->patch("/accounting/categories/{$category->id}", [
+            'name' => 'Essensgeld',
+            'comment' => 'Monatlicher Beitrag fürs Mittagessen',
+            'active' => true,
+        ])
+        ->assertRedirect();
+
+    expect($category->refresh()->comment)->toBe('Monatlicher Beitrag fürs Mittagessen');
+
+    $option = collect(CategoryOptions::flat())->firstWhere('id', $category->id);
+    expect($option['comment'])->toBe('Monatlicher Beitrag fürs Mittagessen');
 });
 
 it('deletes an empty category but refuses one with bookings in its subtree', function () {

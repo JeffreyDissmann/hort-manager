@@ -45,6 +45,7 @@ return [
     ],
     'booking_status' => [
         'draft' => 'Draft',
+        'suggested' => 'AI suggestion',
         'confirmed' => 'Confirmed',
     ],
 ];

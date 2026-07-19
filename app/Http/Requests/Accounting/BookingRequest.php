@@ -30,6 +30,7 @@ class BookingRequest extends FormRequest
             'valuta_date' => ['nullable', 'date'],
             'purpose' => ['nullable', 'string', 'max:2000'],
             'comment' => ['nullable', 'string', 'max:2000'],
+            'counterparty_child_id' => ['nullable', Rule::exists('children', 'id')],
             'counterparty_user_id' => ['nullable', Rule::exists('users', 'id')],
             'counterparty_name' => ['nullable', 'string', 'max:255'],
             // Only used by the edit form's review-status toggle.
@@ -47,7 +48,10 @@ class BookingRequest extends FormRequest
     {
         $category = Category::findOrFail($this->integer('category_id'));
         $magnitude = (int) round((float) $this->input('amount') * 100);
-        $userId = $this->filled('counterparty_user_id') ? $this->integer('counterparty_user_id') : null;
+
+        // Counterparty precedence: child (income) beats user (person) beats free text.
+        $childId = $this->filled('counterparty_child_id') ? $this->integer('counterparty_child_id') : null;
+        $userId = ! $childId && $this->filled('counterparty_user_id') ? $this->integer('counterparty_user_id') : null;
 
         return [
             'account_id' => $this->integer('account_id'),
@@ -59,9 +63,9 @@ class BookingRequest extends FormRequest
             'valuta_date' => ($this->input('valuta_date') ?: $this->input('booking_date')),
             'purpose' => $this->input('purpose'),
             'comment' => $this->input('comment'),
-            // A linked user wins; free-text name is only kept when no user is set.
+            'counterparty_child_id' => $childId,
             'counterparty_user_id' => $userId,
-            'counterparty_name' => $userId ? null : $this->input('counterparty_name'),
+            'counterparty_name' => ($childId || $userId) ? null : $this->input('counterparty_name'),
         ];
     }
 }

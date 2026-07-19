@@ -5,13 +5,14 @@ import BookingFields from './Partials/BookingFields.vue';
 import { formatEuro } from '@/money';
 import { reviewSave as bookingsReviewSave } from '@/routes/accounting/bookings';
 import { Head, useForm } from '@inertiajs/vue3';
-import { ArrowRightIcon, TrashIcon, ForwardIcon } from '@heroicons/vue/24/outline';
+import { ArrowRightIcon, TrashIcon, ForwardIcon, SparklesIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
     booking: { type: Object, required: true },
     remaining: { type: Number, required: true },
     accounts: { type: Array, required: true },
     categories: { type: Array, required: true },
+    children: { type: Array, default: () => [] },
     users: { type: Array, required: true },
 });
 
@@ -24,6 +25,7 @@ const form = useForm({
     valuta_date: props.booking.valuta_date ?? '',
     purpose: props.booking.purpose ?? '',
     comment: props.booking.comment ?? '',
+    counterparty_child_id: props.booking.counterparty_child_id,
     counterparty_user_id: props.booking.counterparty_user_id,
     counterparty_name: props.booking.counterparty_name ?? '',
 });
@@ -65,12 +67,18 @@ function send(action) {
                     </p>
                 </div>
 
+                <!-- AI suggestion hint -->
+                <p v-if="booking.ai_suggested" class="mt-3 flex items-center gap-1 text-xs font-medium text-hort-teal-dark">
+                    <SparklesIcon class="h-4 w-4" /> {{ $t('accounting.review.ai_hint') }}
+                </p>
+
                 <!-- Full editable form (same fields as the booking editor) -->
-                <div class="pt-5">
+                <div class="pt-4">
                     <BookingFields
                         :form="form"
                         :accounts="accounts"
                         :categories="categories"
+                        :children="children"
                         :users="users"
                         :direction="booking.direction"
                     />

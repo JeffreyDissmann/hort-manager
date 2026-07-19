@@ -8,6 +8,7 @@ import { Head, Link, useForm } from '@inertiajs/vue3';
 defineProps({
     accounts: { type: Array, required: true },
     categories: { type: Array, required: true },
+    children: { type: Array, default: () => [] },
     users: { type: Array, required: true },
 });
 
@@ -19,6 +20,7 @@ const form = useForm({
     valuta_date: '',
     purpose: '',
     comment: '',
+    counterparty_child_id: null,
     counterparty_user_id: null,
     counterparty_name: '',
 });
@@ -39,7 +41,7 @@ function submit() {
 
         <div class="mx-auto max-w-2xl">
             <form @submit.prevent="submit" class="rounded-2xl bg-surface p-6 shadow-sm">
-                <BookingFields :form="form" :accounts="accounts" :categories="categories" :users="users" />
+                <BookingFields :form="form" :accounts="accounts" :categories="categories" :children="children" :users="users" />
 
                 <div class="mt-6 flex items-center justify-end gap-4">
                     <Link :href="bookingsIndex().url" class="text-sm text-ink/70 hover:text-ink">

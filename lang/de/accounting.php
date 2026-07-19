@@ -27,7 +27,9 @@ return [
 
     'categories' => [
         'title' => 'Kategorien',
-        'intro' => 'Buchungskategorien als Baum. Die Richtung (Einnahme/Ausgabe) legt die oberste Ebene fest und vererbt sich an alle Unterkategorien.',
+        'intro' => 'Buchungskategorien als Baum. Die Richtung (Einnahme/Ausgabe) legt die oberste Ebene fest und vererbt sich an alle Unterkategorien. Der Hinweis pro Kategorie hilft der KI beim Zuordnen.',
+        'comment_placeholder' => 'Hinweis für die KI (optional), z. B. „monatlicher Beitrag fürs Mittagessen"',
+        'edit_hint' => 'KI-Hinweis bearbeiten',
         'income' => 'Einnahmen',
         'expense' => 'Ausgaben',
         'new_root' => 'Neue Hauptkategorie',
@@ -59,8 +61,10 @@ return [
         'comment' => 'Kommentar',
         'counterparty' => 'Von / An',
         'counterparty_none' => 'keine Angabe',
+        'counterparty_child' => 'Kind',
         'counterparty_user' => 'Benutzer',
         'counterparty_free' => 'Freitext',
+        'pick_child' => 'Kind wählen …',
         'search' => 'Suche (Verwendungszweck, Name)',
         'all_accounts' => 'Alle Konten',
         'all_categories' => 'Alle Kategorien',
@@ -132,5 +136,6 @@ return [
         'skip' => 'Überspringen',
         'none' => 'keine',
         'done_title' => 'Alle Entwürfe geprüft 🎉',
+        'ai_hint' => 'Kategorie und Gegenpartei wurden von der KI vorgeschlagen – bitte prüfen.',
     ],
 ];

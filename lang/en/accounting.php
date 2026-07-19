@@ -27,7 +27,9 @@ return [
 
     'categories' => [
         'title' => 'Categories',
-        'intro' => 'Booking categories as a tree. The direction (income/expense) is set at the top level and inherited by every subcategory.',
+        'intro' => 'Booking categories as a tree. The direction (income/expense) is set at the top level and inherited by every subcategory. The per-category hint helps the AI categorize.',
+        'comment_placeholder' => 'Hint for the AI (optional), e.g. “monthly lunch contribution”',
+        'edit_hint' => 'Edit AI hint',
         'income' => 'Income',
         'expense' => 'Expenses',
         'new_root' => 'New top-level category',
@@ -59,8 +61,10 @@ return [
         'comment' => 'Comment',
         'counterparty' => 'From / to',
         'counterparty_none' => 'not specified',
+        'counterparty_child' => 'Child',
         'counterparty_user' => 'User',
         'counterparty_free' => 'Free text',
+        'pick_child' => 'Choose child …',
         'search' => 'Search (reference, name)',
         'all_accounts' => 'All accounts',
         'all_categories' => 'All categories',
@@ -132,5 +136,6 @@ return [
         'skip' => 'Skip',
         'none' => 'none',
         'done_title' => 'All drafts reviewed 🎉',
+        'ai_hint' => 'Category and counterparty were suggested by the AI — please review.',
     ],
 ];

@@ -10,6 +10,7 @@ const props = defineProps({
     booking: { type: Object, required: true },
     accounts: { type: Array, required: true },
     categories: { type: Array, required: true },
+    children: { type: Array, default: () => [] },
     users: { type: Array, required: true },
     statuses: { type: Array, required: true },
 });
@@ -22,6 +23,7 @@ const form = useForm({
     valuta_date: props.booking.valuta_date ?? '',
     purpose: props.booking.purpose ?? '',
     comment: props.booking.comment ?? '',
+    counterparty_child_id: props.booking.counterparty_child_id,
     counterparty_user_id: props.booking.counterparty_user_id,
     counterparty_name: props.booking.counterparty_name ?? '',
     status: props.booking.status,
@@ -43,7 +45,7 @@ function submit() {
 
         <div class="mx-auto max-w-2xl">
             <form @submit.prevent="submit" class="rounded-2xl bg-surface p-6 shadow-sm">
-                <BookingFields :form="form" :accounts="accounts" :categories="categories" :users="users" />
+                <BookingFields :form="form" :accounts="accounts" :categories="categories" :children="children" :users="users" />
 
                 <div class="mt-6 border-t border-ink/10 pt-4">
                     <InputLabel for="status" :value="$t('accounting.bookings.status')" />

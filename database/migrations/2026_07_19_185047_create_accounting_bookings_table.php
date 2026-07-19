@@ -35,15 +35,11 @@ return new class extends Migration
             $table->text('comment')->nullable();
 
             // Counterparty: either a linked app user or a free-text name.
+            // (A child counterparty is added in a later migration.) While a booking
+            // is in the „suggested" status these values are the AI's proposals; once
+            // confirmed they are the accepted values — no separate suggestion columns.
             $table->foreignId('counterparty_user_id')->nullable()->constrained('users')->nullOnDelete();
             $table->string('counterparty_name')->nullable();
-
-            // AI proposals held until a reviewer accepts them.
-            $table->foreignId('suggested_category_id')->nullable()->constrained('accounting_categories')->nullOnDelete();
-            $table->foreignId('suggested_counterparty_user_id')->nullable()->constrained('users')->nullOnDelete();
-            $table->string('suggested_counterparty_name')->nullable();
-            // When the AI pass produced its suggestions (null = not yet processed).
-            $table->timestamp('ai_suggested_at')->nullable();
 
             $table->string('import_hash')->nullable();
             $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();

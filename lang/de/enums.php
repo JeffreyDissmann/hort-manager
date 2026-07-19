@@ -45,6 +45,7 @@ return [
     ],
     'booking_status' => [
         'draft' => 'Entwurf',
+        'suggested' => 'KI-Vorschlag',
         'confirmed' => 'Bestätigt',
     ],
 ];

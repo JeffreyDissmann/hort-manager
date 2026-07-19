@@ -10,15 +10,27 @@ const props = defineProps({
     form: { type: Object, required: true },
     accounts: { type: Array, required: true },
     categories: { type: Array, required: true },
+    children: { type: Array, default: () => [] },
     users: { type: Array, required: true },
     // Optional: restrict the category picker to one direction (used during review).
     direction: { type: String, default: null },
 });
 
-// Counterparty is either a linked user, a free-text name, or nothing.
-const mode = ref(props.form.counterparty_user_id ? 'user' : props.form.counterparty_name ? 'free' : 'none');
+// Counterparty is a child (income), a linked user (person), free text, or nothing.
+const mode = ref(
+    props.form.counterparty_child_id
+        ? 'child'
+        : props.form.counterparty_user_id
+          ? 'user'
+          : props.form.counterparty_name
+            ? 'free'
+            : 'none',
+);
 
 watch(mode, (value) => {
+    if (value !== 'child') {
+        props.form.counterparty_child_id = null;
+    }
     if (value !== 'user') {
         props.form.counterparty_user_id = null;
     }
@@ -29,6 +41,7 @@ watch(mode, (value) => {
 
 const modes = [
     { value: 'none', key: 'counterparty_none' },
+    { value: 'child', key: 'counterparty_child' },
     { value: 'user', key: 'counterparty_user' },
     { value: 'free', key: 'counterparty_free' },
 ];
@@ -98,6 +111,14 @@ const modes = [
                 </button>
             </div>
             <select
+                v-if="mode === 'child'"
+                v-model="form.counterparty_child_id"
+                class="mt-2 block w-full rounded-md border-ink/20 shadow-sm focus:border-hort-teal focus:ring-hort-teal"
+            >
+                <option :value="null">{{ $t('accounting.bookings.pick_child') }}</option>
+                <option v-for="child in children" :key="child.id" :value="child.id">{{ child.name }}</option>
+            </select>
+            <select
                 v-if="mode === 'user'"
                 v-model="form.counterparty_user_id"
                 class="mt-2 block w-full rounded-md border-ink/20 shadow-sm focus:border-hort-teal focus:ring-hort-teal"
@@ -111,6 +132,7 @@ const modes = [
                 type="text"
                 class="mt-2 block w-full"
             />
+            <InputError :message="form.errors.counterparty_child_id" class="mt-2" />
             <InputError :message="form.errors.counterparty_user_id" class="mt-2" />
             <InputError :message="form.errors.counterparty_name" class="mt-2" />
         </div>

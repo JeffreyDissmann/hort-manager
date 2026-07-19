@@ -6,6 +6,7 @@ namespace App\Models\Accounting;
 
 use App\Enums\BookingKind;
 use App\Enums\BookingStatus;
+use App\Models\Child;
 use App\Models\User;
 use Database\Factories\Accounting\BookingFactory;
 use Illuminate\Database\Eloquent\Builder;
@@ -39,11 +40,8 @@ class Booking extends Model
         'purpose',
         'comment',
         'counterparty_user_id',
+        'counterparty_child_id',
         'counterparty_name',
-        'suggested_category_id',
-        'suggested_counterparty_user_id',
-        'suggested_counterparty_name',
-        'ai_suggested_at',
         'import_hash',
     ];
 
@@ -55,7 +53,6 @@ class Booking extends Model
             'amount_cents' => 'integer',
             'booking_date' => 'date:Y-m-d',
             'valuta_date' => 'date:Y-m-d',
-            'ai_suggested_at' => 'datetime',
         ];
     }
 
@@ -83,6 +80,19 @@ class Booking extends Model
     public function scopeDraft(Builder $query): void
     {
         $query->where('status', BookingStatus::Draft);
+    }
+
+    /** @param Builder<Booking> $query */
+    public function scopeSuggested(Builder $query): void
+    {
+        $query->where('status', BookingStatus::Suggested);
+    }
+
+    /** Everything still awaiting human confirmation (raw draft or AI-suggested). */
+    /** @param Builder<Booking> $query */
+    public function scopeNeedsReview(Builder $query): void
+    {
+        $query->whereIn('status', [BookingStatus::Draft, BookingStatus::Suggested]);
     }
 
     /** @return BelongsTo<Account, $this> */
@@ -115,16 +125,16 @@ class Booking extends Model
         return $this->belongsTo(User::class, 'counterparty_user_id');
     }
 
-    /** @return BelongsTo<Category, $this> */
-    public function suggestedCategory(): BelongsTo
+    /** @return BelongsTo<Child, $this> */
+    public function counterpartyChild(): BelongsTo
     {
-        return $this->belongsTo(Category::class, 'suggested_category_id');
+        return $this->belongsTo(Child::class, 'counterparty_child_id');
     }
 
-    /** @return BelongsTo<User, $this> */
-    public function suggestedCounterparty(): BelongsTo
+    /** Display label for the counterparty: child, then user, then free text. */
+    public function counterpartyLabel(): ?string
     {
-        return $this->belongsTo(User::class, 'suggested_counterparty_user_id');
+        return $this->counterpartyChild?->name ?? $this->counterparty?->name ?? $this->counterparty_name;
     }
 
     /** @return BelongsTo<User, $this> */

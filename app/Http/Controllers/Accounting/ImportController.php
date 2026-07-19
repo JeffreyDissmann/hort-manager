@@ -8,6 +8,7 @@ use App\Enums\BookingKind;
 use App\Enums\BookingStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Accounting\StoreImportRequest;
+use App\Jobs\SuggestBookingCategory;
 use App\Models\Accounting\Account;
 use App\Models\Accounting\Booking;
 use App\Models\Accounting\Import;
@@ -45,9 +46,9 @@ class ImportController extends Controller
             'row_count' => count($rows),
         ]);
 
-        $imported = 0;
         $duplicates = 0;
         $seen = [];
+        $drafts = collect();
 
         foreach ($rows as $row) {
             $hash = $this->hashFor($account->id, $row);
@@ -59,7 +60,7 @@ class ImportController extends Controller
             }
             $seen[$hash] = true;
 
-            Booking::create([
+            $drafts->push(Booking::create([
                 'account_id' => $account->id,
                 'import_id' => $import->id,
                 'category_id' => null,
@@ -71,11 +72,17 @@ class ImportController extends Controller
                 'valuta_date' => $row['valuta_date'],
                 'purpose' => $row['purpose'],
                 'import_hash' => $hash,
-            ]);
-            $imported++;
+            ]));
         }
 
-        $import->update(['imported_count' => $imported, 'duplicate_count' => $duplicates]);
+        $import->update(['imported_count' => $drafts->count(), 'duplicate_count' => $duplicates]);
+
+        // Queue the AI pass: one job per draft, globally serialized (one Ollama call
+        // at a time). Drafts flip to "suggested" as each job completes. Disabled in
+        // tests / when Ollama is off.
+        if (config('accounting.ai_suggestions')) {
+            $drafts->each(fn (Booking $b) => SuggestBookingCategory::dispatch($b->id));
+        }
 
         return redirect()->route('accounting.import.show', $import);
     }
@@ -90,8 +97,8 @@ class ImportController extends Controller
                 'imported_count' => $import->imported_count,
                 'duplicate_count' => $import->duplicate_count,
             ],
-            // Total drafts awaiting review across the whole ledger (not just this file).
-            'draftTotal' => Booking::where('status', BookingStatus::Draft)->count(),
+            // Total bookings awaiting review across the whole ledger (not just this file).
+            'draftTotal' => Booking::needsReview()->count(),
         ]);
     }
 

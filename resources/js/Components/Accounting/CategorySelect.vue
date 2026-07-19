@@ -1,9 +1,9 @@
 <script setup>
 import { computed, ref, nextTick } from 'vue';
 import { router, usePage } from '@inertiajs/vue3';
-import { store as categoriesStore } from '@/routes/accounting/categories';
+import { store as categoriesStore, update as categoriesUpdate } from '@/routes/accounting/categories';
 import { t } from '@/i18n';
-import { PlusIcon, CheckIcon, XMarkIcon } from '@heroicons/vue/24/outline';
+import { PlusIcon, CheckIcon, XMarkIcon, ChatBubbleBottomCenterTextIcon } from '@heroicons/vue/24/outline';
 
 // A grouped category <select> (Einnahmen / Ausgaben, indented by depth) with an
 // inline „neue Kategorie" affordance so a missing category can be added without
@@ -21,6 +21,33 @@ const adding = ref(false);
 const newName = ref('');
 const newDirection = ref(props.direction ?? 'expense');
 const nameInput = ref(null);
+
+// The currently-selected category option (for editing its AI hint inline).
+const selected = computed(() => props.categories.find((c) => c.id === Number(props.modelValue)) ?? null);
+
+const editingHint = ref(false);
+const hintValue = ref('');
+const hintInput = ref(null);
+
+async function startEditHint() {
+    hintValue.value = selected.value?.comment ?? '';
+    editingHint.value = true;
+    await nextTick();
+    hintInput.value?.focus();
+}
+
+function saveHint() {
+    const cat = selected.value;
+    if (!cat) {
+        editingHint.value = false;
+        return;
+    }
+    router.patch(
+        categoriesUpdate(cat.id).url,
+        { name: cat.name, comment: hintValue.value.trim() || null, active: cat.active },
+        { preserveScroll: true, preserveState: true, only: ['categories'], onSuccess: () => (editingHint.value = false) },
+    );
+}
 
 const groups = computed(() =>
     [
@@ -89,6 +116,16 @@ function saveNew() {
                 </optgroup>
             </select>
             <button
+                v-if="selected"
+                type="button"
+                class="shrink-0 rounded-lg bg-ink/5 p-2 text-ink/60 transition hover:bg-ink/10 hover:text-ink"
+                :class="{ 'text-hort-teal-dark': selected.comment }"
+                :title="$t('accounting.categories.edit_hint')"
+                @click="startEditHint"
+            >
+                <ChatBubbleBottomCenterTextIcon class="h-5 w-5" />
+            </button>
+            <button
                 type="button"
                 class="shrink-0 rounded-lg bg-ink/5 p-2 text-ink/60 transition hover:bg-ink/10 hover:text-ink"
                 :title="$t('accounting.bookings.add_category')"
@@ -96,6 +133,29 @@ function saveNew() {
             >
                 <PlusIcon class="h-5 w-5" />
             </button>
+        </div>
+
+        <!-- Edit the selected category's AI hint -->
+        <div v-if="editingHint && selected" class="mt-2 rounded-lg bg-ink/5 p-2">
+            <p class="mb-1 text-xs font-medium text-ink/50">
+                {{ $t('accounting.categories.edit_hint') }}: {{ selected.path }}
+            </p>
+            <div class="flex items-start gap-2">
+                <textarea
+                    ref="hintInput"
+                    v-model="hintValue"
+                    rows="2"
+                    :placeholder="$t('accounting.categories.comment_placeholder')"
+                    class="min-w-0 flex-1 rounded-md border-ink/20 py-1 text-xs focus:border-hort-teal focus:ring-hort-teal"
+                    @keyup.esc="editingHint = false"
+                ></textarea>
+                <button type="button" class="rounded p-1 text-hort-teal-dark hover:bg-hort-teal/10" @click="saveHint">
+                    <CheckIcon class="h-4 w-4" />
+                </button>
+                <button type="button" class="rounded p-1 text-ink/40 hover:bg-ink/10" @click="editingHint = false">
+                    <XMarkIcon class="h-4 w-4" />
+                </button>
+            </div>
         </div>
 
         <!-- Inline add -->

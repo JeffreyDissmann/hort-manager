@@ -27,12 +27,14 @@ const props = defineProps({
 const renaming = ref(false);
 const addingChild = ref(false);
 const renameValue = ref(props.node.name);
+const commentValue = ref(props.node.comment ?? '');
 const childName = ref('');
 const renameInput = ref(null);
 const childInput = ref(null);
 
 async function startRename() {
     renameValue.value = props.node.name;
+    commentValue.value = props.node.comment ?? '';
     renaming.value = true;
     await nextTick();
     renameInput.value?.focus();
@@ -46,7 +48,7 @@ function saveRename() {
     }
     router.patch(
         categoriesUpdate(props.node.id).url,
-        { name, active: props.node.active },
+        { name, comment: commentValue.value.trim() || null, active: props.node.active },
         { preserveScroll: true, onSuccess: () => (renaming.value = false) },
     );
 }
@@ -74,7 +76,7 @@ function saveChild() {
 function toggleActive() {
     router.patch(
         categoriesUpdate(props.node.id).url,
-        { name: props.node.name, active: !props.node.active },
+        { name: props.node.name, comment: props.node.comment, active: !props.node.active },
         { preserveScroll: true },
     );
 }
@@ -89,19 +91,27 @@ function destroy() {
 <template>
     <li>
         <div
-            class="group flex items-center gap-2 rounded-lg py-1.5 pr-1 hover:bg-ink/5"
+            class="group flex items-start gap-2 rounded-lg py-1.5 pr-1 hover:bg-ink/5"
             :class="{ 'opacity-50': !node.active }"
         >
-            <!-- Rename mode -->
+            <!-- Edit mode (name + AI hint) -->
             <template v-if="renaming">
-                <input
-                    ref="renameInput"
-                    v-model="renameValue"
-                    type="text"
-                    class="min-w-0 flex-1 rounded-md border-ink/20 py-1 text-sm focus:border-hort-teal focus:ring-hort-teal"
-                    @keyup.enter="saveRename"
-                    @keyup.esc="renaming = false"
-                />
+                <div class="min-w-0 flex-1 space-y-1">
+                    <input
+                        ref="renameInput"
+                        v-model="renameValue"
+                        type="text"
+                        class="block w-full rounded-md border-ink/20 py-1 text-sm focus:border-hort-teal focus:ring-hort-teal"
+                        @keyup.enter="saveRename"
+                        @keyup.esc="renaming = false"
+                    />
+                    <textarea
+                        v-model="commentValue"
+                        rows="2"
+                        :placeholder="$t('accounting.categories.comment_placeholder')"
+                        class="block w-full rounded-md border-ink/20 py-1 text-xs focus:border-hort-teal focus:ring-hort-teal"
+                    ></textarea>
+                </div>
                 <button type="button" class="rounded p-1 text-hort-teal-dark hover:bg-hort-teal/10" @click="saveRename">
                     <CheckIcon class="h-4 w-4" />
                 </button>
@@ -112,11 +122,16 @@ function destroy() {
 
             <!-- Display mode -->
             <template v-else>
-                <span class="min-w-0 flex-1 truncate text-sm text-ink">
-                    {{ node.name }}
-                    <span v-if="!node.active" class="ml-1 text-xs text-ink/40">({{ $t('accounting.categories.inactive') }})</span>
-                    <span v-if="node.bookings_count" class="ml-1 text-xs text-ink/40">· {{ node.bookings_count }}</span>
-                </span>
+                <div class="min-w-0 flex-1">
+                    <span class="block truncate text-sm text-ink">
+                        {{ node.name }}
+                        <span v-if="!node.active" class="ml-1 text-xs text-ink/40">({{ $t('accounting.categories.inactive') }})</span>
+                        <span v-if="node.bookings_count" class="ml-1 text-xs text-ink/40">· {{ node.bookings_count }}</span>
+                    </span>
+                    <span v-if="node.comment" class="block truncate text-xs italic text-ink/40" :title="node.comment">
+                        {{ node.comment }}
+                    </span>
+                </div>
                 <div class="flex shrink-0 items-center gap-0.5 opacity-0 transition group-hover:opacity-100">
                     <button
                         type="button"

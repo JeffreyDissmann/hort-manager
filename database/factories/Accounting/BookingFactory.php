@@ -44,6 +44,12 @@ class BookingFactory extends Factory
         return $this->state(['status' => BookingStatus::Draft]);
     }
 
+    /** An AI-analysed draft (its values are AI proposals, awaiting confirmation). */
+    public function suggested(): static
+    {
+        return $this->state(['status' => BookingStatus::Suggested]);
+    }
+
     /** An expense: negative amount, expense category. */
     public function expense(): static
     {

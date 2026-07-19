@@ -12,6 +12,7 @@ use App\Http\Requests\Accounting\BookingRequest;
 use App\Models\Accounting\Account;
 use App\Models\Accounting\Booking;
 use App\Models\Accounting\Category;
+use App\Models\Child;
 use App\Models\User;
 use App\Support\Accounting\CategoryOptions;
 use Illuminate\Http\RedirectResponse;
@@ -33,6 +34,7 @@ class BookingController extends Controller
             ->with([
                 'account:id,name',
                 'counterparty:id,name',
+                'counterpartyChild:id,name',
                 'transfer.outBooking.account:id,name',
                 'transfer.inBooking.account:id,name',
             ])
@@ -72,7 +74,7 @@ class BookingController extends Controller
                     'counter_account' => $counterAccount,
                     'status' => $b->status->value,
                     'amount_cents' => $b->amount_cents,
-                    'counterparty' => $b->counterparty?->name ?? $b->counterparty_name,
+                    'counterparty' => $b->counterpartyLabel(),
                     'purpose' => $b->purpose,
                 ];
             });
@@ -81,7 +83,7 @@ class BookingController extends Controller
             'bookings' => $bookings,
             'filters' => $filters,
             // Drives the „Entwürfe prüfen" button (resume the review workflow anytime).
-            'draftCount' => Booking::draft()->count(),
+            'draftCount' => Booking::needsReview()->count(),
             'filterOptions' => [
                 'accounts' => Account::orderBy('name')->get(['id', 'name']),
                 'categories' => CategoryOptions::flat(onlyActive: false),
@@ -119,6 +121,7 @@ class BookingController extends Controller
                 'valuta_date' => $booking->valuta_date?->format('Y-m-d'),
                 'purpose' => $booking->purpose,
                 'comment' => $booking->comment,
+                'counterparty_child_id' => $booking->counterparty_child_id,
                 'counterparty_user_id' => $booking->counterparty_user_id,
                 'counterparty_name' => $booking->counterparty_name,
                 'status' => $booking->status->value,
@@ -162,7 +165,7 @@ class BookingController extends Controller
      */
     public function review(Request $request): Response|RedirectResponse
     {
-        $drafts = Booking::draft()->orderBy('booking_date')->orderBy('id');
+        $drafts = Booking::needsReview()->orderBy('booking_date')->orderBy('id');
 
         $cursor = $request->integer('cursor');
         $booking = (clone $drafts)->when($cursor, fn ($q) => $q->where('id', $cursor))->first()
@@ -172,6 +175,7 @@ class BookingController extends Controller
             return redirect()->route('accounting.bookings.index')->with('status', __('flash.import_complete'));
         }
 
+        // A „suggested" booking already carries the AI's picks in its real fields.
         return Inertia::render('Accounting/Bookings/Review', [
             'booking' => [
                 'id' => $booking->id,
@@ -186,12 +190,15 @@ class BookingController extends Controller
                 'amount' => abs($booking->amount_cents) / 100,
                 'direction' => $booking->amount_cents >= 0 ? CategoryDirection::Income->value : CategoryDirection::Expense->value,
                 'category_id' => $booking->category_id,
+                'counterparty_child_id' => $booking->counterparty_child_id,
                 'counterparty_user_id' => $booking->counterparty_user_id,
                 'counterparty_name' => $booking->counterparty_name,
+                'ai_suggested' => $booking->status === BookingStatus::Suggested,
             ],
             'remaining' => (clone $drafts)->count(),
             'accounts' => Account::where('active', true)->orderBy('name')->get(['id', 'name']),
             'categories' => CategoryOptions::flat(),
+            'children' => Child::orderBy('name')->get(['id', 'name']),
             'users' => User::orderBy('name')->get(['id', 'name']),
         ]);
     }
@@ -203,7 +210,7 @@ class BookingController extends Controller
      */
     public function reviewSave(Request $request, Booking $booking): RedirectResponse
     {
-        abort_unless($booking->status === BookingStatus::Draft, 404);
+        abort_unless(in_array($booking->status, [BookingStatus::Draft, BookingStatus::Suggested], true), 404);
 
         $action = $request->validate(['action' => ['required', 'in:confirm,discard,skip']])['action'];
 
@@ -227,6 +234,7 @@ class BookingController extends Controller
             'valuta_date' => ['nullable', 'date'],
             'purpose' => ['nullable', 'string', 'max:2000'],
             'comment' => ['nullable', 'string', 'max:2000'],
+            'counterparty_child_id' => ['nullable', Rule::exists('children', 'id')],
             'counterparty_user_id' => ['nullable', Rule::exists('users', 'id')],
             'counterparty_name' => ['nullable', 'string', 'max:255'],
         ]);
@@ -239,8 +247,6 @@ class BookingController extends Controller
             throw ValidationException::withMessages(['category_id' => __('accounting.import.wrong_direction')]);
         }
 
-        $userId = ! empty($data['counterparty_user_id']) ? (int) $data['counterparty_user_id'] : null;
-
         $booking->update([
             'account_id' => (int) $data['account_id'],
             'category_id' => $category->id,
@@ -250,16 +256,34 @@ class BookingController extends Controller
             'valuta_date' => ($data['valuta_date'] ?? null) ?: $data['booking_date'],
             'purpose' => $data['purpose'] ?? null,
             'comment' => $data['comment'] ?? null,
-            'counterparty_user_id' => $userId,
-            'counterparty_name' => $userId ? null : ($data['counterparty_name'] ?? null),
+            ...$this->counterparty($data),
             'status' => BookingStatus::Confirmed,
         ]);
     }
 
-    /** The next draft after the given one in (booking_date, id) order, if any. */
+    /**
+     * Resolve the mutually-exclusive counterparty: child (income) beats user
+     * (person expense) beats free text.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array{counterparty_child_id: ?int, counterparty_user_id: ?int, counterparty_name: ?string}
+     */
+    private function counterparty(array $data): array
+    {
+        $childId = ! empty($data['counterparty_child_id']) ? (int) $data['counterparty_child_id'] : null;
+        $userId = ! $childId && ! empty($data['counterparty_user_id']) ? (int) $data['counterparty_user_id'] : null;
+
+        return [
+            'counterparty_child_id' => $childId,
+            'counterparty_user_id' => $userId,
+            'counterparty_name' => ($childId || $userId) ? null : ($data['counterparty_name'] ?? null),
+        ];
+    }
+
+    /** The next unconfirmed booking after the given one in (booking_date, id) order. */
     private function nextDraftId(Booking $current): ?int
     {
-        return Booking::draft()
+        return Booking::needsReview()
             ->where(function ($q) use ($current): void {
                 $q->where('booking_date', '>', $current->booking_date)
                     ->orWhere(function ($q2) use ($current): void {
@@ -308,6 +332,7 @@ class BookingController extends Controller
         return [
             'accounts' => Account::where('active', true)->orderBy('name')->get(['id', 'name']),
             'categories' => CategoryOptions::flat(),
+            'children' => Child::orderBy('name')->get(['id', 'name']),
             'users' => User::orderBy('name')->get(['id', 'name']),
         ];
     }

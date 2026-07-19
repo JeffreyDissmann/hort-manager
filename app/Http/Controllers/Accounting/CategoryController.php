@@ -51,6 +51,7 @@ class CategoryController extends Controller
     {
         $category->update([
             'name' => $request->string('name')->trim()->value(),
+            'comment' => $request->input('comment') ?: null,
             'active' => $request->boolean('active'),
         ]);
 
@@ -87,6 +88,7 @@ class CategoryController extends Controller
             ->map(fn (Category $category): array => [
                 'id' => $category->id,
                 'name' => $category->name,
+                'comment' => $category->comment,
                 'active' => $category->active,
                 'bookings_count' => $category->bookings_count,
                 'children' => $this->tree($categories, $direction, $category->id),
