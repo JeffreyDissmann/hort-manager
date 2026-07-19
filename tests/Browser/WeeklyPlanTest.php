@@ -12,7 +12,7 @@ it('adjusts a day from the Wochenplan and resets it back to the Stammplan', func
     $child = Child::factory()->scheduledOn(boardWeekday(), '15:00')->withGuardian($parent)->create(['name' => 'Nina']);
     $date = boardDate()->toDateString();
 
-    $page = actAndVisit($parent, "/wochenplan?week={$date}");
+    $page = actAndVisit($parent, "/weekly-plan?week={$date}");
 
     // Adjust today's 15:00 pickup to 16:00 (opens with the Stammplan plan pre-filled).
     $page->click("@wp-cell-{$child->id}-{$date}")
@@ -38,6 +38,6 @@ it('links each weekday header to that day\'s board', function () {
     Child::factory()->scheduledOn(boardWeekday(), '15:00')->create(['name' => 'Nils']);
     $date = boardDate()->toDateString();
 
-    actAndVisit($staff, '/wochenplan')
+    actAndVisit($staff, '/weekly-plan')
         ->assertPresent("@wp-day-link-{$date}"); // the timetable header links to Heute for that date
 });

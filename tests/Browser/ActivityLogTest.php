@@ -11,10 +11,10 @@ it('lets an admin open the activity log from the menu', function () {
     $this->actingAs($admin);
     Child::factory()->create(['name' => 'Protokoll Kind']);
 
-    actAndVisit($admin, '/tagesboard')
+    actAndVisit($admin, '/board')
         ->click('@user-menu')
         ->click('@nav-activity-log')
-        ->assertPathIs('/protokoll')
+        ->assertPathIs('/activity-log')
         ->assertSee('Protokoll')
         ->assertSee('Protokoll Kind'); // the logged entry
 });
@@ -22,7 +22,7 @@ it('lets an admin open the activity log from the menu', function () {
 it('has no activity-log link for non-admins', function () {
     $staff = User::factory()->staff()->create();
 
-    actAndVisit($staff, '/tagesboard')
+    actAndVisit($staff, '/board')
         ->click('@user-menu')
         ->assertMissing('@nav-activity-log');
 });
