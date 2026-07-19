@@ -28,6 +28,8 @@ return [
         'rsvp_yes' => 'Accepted',
         'rsvp_no' => 'Declined',
         'guardians' => 'Guardians',
+        'companion_yes' => 'Companion: yes',
+        'companion_no' => 'Companion: no',
     ],
 
     // Subject nouns (shown for create/update/delete entries).
@@ -37,6 +39,7 @@ return [
         'absence' => 'Absence',
         'excursion' => 'Excursion',
         'daily_program' => 'Daily program',
+        'homework_default' => 'Homework default',
         'user' => 'User',
     ],
 
@@ -60,6 +63,8 @@ return [
         'homework_start' => 'Homework from',
         'homework_end' => 'Homework until',
         'homework_none' => 'No homework',
+        'start_time' => 'Homework from',
+        'end_time' => 'Homework until',
         'depart_at' => 'Departure',
         'return_at' => 'Return',
         'rsvp_deadline' => 'RSVP deadline',

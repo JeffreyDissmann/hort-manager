@@ -2,11 +2,18 @@
 
 declare(strict_types=1);
 
+use App\Enums\AbsenceReason;
+use App\Enums\DepartureMethod;
 use App\Enums\DepartureStatus;
+use App\Models\Absence;
 use App\Models\Child;
 use App\Models\DailyDeparture;
+use App\Models\HomeworkDefault;
 use App\Models\User;
+use App\Support\CompanionAnswer;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Notification;
 use Inertia\Testing\AssertableInertia;
 use Spatie\Activitylog\Models\Activity;
 
@@ -103,4 +110,50 @@ it('does not log a day-plan adjustment that changes nothing', function () {
         ->assertRedirect();
 
     expect(Activity::where('event', 'adjusted')->count())->toBe(0);
+});
+
+it('logs a companion („geht mit … mit") answer', function () {
+    Notification::fake();
+    Bus::fake();
+
+    $parent = User::factory()->create();
+    $tom = Child::factory()->create(['name' => 'Tom']);
+    $emma = Child::factory()->create(['name' => 'Emma']);
+    $emma->guardians()->attach($parent);
+
+    $departure = DailyDeparture::create([
+        'child_id' => $tom->id,
+        'date' => boardDate()->toDateString(),
+        'planned_method' => DepartureMethod::WithChild,
+        'companion_child_id' => $emma->id,
+        'companion_confirmed' => null,
+        'status' => DepartureStatus::Present,
+    ]);
+
+    CompanionAnswer::record($departure, true, $parent->id);
+
+    expect(Activity::where('event', 'companion_yes')->where('causer_id', $parent->id)->count())->toBe(1);
+});
+
+it('logs when a reported absence is cleared', function () {
+    $staff = User::factory()->staff()->create();
+    $child = Child::factory()->create();
+    $date = boardDate()->toDateString();
+    Absence::report($child, $date, AbsenceReason::Sick, $staff->id, null);
+
+    $this->actingAs($staff)
+        ->delete('/abwesenheiten', ['child_id' => $child->id, 'from' => $date, 'to' => $date])
+        ->assertRedirect();
+
+    expect(Activity::where('subject_type', Absence::class)->where('event', 'deleted')->count())->toBe(1);
+});
+
+it('logs homework-default changes', function () {
+    $staff = User::factory()->staff()->create();
+
+    $this->actingAs($staff)
+        ->patch('/programm/standard', ['defaults' => [['weekday' => 1, 'start' => '14:00', 'end' => '15:00']]])
+        ->assertRedirect();
+
+    expect(Activity::where('subject_type', HomeworkDefault::class)->where('event', 'created')->count())->toBe(1);
 });

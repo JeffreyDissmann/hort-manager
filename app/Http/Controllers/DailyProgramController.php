@@ -153,7 +153,8 @@ class DailyProgramController extends Controller
 
         foreach ($validated['defaults'] ?? [] as $row) {
             if (empty($row['start']) && empty($row['end'])) {
-                HomeworkDefault::where('weekday', $row['weekday'])->delete();
+                // Model delete (not a bulk query) so the removal is logged.
+                HomeworkDefault::where('weekday', $row['weekday'])->first()?->delete();
 
                 continue;
             }
