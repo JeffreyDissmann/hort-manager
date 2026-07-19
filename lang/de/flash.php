@@ -42,4 +42,5 @@ return [
     'booking_created' => 'Buchung angelegt.',
     'booking_updated' => 'Buchung gespeichert.',
     'booking_deleted' => 'Buchung gelöscht.',
+    'transfer_created' => 'Umbuchung angelegt.',
 ];

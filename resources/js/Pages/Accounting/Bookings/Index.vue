@@ -11,7 +11,8 @@ import {
     edit as bookingsEdit,
     destroy as bookingsDestroy,
 } from '@/routes/accounting/bookings';
-import { PencilSquareIcon, TrashIcon, PlusIcon } from '@heroicons/vue/24/outline';
+import { create as transfersCreate } from '@/routes/accounting/transfers';
+import { PencilSquareIcon, TrashIcon, PlusIcon, ArrowsRightLeftIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
     bookings: { type: Object, required: true }, // paginator
@@ -29,7 +30,6 @@ const filters = reactive({
     search: props.filters.search ?? '',
 });
 
-const kindLabel = computed(() => Object.fromEntries(props.filterOptions.kinds.map((k) => [k.value, k.label])));
 const statusLabel = computed(() => Object.fromEntries(props.filterOptions.statuses.map((s) => [s.value, s.label])));
 
 let searchTimer = null;
@@ -68,11 +68,19 @@ function destroy(booking) {
                     <p class="text-xs font-semibold uppercase tracking-wide text-ink/40">{{ $t('accounting.title') }}</p>
                     <h2 class="text-xl font-semibold text-ink">{{ $t('accounting.bookings.title') }}</h2>
                 </div>
-                <Link :href="bookingsCreate().url">
-                    <PrimaryButton>
-                        <PlusIcon class="mr-1 h-4 w-4" /> {{ $t('accounting.bookings.new') }}
-                    </PrimaryButton>
-                </Link>
+                <div class="flex items-center gap-2">
+                    <Link
+                        :href="transfersCreate().url"
+                        class="flex items-center gap-1 rounded-lg bg-ink/5 px-3 py-2 text-sm font-medium text-ink transition hover:bg-ink/10"
+                    >
+                        <ArrowsRightLeftIcon class="h-4 w-4" /> {{ $t('accounting.transfers.new') }}
+                    </Link>
+                    <Link :href="bookingsCreate().url">
+                        <PrimaryButton>
+                            <PlusIcon class="mr-1 h-4 w-4" /> {{ $t('accounting.bookings.new') }}
+                        </PrimaryButton>
+                    </Link>
+                </div>
             </div>
         </template>
 
@@ -132,10 +140,18 @@ function destroy(booking) {
                                 </span>
                             </td>
                             <td class="px-3 py-2">
-                                <span class="text-ink">{{ b.category ?? '—' }}</span>
+                                <span v-if="b.is_transfer" class="inline-flex items-center gap-1 rounded-full bg-ink/10 px-2 py-0.5 text-xs font-medium text-ink/70">
+                                    <ArrowsRightLeftIcon class="h-3 w-3" /> {{ $t('accounting.bookings.transfer') }}
+                                </span>
+                                <span v-else class="text-ink">{{ b.category ?? '—' }}</span>
                                 <span v-if="b.purpose" class="block max-w-xs truncate text-xs text-ink/40">{{ b.purpose }}</span>
                             </td>
-                            <td class="hidden px-3 py-2 text-ink/70 sm:table-cell">{{ b.counterparty ?? '—' }}</td>
+                            <td class="hidden px-3 py-2 text-ink/70 sm:table-cell">
+                                <span v-if="b.is_transfer" class="text-ink/50">
+                                    {{ b.amount_cents < 0 ? '→' : '←' }} {{ b.counter_account }}
+                                </span>
+                                <span v-else>{{ b.counterparty ?? '—' }}</span>
+                            </td>
                             <td class="hidden px-3 py-2 text-ink/70 md:table-cell">{{ b.account }}</td>
                             <td
                                 class="whitespace-nowrap px-3 py-2 text-right font-semibold tabular-nums"
@@ -145,7 +161,7 @@ function destroy(booking) {
                             </td>
                             <td class="whitespace-nowrap px-3 py-2">
                                 <div class="flex items-center justify-end gap-1">
-                                    <Link :href="bookingsEdit(b.id).url" class="rounded p-1 text-ink/50 hover:bg-ink/10 hover:text-ink" :aria-label="$t('common.edit')">
+                                    <Link v-if="!b.is_transfer" :href="bookingsEdit(b.id).url" class="rounded p-1 text-ink/50 hover:bg-ink/10 hover:text-ink" :aria-label="$t('common.edit')">
                                         <PencilSquareIcon class="h-4 w-4" />
                                     </Link>
                                     <button type="button" class="rounded p-1 text-ink/50 hover:bg-red-50 hover:text-red-600" :aria-label="$t('common.delete')" @click="destroy(b)">

@@ -42,4 +42,5 @@ return [
     'booking_created' => 'Booking created.',
     'booking_updated' => 'Booking saved.',
     'booking_deleted' => 'Booking deleted.',
+    'transfer_created' => 'Transfer created.',
 ];

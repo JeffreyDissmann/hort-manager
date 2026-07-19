@@ -6,6 +6,7 @@ use App\Http\Controllers\AbsenceController;
 use App\Http\Controllers\Accounting\AccountController;
 use App\Http\Controllers\Accounting\BookingController;
 use App\Http\Controllers\Accounting\CategoryController;
+use App\Http\Controllers\Accounting\TransferController;
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\Auth\SlackController;
 use App\Http\Controllers\ChildController;
@@ -143,6 +144,8 @@ Route::middleware('auth')->group(function () {
         Route::resource('accounts', AccountController::class)->except('show');
         Route::resource('categories', CategoryController::class)->only(['index', 'store', 'update', 'destroy']);
         Route::resource('bookings', BookingController::class)->except('show');
+        Route::get('transfers/create', [TransferController::class, 'create'])->name('transfers.create');
+        Route::post('transfers', [TransferController::class, 'store'])->name('transfers.store');
     });
 });
 

@@ -75,5 +75,16 @@ return [
         'pick_category' => 'Kategorie wählen …',
         'pick_account' => 'Konto wählen …',
         'pick_user' => 'Benutzer wählen …',
+        'transfer' => 'Umbuchung',
+    ],
+
+    'transfers' => [
+        'new' => 'Neue Umbuchung',
+        'title' => 'Umbuchung zwischen Konten',
+        'intro' => 'Geld von einem eigenen Konto auf ein anderes buchen (z. B. Bar-Kasse auf das Konto). Erzeugt zwei verknüpfte Buchungen und zählt nicht als Einnahme oder Ausgabe.',
+        'from' => 'Von Konto',
+        'to' => 'Auf Konto',
+        'amount' => 'Betrag (€)',
+        'pick_account' => 'Konto wählen …',
     ],
 ];

@@ -27,7 +27,12 @@ class BookingController extends Controller
         $paths = collect(CategoryOptions::flat(onlyActive: false))->keyBy('id');
 
         $bookings = Booking::query()
-            ->with(['account:id,name', 'counterparty:id,name'])
+            ->with([
+                'account:id,name',
+                'counterparty:id,name',
+                'transfer.outBooking.account:id,name',
+                'transfer.inBooking.account:id,name',
+            ])
             ->when($filters['account'] ?? null, fn ($q, $v) => $q->where('account_id', $v))
             // A category filter includes the whole subtree (parent + all descendants).
             ->when($filters['category'] ?? null, fn ($q, $v) => $q->whereIn('category_id', $this->categorySubtreeIds((int) $v)))
@@ -42,17 +47,32 @@ class BookingController extends Controller
             ->orderByDesc('id')
             ->paginate(50)
             ->withQueryString()
-            ->through(fn (Booking $b): array => [
-                'id' => $b->id,
-                'booking_date' => $b->booking_date?->format('Y-m-d'),
-                'account' => $b->account?->name,
-                'category' => $paths->get($b->category_id)['path'] ?? null,
-                'kind' => $b->kind->value,
-                'status' => $b->status->value,
-                'amount_cents' => $b->amount_cents,
-                'counterparty' => $b->counterparty?->name ?? $b->counterparty_name,
-                'purpose' => $b->purpose,
-            ]);
+            ->through(function (Booking $b) use ($paths): array {
+                $isTransfer = $b->kind === BookingKind::Transfer;
+
+                // For a transfer leg, the „counterparty" is the other account.
+                $counterAccount = null;
+                if ($isTransfer && $b->transfer) {
+                    $other = $b->transfer->out_booking_id === $b->id
+                        ? $b->transfer->inBooking
+                        : $b->transfer->outBooking;
+                    $counterAccount = $other?->account?->name;
+                }
+
+                return [
+                    'id' => $b->id,
+                    'booking_date' => $b->booking_date?->format('Y-m-d'),
+                    'account' => $b->account?->name,
+                    'category' => $isTransfer ? null : ($paths->get($b->category_id)['path'] ?? null),
+                    'kind' => $b->kind->value,
+                    'is_transfer' => $isTransfer,
+                    'counter_account' => $counterAccount,
+                    'status' => $b->status->value,
+                    'amount_cents' => $b->amount_cents,
+                    'counterparty' => $b->counterparty?->name ?? $b->counterparty_name,
+                    'purpose' => $b->purpose,
+                ];
+            });
 
         return Inertia::render('Accounting/Bookings/Index', [
             'bookings' => $bookings,
@@ -112,7 +132,12 @@ class BookingController extends Controller
 
     public function destroy(Booking $booking): RedirectResponse
     {
-        $booking->delete();
+        // A transfer leg can't be deleted alone — remove the whole transfer.
+        if ($booking->transfer) {
+            $booking->transfer->deleteWithLegs();
+        } else {
+            $booking->delete();
+        }
 
         return redirect()
             ->route('accounting.bookings.index')

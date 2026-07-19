@@ -10,6 +10,7 @@ use App\Enums\CategoryDirection;
 use App\Models\Accounting\Account;
 use App\Models\Accounting\Booking;
 use App\Models\Accounting\Category;
+use App\Models\Accounting\Transfer;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 
@@ -75,5 +76,14 @@ class AccountingBookingSeeder extends Seeder
                 'counterparty_name' => is_string($counterparty) ? $counterparty : null,
             ]);
         }
+
+        // A cash-to-bank transfer (Bar-Kasse → Hort-Konto).
+        Transfer::record(
+            fromAccountId: $cash->id,
+            toAccountId: $bank->id,
+            amountCents: 10000,
+            bookingDate: '2026-04-12',
+            purpose: 'Barbestand aufs Konto eingezahlt',
+        );
     }
 }

@@ -75,5 +75,16 @@ return [
         'pick_category' => 'Choose category …',
         'pick_account' => 'Choose account …',
         'pick_user' => 'Choose user …',
+        'transfer' => 'Transfer',
+    ],
+
+    'transfers' => [
+        'new' => 'New transfer',
+        'title' => 'Transfer between accounts',
+        'intro' => 'Move money from one of your accounts to another (e.g. cash box to the bank). Creates two linked bookings and does not count as income or expense.',
+        'from' => 'From account',
+        'to' => 'To account',
+        'amount' => 'Amount (€)',
+        'pick_account' => 'Choose account …',
     ],
 ];
