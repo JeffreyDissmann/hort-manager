@@ -3,6 +3,7 @@ import { reactive, computed, watch } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
+import Pagination from '@/Components/Pagination.vue';
 import { formatEuro } from '@/money';
 import { t } from '@/i18n';
 import {
@@ -211,13 +212,7 @@ function destroy(booking) {
             </div>
 
             <!-- Pagination -->
-            <div v-if="bookings.data.length" class="flex items-center justify-between text-sm">
-                <Link v-if="bookings.prev_page_url" :href="bookings.prev_page_url" preserve-scroll class="text-hort-teal-dark hover:underline">← {{ $t('activity.newer') }}</Link>
-                <span v-else />
-                <span class="text-ink/40">{{ bookings.from }}–{{ bookings.to }} / {{ bookings.total }}</span>
-                <Link v-if="bookings.next_page_url" :href="bookings.next_page_url" preserve-scroll class="text-hort-teal-dark hover:underline">{{ $t('activity.older') }} →</Link>
-                <span v-else />
-            </div>
+            <Pagination :paginator="bookings" />
         </div>
     </AuthenticatedLayout>
 </template>
