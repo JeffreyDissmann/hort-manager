@@ -1,5 +1,5 @@
 <script setup>
-import { reactive, computed, watch } from 'vue';
+import { reactive, ref, computed, watch } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
@@ -12,11 +12,12 @@ import {
     edit as bookingsEdit,
     destroy as bookingsDestroy,
     review as bookingsReview,
+    reanalyse as bookingsReanalyse,
+    bulkConfirm as bookingsBulkConfirm,
 } from '@/routes/accounting/bookings';
 import { create as transfersCreate } from '@/routes/accounting/transfers';
 import { create as importCreate } from '@/routes/accounting/import';
-import { reanalyse as bookingsReanalyse } from '@/routes/accounting/bookings';
-import { PencilSquareIcon, TrashIcon, PlusIcon, ArrowsRightLeftIcon, ArrowDownTrayIcon, ClipboardDocumentCheckIcon, SparklesIcon } from '@heroicons/vue/24/outline';
+import { PencilSquareIcon, TrashIcon, PlusIcon, ArrowsRightLeftIcon, ArrowDownTrayIcon, ClipboardDocumentCheckIcon, SparklesIcon, CheckIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
     bookings: { type: Object, required: true }, // paginator
@@ -24,7 +25,53 @@ const props = defineProps({
     filterOptions: { type: Object, required: true },
     reviewCount: { type: Number, default: 0 },
     unconfirmedCount: { type: Number, default: 0 },
+    confirmableTotal: { type: Number, default: 0 },
 });
+
+// --- Bulk selection / confirm ---------------------------------------------
+const selectedIds = ref(new Set());
+const selectAllMatching = ref(false);
+
+const confirmableRows = computed(() => props.bookings.data.filter((b) => b.can_confirm));
+const allPageSelected = computed(
+    () => confirmableRows.value.length > 0 && confirmableRows.value.every((b) => selectedIds.value.has(b.id)),
+);
+const hasSelection = computed(() => selectAllMatching.value || selectedIds.value.size > 0);
+const selectionCount = computed(() => (selectAllMatching.value ? props.confirmableTotal : selectedIds.value.size));
+const canSelectAllMatching = computed(
+    () => allPageSelected.value && !selectAllMatching.value && props.confirmableTotal > selectedIds.value.size,
+);
+
+function toggleRow(booking) {
+    selectAllMatching.value = false;
+    const next = new Set(selectedIds.value);
+    next.has(booking.id) ? next.delete(booking.id) : next.add(booking.id);
+    selectedIds.value = next;
+}
+
+function togglePage() {
+    selectAllMatching.value = false;
+    const next = new Set(selectedIds.value);
+    const select = !allPageSelected.value;
+    confirmableRows.value.forEach((b) => (select ? next.add(b.id) : next.delete(b.id)));
+    selectedIds.value = next;
+}
+
+function clearSelection() {
+    selectedIds.value = new Set();
+    selectAllMatching.value = false;
+}
+
+function confirmSelected() {
+    const activeFilters = Object.fromEntries(Object.entries(filters).filter(([, v]) => v !== '' && v !== null));
+    const payload = selectAllMatching.value
+        ? { all: true, filters: activeFilters }
+        : { ids: [...selectedIds.value] };
+    router.post(bookingsBulkConfirm().url, payload, { preserveScroll: true, onSuccess: clearSelection });
+}
+
+// Reset selection whenever the list changes (filter / page navigation).
+watch(() => props.bookings, clearSelection);
 
 function reanalyse() {
     if (confirm(t('accounting.bookings.reanalyse_confirm'))) {
@@ -43,6 +90,8 @@ const filters = reactive({
 });
 
 const statusLabel = computed(() => Object.fromEntries(props.filterOptions.statuses.map((s) => [s.value, s.label])));
+
+const confidenceDot = { 0: 'bg-red-500', 1: 'bg-amber-500', 2: 'bg-hort-teal-dark' };
 
 let searchTimer = null;
 function apply() {
@@ -138,11 +187,32 @@ function destroy(booking) {
                 </select>
                 <select v-model="filters.status" class="rounded-md border-ink/20 text-sm focus:border-hort-teal focus:ring-hort-teal">
                     <option value="">{{ $t('accounting.bookings.all_statuses') }}</option>
-                    <option v-for="s in filterOptions.statuses" :key="s.value" :value="s.value">{{ s.label }}</option>
+                    <option v-for="s in filterOptions.statusFilter" :key="s.value" :value="s.value">{{ s.label }}</option>
                 </select>
                 <input v-model="filters.from" type="date" :aria-label="$t('accounting.bookings.from')" class="rounded-md border-ink/20 text-sm focus:border-hort-teal focus:ring-hort-teal" />
                 <input v-model="filters.to" type="date" :aria-label="$t('accounting.bookings.to')" class="rounded-md border-ink/20 text-sm focus:border-hort-teal focus:ring-hort-teal" />
                 <input v-model="filters.search" type="search" :placeholder="$t('accounting.bookings.search')" class="col-span-2 rounded-md border-ink/20 text-sm focus:border-hort-teal focus:ring-hort-teal sm:col-span-3 lg:col-span-1" />
+            </div>
+
+            <!-- Bulk-confirm bar -->
+            <div v-if="hasSelection" class="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-hort-teal/10 p-3">
+                <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+                    <span class="font-medium text-ink">
+                        {{ selectAllMatching
+                            ? $t('accounting.bookings.all_matching_selected', { count: selectionCount })
+                            : $t('accounting.bookings.selected_count', { count: selectionCount }) }}
+                    </span>
+                    <button v-if="canSelectAllMatching" type="button" class="text-hort-teal-dark hover:underline" @click="selectAllMatching = true">
+                        {{ $t('accounting.bookings.select_all_matching', { count: confirmableTotal }) }}
+                    </button>
+                    <button type="button" class="text-ink/50 hover:text-ink" @click="clearSelection">
+                        {{ $t('accounting.bookings.clear_selection') }}
+                    </button>
+                    <span class="text-ink/40">· {{ $t('accounting.bookings.confirm_selected_hint') }}</span>
+                </div>
+                <PrimaryButton :disabled="selectionCount === 0" @click="confirmSelected">
+                    <CheckIcon class="mr-1 h-4 w-4" /> {{ $t('accounting.bookings.confirm_selected') }} ({{ selectionCount }})
+                </PrimaryButton>
             </div>
 
             <!-- List -->
@@ -157,6 +227,16 @@ function destroy(booking) {
                 <table v-else class="w-full text-sm">
                     <thead class="border-b border-ink/10 text-left text-xs uppercase tracking-wide text-ink/40">
                         <tr>
+                            <th class="w-8 px-3 py-2">
+                                <input
+                                    v-if="confirmableRows.length"
+                                    type="checkbox"
+                                    :checked="allPageSelected"
+                                    class="rounded border-ink/20 text-hort-teal-dark focus:ring-hort-teal"
+                                    :aria-label="$t('accounting.bookings.confirm_selected')"
+                                    @change="togglePage"
+                                />
+                            </th>
                             <th class="px-3 py-2 font-medium">{{ $t('accounting.bookings.booking_date') }}</th>
                             <th class="px-3 py-2 font-medium">{{ $t('accounting.bookings.category') }}</th>
                             <th class="hidden px-3 py-2 font-medium sm:table-cell">{{ $t('accounting.bookings.counterparty') }}</th>
@@ -166,13 +246,29 @@ function destroy(booking) {
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-ink/5">
-                        <tr v-for="b in bookings.data" :key="b.id" class="hover:bg-ink/5">
+                        <tr v-for="b in bookings.data" :key="b.id" class="hover:bg-ink/5" :class="{ 'bg-hort-teal/5': selectAllMatching ? b.can_confirm : selectedIds.has(b.id) }">
+                            <td class="px-3 py-2">
+                                <input
+                                    v-if="b.can_confirm"
+                                    type="checkbox"
+                                    :checked="selectAllMatching || selectedIds.has(b.id)"
+                                    :disabled="selectAllMatching"
+                                    class="rounded border-ink/20 text-hort-teal-dark focus:ring-hort-teal disabled:opacity-50"
+                                    @change="toggleRow(b)"
+                                />
+                            </td>
                             <td class="whitespace-nowrap px-3 py-2 text-ink/70">
                                 {{ b.booking_date }}
                                 <span
                                     v-if="b.status !== 'confirmed'"
-                                    class="ml-1 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700"
+                                    class="ml-1 inline-flex items-center gap-1 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700"
                                 >
+                                    <span
+                                        v-if="b.confidence != null"
+                                        class="h-1.5 w-1.5 rounded-full"
+                                        :class="confidenceDot[b.confidence]"
+                                        :title="$t('accounting.review.confidence') + ': ' + $t(`enums.suggestion_confidence.${b.confidence}`)"
+                                    />
                                     {{ statusLabel[b.status] }}
                                 </span>
                             </td>
@@ -181,7 +277,14 @@ function destroy(booking) {
                                     <ArrowsRightLeftIcon class="h-3 w-3" /> {{ $t('accounting.bookings.transfer') }}
                                 </span>
                                 <span v-else class="text-ink">{{ b.category ?? '—' }}</span>
-                                <span v-if="b.purpose" class="block max-w-xs truncate text-xs text-ink/40">{{ b.purpose }}</span>
+                                <!-- Full purpose while unconfirmed, so it's easy to check; truncated once confirmed. -->
+                                <span
+                                    v-if="b.purpose"
+                                    class="block text-xs text-ink/40"
+                                    :class="b.status === 'confirmed' ? 'max-w-xs truncate' : 'whitespace-pre-wrap break-words'"
+                                >
+                                    {{ b.purpose }}
+                                </span>
                             </td>
                             <td class="hidden px-3 py-2 text-ink/70 sm:table-cell">
                                 <span v-if="b.is_transfer" class="text-ink/50">

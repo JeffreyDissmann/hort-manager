@@ -48,4 +48,9 @@ return [
         'suggested' => 'KI-Vorschlag',
         'confirmed' => 'Bestätigt',
     ],
+    'suggestion_confidence' => [
+        0 => 'Unsicher',
+        1 => 'Mittel',
+        2 => 'Sicher',
+    ],
 ];

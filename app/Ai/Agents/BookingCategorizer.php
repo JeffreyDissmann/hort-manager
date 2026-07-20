@@ -87,6 +87,9 @@ class BookingCategorizer implements Agent, HasStructuredOutput
         Bekannte Benutzer (id · Name):
         {$users}
 
+        Schätze außerdem ehrlich deine Sicherheit ein (confidence): „high" nur bei
+        klarer Zuordnung, „low" wenn du unsicher bist oder ratest.
+
         Gib genau ein Vorschlags-Objekt für die eine übergebene Buchung zurück.
         TXT;
     }
@@ -101,6 +104,7 @@ class BookingCategorizer implements Agent, HasStructuredOutput
             'counterparty_child_id' => $schema->integer()->nullable()->description('Bei Einnahmen: ID des zugeordneten Kindes oder null'),
             'counterparty_user_id' => $schema->integer()->nullable()->description('Bei Ausgaben an eine Person: ID eines bekannten Benutzers oder null'),
             'counterparty_name' => $schema->string()->nullable()->description('Bereinigter Name der Gegenpartei (Firma) oder null'),
+            'confidence' => $schema->string()->enum(['low', 'medium', 'high'])->nullable()->description('Wie sicher bist du bei dieser Zuordnung? low, medium oder high'),
         ];
     }
 }

@@ -7,12 +7,14 @@ namespace App\Services\Accounting;
 use App\Ai\Agents\BookingCategorizer;
 use App\Enums\BookingStatus;
 use App\Enums\CategoryDirection;
+use App\Enums\SuggestionConfidence;
 use App\Models\Accounting\Booking;
 use App\Models\Child;
 use App\Models\User;
 use App\Support\Accounting\CategoryOptions;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Laravel\Ai\Enums\Lab;
 use Throwable;
 
@@ -35,8 +37,10 @@ class BookingSuggester
         $categoryDirection = collect($categories)->pluck('direction', 'id');
 
         $children = Child::with('guardians:id,name')->orderBy('name')->get();
-        $childIds = $children->pluck('id')->flip();
-        $userIds = User::pluck('id')->flip();
+        $childNames = $children->pluck('name', 'id');
+        $userNames = User::pluck('name', 'id');
+        $childIds = $childNames->keys()->flip();
+        $userIds = $userNames->keys()->flip();
 
         $row = [
             'amount' => round($booking->amount_cents / 100, 2),
@@ -62,6 +66,16 @@ class BookingSuggester
 
         $childId = $this->pickId($response['counterparty_child_id'] ?? null, $childIds);
         $userId = $childId ? null : $this->pickId($response['counterparty_user_id'] ?? null, $userIds);
+        $categoryId = $this->validCategory($response['category_id'] ?? null, $booking, $categoryDirection);
+
+        // Blend the model's self-assessment with deterministic signals.
+        $matchedName = $childId ? $childNames->get($childId) : ($userId ? $userNames->get($userId) : null);
+        $confidence = $this->confidence(
+            categoryValid: $categoryId !== null,
+            matchedName: $matchedName,
+            modelConfidence: $response['confidence'] ?? null,
+            purpose: (string) $booking->purpose,
+        );
 
         // Write only while the booking is STILL a draft. The Ollama call takes
         // seconds, so a reviewer may have confirmed it meanwhile — this conditional
@@ -70,12 +84,50 @@ class BookingSuggester
         Booking::whereKey($booking->id)
             ->where('status', BookingStatus::Draft)
             ->update([
-                'category_id' => $this->validCategory($response['category_id'] ?? null, $booking, $categoryDirection),
+                'category_id' => $categoryId,
                 'counterparty_child_id' => $childId,
                 'counterparty_user_id' => $userId,
                 'counterparty_name' => ($childId || $userId) ? null : ($response['counterparty_name'] ?? null),
+                'confidence' => $confidence,
                 'status' => BookingStatus::Suggested,
             ]);
+    }
+
+    /**
+     * Blend the model's self-assessment with deterministic signals into a triage
+     * confidence. Never trusts a bare model score — a small model is poorly
+     * calibrated — so „high" requires a matched counterparty actually named in the
+     * purpose, and no category always means „low".
+     */
+    private function confidence(bool $categoryValid, ?string $matchedName, ?string $modelConfidence, string $purpose): SuggestionConfidence
+    {
+        if (! $categoryValid) {
+            return SuggestionConfidence::Low; // nothing to book against → must review
+        }
+
+        if ($matchedName !== null && $this->nameInPurpose($matchedName, $purpose)) {
+            return SuggestionConfidence::High; // strongest evidence: the matched entity is named in the text
+        }
+
+        if ($modelConfidence === 'low') {
+            return SuggestionConfidence::Low; // valid category, but the model itself is unsure
+        }
+
+        return SuggestionConfidence::Medium;
+    }
+
+    /** True when a meaningful word of the matched name appears in the purpose. */
+    private function nameInPurpose(string $name, string $purpose): bool
+    {
+        $haystack = Str::lower($purpose);
+
+        foreach (preg_split('/\s+/', $name) ?: [] as $word) {
+            if (Str::length($word) >= 3 && str_contains($haystack, Str::lower($word))) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

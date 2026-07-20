@@ -48,4 +48,9 @@ return [
         'suggested' => 'AI suggestion',
         'confirmed' => 'Confirmed',
     ],
+    'suggestion_confidence' => [
+        0 => 'Unsure',
+        1 => 'Medium',
+        2 => 'Confident',
+    ],
 ];

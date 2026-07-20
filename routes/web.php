@@ -149,6 +149,8 @@ Route::middleware('auth')->group(function () {
         Route::patch('bookings/{booking}/review', [BookingController::class, 'reviewSave'])->name('bookings.review-save');
         // Re-run the AI over all unconfirmed bookings.
         Route::post('bookings/reanalyse', [BookingController::class, 'reanalyse'])->name('bookings.reanalyse');
+        // Bulk-confirm bookings from the overview.
+        Route::post('bookings/confirm', [BookingController::class, 'bulkConfirm'])->name('bookings.bulk-confirm');
         Route::resource('bookings', BookingController::class)->except('show');
 
         Route::get('transfers/create', [TransferController::class, 'create'])->name('transfers.create');

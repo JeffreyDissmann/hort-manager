@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Ai\Agents\BookingCategorizer;
 use App\Enums\BookingStatus;
+use App\Enums\SuggestionConfidence;
 use App\Jobs\SuggestBookingCategory;
 use App\Models\Accounting\Account;
 use App\Models\Accounting\Booking;
@@ -78,22 +79,19 @@ it('drops a suggested category whose direction is wrong', function () {
 
 it('pre-fills the review form from the AI suggestion', function () {
     $admin = User::factory()->admin()->create();
-    $account = Account::factory()->create();
     $income = Category::factory()->income()->create();
     $emma = Child::factory()->create(['name' => 'Emma']);
-
-    BookingCategorizer::fake([
-        ['category_id' => $income->id, 'counterparty_child_id' => $emma->id],
-        [],
+    $booking = Booking::factory()->suggested()->create([
+        'category_id' => $income->id,
+        'counterparty_child_id' => $emma->id,
+        'confidence' => SuggestionConfidence::High,
     ]);
-
-    $this->actingAs($admin)
-        ->post('/accounting/import', ['account_id' => $account->id, 'file' => suggestionCsv()]);
 
     $this->actingAs($admin)
         ->get('/accounting/bookings/review')
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->component('Accounting/Bookings/Review')
+            ->where('booking.id', $booking->id)
             ->where('booking.category_id', $income->id)
             ->where('booking.counterparty_child_id', $emma->id)
             ->where('booking.ai_suggested', true));
@@ -121,6 +119,50 @@ it('re-analyses unconfirmed bookings and leaves confirmed ones alone', function 
     expect($suggested->refresh()->status)->toBe(BookingStatus::Draft)
         ->and($confirmed->refresh()->status)->toBe(BookingStatus::Confirmed);
     Queue::assertPushed(SuggestBookingCategory::class, 1); // only the unconfirmed one
+});
+
+it('blends confidence: high when the matched name is in the purpose', function () {
+    $this->actingAs(User::factory()->admin()->create());
+    $income = Category::factory()->income()->create();
+    $emma = Child::factory()->create(['name' => 'Emma']);
+    $booking = Booking::factory()->draft()->create(['amount_cents' => 5000, 'category_id' => null, 'purpose' => 'SEPA Essensgeld Emma']);
+
+    BookingCategorizer::fake([['category_id' => $income->id, 'counterparty_child_id' => $emma->id, 'confidence' => 'medium']]);
+    app(BookingSuggester::class)->suggest($booking->fresh());
+
+    expect($booking->refresh()->confidence)->toBe(SuggestionConfidence::High);
+});
+
+it('blends confidence: low when the AI found no category (even if it claims high)', function () {
+    $this->actingAs(User::factory()->admin()->create());
+    $booking = Booking::factory()->draft()->create(['amount_cents' => -890, 'category_id' => null, 'purpose' => 'Kontoführung']);
+
+    BookingCategorizer::fake([['category_id' => null, 'confidence' => 'high']]);
+    app(BookingSuggester::class)->suggest($booking->fresh());
+
+    expect($booking->refresh()->confidence)->toBe(SuggestionConfidence::Low);
+});
+
+it('blends confidence: medium for a solid category without a named counterparty', function () {
+    $this->actingAs(User::factory()->admin()->create());
+    $expense = Category::factory()->expense()->create();
+    $booking = Booking::factory()->draft()->create(['amount_cents' => -3520, 'category_id' => null, 'purpose' => 'DAUERAUFTRAG Miete']);
+
+    BookingCategorizer::fake([['category_id' => $expense->id, 'counterparty_name' => 'Vermietung', 'confidence' => 'high']]);
+    app(BookingSuggester::class)->suggest($booking->fresh());
+
+    expect($booking->refresh()->confidence)->toBe(SuggestionConfidence::Medium);
+});
+
+it('reviews riskiest (lowest confidence) first', function () {
+    $this->actingAs(User::factory()->admin()->create());
+    Booking::factory()->suggested()->create(['confidence' => SuggestionConfidence::High, 'booking_date' => '2026-04-01']);
+    $risky = Booking::factory()->suggested()->create(['confidence' => SuggestionConfidence::Low, 'booking_date' => '2026-04-20']);
+
+    $this->get('/accounting/bookings/review')
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('booking.id', $risky->id) // low confidence first, despite the later date
+            ->where('booking.confidence', SuggestionConfidence::Low->value));
 });
 
 it('never overwrites a booking confirmed while the AI was running', function () {

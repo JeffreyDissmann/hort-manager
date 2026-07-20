@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Accounting;
 use App\Enums\BookingKind;
 use App\Enums\BookingStatus;
 use App\Enums\CategoryDirection;
+use App\Enums\SuggestionConfidence;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Accounting\BookingRequest;
 use App\Jobs\SuggestBookingCategory;
@@ -16,6 +17,7 @@ use App\Models\Accounting\Category;
 use App\Models\Child;
 use App\Models\User;
 use App\Support\Accounting\CategoryOptions;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -39,16 +41,7 @@ class BookingController extends Controller
                 'transfer.outBooking.account:id,name',
                 'transfer.inBooking.account:id,name',
             ])
-            ->when($filters['account'] ?? null, fn ($q, $v) => $q->where('account_id', $v))
-            // A category filter includes the whole subtree (parent + all descendants).
-            ->when($filters['category'] ?? null, fn ($q, $v) => $q->whereIn('category_id', $this->categorySubtreeIds((int) $v)))
-            ->when($filters['kind'] ?? null, fn ($q, $v) => $q->where('kind', $v))
-            ->when($filters['status'] ?? null, fn ($q, $v) => $q->where('status', $v))
-            ->when($filters['from'] ?? null, fn ($q, $v) => $q->whereDate('booking_date', '>=', $v))
-            ->when($filters['to'] ?? null, fn ($q, $v) => $q->whereDate('booking_date', '<=', $v))
-            ->when($filters['search'] ?? null, fn ($q, $v) => $q->where(fn ($w) => $w
-                ->where('purpose', 'like', "%{$v}%")
-                ->orWhere('counterparty_name', 'like', "%{$v}%")))
+            ->tap(fn ($q) => $this->applyFilters($q, $filters))
             ->orderByDesc('booking_date')
             ->orderByDesc('id')
             ->paginate(50)
@@ -74,9 +67,14 @@ class BookingController extends Controller
                     'is_transfer' => $isTransfer,
                     'counter_account' => $counterAccount,
                     'status' => $b->status->value,
+                    'confidence' => $b->confidence?->value,
                     'amount_cents' => $b->amount_cents,
                     'counterparty' => $b->counterpartyLabel(),
                     'purpose' => $b->purpose,
+                    // Confirmable in bulk: unconfirmed and already categorised.
+                    'can_confirm' => ! $isTransfer
+                        && in_array($b->status, [BookingStatus::Draft, BookingStatus::Suggested], true)
+                        && $b->category_id !== null,
                 ];
             });
 
@@ -87,13 +85,40 @@ class BookingController extends Controller
             'reviewCount' => Booking::suggested()->count(),
             // Drives the „Neu analysieren" button — all unconfirmed bookings.
             'unconfirmedCount' => Booking::needsReview()->count(),
+            // How many unconfirmed+categorised bookings match the current filter
+            // (the count „select all matching" would bulk-confirm).
+            'confirmableTotal' => Booking::needsReview()->whereNotNull('category_id')
+                ->tap(fn ($q) => $this->applyFilters($q, $filters))->count(),
             'filterOptions' => [
                 'accounts' => Account::orderBy('name')->get(['id', 'name']),
                 'categories' => CategoryOptions::flat(onlyActive: false),
                 'kinds' => $this->enumOptions(BookingKind::cases()),
+                // Plain statuses drive the row badges; the composite list drives the filter.
                 'statuses' => $this->enumOptions(BookingStatus::cases()),
+                'statusFilter' => $this->statusFilterOptions(),
             ],
         ]);
+    }
+
+    /**
+     * Status filter options, with the „suggested" status broken out by AI
+     * confidence („KI-Vorschlag · Unsicher", …).
+     *
+     * @return list<array{value:string, label:string}>
+     */
+    private function statusFilterOptions(): array
+    {
+        $suggested = BookingStatus::Suggested;
+
+        return [
+            ['value' => BookingStatus::Draft->value, 'label' => BookingStatus::Draft->label()],
+            ['value' => $suggested->value, 'label' => $suggested->label()],
+            ...collect(SuggestionConfidence::cases())->map(fn (SuggestionConfidence $c): array => [
+                'value' => $suggested->value.':'.$c->value,
+                'label' => $suggested->label().' · '.$c->label(),
+            ]),
+            ['value' => BookingStatus::Confirmed->value, 'label' => BookingStatus::Confirmed->label()],
+        ];
     }
 
     public function create(): Response
@@ -168,8 +193,8 @@ class BookingController extends Controller
      */
     public function review(Request $request): Response|RedirectResponse
     {
-        // Only AI-ready bookings are walked; raw drafts still awaiting the AI wait.
-        $drafts = Booking::suggested()->orderBy('booking_date')->orderBy('id');
+        // Only AI-ready bookings are walked, riskiest (lowest confidence) first.
+        $drafts = Booking::suggested()->orderBy('confidence')->orderBy('id');
 
         $cursor = $request->integer('cursor');
         $booking = (clone $drafts)->when($cursor, fn ($q) => $q->where('id', $cursor))->first()
@@ -198,6 +223,7 @@ class BookingController extends Controller
                 'counterparty_user_id' => $booking->counterparty_user_id,
                 'counterparty_name' => $booking->counterparty_name,
                 'ai_suggested' => $booking->status === BookingStatus::Suggested,
+                'confidence' => $booking->confidence?->value,
             ],
             'remaining' => (clone $drafts)->count(),
             'accounts' => Account::where('active', true)->orderBy('name')->get(['id', 'name']),
@@ -305,19 +331,73 @@ class BookingController extends Controller
         ];
     }
 
-    /** The next AI-ready booking after the given one in (booking_date, id) order. */
+    /** The next AI-ready booking after the given one in (confidence, id) order. */
     private function nextDraftId(Booking $current): ?int
     {
         return Booking::suggested()
             ->where(function ($q) use ($current): void {
-                $q->where('booking_date', '>', $current->booking_date)
-                    ->orWhere(function ($q2) use ($current): void {
-                        $q2->where('booking_date', $current->booking_date)->where('id', '>', $current->id);
-                    });
+                $rank = $current->confidence?->value ?? 0;
+                $q->where('confidence', '>', $rank)
+                    ->orWhere(fn ($q2) => $q2->where('confidence', $rank)->where('id', '>', $current->id));
             })
-            ->orderBy('booking_date')
+            ->orderBy('confidence')
             ->orderBy('id')
             ->value('id');
+    }
+
+    /**
+     * Apply the ledger filters to a query (shared by the list and bulk-confirm).
+     *
+     * @param  Builder<Booking>  $query
+     * @param  array<string, mixed>  $filters
+     */
+    private function applyFilters(Builder $query, array $filters): void
+    {
+        $query
+            ->when($filters['account'] ?? null, fn ($q, $v) => $q->where('account_id', $v))
+            // A category filter includes the whole subtree (parent + all descendants).
+            ->when($filters['category'] ?? null, fn ($q, $v) => $q->whereIn('category_id', $this->categorySubtreeIds((int) $v)))
+            ->when($filters['kind'] ?? null, fn ($q, $v) => $q->where('kind', $v))
+            // The status filter may carry a confidence sub-selection, e.g. „suggested:low".
+            ->when($filters['status'] ?? null, function ($q, $v): void {
+                [$status, $confidence] = array_pad(explode(':', (string) $v, 2), 2, null);
+                $q->where('status', $status);
+                if ($confidence !== null && $confidence !== '') {
+                    $q->where('confidence', (int) $confidence);
+                }
+            })
+            ->when($filters['from'] ?? null, fn ($q, $v) => $q->whereDate('booking_date', '>=', $v))
+            ->when($filters['to'] ?? null, fn ($q, $v) => $q->whereDate('booking_date', '<=', $v))
+            ->when($filters['search'] ?? null, fn ($q, $v) => $q->where(fn ($w) => $w
+                ->where('purpose', 'like', "%{$v}%")
+                ->orWhere('counterparty_name', 'like', "%{$v}%")));
+    }
+
+    /**
+     * Bulk-confirm bookings straight from the overview: either the given ids, or
+     * every unconfirmed+categorised booking matching the current filter. Only
+     * already-categorised, not-yet-confirmed bookings are touched.
+     */
+    public function bulkConfirm(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'ids' => ['array'],
+            'ids.*' => ['integer'],
+            'all' => ['boolean'],
+            'filters' => ['array'],
+        ]);
+
+        $query = Booking::needsReview()->whereNotNull('category_id');
+
+        if ($data['all'] ?? false) {
+            $this->applyFilters($query, $data['filters'] ?? []);
+        } else {
+            $query->whereIn('id', $data['ids'] ?? []);
+        }
+
+        $count = $query->update(['status' => BookingStatus::Confirmed]);
+
+        return back()->with('status', __('flash.bookings_confirmed', ['count' => $count]));
     }
 
     /**

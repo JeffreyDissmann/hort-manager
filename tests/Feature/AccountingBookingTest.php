@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Enums\BookingKind;
 use App\Enums\BookingStatus;
+use App\Enums\SuggestionConfidence;
 use App\Models\Accounting\Account;
 use App\Models\Accounting\Booking;
 use App\Models\Accounting\Category;
@@ -130,6 +131,24 @@ it('filters bookings by account', function () {
         ->assertInertia(fn (AssertableInertia $page) => $page->has('bookings.data', 1));
 });
 
+it('filters suggested bookings by confidence via the status filter', function () {
+    $admin = User::factory()->admin()->create();
+    $this->actingAs($admin);
+    Booking::factory()->suggested()->create(['confidence' => SuggestionConfidence::Low]);
+    Booking::factory()->suggested()->create(['confidence' => SuggestionConfidence::High]);
+    Booking::factory()->create(); // confirmed
+
+    // Plain status still works…
+    $this->get('/accounting/bookings?status=suggested')
+        ->assertInertia(fn (AssertableInertia $page) => $page->has('bookings.data', 2));
+
+    // …and the composite „suggested:0" (low) narrows to the risky one.
+    $this->get('/accounting/bookings?status=suggested%3A0')
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->has('bookings.data', 1)
+            ->where('bookings.data.0.confidence', SuggestionConfidence::Low->value));
+});
+
 it('filtering by a parent category includes its descendants', function () {
     $admin = User::factory()->admin()->create();
     $this->actingAs($admin);
@@ -159,6 +178,32 @@ it('rejects a zero or negative amount', function () {
         'amount' => '0',
         'booking_date' => '2026-04-05',
     ])->assertSessionHasErrors('amount');
+});
+
+it('bulk-confirms the given ids, skipping uncategorised bookings', function () {
+    $admin = User::factory()->admin()->create();
+    $this->actingAs($admin);
+    $withCat = Booking::factory()->suggested()->create();                       // has a category
+    $noCat = Booking::factory()->suggested()->create(['category_id' => null]);   // no category
+
+    $this->post('/accounting/bookings/confirm', ['ids' => [$withCat->id, $noCat->id]])
+        ->assertRedirect();
+
+    expect($withCat->refresh()->status)->toBe(BookingStatus::Confirmed)
+        ->and($noCat->refresh()->status)->toBe(BookingStatus::Suggested); // untouched (no category)
+});
+
+it('bulk-confirms all unconfirmed bookings matching the filter', function () {
+    $admin = User::factory()->admin()->create();
+    $this->actingAs($admin);
+    Booking::factory()->count(3)->suggested()->create();
+    $alreadyConfirmed = Booking::factory()->create();
+
+    $this->post('/accounting/bookings/confirm', ['all' => true, 'filters' => []])
+        ->assertRedirect();
+
+    expect(Booking::where('status', BookingStatus::Confirmed)->count())->toBe(4)
+        ->and($alreadyConfirmed->refresh()->status)->toBe(BookingStatus::Confirmed);
 });
 
 it('deletes a booking', function () {

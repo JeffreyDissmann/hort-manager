@@ -84,6 +84,12 @@ return [
         'reanalyse' => 'Neu analysieren',
         'reanalyse_confirm' => 'Alle nicht bestätigten Buchungen von der KI neu bewerten lassen?',
         'status' => 'Prüfstatus',
+        'selected_count' => ':count ausgewählt',
+        'select_all_matching' => 'Alle :count auswählen',
+        'all_matching_selected' => 'Alle :count passenden Buchungen ausgewählt',
+        'clear_selection' => 'Auswahl aufheben',
+        'confirm_selected' => 'Bestätigen',
+        'confirm_selected_hint' => 'Nur Buchungen mit Kategorie werden bestätigt.',
     ],
 
     'transfers' => [
@@ -142,5 +148,6 @@ return [
         'none' => 'keine',
         'done_title' => 'Alle Entwürfe geprüft 🎉',
         'ai_hint' => 'Kategorie und Gegenpartei wurden von der KI vorgeschlagen – bitte prüfen.',
+        'confidence' => 'Sicherheit',
     ],
 ];

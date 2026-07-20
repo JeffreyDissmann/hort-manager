@@ -84,6 +84,12 @@ return [
         'reanalyse' => 'Re-analyse',
         'reanalyse_confirm' => 'Have the AI re-assess all unconfirmed bookings?',
         'status' => 'Review status',
+        'selected_count' => ':count selected',
+        'select_all_matching' => 'Select all :count',
+        'all_matching_selected' => 'All :count matching bookings selected',
+        'clear_selection' => 'Clear selection',
+        'confirm_selected' => 'Confirm',
+        'confirm_selected_hint' => 'Only categorised bookings will be confirmed.',
     ],
 
     'transfers' => [
@@ -142,5 +148,6 @@ return [
         'none' => 'none',
         'done_title' => 'All drafts reviewed 🎉',
         'ai_hint' => 'Category and counterparty were suggested by the AI — please review.',
+        'confidence' => 'Confidence',
     ],
 ];

@@ -3,9 +3,9 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import BookingFields from './Partials/BookingFields.vue';
 import { formatEuro } from '@/money';
-import { reviewSave as bookingsReviewSave } from '@/routes/accounting/bookings';
-import { Head, useForm } from '@inertiajs/vue3';
-import { ArrowRightIcon, TrashIcon, ForwardIcon, SparklesIcon } from '@heroicons/vue/24/outline';
+import { reviewSave as bookingsReviewSave, index as bookingsIndex } from '@/routes/accounting/bookings';
+import { Head, Link, useForm } from '@inertiajs/vue3';
+import { ArrowRightIcon, TrashIcon, ForwardIcon, SparklesIcon, ChevronLeftIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
     booking: { type: Object, required: true },
@@ -30,6 +30,12 @@ const form = useForm({
     counterparty_name: props.booking.counterparty_name ?? '',
 });
 
+const confidenceClass = {
+    0: 'bg-red-100 text-red-700',
+    1: 'bg-amber-100 text-amber-700',
+    2: 'bg-hort-teal/15 text-hort-teal-dark',
+};
+
 // preserveState:false so the next draft's props fully replace the form.
 function send(action) {
     form.transform((data) => ({ ...data, action })).patch(bookingsReviewSave(props.booking.id).url, {
@@ -43,9 +49,19 @@ function send(action) {
 
     <AuthenticatedLayout>
         <template #header>
-            <div class="flex items-center justify-between">
-                <h2 class="text-xl font-semibold text-ink">{{ $t('accounting.review.title') }}</h2>
-                <span class="rounded-full bg-amber-100 px-3 py-1 text-sm font-semibold text-amber-700">
+            <div class="flex items-center justify-between gap-3">
+                <div class="flex min-w-0 items-center gap-3">
+                    <Link
+                        :href="bookingsIndex().url"
+                        class="flex shrink-0 items-center gap-1 rounded-lg bg-ink/5 px-2.5 py-1.5 text-sm font-medium text-ink/70 transition hover:bg-ink/10 hover:text-ink"
+                        data-testid="review-back"
+                    >
+                        <ChevronLeftIcon class="h-4 w-4" />
+                        <span class="hidden sm:inline">{{ $t('accounting.import.view_bookings') }}</span>
+                    </Link>
+                    <h2 class="truncate text-xl font-semibold text-ink">{{ $t('accounting.review.title') }}</h2>
+                </div>
+                <span class="shrink-0 rounded-full bg-amber-100 px-3 py-1 text-sm font-semibold text-amber-700">
                     {{ $t('accounting.review.remaining', { count: remaining }) }}
                 </span>
             </div>
@@ -67,10 +83,19 @@ function send(action) {
                     </p>
                 </div>
 
-                <!-- AI suggestion hint -->
-                <p v-if="booking.ai_suggested" class="mt-3 flex items-center gap-1 text-xs font-medium text-hort-teal-dark">
-                    <SparklesIcon class="h-4 w-4" /> {{ $t('accounting.review.ai_hint') }}
-                </p>
+                <!-- AI suggestion hint + confidence -->
+                <div v-if="booking.ai_suggested" class="mt-3 flex items-center gap-2">
+                    <span class="flex items-center gap-1 text-xs font-medium text-hort-teal-dark">
+                        <SparklesIcon class="h-4 w-4" /> {{ $t('accounting.review.ai_hint') }}
+                    </span>
+                    <span
+                        v-if="booking.confidence != null"
+                        class="rounded-full px-2 py-0.5 text-[11px] font-semibold"
+                        :class="confidenceClass[booking.confidence]"
+                    >
+                        {{ $t('accounting.review.confidence') }}: {{ $t(`enums.suggestion_confidence.${booking.confidence}`) }}
+                    </span>
+                </div>
 
                 <!-- Full editable form (same fields as the booking editor) -->
                 <div class="pt-4">

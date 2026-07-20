@@ -6,6 +6,7 @@ namespace Database\Factories\Accounting;
 
 use App\Enums\BookingKind;
 use App\Enums\BookingStatus;
+use App\Enums\SuggestionConfidence;
 use App\Models\Accounting\Account;
 use App\Models\Accounting\Booking;
 use App\Models\Accounting\Category;
@@ -47,7 +48,7 @@ class BookingFactory extends Factory
     /** An AI-analysed draft (its values are AI proposals, awaiting confirmation). */
     public function suggested(): static
     {
-        return $this->state(['status' => BookingStatus::Suggested]);
+        return $this->state(['status' => BookingStatus::Suggested, 'confidence' => SuggestionConfidence::Medium]);
     }
 
     /** An expense: negative amount, expense category. */

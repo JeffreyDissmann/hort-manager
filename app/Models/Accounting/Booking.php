@@ -6,6 +6,7 @@ namespace App\Models\Accounting;
 
 use App\Enums\BookingKind;
 use App\Enums\BookingStatus;
+use App\Enums\SuggestionConfidence;
 use App\Models\Child;
 use App\Models\User;
 use Database\Factories\Accounting\BookingFactory;
@@ -42,6 +43,7 @@ class Booking extends Model
         'counterparty_user_id',
         'counterparty_child_id',
         'counterparty_name',
+        'confidence',
         'import_hash',
     ];
 
@@ -50,6 +52,7 @@ class Booking extends Model
         return [
             'kind' => BookingKind::class,
             'status' => BookingStatus::class,
+            'confidence' => SuggestionConfidence::class,
             'amount_cents' => 'integer',
             'booking_date' => 'date:Y-m-d',
             'valuta_date' => 'date:Y-m-d',
