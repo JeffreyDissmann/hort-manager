@@ -121,19 +121,29 @@ it('re-analyses unconfirmed bookings and leaves confirmed ones alone', function 
     Queue::assertPushed(SuggestBookingCategory::class, 1); // only the unconfirmed one
 });
 
-it('blends confidence: high when the matched name is in the purpose', function () {
+it('trusts the model: high confidence is taken at face value', function () {
     $this->actingAs(User::factory()->admin()->create());
-    $income = Category::factory()->income()->create();
-    $emma = Child::factory()->create(['name' => 'Emma']);
-    $booking = Booking::factory()->draft()->create(['amount_cents' => 5000, 'category_id' => null, 'purpose' => 'SEPA Essensgeld Emma']);
+    $expense = Category::factory()->expense()->create(); // random name, not in the purpose
+    $booking = Booking::factory()->draft()->create(['amount_cents' => -6842, 'category_id' => null, 'purpose' => 'EC-POS REWE SAGT DANKE']);
 
-    BookingCategorizer::fake([['category_id' => $income->id, 'counterparty_child_id' => $emma->id, 'confidence' => 'medium']]);
+    BookingCategorizer::fake([['category_id' => $expense->id, 'counterparty_name' => 'REWE', 'confidence' => 'high']]);
     app(BookingSuggester::class)->suggest($booking->fresh());
 
     expect($booking->refresh()->confidence)->toBe(SuggestionConfidence::High);
 });
 
-it('blends confidence: low when the AI found no category (even if it claims high)', function () {
+it('trusts the model: medium stays medium', function () {
+    $this->actingAs(User::factory()->admin()->create());
+    $expense = Category::factory()->expense()->create();
+    $booking = Booking::factory()->draft()->create(['amount_cents' => -3520, 'category_id' => null, 'purpose' => 'DAUERAUFTRAG Miete']);
+
+    BookingCategorizer::fake([['category_id' => $expense->id, 'counterparty_name' => 'Vermietung', 'confidence' => 'medium']]);
+    app(BookingSuggester::class)->suggest($booking->fresh());
+
+    expect($booking->refresh()->confidence)->toBe(SuggestionConfidence::Medium);
+});
+
+it('overrides the model to low when the AI found no category (even if it claims high)', function () {
     $this->actingAs(User::factory()->admin()->create());
     $booking = Booking::factory()->draft()->create(['amount_cents' => -890, 'category_id' => null, 'purpose' => 'Kontoführung']);
 
@@ -143,15 +153,46 @@ it('blends confidence: low when the AI found no category (even if it claims high
     expect($booking->refresh()->confidence)->toBe(SuggestionConfidence::Low);
 });
 
-it('blends confidence: medium for a solid category without a named counterparty', function () {
+it('keeps the model category but flags low when a different category is named in the purpose', function () {
     $this->actingAs(User::factory()->admin()->create());
-    $expense = Category::factory()->expense()->create();
-    $booking = Booking::factory()->draft()->create(['amount_cents' => -3520, 'category_id' => null, 'purpose' => 'DAUERAUFTRAG Miete']);
+    $elternbeitrag = Category::factory()->income()->create(['name' => 'Elternbeitrag']);
+    Category::factory()->income()->create(['name' => 'Vereinsbeitrag']);
 
-    BookingCategorizer::fake([['category_id' => $expense->id, 'counterparty_name' => 'Vermietung', 'confidence' => 'high']]);
+    // Text clearly says „Vereinsbeitrag" but the model wrongly picked Elternbeitrag.
+    $booking = Booking::factory()->draft()->create(['amount_cents' => 11000, 'category_id' => null, 'purpose' => 'SEPA-DAUERAUFTRAG Vereinsbeitrag Nora']);
+    BookingCategorizer::fake([['category_id' => $elternbeitrag->id, 'confidence' => 'high']]);
     app(BookingSuggester::class)->suggest($booking->fresh());
 
-    expect($booking->refresh()->confidence)->toBe(SuggestionConfidence::Medium);
+    // The model's pick is untouched; the conflict just drops confidence to low for review.
+    expect($booking->refresh()->category_id)->toBe($elternbeitrag->id)
+        ->and($booking->confidence)->toBe(SuggestionConfidence::Low);
+});
+
+it('is confident when the chosen category is literally named in the purpose', function () {
+    $this->actingAs(User::factory()->admin()->create());
+    $vereinsbeitrag = Category::factory()->income()->create(['name' => 'Vereinsbeitrag']);
+
+    // The model's own pick matches the literally-named category → certain, despite „medium".
+    $booking = Booking::factory()->draft()->create(['amount_cents' => 11000, 'category_id' => null, 'purpose' => 'SEPA-DAUERAUFTRAG Vereinsbeitrag Nora']);
+    BookingCategorizer::fake([['category_id' => $vereinsbeitrag->id, 'confidence' => 'medium']]);
+    app(BookingSuggester::class)->suggest($booking->fresh());
+
+    expect($booking->refresh()->category_id)->toBe($vereinsbeitrag->id)
+        ->and($booking->confidence)->toBe(SuggestionConfidence::High);
+});
+
+it('downgrades to low when two categories are named and the model picks a third', function () {
+    $this->actingAs(User::factory()->admin()->create());
+    Category::factory()->income()->create(['name' => 'Vereinsbeitrag']);
+    Category::factory()->income()->create(['name' => 'Essensgeld']);
+    $kaution = Category::factory()->income()->create(['name' => 'Kaution']);
+
+    // Two category names in the text → no override; the model picks an unrelated third.
+    $booking = Booking::factory()->draft()->create(['amount_cents' => 11000, 'category_id' => null, 'purpose' => 'Vereinsbeitrag und Essensgeld Sammelzahlung']);
+    BookingCategorizer::fake([['category_id' => $kaution->id, 'confidence' => 'high']]);
+    app(BookingSuggester::class)->suggest($booking->fresh());
+
+    expect($booking->refresh()->confidence)->toBe(SuggestionConfidence::Low);
 });
 
 it('reviews riskiest (lowest confidence) first', function () {

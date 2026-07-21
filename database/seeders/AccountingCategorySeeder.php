@@ -12,62 +12,63 @@ use Illuminate\Database\Seeder;
 class AccountingCategorySeeder extends Seeder
 {
     /**
-     * Each root maps to its ordered children. Direction is set on the root and
-     * inherited by every child.
+     * Each root maps to its ordered children (name => optional hint comment). The hint
+     * is shown to the AI categorizer to nudge it toward the right leaf; direction is set
+     * on the root and inherited by every child.
      *
-     * @var array<string, array<string, list<string>>>
+     * @var array<string, array<string, array<string, ?string>>>
      */
     private array $tree = [
         'income' => [
-            'Elternbeitrag' => [
-                'Elternbeitrag',
-                'Essensgeld',
-                'Kaution',
-                'Vereinsbeitrag',
-                'Beitrag für Hortfreizeit',
+            'Beiträge' => [
+                'Elternbeitrag' => "Stichwort im Zweck: 'Elternbeitrag' oder 'Elternentgelt'.",
+                'Essensgeld' => "Verpflegungsbeitrag. Stichwort im Zweck: 'Essensgeld' oder 'Essen'.",
+                'Kaution' => "Einmalige Kaution. Stichwort im Zweck: 'Kaution'.",
+                'Vereinsbeitrag' => "Mitgliedsbeitrag im Trägerverein, nicht das Elternentgelt. Stichwort im Zweck: 'Vereinsbeitrag'.",
+                'Beitrag für Hortfreizeit' => "Stichwort im Zweck: 'Hortfreizeit'.",
             ],
             'Erträge' => [
-                'EKI Förderung',
-                'Baykibig',
-                'Untervermietung',
-                'Ekiplus',
+                'EKI Förderung' => null,
+                'Baykibig' => null,
+                'Untervermietung' => null,
+                'Ekiplus' => null,
             ],
         ],
         'expense' => [
             'Konsumgüter' => [
-                'Ausflüge',
-                'Basteln',
-                'Zeitschriften Abo',
-                'Lebensmittel',
-                'Hortausstattung',
-                'Hortfreizeit',
-                'Drogerie',
-                'Büromaterial',
+                'Ausflüge' => null,
+                'Basteln' => null,
+                'Zeitschriften Abo' => null,
+                'Lebensmittel' => null,
+                'Hortausstattung' => null,
+                'Hortfreizeit' => null,
+                'Drogerie' => null,
+                'Büromaterial' => null,
             ],
             'Personalkosten' => [
-                'Krankenkasse',
-                'Altersversorgung',
-                'Gehalt',
-                'Lohnsteuer',
-                'Fortbildung',
-                'Lohnbuchhaltung',
+                'Krankenkasse' => null,
+                'Altersversorgung' => null,
+                'Gehalt' => null,
+                'Lohnsteuer' => null,
+                'Fortbildung' => null,
+                'Lohnbuchhaltung' => null,
             ],
             'Raumkosten' => [
-                'Reinigung',
-                'Miete',
-                'GEZ',
-                'Strom',
-                'Handwerker und Prüfungen',
+                'Reinigung' => null,
+                'Miete' => null,
+                'GEZ' => null,
+                'Strom' => null,
+                'Handwerker und Prüfungen' => null,
             ],
             'Kommunikation' => [
-                'Internet',
-                'Telefon',
+                'Internet' => null,
+                'Telefon' => null,
             ],
             'Versicherung' => [
-                'Gewerbeversicherung',
-                'Rechtsschutz',
-                'D&O',
-                'Haftpflicht',
+                'Gewerbeversicherung' => null,
+                'Rechtsschutz' => null,
+                'D&O' => null,
+                'Haftpflicht' => null,
             ],
             'Bankgebühren' => [],
             'Investitionen in den Hort' => [],
@@ -90,11 +91,12 @@ class AccountingCategorySeeder extends Seeder
 
                 $childPosition = 0;
 
-                foreach ($children as $childName) {
+                foreach ($children as $childName => $comment) {
                     Category::create([
                         'name' => $childName,
                         'parent_id' => $root->id,
                         'direction' => $root->direction,
+                        'comment' => $comment,
                         'position' => ++$childPosition,
                     ]);
                 }

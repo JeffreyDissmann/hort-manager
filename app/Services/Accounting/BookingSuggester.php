@@ -66,15 +66,16 @@ class BookingSuggester
 
         $childId = $this->pickId($response['counterparty_child_id'] ?? null, $childIds);
         $userId = $childId ? null : $this->pickId($response['counterparty_user_id'] ?? null, $userIds);
+        // Always keep the model's own validated pick — the keyword logic below never
+        // changes the category, it only decides how much to trust it.
         $categoryId = $this->validCategory($response['category_id'] ?? null, $booking, $categoryDirection);
 
-        // Blend the model's self-assessment with deterministic signals.
-        $matchedName = $childId ? $childNames->get($childId) : ($userId ? $userNames->get($userId) : null);
+        [$chosenNamed, $otherNamed] = $this->categoryKeywords($categoryId, $categories, (string) $booking->purpose);
         $confidence = $this->confidence(
             categoryValid: $categoryId !== null,
-            matchedName: $matchedName,
+            chosenCategoryNamed: $chosenNamed,
+            otherCategoryNamed: $otherNamed,
             modelConfidence: $response['confidence'] ?? null,
-            purpose: (string) $booking->purpose,
         );
 
         // Write only while the booking is STILL a draft. The Ollama call takes
@@ -94,40 +95,66 @@ class BookingSuggester
     }
 
     /**
-     * Blend the model's self-assessment with deterministic signals into a triage
-     * confidence. Never trusts a bare model score — a small model is poorly
-     * calibrated — so „high" requires a matched counterparty actually named in the
-     * purpose, and no category always means „low".
+     * The model's category pick is always kept; this only decides how much to trust it:
+     *  - no category → low (nothing to confirm against);
+     *  - a DIFFERENT category is literally named in the purpose than the one chosen →
+     *    low, flagged for review (a likely mistake — e.g. „Vereinsbeitrag" booked as
+     *    Elternbeitrag — or bank noise like „INTERNET" clashing with the Internet
+     *    category; either way we keep the model's pick and let a human check it);
+     *  - the chosen category is itself named in the purpose → high (a certain match);
+     *  - otherwise the model's own self-assessment (high / medium / low) is trusted.
      */
-    private function confidence(bool $categoryValid, ?string $matchedName, ?string $modelConfidence, string $purpose): SuggestionConfidence
+    private function confidence(bool $categoryValid, bool $chosenCategoryNamed, bool $otherCategoryNamed, ?string $modelConfidence): SuggestionConfidence
     {
         if (! $categoryValid) {
-            return SuggestionConfidence::Low; // nothing to book against → must review
+            return SuggestionConfidence::Low;
         }
 
-        if ($matchedName !== null && $this->nameInPurpose($matchedName, $purpose)) {
-            return SuggestionConfidence::High; // strongest evidence: the matched entity is named in the text
+        if ($otherCategoryNamed && ! $chosenCategoryNamed) {
+            return SuggestionConfidence::Low;
         }
 
-        if ($modelConfidence === 'low') {
-            return SuggestionConfidence::Low; // valid category, but the model itself is unsure
+        if ($chosenCategoryNamed) {
+            return SuggestionConfidence::High; // the chosen category is literally in the text
         }
 
-        return SuggestionConfidence::Medium;
+        return match ($modelConfidence) {
+            'high' => SuggestionConfidence::High,
+            'low' => SuggestionConfidence::Low,
+            default => SuggestionConfidence::Medium,
+        };
     }
 
-    /** True when a meaningful word of the matched name appears in the purpose. */
-    private function nameInPurpose(string $name, string $purpose): bool
+    /**
+     * Whether the chosen category's name — and/or any OTHER same-direction category's
+     * name — appears verbatim in the purpose. Only reasonably distinctive names
+     * (≥ 5 chars) are matched, to avoid false hits on short generic words.
+     *
+     * @param  list<array{id:int, name:string, direction:string}>  $categories
+     * @return array{0:bool, 1:bool} [chosenNamed, otherNamed]
+     */
+    private function categoryKeywords(?int $chosenId, array $categories, string $purpose): array
     {
-        $haystack = Str::lower($purpose);
-
-        foreach (preg_split('/\s+/', $name) ?: [] as $word) {
-            if (Str::length($word) >= 3 && str_contains($haystack, Str::lower($word))) {
-                return true;
-            }
+        if ($chosenId === null) {
+            return [false, false];
         }
 
-        return false;
+        $haystack = Str::lower($purpose);
+        $chosenDirection = collect($categories)->firstWhere('id', $chosenId)['direction'] ?? null;
+        $chosenNamed = false;
+        $otherNamed = false;
+
+        foreach ($categories as $category) {
+            if ($category['direction'] !== $chosenDirection || Str::length($category['name']) < 5) {
+                continue;
+            }
+            if (! str_contains($haystack, Str::lower($category['name']))) {
+                continue;
+            }
+            $category['id'] === $chosenId ? $chosenNamed = true : $otherNamed = true;
+        }
+
+        return [$chosenNamed, $otherNamed];
     }
 
     /**

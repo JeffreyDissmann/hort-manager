@@ -64,6 +64,10 @@ class BookingCategorizer implements Agent, HasStructuredOutput
         - Wähle immer die SPEZIFISCHSTE passende Kategorie (unterste Ebene / Blatt).
           Eine Oberkategorie nur, wenn wirklich keine Unterkategorie passt (der Pfad
           zeigt die Ebene mit „ › ").
+        - WICHTIG: Steht ein Kategoriename wörtlich im Verwendungszweck (z. B.
+          „Vereinsbeitrag", „Essensgeld", „Elternbeitrag", „Kaution"), wähle GENAU
+          diese Kategorie – auch wenn ein Name oder anderes Wort auf etwas anderes
+          hindeutet. Der Verwendungszweck-Text hat Vorrang.
         - Ein positiver Betrag ist eine Einnahme und braucht eine Einnahme-Kategorie;
           ein negativer Betrag ist eine Ausgabe und braucht eine Ausgabe-Kategorie.
         - EINNAHMEN (z. B. Essensgeld, Elternbeitrag, Vereinsbeitrag) werden dem KIND
@@ -87,8 +91,12 @@ class BookingCategorizer implements Agent, HasStructuredOutput
         Bekannte Benutzer (id · Name):
         {$users}
 
-        Schätze außerdem ehrlich deine Sicherheit ein (confidence): „high" nur bei
-        klarer Zuordnung, „low" wenn du unsicher bist oder ratest.
+        Schätze außerdem ehrlich deine Sicherheit ein (confidence):
+        - „high": Die Kategorie ist eindeutig – ein Händler, Stichwort oder Name im
+          Verwendungszweck passt klar zu genau dieser Kategorie.
+        - „medium": Plausibel, aber es käme auch eine andere Kategorie in Frage.
+        - „low": Du rätst oder findest keine passende Kategorie.
+        Sei bei „high" ehrlich – lieber „medium", wenn du nicht sicher bist.
 
         Gib genau ein Vorschlags-Objekt für die eine übergebene Buchung zurück.
         TXT;
