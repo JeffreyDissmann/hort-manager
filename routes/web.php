@@ -6,6 +6,7 @@ use App\Http\Controllers\AbsenceController;
 use App\Http\Controllers\Accounting\AccountController;
 use App\Http\Controllers\Accounting\BookingController;
 use App\Http\Controllers\Accounting\CategoryController;
+use App\Http\Controllers\Accounting\ContributionController;
 use App\Http\Controllers\Accounting\ImportController;
 use App\Http\Controllers\Accounting\ReportController;
 use App\Http\Controllers\Accounting\TransferController;
@@ -163,6 +164,8 @@ Route::middleware('auth')->group(function () {
 
         // Auswertung — month × category pivot of the confirmed ledger.
         Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
+        // Einnahmen je Kind — child × month matrix of contributions.
+        Route::get('contributions', [ContributionController::class, 'index'])->name('contributions.index');
     });
 });
 

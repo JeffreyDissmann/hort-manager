@@ -16,6 +16,7 @@ return [
     'categories' => 'Kategorien',
     'bookings' => 'Buchungen',
     'reports' => 'Auswertung',
+    'contributions' => 'Einnahmen je Kind',
     'import' => 'Import',
     'my_children' => 'Meine Kinder',
     'profile' => 'Profil',

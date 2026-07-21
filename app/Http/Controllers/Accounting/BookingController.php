@@ -30,7 +30,7 @@ class BookingController extends Controller
 {
     public function index(Request $request): Response
     {
-        $filters = $request->only(['account', 'category', 'kind', 'status', 'from', 'to', 'search']);
+        $filters = $request->only(['account', 'category', 'kind', 'status', 'from', 'to', 'search', 'unassigned']);
         $paths = collect(CategoryOptions::flat(onlyActive: false))->keyBy('id');
 
         $bookings = Booking::query()
@@ -370,6 +370,11 @@ class BookingController extends Controller
                     $q->where('confidence', (int) $confidence);
                 }
             })
+            // Income not attributed to a child — the „Nicht zugeordnet" hand-off from
+            // the contributions view, so those misassigned bookings can be fixed.
+            ->when($filters['unassigned'] ?? null, fn ($q) => $q
+                ->where('kind', BookingKind::Income)
+                ->whereNull('counterparty_child_id'))
             ->when($filters['from'] ?? null, fn ($q, $v) => $q->whereDate('booking_date', '>=', $v))
             ->when($filters['to'] ?? null, fn ($q, $v) => $q->whereDate('booking_date', '<=', $v))
             ->when($filters['search'] ?? null, fn ($q, $v) => $q->where(fn ($w) => $w

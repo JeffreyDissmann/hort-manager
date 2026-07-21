@@ -6,6 +6,19 @@ declare(strict_types=1);
 return [
     'title' => 'Accounting',
 
+    'contributions' => [
+        'title' => 'Income per child',
+        'intro' => 'Confirmed payments per child and month. Pick a contribution to see who has not paid in a given month.',
+        'year' => 'Year',
+        'group' => 'Group',
+        'child' => 'Child',
+        'total' => 'Σ',
+        'sum' => 'Total',
+        'unassigned' => 'Unassigned – fix these',
+        'missing_hint' => 'Red = no payment in that (already past) month.',
+        'empty' => 'No child-attributed income for this year yet.',
+    ],
+
     'reports' => [
         'title' => 'Reports',
         'intro' => 'Income and expenses per category and month — confirmed bookings only, transfers excluded.',

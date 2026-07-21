@@ -6,6 +6,19 @@ declare(strict_types=1);
 return [
     'title' => 'Buchhaltung',
 
+    'contributions' => [
+        'title' => 'Einnahmen je Kind',
+        'intro' => 'Bestätigte Zahlungen je Kind und Monat. Wähle einen Beitrag, um zu sehen, wer in einem Monat noch nicht gezahlt hat.',
+        'year' => 'Jahr',
+        'group' => 'Gruppe',
+        'child' => 'Kind',
+        'total' => 'Σ',
+        'sum' => 'Summe',
+        'unassigned' => 'Nicht zugeordnet – korrigieren',
+        'missing_hint' => 'Rot hinterlegt = in diesem (bereits vergangenen) Monat keine Zahlung.',
+        'empty' => 'Für dieses Jahr gibt es noch keine kindbezogenen Einnahmen.',
+    ],
+
     'reports' => [
         'title' => 'Auswertung',
         'intro' => 'Einnahmen und Ausgaben je Kategorie und Monat — nur bestätigte Buchungen, ohne Umbuchungen.',
