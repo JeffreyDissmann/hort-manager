@@ -22,6 +22,7 @@ const props = defineProps({
 });
 
 const flash = computed(() => usePage().props.flash?.status);
+const flashError = computed(() => usePage().props.flash?.error);
 
 function formatDate(value) {
     if (!value) {
@@ -56,6 +57,12 @@ function destroy(child) {
                 class="rounded-2xl bg-hort-teal/20 px-4 py-3 text-sm font-medium text-ink"
             >
                 {{ flash }}
+            </div>
+            <div
+                v-if="flashError"
+                class="rounded-2xl bg-red-500/10 px-4 py-3 text-sm font-medium text-red-700 dark:text-red-400"
+            >
+                {{ flashError }}
             </div>
 
             <Link

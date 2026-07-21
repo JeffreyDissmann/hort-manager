@@ -16,6 +16,7 @@ return [
     'child_created' => 'Kind angelegt. Jetzt den Stammplan festlegen.',
     'schedule_saved' => 'Stammplan für :name gespeichert.',
     'child_deleted' => ':name wurde gelöscht.',
+    'child_has_bookings' => ':name kann nicht gelöscht werden, da noch Buchungen zugeordnet sind.',
 
     'plan_updated' => 'Plan für :name aktualisiert.',
     'day_reset' => ':name: Tag auf Standard zurückgesetzt.',

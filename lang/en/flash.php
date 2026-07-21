@@ -16,6 +16,7 @@ return [
     'child_created' => 'Child created. Now set the weekly schedule.',
     'schedule_saved' => 'Weekly schedule for :name saved.',
     'child_deleted' => ':name has been deleted.',
+    'child_has_bookings' => ":name can't be deleted while bookings are still attributed to them.",
 
     'plan_updated' => 'Plan for :name updated.',
     'day_reset' => ':name: day reset to the standard.',

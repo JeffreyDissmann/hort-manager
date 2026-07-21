@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\Enums\DepartureMethod;
 use App\Enums\TimeQualifier;
 use App\Enums\UserRole;
+use App\Models\Accounting\Booking;
 use App\Models\Child;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
@@ -203,6 +204,12 @@ class ChildController extends Controller
     public function destroy(Child $child): RedirectResponse
     {
         $this->authorize('delete', $child);
+
+        // Keep the ledger intact: a child with any booking attributed to it can't be
+        // deleted (the payments would lose their reference).
+        if (Booking::where('counterparty_child_id', $child->id)->exists()) {
+            return back()->with('error', __('flash.child_has_bookings', ['name' => $child->name]));
+        }
 
         $name = $child->name;
         $child->delete();

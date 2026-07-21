@@ -53,6 +53,7 @@ class HandleInertiaRequests extends Middleware
             ],
             'flash' => [
                 'status' => fn () => $request->session()->get('status'),
+                'error' => fn () => $request->session()->get('error'),
             ],
             // Active UI locale, the languages a user can pick, and the full message
             // catalog for the active locale — for the frontend $t() helper.

@@ -7,6 +7,7 @@ namespace Tests\Feature;
 use App\Enums\DepartureMethod;
 use App\Enums\TimeQualifier;
 use App\Enums\UserRole;
+use App\Models\Accounting\Booking;
 use App\Models\Child;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -356,5 +357,19 @@ class ChildManagementTest extends TestCase
 
         $this->assertDatabaseMissing('children', ['id' => $child->id]);
         $this->assertDatabaseMissing('weekly_schedules', ['child_id' => $child->id]);
+    }
+
+    public function test_a_child_with_bookings_cannot_be_deleted(): void
+    {
+        $child = Child::factory()->create();
+        Booking::factory()->create(['counterparty_child_id' => $child->id]);
+
+        $this->actingAs($this->staff())
+            ->from(route('children.index'))
+            ->delete(route('children.destroy', $child))
+            ->assertRedirect(route('children.index'))
+            ->assertSessionHas('error');
+
+        $this->assertDatabaseHas('children', ['id' => $child->id]);
     }
 }
