@@ -15,6 +15,7 @@ return [
     'accounts' => 'Konten',
     'categories' => 'Kategorien',
     'bookings' => 'Buchungen',
+    'reports' => 'Auswertung',
     'import' => 'Import',
     'my_children' => 'Meine Kinder',
     'profile' => 'Profil',

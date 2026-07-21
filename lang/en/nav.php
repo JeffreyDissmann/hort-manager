@@ -15,6 +15,7 @@ return [
     'accounts' => 'Accounts',
     'categories' => 'Categories',
     'bookings' => 'Bookings',
+    'reports' => 'Reports',
     'import' => 'Import',
     'my_children' => 'My children',
     'profile' => 'Profile',

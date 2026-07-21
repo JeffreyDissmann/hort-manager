@@ -6,6 +6,18 @@ declare(strict_types=1);
 return [
     'title' => 'Buchhaltung',
 
+    'reports' => [
+        'title' => 'Auswertung',
+        'intro' => 'Einnahmen und Ausgaben je Kategorie und Monat — nur bestätigte Buchungen, ohne Umbuchungen.',
+        'year' => 'Jahr',
+        'category' => 'Kategorie',
+        'total' => 'Σ',
+        'income' => 'Einnahmen',
+        'expense' => 'Ausgaben',
+        'net' => 'Saldo',
+        'empty' => 'Für dieses Jahr gibt es noch keine bestätigten Buchungen.',
+    ],
+
     'accounts' => [
         'title' => 'Konten',
         'intro' => 'Bank- und Bar-Konten. Der Saldo ergibt sich aus dem Anfangssaldo plus allen bestätigten Buchungen.',

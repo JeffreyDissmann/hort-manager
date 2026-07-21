@@ -6,6 +6,18 @@ declare(strict_types=1);
 return [
     'title' => 'Accounting',
 
+    'reports' => [
+        'title' => 'Reports',
+        'intro' => 'Income and expenses per category and month — confirmed bookings only, transfers excluded.',
+        'year' => 'Year',
+        'category' => 'Category',
+        'total' => 'Σ',
+        'income' => 'Income',
+        'expense' => 'Expenses',
+        'net' => 'Net',
+        'empty' => 'No confirmed bookings for this year yet.',
+    ],
+
     'accounts' => [
         'title' => 'Accounts',
         'intro' => 'Bank and cash accounts. The balance is the opening balance plus every confirmed booking.',

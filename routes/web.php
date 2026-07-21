@@ -7,6 +7,7 @@ use App\Http\Controllers\Accounting\AccountController;
 use App\Http\Controllers\Accounting\BookingController;
 use App\Http\Controllers\Accounting\CategoryController;
 use App\Http\Controllers\Accounting\ImportController;
+use App\Http\Controllers\Accounting\ReportController;
 use App\Http\Controllers\Accounting\TransferController;
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\Auth\SlackController;
@@ -159,6 +160,9 @@ Route::middleware('auth')->group(function () {
         Route::get('import', [ImportController::class, 'create'])->name('import.create');
         Route::post('import', [ImportController::class, 'store'])->name('import.store');
         Route::get('import/{import}', [ImportController::class, 'show'])->name('import.show');
+
+        // Auswertung — month × category pivot of the confirmed ledger.
+        Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
     });
 });
 
