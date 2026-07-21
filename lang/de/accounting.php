@@ -50,6 +50,7 @@ return [
         'new' => 'Neue Buchung',
         'edit' => 'Buchung bearbeiten',
         'empty' => 'Keine Buchungen gefunden.',
+        'analysing' => 'Buchungen werden analysiert …',
         'account' => 'Konto',
         'category' => 'Kategorie',
         'kind' => 'Art',

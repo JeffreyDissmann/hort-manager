@@ -85,6 +85,10 @@ class BookingController extends Controller
             'reviewCount' => Booking::suggested()->count(),
             // Drives the „Neu analysieren" button — all unconfirmed bookings.
             'unconfirmedCount' => Booking::needsReview()->count(),
+            // Drafts still queued for the AI — the list polls itself while these
+            // drain, so freshly-analysed rows appear without a manual reload.
+            'pendingCount' => Booking::where('status', BookingStatus::Draft)->count(),
+            'aiEnabled' => (bool) config('accounting.ai_suggestions'),
             // How many unconfirmed+categorised bookings match the current filter
             // (the count „select all matching" would bulk-confirm).
             'confirmableTotal' => Booking::needsReview()->whereNotNull('category_id')

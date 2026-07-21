@@ -1,6 +1,6 @@
 <script setup>
 import { reactive, ref, computed, watch } from 'vue';
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, Link, router, usePoll } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import Pagination from '@/Components/Pagination.vue';
@@ -17,7 +17,7 @@ import {
 } from '@/routes/accounting/bookings';
 import { create as transfersCreate } from '@/routes/accounting/transfers';
 import { create as importCreate } from '@/routes/accounting/import';
-import { PencilSquareIcon, TrashIcon, PlusIcon, ArrowsRightLeftIcon, ArrowDownTrayIcon, ClipboardDocumentCheckIcon, SparklesIcon, CheckIcon } from '@heroicons/vue/24/outline';
+import { PencilSquareIcon, TrashIcon, PlusIcon, ArrowsRightLeftIcon, ArrowDownTrayIcon, ClipboardDocumentCheckIcon, SparklesIcon, CheckIcon, ArrowPathIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
     bookings: { type: Object, required: true }, // paginator
@@ -26,7 +26,20 @@ const props = defineProps({
     reviewCount: { type: Number, default: 0 },
     unconfirmedCount: { type: Number, default: 0 },
     confirmableTotal: { type: Number, default: 0 },
+    pendingCount: { type: Number, default: 0 },
+    aiEnabled: { type: Boolean, default: false },
 });
+
+// While the AI is still analysing imported drafts and the current filter shows
+// nothing yet, poll so the freshly-suggested rows appear on their own. Stops as
+// soon as rows show up or the draft queue drains.
+const shouldPoll = computed(() => props.aiEnabled && props.pendingCount > 0 && props.bookings.data.length === 0);
+const { start: startPoll, stop: stopPoll } = usePoll(
+    4000,
+    { only: ['bookings', 'pendingCount', 'reviewCount', 'unconfirmedCount', 'confirmableTotal'], preserveScroll: true },
+    { autoStart: false },
+);
+watch(shouldPoll, (on) => (on ? startPoll() : stopPoll()), { immediate: true });
 
 // --- Bulk selection / confirm ---------------------------------------------
 const selectedIds = ref(new Set());
@@ -218,10 +231,16 @@ function destroy(booking) {
             <!-- List -->
             <div class="overflow-hidden rounded-2xl bg-surface shadow-sm">
                 <p v-if="!bookings.data.length" class="p-6 text-center text-ink/50">
-                    {{ $t('accounting.bookings.empty') }}
-                    <button type="button" class="ml-2 text-hort-teal-dark hover:underline" @click="reset">
-                        {{ $t('accounting.bookings.reset_filters') }}
-                    </button>
+                    <span v-if="shouldPoll" class="inline-flex items-center gap-2" data-testid="bookings-analysing">
+                        <ArrowPathIcon class="h-4 w-4 animate-spin" />
+                        {{ $t('accounting.bookings.analysing') }}
+                    </span>
+                    <template v-else>
+                        {{ $t('accounting.bookings.empty') }}
+                        <button type="button" class="ml-2 text-hort-teal-dark hover:underline" @click="reset">
+                            {{ $t('accounting.bookings.reset_filters') }}
+                        </button>
+                    </template>
                 </p>
 
                 <table v-else class="w-full text-sm">

@@ -33,6 +33,21 @@ it('lists bookings for admins', function () {
             ->has('filterOptions.categories'));
 });
 
+it('exposes the pending-draft count and AI flag to drive list polling', function () {
+    config(['accounting.ai_suggestions' => true]);
+    $admin = User::factory()->admin()->create();
+    Booking::factory()->draft()->create();
+    Booking::factory()->draft()->create();
+    Booking::factory()->suggested()->create();
+    Booking::factory()->create(); // confirmed
+
+    $this->actingAs($admin)
+        ->get('/accounting/bookings')
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('pendingCount', 2) // only the un-analysed drafts
+            ->where('aiEnabled', true));
+});
+
 it('creates an income booking as a positive confirmed amount', function () {
     $admin = User::factory()->admin()->create();
     $this->actingAs($admin);

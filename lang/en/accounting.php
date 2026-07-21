@@ -50,6 +50,7 @@ return [
         'new' => 'New booking',
         'edit' => 'Edit booking',
         'empty' => 'No bookings found.',
+        'analysing' => 'Analysing bookings …',
         'account' => 'Account',
         'category' => 'Category',
         'kind' => 'Kind',
