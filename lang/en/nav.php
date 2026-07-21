@@ -12,6 +12,8 @@ return [
     'users' => 'Users',
     'activity_log' => 'Activity log',
     'accounting' => 'Accounting',
+    'hort_world' => 'Hort',
+    'accounting_overview' => 'Overview',
     'accounts' => 'Accounts',
     'categories' => 'Categories',
     'bookings' => 'Bookings',

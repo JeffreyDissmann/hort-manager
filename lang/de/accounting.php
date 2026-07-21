@@ -6,6 +6,22 @@ declare(strict_types=1);
 return [
     'title' => 'Buchhaltung',
 
+    'dashboard' => [
+        'title' => 'Übersicht',
+        'as_of' => 'Daten aktuell bis :date',
+        'as_of_label' => 'Daten aktuell bis',
+        'balances' => 'Kontostände',
+        'account' => 'Konto',
+        'balance_current' => 'Aktuell',
+        'balance_quarter' => 'Vorquartal',
+        'balance_year' => 'Vorjahr',
+        'no_accounts' => 'Noch keine Konten angelegt.',
+        'review' => 'Zu prüfen',
+        'review_hint' => ':count Buchung(en) warten auf Bestätigung.',
+        'all_clear' => 'Alles erledigt.',
+        'links' => 'Auswertungen',
+    ],
+
     'contributions' => [
         'title' => 'Einnahmen je Kind',
         'intro' => 'Bestätigte Zahlungen je Kind und Monat. Wähle einen Beitrag, um zu sehen, wer in einem Monat noch nicht gezahlt hat.',

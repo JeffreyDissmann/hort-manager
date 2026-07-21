@@ -7,6 +7,7 @@ use App\Http\Controllers\Accounting\AccountController;
 use App\Http\Controllers\Accounting\BookingController;
 use App\Http\Controllers\Accounting\CategoryController;
 use App\Http\Controllers\Accounting\ContributionController;
+use App\Http\Controllers\Accounting\DashboardController;
 use App\Http\Controllers\Accounting\ImportController;
 use App\Http\Controllers\Accounting\ReportController;
 use App\Http\Controllers\Accounting\TransferController;
@@ -144,6 +145,9 @@ Route::middleware('auth')->group(function () {
 
     // Buchhaltung — admin-only accounting module.
     Route::middleware('admin')->prefix('accounting')->name('accounting.')->group(function () {
+        // Home of the accounting world.
+        Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+
         Route::resource('accounts', AccountController::class)->except('show');
         Route::resource('categories', CategoryController::class)->only(['index', 'store', 'update', 'destroy']);
         // Step-through review of draft bookings (before the resource's {booking} routes).

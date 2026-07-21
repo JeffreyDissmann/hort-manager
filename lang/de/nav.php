@@ -12,6 +12,8 @@ return [
     'users' => 'Benutzer',
     'activity_log' => 'Protokoll',
     'accounting' => 'Buchhaltung',
+    'hort_world' => 'Hort',
+    'accounting_overview' => 'Übersicht',
     'accounts' => 'Konten',
     'categories' => 'Kategorien',
     'bookings' => 'Buchungen',

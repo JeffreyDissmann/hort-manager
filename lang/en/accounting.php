@@ -6,6 +6,22 @@ declare(strict_types=1);
 return [
     'title' => 'Accounting',
 
+    'dashboard' => [
+        'title' => 'Overview',
+        'as_of' => 'Data accurate to :date',
+        'as_of_label' => 'Data accurate to',
+        'balances' => 'Account balances',
+        'account' => 'Account',
+        'balance_current' => 'Current',
+        'balance_quarter' => 'Prev. quarter',
+        'balance_year' => 'Prev. year',
+        'no_accounts' => 'No accounts yet.',
+        'review' => 'To review',
+        'review_hint' => ':count booking(s) awaiting confirmation.',
+        'all_clear' => 'All clear.',
+        'links' => 'Reports',
+    ],
+
     'contributions' => [
         'title' => 'Income per child',
         'intro' => 'Confirmed payments per child and month. Pick a contribution to see who has not paid in a given month.',
