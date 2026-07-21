@@ -1,7 +1,8 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { Head, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import { ChevronRightIcon } from '@heroicons/vue/24/outline';
 import { formatEuro } from '@/money';
 import { index as reportsIndex } from '@/routes/accounting/reports';
 
@@ -24,6 +25,29 @@ const hasData = computed(() => props.incomeRows.length > 0 || props.expenseRows.
 function changeYear(event) {
     router.get(reportsIndex({ query: { year: event.target.value } }).url, {}, { preserveScroll: true });
 }
+
+// --- Collapsible parent categories ----------------------------------------
+// A top-level category is collapsible when it has (non-zero) child rows.
+const hasChildren = (rows, row) => row.depth === 0 && rows.some((r) => r.parent_id === row.id);
+
+// Every collapsible parent across both blocks — the report starts fully collapsed
+// (subtotals only), and resets to that whenever the year's rows change.
+function collapsibleParents() {
+    const all = [...props.incomeRows, ...props.expenseRows];
+    return all.filter((r) => hasChildren(all, r)).map((r) => r.id);
+}
+const collapsed = ref(new Set(collapsibleParents()));
+watch(() => [props.incomeRows, props.expenseRows], () => (collapsed.value = new Set(collapsibleParents())));
+
+function toggle(id) {
+    const next = new Set(collapsed.value);
+    next.has(id) ? next.delete(id) : next.add(id);
+    collapsed.value = next;
+}
+// Hide a child row while its parent is collapsed.
+const visible = (rows) => rows.filter((r) => r.depth === 0 || !collapsed.value.has(r.parent_id));
+const visibleIncome = computed(() => visible(props.incomeRows));
+const visibleExpense = computed(() => visible(props.expenseRows));
 
 // Zero cells read as noise in a wide grid — show a muted dash instead.
 const cell = (cents) => (cents === 0 ? '—' : formatEuro(cents));
@@ -82,9 +106,21 @@ const cellClass = (cents) =>
                                 <td v-for="(c, i) in incomeMonths" :key="i" class="px-3 py-2 text-right" :class="cellClass(c)">{{ cell(c) }}</td>
                                 <td class="px-3 py-2 text-right" :class="cellClass(incomeTotal)">{{ cell(incomeTotal) }}</td>
                             </tr>
-                            <tr v-for="row in incomeRows" :key="'i' + row.id" class="hover:bg-ink/5">
-                                <td class="sticky left-0 z-10 bg-surface px-3 py-1.5 text-ink" :class="{ 'font-medium': row.depth === 0 }">
-                                    <span :style="{ paddingLeft: row.depth * 14 + 'px' }">{{ row.name }}</span>
+                            <tr v-for="row in visibleIncome" :key="'i' + row.id" class="hover:bg-ink/5">
+                                <td class="sticky left-0 z-10 bg-surface px-3 py-1.5 text-ink">
+                                    <div class="flex items-center gap-1" :style="{ paddingLeft: row.depth * 16 + 'px' }">
+                                        <button
+                                            v-if="hasChildren(incomeRows, row)"
+                                            type="button"
+                                            class="text-ink/40 transition hover:text-ink"
+                                            :aria-expanded="!collapsed.has(row.id)"
+                                            @click="toggle(row.id)"
+                                        >
+                                            <ChevronRightIcon class="h-3.5 w-3.5 transition-transform" :class="{ 'rotate-90': !collapsed.has(row.id) }" />
+                                        </button>
+                                        <span v-else class="inline-block w-3.5" />
+                                        <span :class="{ 'font-medium': row.depth === 0 }">{{ row.name }}</span>
+                                    </div>
                                 </td>
                                 <td v-for="(c, i) in row.months" :key="i" class="px-3 py-1.5 text-right" :class="cellClass(c)">
                                     {{ cell(c) }}
@@ -98,9 +134,21 @@ const cellClass = (cents) =>
                                 <td v-for="(c, i) in expenseMonths" :key="i" class="px-3 py-2 text-right" :class="cellClass(c)">{{ cell(c) }}</td>
                                 <td class="px-3 py-2 text-right" :class="cellClass(expenseTotal)">{{ cell(expenseTotal) }}</td>
                             </tr>
-                            <tr v-for="row in expenseRows" :key="'e' + row.id" class="hover:bg-ink/5">
-                                <td class="sticky left-0 z-10 bg-surface px-3 py-1.5 text-ink" :class="{ 'font-medium': row.depth === 0 }">
-                                    <span :style="{ paddingLeft: row.depth * 14 + 'px' }">{{ row.name }}</span>
+                            <tr v-for="row in visibleExpense" :key="'e' + row.id" class="hover:bg-ink/5">
+                                <td class="sticky left-0 z-10 bg-surface px-3 py-1.5 text-ink">
+                                    <div class="flex items-center gap-1" :style="{ paddingLeft: row.depth * 16 + 'px' }">
+                                        <button
+                                            v-if="hasChildren(expenseRows, row)"
+                                            type="button"
+                                            class="text-ink/40 transition hover:text-ink"
+                                            :aria-expanded="!collapsed.has(row.id)"
+                                            @click="toggle(row.id)"
+                                        >
+                                            <ChevronRightIcon class="h-3.5 w-3.5 transition-transform" :class="{ 'rotate-90': !collapsed.has(row.id) }" />
+                                        </button>
+                                        <span v-else class="inline-block w-3.5" />
+                                        <span :class="{ 'font-medium': row.depth === 0 }">{{ row.name }}</span>
+                                    </div>
                                 </td>
                                 <td v-for="(c, i) in row.months" :key="i" class="px-3 py-1.5 text-right" :class="cellClass(c)">
                                     {{ cell(c) }}

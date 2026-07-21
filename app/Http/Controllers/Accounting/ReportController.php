@@ -88,7 +88,7 @@ class ReportController extends Controller
      *
      * @param  Collection<int, array<string, mixed>>  $flat
      * @param  array<int, array<int, int>>  $totals
-     * @return list<array{id:int, name:string, depth:int, months:list<int>, total:int}>
+     * @return list<array{id:int, parent_id:?int, name:string, depth:int, months:list<int>, total:int}>
      */
     private function rows(Collection $flat, array $totals, CategoryDirection $direction): array
     {
@@ -96,6 +96,7 @@ class ReportController extends Controller
             ->where('direction', $direction->value)
             ->map(fn (array $c): array => [
                 'id' => $c['id'],
+                'parent_id' => $c['parent_id'],
                 'name' => $c['name'],
                 'depth' => $c['depth'],
                 'months' => collect(range(1, 12))->map(fn (int $m): int => $totals[$c['id']][$m] ?? 0)->all(),
