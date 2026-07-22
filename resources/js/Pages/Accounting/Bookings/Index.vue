@@ -14,10 +14,11 @@ import {
     review as bookingsReview,
     reanalyse as bookingsReanalyse,
     bulkConfirm as bookingsBulkConfirm,
+    download as bookingsExport,
 } from '@/routes/accounting/bookings';
 import { create as transfersCreate } from '@/routes/accounting/transfers';
 import { create as importCreate } from '@/routes/accounting/import';
-import { PencilSquareIcon, TrashIcon, PlusIcon, ArrowsRightLeftIcon, ArrowDownTrayIcon, ClipboardDocumentCheckIcon, SparklesIcon, CheckIcon, ArrowPathIcon } from '@heroicons/vue/24/outline';
+import { PencilSquareIcon, TrashIcon, PlusIcon, ArrowsRightLeftIcon, ArrowUpTrayIcon, DocumentTextIcon, TableCellsIcon, ClipboardDocumentCheckIcon, SparklesIcon, CheckIcon, ArrowPathIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
     bookings: { type: Object, required: true }, // paginator
@@ -107,10 +108,14 @@ const statusLabel = computed(() => Object.fromEntries(props.filterOptions.status
 const confidenceDot = { 0: 'bg-red-500', 1: 'bg-amber-500', 2: 'bg-hort-teal-dark' };
 
 let searchTimer = null;
+const activeFilters = () => Object.fromEntries(Object.entries(filters).filter(([, v]) => v !== '' && v !== null));
+
 function apply() {
-    const query = Object.fromEntries(Object.entries(filters).filter(([, v]) => v !== '' && v !== null));
-    router.get(bookingsIndex().url, query, { preserveState: true, preserveScroll: true, replace: true });
+    router.get(bookingsIndex().url, activeFilters(), { preserveState: true, preserveScroll: true, replace: true });
 }
+
+// Export URL for the current filter (all matching rows, not just the page).
+const exportUrl = (format) => bookingsExport({ query: { ...activeFilters(), format } }).url;
 
 watch(() => ({ ...filters, search: undefined }), apply, { deep: true });
 watch(
@@ -143,6 +148,21 @@ function destroy(booking) {
                     <h2 class="text-xl font-semibold text-ink">{{ $t('accounting.bookings.title') }}</h2>
                 </div>
                 <div class="flex flex-wrap items-center justify-end gap-2">
+                    <div class="flex items-center gap-1">
+                        <a
+                            :href="exportUrl('csv')"
+                            class="flex items-center gap-1 rounded-lg bg-ink/5 px-3 py-2 text-sm font-medium text-ink transition hover:bg-ink/10"
+                            data-testid="bookings-export-csv"
+                        >
+                            <DocumentTextIcon class="h-4 w-4" /> CSV
+                        </a>
+                        <a
+                            :href="exportUrl('xlsx')"
+                            class="flex items-center gap-1 rounded-lg bg-ink/5 px-3 py-2 text-sm font-medium text-ink transition hover:bg-ink/10"
+                        >
+                            <TableCellsIcon class="h-4 w-4" /> Excel
+                        </a>
+                    </div>
                     <button
                         v-if="unconfirmedCount > 0"
                         type="button"
@@ -166,7 +186,7 @@ function destroy(booking) {
                         class="flex items-center gap-1 rounded-lg bg-ink/5 px-3 py-2 text-sm font-medium text-ink transition hover:bg-ink/10"
                         data-testid="bookings-import"
                     >
-                        <ArrowDownTrayIcon class="h-4 w-4" /> {{ $t('nav.import') }}
+                        <ArrowUpTrayIcon class="h-4 w-4" /> {{ $t('nav.import') }}
                     </Link>
                     <Link
                         :href="transfersCreate().url"

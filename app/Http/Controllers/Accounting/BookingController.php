@@ -17,6 +17,7 @@ use App\Models\Accounting\Category;
 use App\Models\Child;
 use App\Models\User;
 use App\Support\Accounting\CategoryOptions;
+use App\Support\Accounting\SpreadsheetExport;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -24,6 +25,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 /** Admin-only list + manual entry of ledger bookings. */
 class BookingController extends Controller
@@ -106,6 +108,63 @@ class BookingController extends Controller
                 'statusFilter' => $this->statusFilterOptions(),
             ],
         ]);
+    }
+
+    /** Download every booking matching the current filter (not just the page) as CSV/XLSX. */
+    public function export(Request $request): BinaryFileResponse
+    {
+        $filters = $request->only(['account', 'category', 'kind', 'status', 'from', 'to', 'search', 'unassigned']);
+        $xlsx = strtolower((string) $request->string('format')) === 'xlsx';
+        $paths = collect(CategoryOptions::flat(onlyActive: false))->keyBy('id');
+
+        $bookings = Booking::query()
+            ->with([
+                'account:id,name',
+                'counterparty:id,name',
+                'counterpartyChild:id,name',
+                'transfer.outBooking.account:id,name',
+                'transfer.inBooking.account:id,name',
+            ])
+            ->tap(fn ($q) => $this->applyFilters($q, $filters))
+            ->orderByDesc('booking_date')
+            ->orderByDesc('id')
+            ->get();
+
+        $rows = [['type' => 'head', 'cells' => [
+            __('accounting.bookings.booking_date'),
+            __('accounting.bookings.valuta_date'),
+            __('accounting.bookings.account'),
+            __('accounting.bookings.category'),
+            __('accounting.bookings.kind'),
+            __('accounting.bookings.status'),
+            __('accounting.bookings.counterparty'),
+            __('accounting.bookings.purpose'),
+            __('accounting.bookings.amount'),
+        ]]];
+
+        foreach ($bookings as $b) {
+            $isTransfer = $b->kind === BookingKind::Transfer;
+
+            $counterparty = $b->counterpartyLabel() ?? '';
+            if ($isTransfer && $b->transfer) {
+                $other = $b->transfer->out_booking_id === $b->id ? $b->transfer->inBooking : $b->transfer->outBooking;
+                $counterparty = ($b->amount_cents < 0 ? '→ ' : '← ').($other?->account?->name ?? '');
+            }
+
+            $rows[] = ['type' => 'row', 'cells' => [
+                $b->booking_date?->format('Y-m-d') ?? '',
+                $b->valuta_date?->format('Y-m-d') ?? '',
+                $b->account?->name ?? '',
+                $isTransfer ? __('accounting.bookings.transfer') : ($paths->get($b->category_id)['path'] ?? ''),
+                $b->kind->label(),
+                $b->status->label(),
+                $counterparty,
+                (string) ($b->purpose ?? ''),
+                round($b->amount_cents / 100, 2),
+            ]];
+        }
+
+        return SpreadsheetExport::download($rows, 'bookings', $xlsx);
     }
 
     /**

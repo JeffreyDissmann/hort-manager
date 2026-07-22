@@ -157,6 +157,8 @@ Route::middleware('auth')->group(function () {
         Route::post('bookings/reanalyse', [BookingController::class, 'reanalyse'])->name('bookings.reanalyse');
         // Bulk-confirm bookings from the overview.
         Route::post('bookings/confirm', [BookingController::class, 'bulkConfirm'])->name('bookings.bulk-confirm');
+        // Export every booking matching the current filter (CSV/XLSX).
+        Route::get('bookings/export', [BookingController::class, 'export'])->name('bookings.download');
         Route::resource('bookings', BookingController::class)->except('show');
 
         Route::get('transfers/create', [TransferController::class, 'create'])->name('transfers.create');

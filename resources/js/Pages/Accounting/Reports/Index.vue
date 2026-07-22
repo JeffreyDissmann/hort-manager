@@ -2,7 +2,7 @@
 import { computed, ref, watch } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { ChevronRightIcon, ArrowDownTrayIcon } from '@heroicons/vue/24/outline';
+import { ChevronRightIcon, DocumentTextIcon, TableCellsIcon } from '@heroicons/vue/24/outline';
 import { formatEuro } from '@/money';
 import { index as reportsIndex, download as reportsExport } from '@/routes/accounting/reports';
 import { index as bookingsIndex } from '@/routes/accounting/bookings';
@@ -86,13 +86,13 @@ function drilldown({ category, kind, month }) {
                             :href="reportsExport({ query: { year, format: 'csv' } }).url"
                             class="flex items-center gap-1 rounded-lg bg-ink/5 px-3 py-2 text-sm font-medium text-ink transition hover:bg-ink/10"
                         >
-                            <ArrowDownTrayIcon class="h-4 w-4" /> CSV
+                            <DocumentTextIcon class="h-4 w-4" /> CSV
                         </a>
                         <a
                             :href="reportsExport({ query: { year, format: 'xlsx' } }).url"
                             class="flex items-center gap-1 rounded-lg bg-ink/5 px-3 py-2 text-sm font-medium text-ink transition hover:bg-ink/10"
                         >
-                            <ArrowDownTrayIcon class="h-4 w-4" /> Excel
+                            <TableCellsIcon class="h-4 w-4" /> Excel
                         </a>
                     </div>
                     <label class="flex items-center gap-2 text-sm text-ink/60">

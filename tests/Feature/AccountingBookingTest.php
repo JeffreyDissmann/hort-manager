@@ -365,3 +365,42 @@ it('filters by kind, confirmed status and a month range (report drill-down)', fu
     $this->get('/accounting/bookings?kind=income&status=confirmed&from=2026-01-01&to=2026-01-31')
         ->assertInertia(fn (AssertableInertia $page) => $page->has('bookings.data', 1));
 });
+
+it('forbids non-admins from exporting the bookings list', function () {
+    $this->actingAs(User::factory()->staff()->create())
+        ->get('/accounting/bookings/export')
+        ->assertForbidden();
+});
+
+it('exports every matching booking, not just the current page', function () {
+    $admin = User::factory()->admin()->create();
+    $this->actingAs($admin);
+    Booking::factory()->count(60)->create(); // the list paginates at 50
+
+    $response = $this->get('/accounting/bookings/export?format=csv')->assertOk()->assertDownload('bookings.csv');
+
+    $lines = array_filter(explode("\n", trim(file_get_contents($response->baseResponse->getFile()->getPathname()))));
+    expect($lines)->toHaveCount(61); // header + all 60 rows
+});
+
+it('exports only the bookings matching the active filter', function () {
+    $admin = User::factory()->admin()->create();
+    $this->actingAs($admin);
+    $a = Account::factory()->create();
+    $b = Account::factory()->create();
+    Booking::factory()->count(3)->for($a)->create();
+    Booking::factory()->count(2)->for($b)->create();
+
+    $response = $this->get('/accounting/bookings/export?format=csv&account='.$a->id)->assertOk();
+
+    $lines = array_filter(explode("\n", trim(file_get_contents($response->baseResponse->getFile()->getPathname()))));
+    expect($lines)->toHaveCount(4); // header + 3 for account A only
+});
+
+it('exports the bookings list as an XLSX download', function () {
+    $admin = User::factory()->admin()->create();
+    $this->actingAs($admin)
+        ->get('/accounting/bookings/export?format=xlsx')
+        ->assertOk()
+        ->assertDownload('bookings.xlsx');
+});
