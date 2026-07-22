@@ -8,9 +8,11 @@ use App\Enums\CategoryDirection;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Accounting\StoreCategoryRequest;
 use App\Http\Requests\Accounting\UpdateCategoryRequest;
+use App\Models\Accounting\Booking;
 use App\Models\Accounting\Category;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -60,18 +62,21 @@ class CategoryController extends Controller
 
     public function destroy(Category $category): RedirectResponse
     {
-        // Deleting cascades to children and nulls the category on any bookings —
-        // refuse if the node or any descendant still carries bookings.
-        $all = Category::query()->withCount('bookings')->get();
-        $subtree = $this->subtree($all, $category->id);
+        // Deleting cascades to children and nulls the category on any bookings — refuse
+        // if the node or any descendant still carries bookings. The check + delete run
+        // in one transaction (with a locking read) so a booking inserted in between
+        // can't be silently orphaned.
+        return DB::transaction(function () use ($category): RedirectResponse {
+            $subtreeIds = $this->subtree(Category::get(['id', 'parent_id']), $category->id)->pluck('id');
 
-        if ($subtree->sum('bookings_count') > 0) {
-            return back()->with('status', __('flash.category_has_bookings', ['name' => $category->name]));
-        }
+            if (Booking::whereIn('category_id', $subtreeIds)->lockForUpdate()->exists()) {
+                return back()->with('status', __('flash.category_has_bookings', ['name' => $category->name]));
+            }
 
-        $category->delete();
+            $category->delete();
 
-        return back()->with('status', __('flash.category_deleted', ['name' => $category->name]));
+            return back()->with('status', __('flash.category_deleted', ['name' => $category->name]));
+        });
     }
 
     /**
