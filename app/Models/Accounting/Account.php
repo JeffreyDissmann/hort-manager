@@ -47,14 +47,4 @@ class Account extends Model
         return $this->opening_balance_cents
             + (int) $this->bookings()->where('status', BookingStatus::Confirmed)->sum('amount_cents');
     }
-
-    /** The balance as it stood at the end of the given date (confirmed bookings up to it). */
-    public function balanceCentsAsOf(string $date): int
-    {
-        return $this->opening_balance_cents
-            + (int) $this->bookings()
-                ->where('status', BookingStatus::Confirmed)
-                ->whereDate('booking_date', '<=', $date)
-                ->sum('amount_cents');
-    }
 }

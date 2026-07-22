@@ -141,6 +141,9 @@ class BookingController extends Controller
 
     public function edit(Booking $booking): Response
     {
+        // A transfer leg is only ever edited/removed as a whole via the transfer flow.
+        abort_if((bool) $booking->transfer, 403);
+
         return Inertia::render('Accounting/Bookings/Edit', [
             ...$this->formProps(),
             'booking' => [
@@ -164,6 +167,9 @@ class BookingController extends Controller
 
     public function update(BookingRequest $request, Booking $booking): RedirectResponse
     {
+        // Editing a single transfer leg would break the two-leg zero-sum invariant.
+        abort_if((bool) $booking->transfer, 403);
+
         $attributes = $request->toAttributes();
         // The edit form may flip the review status (mark confirmed / back to draft).
         if ($request->filled('status')) {

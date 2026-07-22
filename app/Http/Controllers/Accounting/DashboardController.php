@@ -9,6 +9,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Accounting\Account;
 use App\Models\Accounting\Booking;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Builder;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -25,13 +26,19 @@ class DashboardController extends Controller
         $prevYearEnd = $reference->startOfYear()->subDay();
 
         return Inertia::render('Accounting/Dashboard', [
-            'accounts' => Account::orderBy('name')->get(['id', 'name', 'opening_balance_cents'])
+            // Balances at three points in time, summed in the DB (no per-account N+1).
+            'accounts' => Account::query()
+                ->withSum(['bookings as confirmed_cents' => fn (Builder $q) => $q->confirmed()], 'amount_cents')
+                ->withSum(['bookings as quarter_cents' => fn (Builder $q) => $q->confirmed()->whereDate('booking_date', '<=', $prevQuarterEnd->toDateString())], 'amount_cents')
+                ->withSum(['bookings as year_cents' => fn (Builder $q) => $q->confirmed()->whereDate('booking_date', '<=', $prevYearEnd->toDateString())], 'amount_cents')
+                ->orderBy('name')
+                ->get()
                 ->map(fn (Account $a): array => [
                     'id' => $a->id,
                     'name' => $a->name,
-                    'balance_cents' => $a->balanceCents(),
-                    'balance_quarter_cents' => $a->balanceCentsAsOf($prevQuarterEnd->toDateString()),
-                    'balance_year_cents' => $a->balanceCentsAsOf($prevYearEnd->toDateString()),
+                    'balance_cents' => $a->opening_balance_cents + (int) $a->confirmed_cents,
+                    'balance_quarter_cents' => $a->opening_balance_cents + (int) $a->quarter_cents,
+                    'balance_year_cents' => $a->opening_balance_cents + (int) $a->year_cents,
                 ]),
             'periods' => [
                 'quarter' => $prevQuarterEnd->toDateString(),

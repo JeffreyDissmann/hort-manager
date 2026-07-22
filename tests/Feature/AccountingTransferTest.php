@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Enums\BookingKind;
 use App\Models\Accounting\Account;
 use App\Models\Accounting\Booking;
+use App\Models\Accounting\Category;
 use App\Models\Accounting\Transfer;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -88,4 +89,33 @@ it('deleting one leg removes the whole transfer', function () {
 
     expect(Booking::where('kind', BookingKind::Transfer)->count())->toBe(0)
         ->and(Transfer::count())->toBe(0);
+});
+
+it('refuses to edit or update a single transfer leg', function () {
+    $admin = User::factory()->admin()->create();
+    $this->actingAs($admin);
+    $from = Account::factory()->create();
+    $to = Account::factory()->create();
+
+    $this->post('/accounting/transfers', [
+        'from_account_id' => $from->id,
+        'to_account_id' => $to->id,
+        'amount' => '30',
+        'booking_date' => '2026-04-10',
+    ]);
+
+    $leg = Booking::where('kind', BookingKind::Transfer)->first();
+
+    // Editing a leg would break the two-leg zero-sum invariant → forbidden.
+    $this->get("/accounting/bookings/{$leg->id}/edit")->assertForbidden();
+    $this->put("/accounting/bookings/{$leg->id}", [
+        'account_id' => $from->id,
+        'category_id' => Category::factory()->income()->create()->id,
+        'amount' => '99',
+        'booking_date' => '2026-04-10',
+    ])->assertForbidden();
+
+    // Untouched: still two transfer legs that net to zero.
+    expect(Booking::where('kind', BookingKind::Transfer)->count())->toBe(2)
+        ->and((int) Booking::where('kind', BookingKind::Transfer)->sum('amount_cents'))->toBe(0);
 });

@@ -10,6 +10,7 @@ use App\Enums\UserRole;
 use App\Models\Accounting\Booking;
 use App\Models\Child;
 use App\Models\User;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
@@ -371,5 +372,16 @@ class ChildManagementTest extends TestCase
             ->assertSessionHas('error');
 
         $this->assertDatabaseHas('children', ['id' => $child->id]);
+    }
+
+    public function test_the_database_blocks_deleting_a_child_with_bookings(): void
+    {
+        // Belt-and-suspenders: even bypassing the controller guard, the
+        // restrictOnDelete foreign key keeps a referenced child from being deleted.
+        $child = Child::factory()->create();
+        Booking::factory()->create(['counterparty_child_id' => $child->id]);
+
+        $this->expectException(QueryException::class);
+        $child->delete();
     }
 }
