@@ -26,9 +26,9 @@ class BookingCategorizer implements Agent, HasStructuredOutput
      * @param  list<array{id:int, name:string}>  $users
      */
     public function __construct(
-        private array $categories,
-        private array $children,
-        private array $users,
+        private readonly array $categories,
+        private readonly array $children,
+        private readonly array $users,
     ) {}
 
     /** Cap the Ollama request so a hung host can't block the request. */
