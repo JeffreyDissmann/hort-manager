@@ -75,7 +75,8 @@ class Transfer extends Model
         DB::transaction(function (): void {
             $legIds = [$this->out_booking_id, $this->in_booking_id];
             $this->delete();
-            Booking::whereKey($legIds)->get()->each->delete();
+            // Booking has no "deleting" hook, so a mass delete is equivalent (and cheaper).
+            Booking::whereKey($legIds)->delete();
         });
     }
 
