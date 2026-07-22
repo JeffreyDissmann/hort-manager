@@ -11,6 +11,7 @@ use App\Http\Requests\Accounting\UpdateCategoryRequest;
 use App\Models\Accounting\Booking;
 use App\Models\Accounting\Category;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -60,17 +61,28 @@ class CategoryController extends Controller
         return back()->with('status', __('flash.category_updated'));
     }
 
-    public function destroy(Category $category): RedirectResponse
+    public function destroy(Request $request, Category $category): RedirectResponse
     {
-        // Deleting cascades to children and nulls the category on any bookings — refuse
-        // if the node or any descendant still carries bookings. The check + delete run
-        // in one transaction (with a locking read) so a booking inserted in between
-        // can't be silently orphaned.
-        return DB::transaction(function () use ($category): RedirectResponse {
-            $subtreeIds = $this->subtree(Category::get(['id', 'parent_id']), $category->id)->pluck('id');
+        $moveTo = $request->integer('move_to') ?: null;
 
-            if (Booking::whereIn('category_id', $subtreeIds)->lockForUpdate()->exists()) {
-                return back()->with('status', __('flash.category_has_bookings', ['name' => $category->name]));
+        // Deleting cascades to children and nulls the category on any bookings. If the
+        // node or a descendant still carries bookings, they must first be moved to
+        // another category of the same direction (outside this subtree). The whole
+        // thing runs in one transaction with a locking read.
+        return DB::transaction(function () use ($category, $moveTo): RedirectResponse {
+            $all = Category::get(['id', 'parent_id', 'direction']);
+            $subtreeIds = $this->subtree($all, $category->id)->pluck('id');
+            $bookings = Booking::whereIn('category_id', $subtreeIds)->lockForUpdate();
+
+            if ($bookings->clone()->exists()) {
+                $target = $moveTo ? $all->firstWhere('id', $moveTo) : null;
+
+                // A valid target: exists, not part of this subtree, same direction.
+                if (! $target || $subtreeIds->contains($target->id) || $target->direction !== $category->direction) {
+                    return back()->with('status', __('flash.category_has_bookings', ['name' => $category->name]));
+                }
+
+                $bookings->update(['category_id' => $target->id]);
             }
 
             $category->delete();

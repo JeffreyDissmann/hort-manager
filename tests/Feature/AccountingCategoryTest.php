@@ -114,3 +114,47 @@ it('deletes an empty category but refuses one with bookings in its subtree', fun
     $this->delete("/accounting/categories/{$root->id}");
     expect(Category::find($root->id))->not->toBeNull();
 });
+
+it('moves the subtree bookings to a target category, then deletes', function () {
+    $admin = User::factory()->admin()->create();
+    $this->actingAs($admin);
+
+    $root = Category::factory()->expense()->create();
+    $child = Category::factory()->childOf($root)->create();
+    $target = Category::factory()->expense()->create();
+    $booking = Booking::factory()->expense()->create(['category_id' => $child->id]);
+
+    $this->delete("/accounting/categories/{$root->id}", ['move_to' => $target->id])
+        ->assertRedirect();
+
+    expect(Category::find($root->id))->toBeNull()          // whole subtree gone
+        ->and(Category::find($child->id))->toBeNull()
+        ->and($booking->refresh()->category_id)->toBe($target->id); // booking reassigned
+});
+
+it('refuses to move bookings to a target of the wrong direction', function () {
+    $admin = User::factory()->admin()->create();
+    $this->actingAs($admin);
+
+    $root = Category::factory()->expense()->create();
+    $income = Category::factory()->income()->create(); // wrong direction
+    Booking::factory()->expense()->create(['category_id' => $root->id]);
+
+    $this->delete("/accounting/categories/{$root->id}", ['move_to' => $income->id]);
+
+    expect(Category::find($root->id))->not->toBeNull(); // untouched
+});
+
+it('refuses to move bookings into the subtree being deleted', function () {
+    $admin = User::factory()->admin()->create();
+    $this->actingAs($admin);
+
+    $root = Category::factory()->expense()->create();
+    $child = Category::factory()->childOf($root)->create();
+    Booking::factory()->expense()->create(['category_id' => $root->id]);
+
+    // Target is inside the subtree → invalid.
+    $this->delete("/accounting/categories/{$root->id}", ['move_to' => $child->id]);
+
+    expect(Category::find($root->id))->not->toBeNull();
+});

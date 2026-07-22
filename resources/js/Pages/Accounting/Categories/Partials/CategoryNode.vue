@@ -1,5 +1,5 @@
 <script setup>
-import { ref, nextTick } from 'vue';
+import { ref, computed, nextTick } from 'vue';
 import { router } from '@inertiajs/vue3';
 import {
     store as categoriesStore,
@@ -22,10 +22,26 @@ defineOptions({ name: 'CategoryNode' });
 const props = defineProps({
     node: { type: Object, required: true },
     depth: { type: Number, default: 0 },
+    // Flat { id, path } reassignment targets for this direction.
+    options: { type: Array, default: () => [] },
 });
 
 const renaming = ref(false);
 const addingChild = ref(false);
+const confirmingDelete = ref(false);
+const moveTo = ref('');
+
+// This node plus all of its descendants, and their total booking count.
+function collectIds(node) {
+    return [node.id, ...node.children.flatMap(collectIds)];
+}
+const subtreeIds = computed(() => collectIds(props.node));
+function collectBookings(node) {
+    return (node.bookings_count ?? 0) + node.children.reduce((sum, c) => sum + collectBookings(c), 0);
+}
+const subtreeBookings = computed(() => collectBookings(props.node));
+// Valid move targets: any same-direction category outside this subtree.
+const targetOptions = computed(() => props.options.filter((o) => !subtreeIds.value.includes(o.id)));
 const renameValue = ref(props.node.name);
 const commentValue = ref(props.node.comment ?? '');
 const childName = ref('');
@@ -82,9 +98,26 @@ function toggleActive() {
 }
 
 function destroy() {
+    // With bookings in the subtree, ask where to move them; otherwise a simple confirm.
+    if (subtreeBookings.value > 0) {
+        moveTo.value = '';
+        confirmingDelete.value = true;
+        return;
+    }
     if (confirm(t('accounting.categories.delete_confirm', { name: props.node.name }))) {
         router.delete(categoriesDestroy(props.node.id).url, { preserveScroll: true });
     }
+}
+
+function confirmMove() {
+    if (!moveTo.value) {
+        return;
+    }
+    router.delete(categoriesDestroy(props.node.id).url, {
+        data: { move_to: moveTo.value },
+        preserveScroll: true,
+        onSuccess: () => (confirmingDelete.value = false),
+    });
 }
 </script>
 
@@ -170,6 +203,29 @@ function destroy() {
             </template>
         </div>
 
+        <!-- Reassign the subtree's bookings, then delete -->
+        <div v-if="confirmingDelete" class="flex flex-wrap items-center gap-2 py-1.5 pl-4">
+            <span class="text-xs text-ink/60">{{ $t('accounting.categories.reassign_prompt', { count: subtreeBookings }) }}</span>
+            <select
+                v-model="moveTo"
+                class="min-w-0 flex-1 rounded-md border-ink/20 py-1 text-sm focus:border-hort-teal focus:ring-hort-teal"
+            >
+                <option value="">{{ $t('accounting.categories.reassign_placeholder') }}</option>
+                <option v-for="o in targetOptions" :key="o.id" :value="o.id">{{ o.path }}</option>
+            </select>
+            <button
+                type="button"
+                class="rounded-lg bg-red-50 px-2.5 py-1 text-xs font-medium text-red-600 transition hover:bg-red-100 disabled:opacity-40"
+                :disabled="!moveTo"
+                @click="confirmMove"
+            >
+                {{ $t('accounting.categories.reassign_confirm') }}
+            </button>
+            <button type="button" class="rounded p-1 text-ink/40 hover:bg-ink/10" @click="confirmingDelete = false">
+                <XMarkIcon class="h-4 w-4" />
+            </button>
+        </div>
+
         <!-- Add-child input -->
         <div v-if="addingChild" class="flex items-center gap-2 py-1.5 pl-4">
             <input
@@ -196,6 +252,7 @@ function destroy() {
                 :key="child.id"
                 :node="child"
                 :depth="depth + 1"
+                :options="options"
             />
         </ul>
     </li>

@@ -1,5 +1,5 @@
 <script setup>
-import { reactive } from 'vue';
+import { reactive, computed } from 'vue';
 import { Head, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import CategoryNode from './Partials/CategoryNode.vue';
@@ -10,6 +10,19 @@ const props = defineProps({
     // { income: [...tree], expense: [...tree] }
     trees: { type: Object, required: true },
 });
+
+// Flat "Parent › Child" options per direction — the reassignment targets when a
+// category being deleted still carries bookings.
+function flatten(nodes, prefix = '') {
+    return nodes.flatMap((n) => {
+        const path = prefix ? `${prefix} › ${n.name}` : n.name;
+        return [{ id: n.id, path }, ...flatten(n.children, path)];
+    });
+}
+const options = computed(() => ({
+    income: flatten(props.trees.income),
+    expense: flatten(props.trees.expense),
+}));
 
 const sections = [
     { key: 'income', accent: 'text-hort-teal-dark' },
@@ -60,6 +73,7 @@ function addRoot(direction) {
                             v-for="node in trees[section.key]"
                             :key="node.id"
                             :node="node"
+                            :options="options[section.key]"
                         />
                     </ul>
                     <p v-else class="mb-3 text-sm text-ink/40">{{ $t('accounting.categories.empty') }}</p>
