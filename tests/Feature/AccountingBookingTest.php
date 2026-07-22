@@ -325,3 +325,27 @@ it('discards a draft during review', function () {
 
     expect(Booking::find($draft->id))->toBeNull();
 });
+
+it('skips a draft, advancing the cursor to the next by (confidence, id)', function () {
+    $admin = User::factory()->admin()->create();
+    $this->actingAs($admin);
+    $first = Booking::factory()->suggested()->create(['confidence' => SuggestionConfidence::Low]);
+    $next = Booking::factory()->suggested()->create(['confidence' => SuggestionConfidence::Low]);
+
+    // Review serves the lowest (confidence, id) first; skipping advances to the next…
+    $this->patch("/accounting/bookings/{$first->id}/review", ['action' => 'skip'])
+        ->assertRedirect(route('accounting.bookings.review', ['cursor' => $next->id]));
+
+    // …and leaves both bookings untouched.
+    expect($first->refresh()->status)->toBe(BookingStatus::Suggested)
+        ->and($next->refresh()->status)->toBe(BookingStatus::Suggested);
+});
+
+it('refuses to review an already-confirmed booking', function () {
+    $admin = User::factory()->admin()->create();
+    $confirmed = Booking::factory()->create(); // factory default = confirmed
+
+    $this->actingAs($admin)
+        ->patch("/accounting/bookings/{$confirmed->id}/review", ['action' => 'confirm'])
+        ->assertNotFound();
+});

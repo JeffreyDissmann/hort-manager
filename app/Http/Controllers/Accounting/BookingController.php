@@ -20,7 +20,6 @@ use App\Support\Accounting\CategoryOptions;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -285,61 +284,23 @@ class BookingController extends Controller
         return back()->with('status', __('flash.bookings_reanalysing', ['count' => $ids->count()]));
     }
 
-    /** Validate the full form and confirm a draft (kind/sign from the category). */
+    /**
+     * Validate the full form (shared rules) and confirm a draft. The bank sign is
+     * fixed, so the chosen category's direction must match it.
+     */
     private function confirmDraft(Request $request, Booking $booking): void
     {
-        $data = $request->validate([
-            'account_id' => ['required', Rule::exists('accounting_accounts', 'id')],
-            'category_id' => ['required', Rule::exists('accounting_categories', 'id')],
-            'amount' => ['required', 'numeric', 'gt:0', 'max:99999999.99'],
-            'booking_date' => ['required', 'date'],
-            'valuta_date' => ['nullable', 'date'],
-            'purpose' => ['nullable', 'string', 'max:2000'],
-            'comment' => ['nullable', 'string', 'max:2000'],
-            'counterparty_child_id' => ['nullable', Rule::exists('children', 'id')],
-            'counterparty_user_id' => ['nullable', Rule::exists('users', 'id')],
-            'counterparty_name' => ['nullable', 'string', 'max:255'],
-        ]);
+        $data = $request->validate(BookingRequest::bookingRules());
 
-        $category = Category::findOrFail($data['category_id']);
-        // The real cash-flow sign is fixed by the bank; the category must match it.
         $expected = $booking->amount_cents >= 0 ? CategoryDirection::Income : CategoryDirection::Expense;
-
-        if ($category->direction !== $expected) {
+        if (Category::findOrFail((int) $data['category_id'])->direction !== $expected) {
             throw ValidationException::withMessages(['category_id' => __('accounting.import.wrong_direction')]);
         }
 
         $booking->update([
-            'account_id' => (int) $data['account_id'],
-            'category_id' => $category->id,
-            'kind' => BookingKind::from($category->direction->value),
-            'amount_cents' => (int) round((float) $data['amount'] * 100) * $category->direction->sign(),
-            'booking_date' => $data['booking_date'],
-            'valuta_date' => ($data['valuta_date'] ?? null) ?: $data['booking_date'],
-            'purpose' => $data['purpose'] ?? null,
-            'comment' => $data['comment'] ?? null,
-            ...$this->counterparty($data),
+            ...BookingRequest::attributesFor($data),
             'status' => BookingStatus::Confirmed,
         ]);
-    }
-
-    /**
-     * Resolve the mutually-exclusive counterparty: child (income) beats user
-     * (person expense) beats free text.
-     *
-     * @param  array<string, mixed>  $data
-     * @return array{counterparty_child_id: ?int, counterparty_user_id: ?int, counterparty_name: ?string}
-     */
-    private function counterparty(array $data): array
-    {
-        $childId = ! empty($data['counterparty_child_id']) ? (int) $data['counterparty_child_id'] : null;
-        $userId = ! $childId && ! empty($data['counterparty_user_id']) ? (int) $data['counterparty_user_id'] : null;
-
-        return [
-            'counterparty_child_id' => $childId,
-            'counterparty_user_id' => $userId,
-            'counterparty_name' => ($childId || $userId) ? null : ($data['counterparty_name'] ?? null),
-        ];
     }
 
     /** The next AI-ready booking after the given one in (confidence, id) order. */
