@@ -55,3 +55,22 @@ it('defaults to the highest year and offers every year in the min–max range', 
             ->where('year', 2026)
             ->where('years', [2026, 2025, 2024]));
 });
+
+it('rolls a grandchild category amount up into its parent and root rows', function () {
+    $admin = User::factory()->admin()->create();
+    $root = Category::factory()->expense()->create(['name' => 'Konsum', 'position' => 1]);
+    $child = Category::factory()->childOf($root)->create(['name' => 'Lebensmittel', 'position' => 1]);
+    $grand = Category::factory()->childOf($child)->create(['name' => 'Bio', 'position' => 1]);
+
+    Booking::factory()->expense()->create(['category_id' => $grand->id, 'amount_cents' => -5000, 'booking_date' => '2026-03-10']);
+
+    $this->actingAs($admin)
+        ->get('/accounting/reports?year=2026')
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('expenseRows.0.name', 'Konsum')        // root — rolled up
+            ->where('expenseRows.0.total', -5000)
+            ->where('expenseRows.1.name', 'Lebensmittel')   // child — rolled up
+            ->where('expenseRows.1.total', -5000)
+            ->where('expenseRows.2.name', 'Bio')            // the grandchild itself
+            ->where('expenseRows.2.total', -5000));
+});

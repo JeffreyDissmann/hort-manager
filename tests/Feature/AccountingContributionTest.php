@@ -129,3 +129,22 @@ it('links the bookings list to the misassigned income', function () {
             ->has('bookings.data', 1)
             ->where('bookings.data.0.id', $unlinked->id));
 });
+
+it('rolls a grandchild-category contribution up into its top-level stream', function () {
+    $admin = User::factory()->admin()->create();
+    $group = Category::factory()->income()->create(['name' => 'Beiträge', 'position' => 1]);
+    $stream = Category::factory()->childOf($group)->create(['name' => 'Elternbeitrag', 'position' => 1]);
+    $grand = Category::factory()->childOf($stream)->create(['name' => '2026', 'position' => 1]);
+    $emma = Child::factory()->create(['name' => 'Emma']);
+
+    // Booked on the grandchild category — must still count under its stream.
+    Booking::factory()->create(['category_id' => $grand->id, 'counterparty_child_id' => $emma->id, 'amount_cents' => 13000, 'booking_date' => '2026-01-10']);
+
+    $this->actingAs($admin)
+        ->get('/accounting/contributions?year=2026')
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('rows.0.total', 13000)
+            ->has('rows.0.breakdown', 1)
+            ->where('rows.0.breakdown.0.name', 'Elternbeitrag')
+            ->where('rows.0.breakdown.0.total', 13000));
+});

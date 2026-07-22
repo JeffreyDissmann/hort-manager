@@ -43,16 +43,16 @@ class ContributionController extends Controller
             : (int) ($roots->first()->id ?? 0);
         $root = $rootId ? Category::find($rootId) : null;
 
-        // Its sub-categories, in tree order, drive the per-child breakdown.
-        $streams = $root
-            ? $root->children()->orderBy('position')->orderBy('name')->get(['id', 'name'])
-            : collect();
-        $scopeIds = $root ? $streams->pluck('id')->push($root->id) : collect();
+        // Direct children drive the per-child breakdown (in tree order). Every deeper
+        // category is mapped back to its top-level stream so a (grand-)child booking
+        // rolls up there — and the scope covers the whole subtree, matching the
+        // full-subtree deep-link to the bookings list.
+        [$streams, $streamOf, $scopeIds] = $this->scope($root);
 
         $years = $this->availableYears($scopeIds);
         $year = $request->integer('year') ?: (int) $years->first();
 
-        // Child-attributed contributions → the per-child matrix, split by category so
+        // Child-attributed contributions → the per-child matrix, split by stream so
         // each child shows which streams they paid (and, as gaps, which they didn't).
         $attributed = $this->contributions($scopeIds)
             ->whereNotNull('counterparty_child_id')
@@ -60,14 +60,21 @@ class ContributionController extends Controller
             ->get(['counterparty_child_id', 'category_id', 'amount_cents', 'booking_date']);
 
         $perChild = [];   // [child][month] total
-        $perCategory = []; // [child][category][month]
+        $perCategory = []; // [child][stream][month]
         $monthTotals = array_fill(1, 12, 0);
 
         foreach ($attributed as $booking) {
+            // Roll the booking's category up to its top-level stream (skip anything
+            // booked directly on the group root — it has no specific stream).
+            $stream = $streamOf[$booking->category_id] ?? null;
+            if ($stream === null) {
+                continue;
+            }
+
             $month = $booking->booking_date->month;
             $child = $booking->counterparty_child_id;
             $perChild[$child][$month] = ($perChild[$child][$month] ?? 0) + $booking->amount_cents;
-            $perCategory[$child][$booking->category_id][$month] = ($perCategory[$child][$booking->category_id][$month] ?? 0) + $booking->amount_cents;
+            $perCategory[$child][$stream][$month] = ($perCategory[$child][$stream][$month] ?? 0) + $booking->amount_cents;
             $monthTotals[$month] += $booking->amount_cents;
         }
 
@@ -117,6 +124,55 @@ class ContributionController extends Controller
             // Up to which month a missing payment is meaningful (a blank future month isn't).
             'pastMonths' => $year < $now->year ? 12 : ($year === $now->year ? $now->month : 0),
         ]);
+    }
+
+    /**
+     * Resolve the selected group into: its direct children (the streams, in tree
+     * order), a map of every subtree category id → its top-level stream id, and the
+     * full set of in-scope category ids (all descendants + the root itself).
+     *
+     * @return array{0: Collection<int, Category>, 1: array<int, int>, 2: Collection<int, int>}
+     */
+    private function scope(?Category $root): array
+    {
+        if (! $root) {
+            return [collect(), [], collect()];
+        }
+
+        $childrenByParent = Category::query()->get(['id', 'parent_id'])->groupBy('parent_id');
+        $streams = $root->children()->orderBy('position')->orderBy('name')->get(['id', 'name']);
+
+        $streamOf = [];
+        foreach ($streams as $stream) {
+            foreach ($this->descendantsInclusive($stream->id, $childrenByParent) as $id) {
+                $streamOf[$id] = $stream->id;
+            }
+        }
+
+        return [$streams, $streamOf, collect(array_keys($streamOf))->push($root->id)];
+    }
+
+    /**
+     * A category id plus every descendant id beneath it.
+     *
+     * @param  Collection<int|null, Collection<int, Category>>  $childrenByParent
+     * @return list<int>
+     */
+    private function descendantsInclusive(int $rootId, Collection $childrenByParent): array
+    {
+        $ids = [];
+        $stack = [$rootId];
+
+        while ($stack !== []) {
+            $id = array_pop($stack);
+            $ids[] = $id;
+
+            foreach ($childrenByParent->get($id, collect()) as $child) {
+                $stack[] = $child->id;
+            }
+        }
+
+        return $ids;
     }
 
     /**
