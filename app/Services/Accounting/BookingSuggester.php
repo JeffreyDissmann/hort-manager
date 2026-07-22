@@ -38,7 +38,8 @@ class BookingSuggester
 
         $children = Child::with('guardians:id,name')->orderBy('name')->get();
         $childNames = $children->pluck('name', 'id');
-        $userNames = User::pluck('name', 'id');
+        $users = User::orderBy('name')->get(['id', 'name']);
+        $userNames = $users->pluck('name', 'id');
         $childIds = $childNames->keys()->flip();
         $userIds = $userNames->keys()->flip();
 
@@ -52,7 +53,7 @@ class BookingSuggester
             $response = (new BookingCategorizer(
                 categories: $categories,
                 children: $children->map($this->childContext(...))->all(),
-                users: User::orderBy('name')->get(['id', 'name'])->toArray(),
+                users: $users->toArray(),
             ))->prompt(
                 json_encode($row, JSON_UNESCAPED_UNICODE),
                 provider: Lab::Ollama,

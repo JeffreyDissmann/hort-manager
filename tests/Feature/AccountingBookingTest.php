@@ -221,6 +221,21 @@ it('bulk-confirms all unconfirmed bookings matching the filter', function () {
         ->and($alreadyConfirmed->refresh()->status)->toBe(BookingStatus::Confirmed);
 });
 
+it('bulk-confirming all honours the active filter, leaving non-matching bookings alone', function () {
+    $admin = User::factory()->admin()->create();
+    $this->actingAs($admin);
+    $accountA = Account::factory()->create();
+    $accountB = Account::factory()->create();
+    $a = Booking::factory()->suggested()->create(['account_id' => $accountA->id]);
+    $b = Booking::factory()->suggested()->create(['account_id' => $accountB->id]);
+
+    $this->post('/accounting/bookings/confirm', ['all' => true, 'filters' => ['account' => $accountA->id]])
+        ->assertRedirect();
+
+    expect($a->refresh()->status)->toBe(BookingStatus::Confirmed)
+        ->and($b->refresh()->status)->toBe(BookingStatus::Suggested);
+});
+
 it('deletes a booking', function () {
     $admin = User::factory()->admin()->create();
     $this->actingAs($admin);

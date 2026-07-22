@@ -216,13 +216,24 @@ it('never overwrites a booking confirmed while the AI was running', function () 
 
     // The job captured the booking while it was a draft…
     $stale = $booking->fresh();
-    // …but a reviewer confirmed it (with a category) before the AI returned.
-    $booking->update(['status' => BookingStatus::Confirmed, 'category_id' => $keep->id]);
+    // …but a reviewer confirmed it (with a category + counterparty) before the AI returned.
+    $booking->update([
+        'status' => BookingStatus::Confirmed,
+        'category_id' => $keep->id,
+        'counterparty_name' => 'Kept Co',
+        'confidence' => SuggestionConfidence::High,
+    ]);
 
-    BookingCategorizer::fake([['category_id' => $other->id]]);
+    // The stale AI result tries to write a different category AND counterparty/confidence.
+    $emma = Child::factory()->create();
+    BookingCategorizer::fake([['category_id' => $other->id, 'counterparty_child_id' => $emma->id, 'counterparty_name' => 'Stale', 'confidence' => 'low']]);
     app(BookingSuggester::class)->suggest($stale);
 
-    // The confirmed booking + its category are untouched.
-    expect($booking->refresh()->status)->toBe(BookingStatus::Confirmed)
-        ->and($booking->category_id)->toBe($keep->id);
+    // Nothing the conditional update writes may touch the confirmed booking.
+    $booking->refresh();
+    expect($booking->status)->toBe(BookingStatus::Confirmed)
+        ->and($booking->category_id)->toBe($keep->id)
+        ->and($booking->counterparty_name)->toBe('Kept Co')
+        ->and($booking->counterparty_child_id)->toBeNull()
+        ->and($booking->confidence)->toBe(SuggestionConfidence::High);
 });

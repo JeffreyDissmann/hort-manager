@@ -24,7 +24,7 @@ class CsvStatementParser implements BankStatementParser
         $lines = preg_split('/\r\n|\r|\n/', trim($text)) ?: [];
 
         $rows = [];
-        foreach ($lines as $index => $line) {
+        foreach ($lines as $line) {
             if (trim($line) === '') {
                 continue;
             }
@@ -34,15 +34,18 @@ class CsvStatementParser implements BankStatementParser
                 continue;
             }
 
-            // Skip the header row.
-            if ($index === 0 && ! $this->looksLikeDate($parts[1])) {
+            // Only rows whose date column holds a real date are transactions — this
+            // skips the header and any preamble/summary noise without ever handing a
+            // malformed value to the (strict) date parser.
+            $bookingDate = trim($parts[1]);
+            if (! $this->looksLikeDate($bookingDate)) {
                 continue;
             }
 
             $currency = trim(array_pop($parts));
             $amount = trim(array_pop($parts));
-            $bookingDate = trim($parts[1]);
-            $valutaDate = trim($parts[2]);
+            $valutaRaw = trim($parts[2]);
+            $valutaDate = $this->looksLikeDate($valutaRaw) ? $valutaRaw : $bookingDate;
             $purpose = trim(implode(';', array_slice($parts, 3)));
 
             $rows[] = [

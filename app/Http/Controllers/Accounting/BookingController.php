@@ -31,7 +31,8 @@ class BookingController extends Controller
     public function index(Request $request): Response
     {
         $filters = $request->only(['account', 'category', 'kind', 'status', 'from', 'to', 'search', 'unassigned']);
-        $paths = collect(CategoryOptions::flat(onlyActive: false))->keyBy('id');
+        $categories = CategoryOptions::flat(onlyActive: false);
+        $paths = collect($categories)->keyBy('id');
 
         $bookings = Booking::query()
             ->with([
@@ -95,7 +96,7 @@ class BookingController extends Controller
                 ->tap(fn ($q) => $this->applyFilters($q, $filters))->count(),
             'filterOptions' => [
                 'accounts' => Account::orderBy('name')->get(['id', 'name']),
-                'categories' => CategoryOptions::flat(onlyActive: false),
+                'categories' => $categories,
                 'kinds' => $this->enumOptions(BookingKind::cases()),
                 // Plain statuses drive the row badges; the composite list drives the filter.
                 'statuses' => $this->enumOptions(BookingStatus::cases()),
@@ -274,14 +275,14 @@ class BookingController extends Controller
             return back()->with('status', __('flash.ai_disabled'));
         }
 
-        $bookings = Booking::needsReview()->get();
+        $ids = Booking::needsReview()->pluck('id');
+        Booking::whereIn('id', $ids)->update(['status' => BookingStatus::Draft]);
 
-        foreach ($bookings as $booking) {
-            $booking->update(['status' => BookingStatus::Draft]);
-            SuggestBookingCategory::dispatch($booking->id);
+        foreach ($ids as $id) {
+            SuggestBookingCategory::dispatch($id);
         }
 
-        return back()->with('status', __('flash.bookings_reanalysing', ['count' => $bookings->count()]));
+        return back()->with('status', __('flash.bookings_reanalysing', ['count' => $ids->count()]));
     }
 
     /** Validate the full form and confirm a draft (kind/sign from the category). */

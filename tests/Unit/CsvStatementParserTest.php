@@ -58,3 +58,23 @@ it('also reads a plain UTF-8 file', function () {
         ->and($rows[0]['amount_cents'])->toBe(1234)
         ->and($rows[0]['purpose'])->toBe('Test Ümlaut');
 });
+
+it('skips preamble/summary lines with a non-date instead of crashing', function () {
+    $csv = "Kontonummer;Buchungsdatum;Valuta;Verwendungszweck;Betrag;Waehrung\r\n"
+        ."Kontostand;Vortrag;;kein Datum hier;123,45;EUR\r\n" // 6 cols but no date → skipped
+        ."12345;01.04.2026;01.04.2026;REWE SAGT DANKE;-50,00;EUR\r\n";
+
+    $rows = (new CsvStatementParser)->parse(utf16le($csv));
+
+    expect($rows)->toHaveCount(1)
+        ->and($rows[0]['booking_date'])->toBe('2026-04-01')
+        ->and($rows[0]['amount_cents'])->toBe(-5000);
+});
+
+it('falls back to the booking date when the valuta column is malformed', function () {
+    $rows = (new CsvStatementParser)->parse(utf16le("12345;02.04.2026;--;Miete;-100,00;EUR\r\n"));
+
+    expect($rows)->toHaveCount(1)
+        ->and($rows[0]['booking_date'])->toBe('2026-04-02')
+        ->and($rows[0]['valuta_date'])->toBe('2026-04-02');
+});
