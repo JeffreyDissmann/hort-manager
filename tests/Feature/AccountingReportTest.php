@@ -74,3 +74,29 @@ it('rolls a grandchild category amount up into its parent and root rows', functi
             ->where('expenseRows.2.name', 'Bio')            // the grandchild itself
             ->where('expenseRows.2.total', -5000));
 });
+
+it('forbids non-admins from exporting the report', function () {
+    $this->actingAs(User::factory()->staff()->create())
+        ->get('/accounting/reports/export?year=2026&format=csv')
+        ->assertForbidden();
+});
+
+it('exports the report as a CSV download', function () {
+    $admin = User::factory()->admin()->create();
+    $income = Category::factory()->income()->create(['name' => 'Essensgeld']);
+    Booking::factory()->create(['category_id' => $income->id, 'amount_cents' => 5000, 'booking_date' => '2026-01-10']);
+
+    $this->actingAs($admin)
+        ->get('/accounting/reports/export?year=2026&format=csv')
+        ->assertOk()
+        ->assertDownload('report-2026.csv');
+});
+
+it('exports the report as an XLSX download', function () {
+    $admin = User::factory()->admin()->create();
+
+    $this->actingAs($admin)
+        ->get('/accounting/reports/export?year=2026&format=xlsx')
+        ->assertOk()
+        ->assertDownload('report-2026.xlsx');
+});

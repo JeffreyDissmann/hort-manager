@@ -2,9 +2,9 @@
 import { computed, ref, watch } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { ChevronRightIcon } from '@heroicons/vue/24/outline';
+import { ChevronRightIcon, ArrowDownTrayIcon } from '@heroicons/vue/24/outline';
 import { formatEuro } from '@/money';
-import { index as reportsIndex } from '@/routes/accounting/reports';
+import { index as reportsIndex, download as reportsExport } from '@/routes/accounting/reports';
 import { index as bookingsIndex } from '@/routes/accounting/bookings';
 
 const props = defineProps({
@@ -75,22 +75,38 @@ function drilldown({ category, kind, month }) {
 
     <AuthenticatedLayout>
         <template #header>
-            <div class="flex items-center justify-between gap-3">
+            <div class="flex flex-wrap items-center justify-between gap-3">
                 <div>
                     <p class="text-xs font-semibold uppercase tracking-wide text-ink/40">{{ $t('accounting.title') }}</p>
                     <h2 class="text-xl font-semibold text-ink">{{ $t('accounting.reports.title') }}</h2>
                 </div>
-                <label class="flex items-center gap-2 text-sm text-ink/60">
-                    {{ $t('accounting.reports.year') }}
-                    <select
-                        :value="year"
-                        data-testid="report-year"
-                        class="rounded-md border-ink/20 text-sm focus:border-hort-teal focus:ring-hort-teal"
-                        @change="changeYear"
-                    >
-                        <option v-for="y in years" :key="y" :value="y">{{ y }}</option>
-                    </select>
-                </label>
+                <div class="flex flex-wrap items-center gap-3">
+                    <div v-if="hasData" class="flex items-center gap-1">
+                        <a
+                            :href="reportsExport({ query: { year, format: 'csv' } }).url"
+                            class="flex items-center gap-1 rounded-lg bg-ink/5 px-3 py-2 text-sm font-medium text-ink transition hover:bg-ink/10"
+                        >
+                            <ArrowDownTrayIcon class="h-4 w-4" /> CSV
+                        </a>
+                        <a
+                            :href="reportsExport({ query: { year, format: 'xlsx' } }).url"
+                            class="flex items-center gap-1 rounded-lg bg-ink/5 px-3 py-2 text-sm font-medium text-ink transition hover:bg-ink/10"
+                        >
+                            <ArrowDownTrayIcon class="h-4 w-4" /> Excel
+                        </a>
+                    </div>
+                    <label class="flex items-center gap-2 text-sm text-ink/60">
+                        {{ $t('accounting.reports.year') }}
+                        <select
+                            :value="year"
+                            data-testid="report-year"
+                            class="rounded-md border-ink/20 text-sm focus:border-hort-teal focus:ring-hort-teal"
+                            @change="changeYear"
+                        >
+                            <option v-for="y in years" :key="y" :value="y">{{ y }}</option>
+                        </select>
+                    </label>
+                </div>
             </div>
         </template>
 

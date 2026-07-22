@@ -170,6 +170,7 @@ Route::middleware('auth')->group(function () {
 
         // Auswertung — month × category pivot of the confirmed ledger.
         Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
+        Route::get('reports/export', [ReportController::class, 'export'])->name('reports.download');
         // Einnahmen je Kind — child × month matrix of contributions.
         Route::get('contributions', [ContributionController::class, 'index'])->name('contributions.index');
     });
