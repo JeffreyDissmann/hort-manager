@@ -26,6 +26,7 @@ class Import extends Model
         'row_count',
         'imported_count',
         'duplicate_count',
+        'skipped_rows',
     ];
 
     protected function casts(): array
@@ -34,6 +35,7 @@ class Import extends Model
             'row_count' => 'integer',
             'imported_count' => 'integer',
             'duplicate_count' => 'integer',
+            'skipped_rows' => 'array',
         ];
     }
 

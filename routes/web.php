@@ -165,6 +165,8 @@ Route::middleware('auth')->group(function () {
         Route::get('import', [ImportController::class, 'create'])->name('import.create');
         Route::post('import', [ImportController::class, 'store'])->name('import.store');
         Route::get('import/{import}', [ImportController::class, 'show'])->name('import.show');
+        // Import genuine duplicates the user confirmed from the summary's skipped list.
+        Route::post('import/{import}/confirm-skipped', [ImportController::class, 'confirmSkipped'])->name('import.confirm-skipped');
 
         // Auswertung — month × category pivot of the confirmed ledger.
         Route::get('reports', [ReportController::class, 'index'])->name('reports.index');

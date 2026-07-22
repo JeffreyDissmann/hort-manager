@@ -176,6 +176,9 @@ return [
         'analysing' => 'KI analysiert …',
         'analysed_done' => 'Analyse abgeschlossen',
         'waiting_ai' => 'Warte auf die erste KI-Analyse …',
+        'skipped_title' => 'Übersprungene Duplikate',
+        'skipped_intro' => 'Diese Zeilen sahen wie bereits vorhandene Buchungen aus. Falls es echte, separate Buchungen sind, hier auswählen und importieren.',
+        'import_anyway' => 'Ausgewählte importieren',
     ],
 
     'review' => [

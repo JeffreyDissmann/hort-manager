@@ -51,4 +51,5 @@ return [
     'import_done' => ':imported Buchungen importiert, :duplicates Duplikate übersprungen. Bitte prüfen.',
     'import_saved' => 'Gespeichert. Es sind noch Entwürfe zu prüfen.',
     'import_complete' => 'Alle importierten Buchungen bestätigt.',
+    'import_skipped_added' => ':count Buchung(en) nachträglich importiert.',
 ];

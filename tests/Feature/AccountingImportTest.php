@@ -84,6 +84,41 @@ it('skips duplicate rows on re-import', function () {
         ->and(Import::latest('id')->first()->duplicate_count)->toBe(2);
 });
 
+it('surfaces the skipped duplicate rows on the summary for confirmation', function () {
+    $admin = User::factory()->admin()->create();
+    $account = Account::factory()->create();
+    $this->actingAs($admin);
+
+    $this->post('/accounting/import', ['account_id' => $account->id, 'file' => uploadStatement()]);
+    $second = $this->post('/accounting/import', ['account_id' => $account->id, 'file' => uploadStatement()]);
+
+    $import = Import::latest('id')->first();
+    expect($import->skipped_rows)->toHaveCount(2); // both rows were skipped as repeats
+
+    $this->get("/accounting/import/{$import->id}")
+        ->assertInertia(fn (AssertableInertia $page) => $page->has('skipped', 2));
+});
+
+it('imports a confirmed skipped row and removes it from the skipped list', function () {
+    $admin = User::factory()->admin()->create();
+    $account = Account::factory()->create();
+    $this->actingAs($admin);
+
+    $this->post('/accounting/import', ['account_id' => $account->id, 'file' => uploadStatement()]);
+    $this->post('/accounting/import', ['account_id' => $account->id, 'file' => uploadStatement()]);
+    $import = Import::latest('id')->first();
+
+    // Confirm the first skipped row is genuine → it's imported.
+    $this->post("/accounting/import/{$import->id}/confirm-skipped", ['rows' => [0]])
+        ->assertRedirect();
+
+    $import->refresh();
+    expect(Booking::where('account_id', $account->id)->count())->toBe(3) // 2 + 1 confirmed
+        ->and($import->skipped_rows)->toHaveCount(1)                     // one still pending
+        ->and($import->imported_count)->toBe(1)
+        ->and($import->duplicate_count)->toBe(1);
+});
+
 it('shows a post-upload summary with the draft total', function () {
     $admin = User::factory()->admin()->create();
     $account = Account::factory()->create();

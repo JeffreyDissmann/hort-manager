@@ -176,6 +176,9 @@ return [
         'analysing' => 'AI analysing …',
         'analysed_done' => 'Analysis complete',
         'waiting_ai' => 'Waiting for the first AI analysis …',
+        'skipped_title' => 'Skipped duplicates',
+        'skipped_intro' => 'These rows looked like existing bookings. If they are genuine, separate bookings, select them here and import.',
+        'import_anyway' => 'Import selected',
     ],
 
     'review' => [

@@ -2,15 +2,24 @@
 import { computed, watch } from 'vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
-import { Head, Link, usePoll } from '@inertiajs/vue3';
+import { Head, Link, useForm, usePoll } from '@inertiajs/vue3';
 import { review as bookingsReview, index as bookingsIndex } from '@/routes/accounting/bookings';
+import { confirmSkipped as importConfirmSkipped } from '@/routes/accounting/import';
 import { CheckCircleIcon, ArrowPathIcon } from '@heroicons/vue/24/outline';
+import { formatEuro } from '@/money';
 
 const props = defineProps({
     batch: { type: Object, required: true },
+    skipped: { type: Array, default: () => [] },
     draftTotal: { type: Number, required: true },
     progress: { type: Object, required: true }, // { total, analyzed, pending }
 });
+
+// Duplicate rows the user can confirm as genuine and import anyway.
+const skipForm = useForm({ rows: [] });
+function importSkipped() {
+    skipForm.post(importConfirmSkipped(props.batch.id).url, { preserveScroll: true, onSuccess: () => (skipForm.rows = []) });
+}
 
 // Poll the AI progress until every draft has been analysed.
 const { stop } = usePoll(2500, { only: ['progress', 'draftTotal'] });
@@ -79,6 +88,37 @@ const percent = computed(() =>
                     <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-ink/10">
                         <div class="h-full rounded-full bg-hort-teal-dark transition-all duration-500" :style="{ width: percent + '%' }" />
                     </div>
+                </div>
+            </div>
+
+            <!-- Skipped duplicates — surface them so genuine ones can be imported. -->
+            <div v-if="skipped.length" class="rounded-2xl bg-surface p-5 shadow-sm">
+                <h3 class="text-sm font-semibold text-ink">{{ $t('accounting.import.skipped_title') }}</h3>
+                <p class="mt-0.5 text-xs text-ink/50">{{ $t('accounting.import.skipped_intro') }}</p>
+
+                <ul class="mt-3 divide-y divide-ink/5">
+                    <li v-for="row in skipped" :key="row.index" class="flex items-center gap-3 py-2 text-sm">
+                        <input
+                            :id="'skip-' + row.index"
+                            v-model="skipForm.rows"
+                            type="checkbox"
+                            :value="row.index"
+                            class="rounded border-ink/20 text-hort-teal-dark focus:ring-hort-teal"
+                        />
+                        <label :for="'skip-' + row.index" class="flex min-w-0 flex-1 items-center gap-3">
+                            <span class="whitespace-nowrap tabular-nums text-ink/60">{{ row.booking_date }}</span>
+                            <span class="min-w-0 flex-1 truncate text-ink/80">{{ row.purpose }}</span>
+                            <span class="whitespace-nowrap font-semibold tabular-nums" :class="row.amount_cents < 0 ? 'text-red-600' : 'text-hort-teal-dark'">
+                                {{ formatEuro(row.amount_cents) }}
+                            </span>
+                        </label>
+                    </li>
+                </ul>
+
+                <div class="mt-3 flex justify-end">
+                    <PrimaryButton :disabled="!skipForm.rows.length || skipForm.processing" @click="importSkipped">
+                        {{ $t('accounting.import.import_anyway') }}
+                    </PrimaryButton>
                 </div>
             </div>
 

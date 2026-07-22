@@ -14,6 +14,8 @@ use App\Models\Accounting\Booking;
 use App\Models\Accounting\Import;
 use App\Support\Accounting\BankStatementParser;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -46,45 +48,99 @@ class ImportController extends Controller
             'row_count' => count($rows),
         ]);
 
-        $duplicates = 0;
         $seen = [];
+        $skipped = [];
         $drafts = collect();
 
         foreach ($rows as $row) {
             $hash = $this->hashFor($account->id, $row);
 
+            // Looks like a repeat — keep the row so the user can decide it's genuine.
             if (isset($existing[$hash]) || isset($seen[$hash])) {
-                $duplicates++;
+                $skipped[] = $row;
 
                 continue;
             }
             $seen[$hash] = true;
 
-            $drafts->push(Booking::create([
-                'account_id' => $account->id,
-                'import_id' => $import->id,
-                'category_id' => null,
-                'kind' => $row['amount_cents'] >= 0 ? BookingKind::Income : BookingKind::Expense,
-                'status' => BookingStatus::Draft,
-                'amount_cents' => $row['amount_cents'],
-                'currency' => $row['currency'],
-                'booking_date' => $row['booking_date'],
-                'valuta_date' => $row['valuta_date'],
-                'purpose' => $row['purpose'],
-                'import_hash' => $hash,
-            ]));
+            $drafts->push($this->createDraft($account, $import, $row, $hash));
         }
 
-        $import->update(['imported_count' => $drafts->count(), 'duplicate_count' => $duplicates]);
+        $import->update([
+            'imported_count' => $drafts->count(),
+            'duplicate_count' => count($skipped),
+            'skipped_rows' => $skipped,
+        ]);
 
-        // Queue the AI pass: one job per draft, globally serialized (one Ollama call
-        // at a time). Drafts flip to "suggested" as each job completes. Disabled in
-        // tests / when Ollama is off.
+        $this->queueSuggestions($drafts);
+
+        return redirect()->route('accounting.import.show', $import);
+    }
+
+    /**
+     * Import the duplicate rows the user has confirmed are genuine (by their index in
+     * the import's skipped list), removing them from that list.
+     */
+    public function confirmSkipped(Request $request, Import $import): RedirectResponse
+    {
+        $skipped = $import->skipped_rows ?? [];
+
+        $selected = collect($request->validate([
+            'rows' => ['array'],
+            'rows.*' => ['integer'],
+        ])['rows'] ?? [])->unique()->filter(fn (int $i): bool => isset($skipped[$i]));
+
+        if ($selected->isEmpty()) {
+            return back();
+        }
+
+        $account = $import->account;
+        $created = $selected->map(fn (int $i): Booking => $this->createDraft($account, $import, $skipped[$i]));
+
+        $import->update([
+            'skipped_rows' => collect($skipped)->except($selected->all())->values()->all(),
+            'imported_count' => $import->imported_count + $created->count(),
+            'duplicate_count' => max(0, $import->duplicate_count - $created->count()),
+        ]);
+
+        $this->queueSuggestions($created);
+
+        return back()->with('status', __('flash.import_skipped_added', ['count' => $created->count()]));
+    }
+
+    /**
+     * Create one draft booking from a parsed statement row.
+     *
+     * @param  array{booking_date:string, valuta_date:string, purpose:string, amount_cents:int, currency:string}  $row
+     */
+    private function createDraft(Account $account, Import $import, array $row, ?string $hash = null): Booking
+    {
+        return Booking::create([
+            'account_id' => $account->id,
+            'import_id' => $import->id,
+            'category_id' => null,
+            'kind' => $row['amount_cents'] >= 0 ? BookingKind::Income : BookingKind::Expense,
+            'status' => BookingStatus::Draft,
+            'amount_cents' => $row['amount_cents'],
+            'currency' => $row['currency'],
+            'booking_date' => $row['booking_date'],
+            'valuta_date' => $row['valuta_date'],
+            'purpose' => $row['purpose'],
+            'import_hash' => $hash ?? $this->hashFor($account->id, $row),
+        ]);
+    }
+
+    /**
+     * Queue the AI pass: one job per draft, globally serialized (one Ollama call at a
+     * time). Drafts flip to "suggested" as each completes. Off in tests / when Ollama is off.
+     *
+     * @param  Collection<int, Booking>  $drafts
+     */
+    private function queueSuggestions(Collection $drafts): void
+    {
         if (config('accounting.ai_suggestions')) {
             $drafts->each(fn (Booking $b) => SuggestBookingCategory::dispatch($b->id));
         }
-
-        return redirect()->route('accounting.import.show', $import);
     }
 
     /** Post-upload summary: what was imported, skipped, and AI-analysis progress. */
@@ -92,11 +148,21 @@ class ImportController extends Controller
     {
         return Inertia::render('Accounting/Import/Summary', [
             'batch' => [
+                'id' => $import->id,
                 'account' => $import->account?->name,
                 'filename' => $import->filename,
                 'imported_count' => $import->imported_count,
                 'duplicate_count' => $import->duplicate_count,
             ],
+            // The skipped duplicate rows, surfaced so genuine ones can be imported.
+            'skipped' => collect($import->skipped_rows ?? [])
+                ->map(fn (array $row, int $i): array => [
+                    'index' => $i,
+                    'booking_date' => $row['booking_date'],
+                    'purpose' => $row['purpose'],
+                    'amount_cents' => $row['amount_cents'],
+                ])
+                ->values(),
             // Total bookings awaiting review across the whole ledger (not just this file).
             'draftTotal' => Booking::needsReview()->count(),
             // Live AI progress for this import (polled by the summary page).
