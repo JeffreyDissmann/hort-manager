@@ -9,7 +9,6 @@ use App\Enums\BookingStatus;
 use App\Enums\CategoryDirection;
 use App\Http\Controllers\Controller;
 use App\Models\Accounting\Booking;
-use App\Models\Accounting\Category;
 use App\Support\Accounting\CategoryOptions;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
@@ -41,7 +40,7 @@ class ReportController extends Controller
 
         $flat = collect(CategoryOptions::flat(onlyActive: false));
         $direction = $flat->pluck('direction', 'id');
-        $parent = Category::pluck('parent_id', 'id');
+        $parent = $flat->pluck('parent_id', 'id');
 
         // Bucket each booking into its month, rolling the amount up into its category
         // and every ancestor so a parent row reflects its whole subtree.
