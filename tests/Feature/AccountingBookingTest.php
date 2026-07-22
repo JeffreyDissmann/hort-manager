@@ -349,3 +349,19 @@ it('refuses to review an already-confirmed booking', function () {
         ->patch("/accounting/bookings/{$confirmed->id}/review", ['action' => 'confirm'])
         ->assertNotFound();
 });
+
+it('filters by kind, confirmed status and a month range (report drill-down)', function () {
+    $admin = User::factory()->admin()->create();
+    $this->actingAs($admin);
+    $income = Category::factory()->income()->create();
+    $expense = Category::factory()->expense()->create();
+
+    Booking::factory()->create(['category_id' => $income->id, 'booking_date' => '2026-01-10']);   // confirmed income, Jan
+    Booking::factory()->create(['category_id' => $income->id, 'booking_date' => '2026-02-10']);   // confirmed income, Feb
+    Booking::factory()->expense()->create(['category_id' => $expense->id, 'booking_date' => '2026-01-15']); // confirmed expense, Jan
+    Booking::factory()->suggested()->create(['category_id' => $income->id, 'booking_date' => '2026-01-20']); // unconfirmed, Jan
+
+    // "Einnahmen · Januar" drill-down → only the one confirmed income booking.
+    $this->get('/accounting/bookings?kind=income&status=confirmed&from=2026-01-01&to=2026-01-31')
+        ->assertInertia(fn (AssertableInertia $page) => $page->has('bookings.data', 1));
+});
