@@ -20,6 +20,7 @@ use App\Support\Accounting\CategoryOptions;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -27,6 +28,9 @@ use Inertia\Response;
 /** Admin-only list + manual entry of ledger bookings. */
 class BookingController extends Controller
 {
+    /** Category id → its child rows, memoised per request (applyFilters runs twice). */
+    private ?Collection $childrenByParent = null;
+
     public function index(Request $request): Response
     {
         $filters = $request->only(['account', 'category', 'kind', 'status', 'from', 'to', 'search', 'unassigned']);
@@ -385,7 +389,7 @@ class BookingController extends Controller
      */
     private function categorySubtreeIds(int $rootId): array
     {
-        $childrenByParent = Category::query()
+        $childrenByParent = $this->childrenByParent ??= Category::query()
             ->get(['id', 'parent_id'])
             ->groupBy('parent_id');
 
