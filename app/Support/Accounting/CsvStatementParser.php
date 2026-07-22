@@ -96,9 +96,14 @@ class CsvStatementParser implements BankStatementParser
         return (int) round((float) $normalized * 100);
     }
 
-    /** Collapse the runs of whitespace the export scatters through the purpose. */
+    /**
+     * Clean the purpose: collapse the whitespace runs the export scatters through it,
+     * and drop the leading empty columns some banks pad it with (they arrive as „;;text").
+     */
     private function tidy(string $value): string
     {
-        return trim((string) preg_replace('/\s+/u', ' ', $value));
+        $value = trim((string) preg_replace('/\s+/u', ' ', $value));
+
+        return ltrim($value, '; ');
     }
 }

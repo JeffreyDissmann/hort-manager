@@ -78,3 +78,10 @@ it('falls back to the booking date when the valuta column is malformed', functio
         ->and($rows[0]['booking_date'])->toBe('2026-04-02')
         ->and($rows[0]['valuta_date'])->toBe('2026-04-02');
 });
+
+it('drops the leading empty columns the bank pads the purpose with', function () {
+    // Two empty columns between Valuta and the real Verwendungszweck → „;;text".
+    $rows = (new CsvStatementParser)->parse(utf16le("12345;06.04.2026;06.04.2026;;;DAUERAUFTRAG Miete;-800,00;EUR\r\n"));
+
+    expect($rows[0]['purpose'])->toBe('DAUERAUFTRAG Miete');
+});
