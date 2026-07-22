@@ -118,6 +118,7 @@ return [
         'new_category' => 'Neue Kategorie',
         'add_category' => 'Kategorie hinzufügen',
         'delete_confirm' => 'Diese Buchung wirklich löschen?',
+        'edit_confirmed_confirm' => 'Diese Buchung ist bereits bestätigt. Änderungen wirklich speichern?',
         'pick_category' => 'Kategorie wählen …',
         'pick_account' => 'Konto wählen …',
         'pick_user' => 'Benutzer wählen …',

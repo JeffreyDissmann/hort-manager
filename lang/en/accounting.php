@@ -118,6 +118,7 @@ return [
         'new_category' => 'New category',
         'add_category' => 'Add category',
         'delete_confirm' => 'Really delete this booking?',
+        'edit_confirmed_confirm' => 'This booking is already confirmed. Really save the changes?',
         'pick_category' => 'Choose category …',
         'pick_account' => 'Choose account …',
         'pick_user' => 'Choose user …',

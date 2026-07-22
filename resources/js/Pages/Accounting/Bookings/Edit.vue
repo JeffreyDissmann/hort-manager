@@ -5,6 +5,7 @@ import InputLabel from '@/Components/InputLabel.vue';
 import BookingFields from './Partials/BookingFields.vue';
 import { update as bookingsUpdate, index as bookingsIndex } from '@/routes/accounting/bookings';
 import { Head, Link, useForm } from '@inertiajs/vue3';
+import { t } from '@/i18n';
 
 const props = defineProps({
     booking: { type: Object, required: true },
@@ -30,6 +31,10 @@ const form = useForm({
 });
 
 function submit() {
+    // Saving changes to an already-confirmed ("old") booking asks an extra time.
+    if (props.booking.status === 'confirmed' && !confirm(t('accounting.bookings.edit_confirmed_confirm'))) {
+        return;
+    }
     form.put(bookingsUpdate(props.booking.id).url);
 }
 </script>
