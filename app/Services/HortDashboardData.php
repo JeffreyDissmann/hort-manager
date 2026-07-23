@@ -53,6 +53,7 @@ class HortDashboardData
         $absences = Absence::with('child:id,name')->where('date', $dateString)->get();
 
         $children = Child::query()
+            ->activeOn($date)
             ->whereHas('weeklySchedules', fn ($q) => $q->where('weekday', $weekday)->whereNotNull('planned_time'))
             ->with(['weeklySchedules' => fn ($q) => $q->where('weekday', $weekday)])
             ->whereNotIn('id', $absences->pluck('child_id'))
@@ -115,7 +116,8 @@ class HortDashboardData
         $days = collect(range(0, 4))->map(fn (int $i) => $weekStart->copy()->addDays($i));
         $dateStrings = $days->map->toDateString()->all();
 
-        $children = Child::query()->with('weeklySchedules')->orderBy('name')->get(['id', 'name']);
+        $children = Child::query()->activeBetween($days->first(), $days->last())
+            ->with('weeklySchedules')->orderBy('name')->get(['id', 'name']);
 
         $overrides = DailyDeparture::whereIn('date', $dateStrings)->get()
             ->keyBy(fn (DailyDeparture $d) => $d->child_id.'|'.$d->date->toDateString());

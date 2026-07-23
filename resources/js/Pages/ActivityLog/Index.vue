@@ -14,6 +14,7 @@ const CRUD_EVENTS = ['created', 'updated', 'deleted'];
 const KNOWN_EVENTS = [
     ...CRUD_EVENTS, 'picked_up', 'sent_home', 'present',
     'adjusted', 'reset', 'rsvp_yes', 'rsvp_no', 'guardians',
+    'companion_yes', 'companion_no',
 ];
 
 function eventLabel(event) {
@@ -45,10 +46,10 @@ function valueLabel(value) {
 }
 
 function eventClass(event) {
-    if (['created', 'picked_up', 'rsvp_yes'].includes(event)) {
+    if (['created', 'picked_up', 'rsvp_yes', 'companion_yes'].includes(event)) {
         return 'bg-hort-teal/15 text-hort-teal-dark';
     }
-    if (['deleted', 'reset', 'present', 'rsvp_no'].includes(event)) {
+    if (['deleted', 'reset', 'present', 'rsvp_no', 'companion_no'].includes(event)) {
         return 'bg-red-100 text-red-700';
     }
     return 'bg-amber-100 text-amber-700'; // updated, adjusted, guardians, sent_home

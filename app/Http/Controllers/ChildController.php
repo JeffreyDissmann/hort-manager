@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\Enums\DepartureMethod;
 use App\Enums\TimeQualifier;
 use App\Enums\UserRole;
+use App\Models\Accounting\Booking;
 use App\Models\Child;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
@@ -34,12 +35,15 @@ class ChildController extends Controller
             'children' => $query
                 ->with('guardians:id,name')
                 ->orderBy('name')
-                ->get(['children.id', 'name', 'date_of_birth', 'note'])
+                ->get(['children.id', 'name', 'date_of_birth', 'note', 'active_from', 'active_until'])
                 ->map(fn (Child $child) => [
                     'id' => $child->id,
                     'name' => $child->name,
                     'date_of_birth' => $child->date_of_birth?->format('Y-m-d'),
                     'note' => $child->note,
+                    // Currently enrolled? Former children are hidden behind a toggle.
+                    'active' => $child->isActiveOn(now()),
+                    'active_until' => $child->active_until?->format('Y-m-d'),
                     'can_delete' => $user->can('delete', $child),
                     // Guardians linked to this child (open-information policy).
                     'guardians' => $child->guardians->sortBy('name')->pluck('name')->values(),
@@ -60,7 +64,7 @@ class ChildController extends Controller
     {
         $this->authorize('create', Child::class);
 
-        $child = Child::create($this->validateChild($request));
+        $child = Child::create($this->validateChild($request, requireActiveFrom: true));
 
         // A parent who creates a child becomes its guardian.
         if (! $request->user()->isStaff()) {
@@ -99,6 +103,8 @@ class ChildController extends Controller
                 // Plain Y-m-d so the <input type="date"> can display it.
                 'date_of_birth' => $child->date_of_birth?->format('Y-m-d'),
                 'note' => $child->note,
+                'active_from' => $child->active_from?->format('Y-m-d'),
+                'active_until' => $child->active_until?->format('Y-m-d'),
             ],
             'schedule' => $schedule,
             // „Geht mit einem anderen Kind mit" is a per-day Wochenplan choice, never
@@ -130,7 +136,7 @@ class ChildController extends Controller
 
         // Validate everything up front so a later failure can't leave a partially
         // applied update (e.g. name saved but the schedule rejected).
-        $childData = $this->validateChild($request);
+        $childData = $this->validateChild($request, requireActiveFrom: false);
 
         $schedule = $request->validate([
             'schedule' => ['array'],
@@ -204,6 +210,12 @@ class ChildController extends Controller
     {
         $this->authorize('delete', $child);
 
+        // Keep the ledger intact: a child with any booking attributed to it can't be
+        // deleted (the payments would lose their reference).
+        if (Booking::where('counterparty_child_id', $child->id)->exists()) {
+            return back()->with('error', __('flash.child_has_bookings', ['name' => $child->name]));
+        }
+
         $name = $child->name;
         $child->delete();
 
@@ -215,12 +227,21 @@ class ChildController extends Controller
     /**
      * @return array<string, mixed>
      */
-    private function validateChild(Request $request): array
+    /**
+     * @return array<string, mixed>
+     */
+    private function validateChild(Request $request, bool $requireActiveFrom): array
     {
         return $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'date_of_birth' => ['nullable', 'date'],
             'note' => ['nullable', 'string', 'max:1000'],
+            // Required on create; on update it's only validated/changed when sent
+            // (the edit form always sends it, so it's still enforced there).
+            'active_from' => [$requireActiveFrom ? 'required' : 'sometimes', 'date'],
+            'active_until' => ['nullable', 'date', 'after_or_equal:active_from'],
+        ], [
+            'active_until.after_or_equal' => __('children.active_until_invalid'),
         ]);
     }
 }

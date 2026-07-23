@@ -43,9 +43,13 @@ class AbsenceController extends Controller
         $child = Child::findOrFail($validated['child_id']);
         $this->authorize('update', $child);
 
+        // Delete per model (not a bulk query) so each removal fires the „deleted"
+        // event and lands in the Protokoll — otherwise clearing a Krankmeldung would
+        // vanish silently while reporting one is logged.
         Absence::where('child_id', $child->id)
             ->whereBetween('date', [$validated['from'], $validated['to']])
-            ->delete();
+            ->get()
+            ->each->delete();
 
         return back()->with('status', __('flash.absence_cleared', ['name' => $child->name]));
     }

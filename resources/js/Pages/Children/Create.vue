@@ -13,6 +13,8 @@ const form = useForm({
     name: '',
     date_of_birth: '',
     note: '',
+    active_from: new Date().toLocaleDateString('en-CA'), // today, YYYY-MM-DD
+    active_until: '',
 });
 
 function submit() {
@@ -59,6 +61,20 @@ function submit() {
                             :message="form.errors.date_of_birth"
                             class="mt-2"
                         />
+                    </div>
+
+                    <div class="grid gap-4 sm:grid-cols-2">
+                        <div>
+                            <InputLabel for="active_from" :value="$t('children.active_from')" />
+                            <DatePicker id="active_from" v-model="form.active_from" class="mt-1" />
+                            <InputError :message="form.errors.active_from" class="mt-2" />
+                        </div>
+                        <div>
+                            <InputLabel for="active_until" :value="$t('children.active_until')" />
+                            <DatePicker id="active_until" v-model="form.active_until" clearable class="mt-1" />
+                            <p class="mt-1 text-xs text-ink/40">{{ $t('children.active_until_hint') }}</p>
+                            <InputError :message="form.errors.active_until" class="mt-2" />
+                        </div>
                     </div>
 
                     <div>

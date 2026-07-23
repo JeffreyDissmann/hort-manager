@@ -59,6 +59,14 @@ class SlackInteractionController extends Controller
             ],
         ]);
 
+        // Log it just like an in-app answer (polls.update) so the Protokoll shows
+        // every RSVP, not only the ones made in the app.
+        activity()
+            ->causedBy($user)
+            ->performedOn($excursion)
+            ->event((bool) $answer ? 'rsvp_yes' : 'rsvp_no')
+            ->log($child->name.' · '.$excursion->name);
+
         // Re-render every guardian's DM (queued) so Slack gets a fast ack.
         SyncExcursionRsvp::dispatch($excursion, $child);
     }

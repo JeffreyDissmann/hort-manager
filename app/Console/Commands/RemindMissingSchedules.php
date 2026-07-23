@@ -20,7 +20,7 @@ class RemindMissingSchedules extends Command
         $dryRun = (bool) $this->option('dry-run');
         $reminded = 0;
 
-        Child::withoutSchedule()->with('guardians')->orderBy('name')->get()->each(function (Child $child) use ($dryRun, &$reminded) {
+        Child::withoutSchedule()->activeOn(now())->with('guardians')->orderBy('name')->get()->each(function (Child $child) use ($dryRun, &$reminded) {
             $guardians = $child->guardians()->reachable()->get();
 
             if ($guardians->isEmpty()) {

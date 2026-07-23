@@ -16,6 +16,7 @@ return [
     'child_created' => 'Child created. Now set the weekly schedule.',
     'schedule_saved' => 'Weekly schedule for :name saved.',
     'child_deleted' => ':name has been deleted.',
+    'child_has_bookings' => ":name can't be deleted while bookings are still attributed to them.",
 
     'plan_updated' => 'Plan for :name updated.',
     'day_reset' => ':name: day reset to the standard.',
@@ -28,4 +29,27 @@ return [
 
     'program_saved' => 'Program saved.',
     'homework_defaults_saved' => 'Default homework times saved.',
+
+    'account_created' => 'Account “:name” created.',
+    'account_updated' => 'Account “:name” saved.',
+    'account_deleted' => 'Account “:name” deleted.',
+    'account_has_bookings' => 'Account “:name” has bookings and cannot be deleted. Deactivate it instead.',
+
+    'category_created' => 'Category created.',
+    'category_updated' => 'Category saved.',
+    'category_deleted' => 'Category “:name” deleted.',
+    'category_has_bookings' => 'Category “:name” (or a subcategory) has bookings and cannot be deleted. Deactivate it instead.',
+
+    'booking_created' => 'Booking created.',
+    'booking_updated' => 'Booking saved.',
+    'booking_deleted' => 'Booking deleted.',
+    'bookings_reanalysing' => ':count bookings are being re-analysed by the AI.',
+    'bookings_confirmed' => ':count bookings confirmed.',
+    'ai_disabled' => 'AI analysis is currently disabled.',
+    'transfer_created' => 'Transfer created.',
+
+    'import_done' => ':imported bookings imported, :duplicates duplicates skipped. Please review.',
+    'import_saved' => 'Saved. There are still drafts to review.',
+    'import_complete' => 'All imported bookings confirmed.',
+    'import_skipped_added' => ':count booking(s) imported afterwards.',
 ];

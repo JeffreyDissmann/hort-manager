@@ -34,4 +34,23 @@ return [
         'at' => 'at',
         'from' => 'from',
     ],
+    'category_direction' => [
+        'income' => 'Income',
+        'expense' => 'Expense',
+    ],
+    'booking_kind' => [
+        'income' => 'Income',
+        'expense' => 'Expense',
+        'transfer' => 'Transfer',
+    ],
+    'booking_status' => [
+        'draft' => 'Draft',
+        'suggested' => 'AI suggestion',
+        'confirmed' => 'Confirmed',
+    ],
+    'suggestion_confidence' => [
+        0 => 'Unsure',
+        1 => 'Medium',
+        2 => 'Confident',
+    ],
 ];
