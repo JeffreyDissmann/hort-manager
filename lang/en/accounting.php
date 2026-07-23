@@ -31,6 +31,7 @@ return [
         'total' => 'Σ',
         'sum' => 'Total',
         'unassigned' => 'Unassigned – fix these',
+        'inactive_section' => 'Children not enrolled this year',
         'missing_hint' => 'Red = no payment in that (already past) month.',
         'empty' => 'No child-attributed income for this year yet.',
     ],

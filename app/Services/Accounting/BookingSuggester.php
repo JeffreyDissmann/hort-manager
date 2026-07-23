@@ -36,7 +36,9 @@ class BookingSuggester
         $categories = CategoryOptions::flat();
         $categoryDirection = collect($categories)->pluck('direction', 'id');
 
-        $children = Child::with('guardians:id,name')->orderBy('name')->get();
+        // Only children enrolled in the booking's year can be attributed (strict — a
+        // payment dated after a child left won't be offered to the AI for them).
+        $children = Child::activeInYear($booking->booking_date->year)->with('guardians:id,name')->orderBy('name')->get();
         $childNames = $children->pluck('name', 'id');
         $users = User::orderBy('name')->get(['id', 'name']);
         $userNames = $users->pluck('name', 'id');

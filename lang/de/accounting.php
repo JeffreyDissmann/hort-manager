@@ -31,6 +31,7 @@ return [
         'total' => 'Σ',
         'sum' => 'Summe',
         'unassigned' => 'Nicht zugeordnet – korrigieren',
+        'inactive_section' => 'Kinder, die in diesem Jahr nicht angemeldet waren',
         'missing_hint' => 'Rot hinterlegt = in diesem (bereits vergangenen) Monat keine Zahlung.',
         'empty' => 'Für dieses Jahr gibt es noch keine kindbezogenen Einnahmen.',
     ],

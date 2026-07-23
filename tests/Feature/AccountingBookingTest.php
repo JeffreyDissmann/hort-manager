@@ -8,6 +8,7 @@ use App\Enums\SuggestionConfidence;
 use App\Models\Accounting\Account;
 use App\Models\Accounting\Booking;
 use App\Models\Accounting\Category;
+use App\Models\Child;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia;
@@ -403,4 +404,15 @@ it('exports the bookings list as an XLSX download', function () {
         ->get('/accounting/bookings/export?format=xlsx')
         ->assertOk()
         ->assertDownload('bookings.xlsx');
+});
+
+it('exposes children with their enrolment range to the booking form', function () {
+    $admin = User::factory()->admin()->create();
+    Child::factory()->create(['name' => 'Emma', 'active_from' => '2025-08-01', 'active_until' => null]);
+
+    $this->actingAs($admin)
+        ->get('/accounting/bookings/create')
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('children.0.name', 'Emma')
+            ->where('children.0.active_from', '2025-08-01'));
 });

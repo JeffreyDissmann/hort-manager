@@ -78,21 +78,29 @@ class ContributionController extends Controller
             $monthTotals[$month] += $booking->amount_cents;
         }
 
-        $rows = Child::orderBy('name')->get(['id', 'name'])
-            ->map(fn (Child $child): array => [
-                'id' => $child->id,
-                'name' => $child->name,
-                'months' => collect(range(1, 12))->map(fn (int $m): int => $perChild[$child->id][$m] ?? 0)->all(),
-                'total' => array_sum($perChild[$child->id] ?? []),
-                // Every sub-category of the group, in tree order — unpaid ones show as
-                // gaps so a missing contribution is always visible.
-                'breakdown' => $streams->map(fn (Category $s): array => [
-                    'id' => $s->id,
-                    'name' => $s->name,
-                    'months' => collect(range(1, 12))->map(fn (int $m): int => $perCategory[$child->id][$s->id][$m] ?? 0)->all(),
-                    'total' => array_sum($perCategory[$child->id][$s->id] ?? []),
-                ])->all(),
-            ]);
+        $rowFor = fn (Child $child): array => [
+            'id' => $child->id,
+            'name' => $child->name,
+            'months' => collect(range(1, 12))->map(fn (int $m): int => $perChild[$child->id][$m] ?? 0)->all(),
+            'total' => array_sum($perChild[$child->id] ?? []),
+            // Every sub-category of the group, in tree order — unpaid ones show as
+            // gaps so a missing contribution is always visible.
+            'breakdown' => $streams->map(fn (Category $s): array => [
+                'id' => $s->id,
+                'name' => $s->name,
+                'months' => collect(range(1, 12))->map(fn (int $m): int => $perCategory[$child->id][$s->id][$m] ?? 0)->all(),
+                'total' => array_sum($perCategory[$child->id][$s->id] ?? []),
+            ])->all(),
+        ];
+
+        $active = Child::activeInYear($year)->orderBy('name')->get(['id', 'name']);
+        $rows = $active->map($rowFor);
+
+        // Contributions attributed to a child NOT enrolled this year — surfaced in
+        // their own section so the totals reconcile and the (likely misattributed)
+        // payment stays visible.
+        $inactiveIds = array_diff(array_keys($perChild), $active->pluck('id')->all());
+        $inactiveRows = Child::whereIn('id', $inactiveIds)->orderBy('name')->get(['id', 'name'])->map($rowFor);
 
         // Contributions NOT linked to a real child — these are likely misassigned.
         $unlinked = $this->contributions($scopeIds)
@@ -115,6 +123,7 @@ class ContributionController extends Controller
             'monthLabels' => collect(range(1, 12))
                 ->map(fn (int $m): string => CarbonImmutable::create($year, $m, 1)->translatedFormat('M')),
             'rows' => $rows,
+            'inactiveRows' => $inactiveRows,
             'monthTotals' => array_values($monthTotals),
             'grandTotal' => array_sum($monthTotals),
             'unassignedMonths' => array_values($unassignedMonths),

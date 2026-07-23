@@ -1,10 +1,11 @@
 <script setup>
-import { ref, watch } from 'vue';
+import { ref, computed, watch } from 'vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import TextInput from '@/Components/TextInput.vue';
 import InputError from '@/Components/InputError.vue';
 import DatePicker from '@/Components/DatePicker.vue';
 import CategorySelect from '@/Components/Accounting/CategorySelect.vue';
+import { activeInYear, yearOf } from '@/childActivity';
 
 const props = defineProps({
     form: { type: Object, required: true },
@@ -45,6 +46,21 @@ const modes = [
     { value: 'user', key: 'counterparty_user' },
     { value: 'free', key: 'counterparty_free' },
 ];
+
+// Only children enrolled in the booking's year can be picked; the list updates live
+// as the date changes. Keep the already-selected child visible even if inactive then.
+const availableChildren = computed(() => {
+    const year = yearOf(props.form.booking_date);
+    const list = props.children.filter((c) => activeInYear(c, year));
+    const selected = props.form.counterparty_child_id;
+    if (selected && !list.some((c) => c.id === selected)) {
+        const current = props.children.find((c) => c.id === selected);
+        if (current) {
+            list.unshift(current);
+        }
+    }
+    return list;
+});
 </script>
 
 <template>
@@ -116,7 +132,7 @@ const modes = [
                 class="mt-2 block w-full rounded-md border-ink/20 shadow-sm focus:border-hort-teal focus:ring-hort-teal"
             >
                 <option :value="null">{{ $t('accounting.bookings.pick_child') }}</option>
-                <option v-for="child in children" :key="child.id" :value="child.id">{{ child.name }}</option>
+                <option v-for="child in availableChildren" :key="child.id" :value="child.id">{{ child.name }}</option>
             </select>
             <select
                 v-if="mode === 'user'"

@@ -301,7 +301,13 @@ class BookingController extends Controller
             'remaining' => (clone $drafts)->count(),
             'accounts' => Account::where('active', true)->orderBy('name')->get(['id', 'name']),
             'categories' => CategoryOptions::flat(),
-            'children' => Child::orderBy('name')->get(['id', 'name']),
+            'children' => Child::orderBy('name')->get(['id', 'name', 'active_from', 'active_until'])
+                ->map(fn (Child $c): array => [
+                    'id' => $c->id,
+                    'name' => $c->name,
+                    'active_from' => $c->active_from?->format('Y-m-d'),
+                    'active_until' => $c->active_until?->format('Y-m-d'),
+                ]),
             'users' => User::orderBy('name')->get(['id', 'name']),
         ]);
     }
@@ -477,7 +483,13 @@ class BookingController extends Controller
         return [
             'accounts' => Account::where('active', true)->orderBy('name')->get(['id', 'name']),
             'categories' => CategoryOptions::flat(),
-            'children' => Child::orderBy('name')->get(['id', 'name']),
+            'children' => Child::orderBy('name')->get(['id', 'name', 'active_from', 'active_until'])
+                ->map(fn (Child $c): array => [
+                    'id' => $c->id,
+                    'name' => $c->name,
+                    'active_from' => $c->active_from?->format('Y-m-d'),
+                    'active_until' => $c->active_until?->format('Y-m-d'),
+                ]),
             'users' => User::orderBy('name')->get(['id', 'name']),
         ];
     }

@@ -237,3 +237,17 @@ it('never overwrites a booking confirmed while the AI was running', function () 
         ->and($booking->counterparty_child_id)->toBeNull()
         ->and($booking->confidence)->toBe(SuggestionConfidence::High);
 });
+
+it('does not attribute a booking to a child not enrolled in the booking year', function () {
+    $this->actingAs(User::factory()->admin()->create());
+    $income = Category::factory()->income()->create();
+    $former = Child::factory()->former('2024-12-31')->create(); // left before 2026
+    $booking = Booking::factory()->draft()->create(['amount_cents' => 5000, 'category_id' => null, 'booking_date' => '2026-03-01']);
+
+    // The AI tries to attribute the 2026 payment to a child who left in 2024…
+    BookingCategorizer::fake([['category_id' => $income->id, 'counterparty_child_id' => $former->id]]);
+    app(BookingSuggester::class)->suggest($booking->fresh());
+
+    // …but they weren't in that year's roster, so no child is attached.
+    expect($booking->refresh()->counterparty_child_id)->toBeNull();
+});

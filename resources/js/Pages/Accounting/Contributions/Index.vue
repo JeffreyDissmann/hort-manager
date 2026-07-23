@@ -14,6 +14,7 @@ const props = defineProps({
     years: { type: Array, required: true },
     monthLabels: { type: Array, required: true },
     rows: { type: Array, required: true },
+    inactiveRows: { type: Array, default: () => [] }, // attributed to a child not enrolled this year
     monthTotals: { type: Array, required: true },
     grandTotal: { type: Number, required: true },
     unassignedMonths: { type: Array, required: true },
@@ -88,7 +89,7 @@ const missingClass = 'bg-red-500/10 text-red-600';
             </p>
 
             <div class="overflow-hidden rounded-2xl bg-surface shadow-sm">
-                <p v-if="!rows.length" class="p-6 text-center text-ink/50">{{ $t('accounting.contributions.empty') }}</p>
+                <p v-if="!rows.length && !inactiveRows.length" class="p-6 text-center text-ink/50">{{ $t('accounting.contributions.empty') }}</p>
 
                 <div v-else class="overflow-x-auto">
                     <table class="w-full text-sm tabular-nums">
@@ -134,6 +135,27 @@ const missingClass = 'bg-red-500/10 text-red-600';
                                     </td>
                                     <td class="px-3 py-1 text-right" :class="valueClass(b.total)">{{ cell(b.total) }}</td>
                                 </tr>
+                            </template>
+
+                            <!-- Contributions attributed to a child NOT enrolled this year — flagged. -->
+                            <template v-if="inactiveRows.length">
+                                <tr>
+                                    <td :colspan="monthLabels.length + 2" class="px-3 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-500">
+                                        {{ $t('accounting.contributions.inactive_section') }}
+                                    </td>
+                                </tr>
+                                <template v-for="row in inactiveRows" :key="'x' + row.id">
+                                    <tr class="hover:bg-ink/5">
+                                        <td class="sticky left-0 z-10 bg-surface px-3 py-1.5 font-medium text-amber-700 dark:text-amber-500">{{ row.name }}</td>
+                                        <td v-for="(c, i) in row.months" :key="i" class="px-3 py-1.5 text-right" :class="c === 0 ? 'text-ink/25' : 'text-amber-700 dark:text-amber-500'">{{ cell(c) }}</td>
+                                        <td class="px-3 py-1.5 text-right font-semibold text-amber-700 dark:text-amber-500">{{ cell(row.total) }}</td>
+                                    </tr>
+                                    <tr v-for="b in row.breakdown" :key="'x' + row.id + '-' + b.id" class="bg-ink/[0.02]">
+                                        <td class="sticky left-0 z-10 bg-surface px-3 py-1 text-ink/50"><span class="block pl-[22px]">{{ b.name }}</span></td>
+                                        <td v-for="(c, i) in b.months" :key="i" class="px-3 py-1 text-right" :class="c === 0 ? 'text-ink/25' : 'text-amber-700/80 dark:text-amber-500/80'">{{ cell(c) }}</td>
+                                        <td class="px-3 py-1 text-right text-amber-700/80 dark:text-amber-500/80">{{ cell(b.total) }}</td>
+                                    </tr>
+                                </template>
                             </template>
 
                             <tr class="border-t-2 border-ink/20 bg-canvas font-semibold">

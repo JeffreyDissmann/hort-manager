@@ -148,3 +148,37 @@ it('rolls a grandchild-category contribution up into its top-level stream', func
             ->where('rows.0.breakdown.0.name', 'Elternbeitrag')
             ->where('rows.0.breakdown.0.total', 13000));
 });
+
+it('only lists children enrolled in the selected year', function () {
+    $admin = User::factory()->admin()->create();
+    $group = Category::factory()->income()->create(['name' => 'Beiträge', 'position' => 1]);
+    Category::factory()->childOf($group)->create(['name' => 'Elternbeitrag']);
+    Child::factory()->create(['name' => 'Aktiv']);            // enrolled since 2020, open
+    Child::factory()->former('2024-12-31')->create(['name' => 'Weg']); // left before 2026
+
+    $this->actingAs($admin)
+        ->get('/accounting/contributions?year=2026')
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->has('rows', 1)
+            ->where('rows.0.name', 'Aktiv'));
+});
+
+it('surfaces contributions attributed to a child not enrolled that year, so the totals reconcile', function () {
+    $admin = User::factory()->admin()->create();
+    $group = Category::factory()->income()->create(['name' => 'Beiträge', 'position' => 1]);
+    $elternbeitrag = Category::factory()->childOf($group)->create(['name' => 'Elternbeitrag']);
+    $weg = Child::factory()->former('2024-12-31')->create(['name' => 'Weg']); // left before 2026
+
+    // A 2026 payment still attributed to the child who left in 2024.
+    Booking::factory()->create(['category_id' => $elternbeitrag->id, 'counterparty_child_id' => $weg->id, 'amount_cents' => 13000, 'booking_date' => '2026-01-10']);
+
+    $this->actingAs($admin)
+        ->get('/accounting/contributions?year=2026')
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->has('rows', 0)                               // not in this year's roster
+            ->has('inactiveRows', 1)                       // …but surfaced separately
+            ->where('inactiveRows.0.name', 'Weg')
+            ->where('inactiveRows.0.total', 13000)
+            ->where('monthTotals.0', 13000)                // still counted in the totals
+            ->where('grandTotal', 13000));
+});
