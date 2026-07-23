@@ -7,6 +7,7 @@ namespace App\Models;
 use App\Models\Concerns\LogsChanges;
 use App\Observers\ChildObserver;
 use Database\Factories\ChildFactory;
+use DateTimeInterface;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -49,16 +50,19 @@ class Child extends Model
     }
 
     /**
-     * Enrolled on the given date: started on/before it and not yet left (a null
-     * active_from is treated as "always enrolled" for safety).
+     * Enrolled on the given date (accepts a Carbon/DateTime or a Y-m-d string):
+     * started on/before it and not yet left (a null active_from is treated as
+     * "always enrolled" for safety).
      *
      * @param  Builder<Child>  $query
      */
-    public function scopeActiveOn(Builder $query, string $date): void
+    public function scopeActiveOn(Builder $query, DateTimeInterface|string $date): void
     {
+        $on = self::toDateString($date);
+
         $query
-            ->where(fn (Builder $q) => $q->whereNull('active_from')->orWhereDate('active_from', '<=', $date))
-            ->where(fn (Builder $q) => $q->whereNull('active_until')->orWhereDate('active_until', '>=', $date));
+            ->where(fn (Builder $q) => $q->whereNull('active_from')->orWhereDate('active_from', '<=', $on))
+            ->where(fn (Builder $q) => $q->whereNull('active_until')->orWhereDate('active_until', '>=', $on));
     }
 
     /**
@@ -66,8 +70,11 @@ class Child extends Model
      *
      * @param  Builder<Child>  $query
      */
-    public function scopeActiveBetween(Builder $query, string $from, string $to): void
+    public function scopeActiveBetween(Builder $query, DateTimeInterface|string $from, DateTimeInterface|string $to): void
     {
+        $from = self::toDateString($from);
+        $to = self::toDateString($to);
+
         $query
             ->where(fn (Builder $q) => $q->whereNull('active_from')->orWhereDate('active_from', '<=', $to))
             ->where(fn (Builder $q) => $q->whereNull('active_until')->orWhereDate('active_until', '>=', $from));
@@ -83,11 +90,18 @@ class Child extends Model
         $query->activeBetween("{$year}-01-01", "{$year}-12-31");
     }
 
-    /** Whether the child is enrolled on the given date. */
-    public function isActiveOn(string $date): bool
+    /** Whether the child is enrolled on the given date (Carbon/DateTime or Y-m-d string). */
+    public function isActiveOn(DateTimeInterface|string $date): bool
     {
-        return ($this->active_from === null || $this->active_from->toDateString() <= $date)
-            && ($this->active_until === null || $this->active_until->toDateString() >= $date);
+        $on = self::toDateString($date);
+
+        return ($this->active_from === null || $this->active_from->toDateString() <= $on)
+            && ($this->active_until === null || $this->active_until->toDateString() >= $on);
+    }
+
+    private static function toDateString(DateTimeInterface|string $date): string
+    {
+        return $date instanceof DateTimeInterface ? $date->format('Y-m-d') : $date;
     }
 
     /**

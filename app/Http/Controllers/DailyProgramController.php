@@ -31,7 +31,9 @@ class DailyProgramController extends Controller
             ->keyBy(fn (DailyProgram $p) => $p->date->toDateString());
 
         $defaults = HomeworkDefault::all()->keyBy('weekday');
-        $children = Child::query()->whereNotNull('date_of_birth')->get(['id', 'name', 'date_of_birth']);
+        $weekRange = $weekDays->pluck('date');
+        $children = Child::query()->activeBetween($weekRange->first(), $weekRange->last())
+            ->whereNotNull('date_of_birth')->get(['id', 'name', 'date_of_birth']);
 
         $days = $weekDays->map(function (array $day) use ($programs, $defaults, $children) {
             $weekday = Carbon::parse($day['date'])->dayOfWeekIso;

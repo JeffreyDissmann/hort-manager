@@ -77,8 +77,10 @@ class WeeklyDigestBuilder
             ])
             ->all();
 
-        // Per-child summary — only this parent's own children.
-        $children = $parent->children()->orderBy('name')->get();
+        // Per-child summary — this parent's own children enrolled during the week.
+        $children = $parent->children()
+            ->activeBetween($weekDays->first(), $weekDays->last())
+            ->orderBy('name')->get();
         $childIds = $children->pluck('id')->all();
 
         $plans = EffectivePlan::forMany($childIds, $weekDates);

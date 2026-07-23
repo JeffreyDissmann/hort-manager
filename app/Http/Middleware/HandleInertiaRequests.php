@@ -89,6 +89,7 @@ class HandleInertiaRequests extends Middleware
 
         return $user->children()
             ->withoutSchedule()
+            ->activeOn(now())
             ->orderBy('name')
             ->get(['children.id', 'name'])
             ->map(fn (Child $child) => ['id' => $child->id, 'name' => $child->name])

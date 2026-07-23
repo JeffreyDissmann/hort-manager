@@ -42,8 +42,10 @@ class DailyBoardController extends Controller
             ->get();
         $absentChildIds = $absences->pluck('child_id')->all();
 
-        // Seed a row per scheduled child from the Stammplan (idempotent).
+        // Seed a row per scheduled child from the Stammplan (idempotent). Only
+        // children enrolled on this date are on the board.
         $scheduled = Child::query()
+            ->activeOn($date)
             ->whereHas('weeklySchedules', fn ($q) => $q->where('weekday', $weekday)->whereNotNull('planned_time'))
             ->with(['weeklySchedules' => fn ($q) => $q->where('weekday', $weekday)])
             ->get();
@@ -261,6 +263,7 @@ class DailyBoardController extends Controller
         // Stammplan at all), today's reported absences, and anyone with a same-day
         // override (a manual pickup for today means they ARE here — they're on the board).
         $hortfrei = Child::query()
+            ->activeOn($date)
             ->whereHas('weeklySchedules', fn ($q) => $q->whereNotNull('planned_time'))
             ->whereDoesntHave('weeklySchedules', fn ($q) => $q->where('weekday', $weekday)->whereNotNull('planned_time'))
             ->whereNotIn('id', $absentChildIds)
@@ -278,7 +281,7 @@ class DailyBoardController extends Controller
         // Companion-picker source for the day editor: each child's effective time today,
         // only for those who can actually be a companion (have a pickup, aren't away and
         // aren't themselves tagging along) — mirroring the Wochenplan.
-        $pickerChildren = Child::query()->orderBy('name')->get(['id', 'name']);
+        $pickerChildren = Child::query()->activeOn($date)->orderBy('name')->get(['id', 'name']);
         $pickerPlans = EffectivePlan::forMany($pickerChildren->pluck('id')->all(), [$date->toDateString()]);
         $companionChildren = $pickerChildren->map(function (Child $c) use ($pickerPlans, $date, $absentChildIds) {
             $plan = $pickerPlans[$c->id.'|'.$date->toDateString()] ?? null;

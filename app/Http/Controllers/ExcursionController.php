@@ -82,9 +82,9 @@ class ExcursionController extends Controller
 
         $excursion = Excursion::create($this->validateExcursion($request));
 
-        // Invite every child — each starts as an open poll entry for the parents.
-        // (Creating the excursion fires the ExcursionObserver, which DMs guardians.)
-        $excursion->children()->attach(Child::pluck('id')->all());
+        // Invite every child enrolled on the trip date — each starts as an open poll
+        // entry. (Creating the excursion fires the ExcursionObserver, which DMs guardians.)
+        $excursion->children()->attach(Child::activeOn($excursion->date)->pluck('id')->all());
 
         return redirect()
             ->route('excursions.index')
@@ -122,8 +122,10 @@ class ExcursionController extends Controller
 
         $excursion->update($this->validateExcursion($request));
 
-        // Keep the poll complete if children were added after the excursion was created.
-        $missing = Child::whereNotIn('id', $excursion->children()->pluck('children.id'))->pluck('id');
+        // Keep the poll complete if children (enrolled on the trip date) were added
+        // after the excursion was created.
+        $missing = Child::activeOn($excursion->date)
+            ->whereNotIn('id', $excursion->children()->pluck('children.id'))->pluck('id');
         $excursion->children()->attach($missing->all());
 
         return redirect()
