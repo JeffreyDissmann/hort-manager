@@ -6,6 +6,7 @@ namespace Tests\Feature;
 
 use App\Enums\DepartureMethod;
 use App\Enums\DepartureStatus;
+use App\Enums\TimeQualifier;
 use App\Enums\UserRole;
 use App\Jobs\AskCompanionConfirmation;
 use App\Jobs\SyncCompanionConfirmation;
@@ -107,6 +108,52 @@ class CompanionDepartureTest extends TestCase
             'companion_confirmed' => null,
         ]);
         Notification::assertSentTo($tomsParent, CompanionRequest::class);
+    }
+
+    public function test_a_companion_inherits_the_lone_childs_time_qualifier(): void
+    {
+        Notification::fake();
+        $date = $this->wednesday();
+        $anna = Child::factory()->create(['name' => 'Anna']);
+        $tom = Child::factory()->create(['name' => 'Tom']);
+        // Tom geht allein „ab 15:00".
+        DailyDeparture::create([
+            'child_id' => $tom->id,
+            'date' => $date,
+            'planned_time' => '15:00',
+            'planned_method' => DepartureMethod::SentHome,
+            'time_qualifier' => TimeQualifier::From,
+            'status' => DepartureStatus::Present,
+        ]);
+        $tomsParent = User::factory()->create(['role' => UserRole::Parent]);
+        $tomsParent->children()->attach($tom);
+        $staff = $this->staff();
+
+        $this->actingAs($staff)->patch(route('weekly-plan.adjust'), [
+            'child_id' => $anna->id,
+            'date' => $date,
+            'planned_method' => DepartureMethod::WithChild->value,
+            'companion_child_id' => $tom->id,
+        ])->assertRedirect();
+
+        // The weekly grid mirrors Tom's „ab" qualifier onto Anna's day (even pending).
+        $this->actingAs($staff)->get(route('weekly-plan'))
+            ->assertInertia(fn ($page) => $page
+                ->where('currentWeek.0.name', 'Anna')
+                ->where('currentWeek.0.days.2.time', '15:00')
+                ->where('currentWeek.0.days.2.qualifier', TimeQualifier::From->value)
+                ->where('currentWeek.0.days.2.companion.name', 'Tom'));
+
+        // Once confirmed, the board shows the mirrored time with the „ab" prefix.
+        $departure = DailyDeparture::where('child_id', $anna->id)->firstOrFail();
+        $this->actingAs($tomsParent)->patch(route('companion.confirm', $departure), ['confirmed' => true]);
+
+        $this->actingAs($staff)->get(route('board', ['date' => $date]))
+            ->assertInertia(fn ($page) => $page
+                ->where('rows.0.name', 'Anna')
+                ->where('rows.0.planned_method', 'with_child')
+                ->where('rows.0.planned_time', '15:00')
+                ->where('rows.0.qualifier_prefix', TimeQualifier::From->prefix()));
     }
 
     public function test_a_companion_who_goes_with_a_third_child_is_rejected(): void

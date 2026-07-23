@@ -236,6 +236,10 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- A „geht mit … mit" pickup now inherits the companion's **time qualifier**
+  (bis/genau um/ab), not just their time — so a child going home with someone who
+  leaves „ab 15:30" now also shows „ab 15:30" on the board, Wochenplan and weekly
+  digest, instead of a bare „15:30". Found by Julia.
 - A child with a same-day override no longer *also* shows in the board's „Heute
   hortfrei" list — a manual pickup for today means they're on the board, not Hortfrei.
 - Wayfinder now generates **relative** route URLs, so the published image is

@@ -82,9 +82,11 @@ function methodIcon(method) {
 
 function planLabel(row) {
     // „geht mit … mit": show the mirrored time + „mit B" rather than the long label.
+    // The time carries the companion's bis/ab prefix (default „um" stays implicit).
     if (row.planned_method === 'with_child' && row.companion) {
         const withText = t('weekly.companion_with', { name: row.companion.name });
-        return row.planned_time ? `${row.planned_time} · ${withText}` : withText;
+        const time = row.qualifier_prefix ? `${row.qualifier_prefix} ${row.planned_time}` : row.planned_time;
+        return row.planned_time ? `${time} · ${withText}` : withText;
     }
     const method = methodLabels.value[row.planned_method];
     if (!method) {
