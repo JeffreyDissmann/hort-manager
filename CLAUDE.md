@@ -42,6 +42,8 @@ Two layers, both **Pest** (the fast suite is Pest running the existing PHPUnit-s
 User            role: staff | parent  (App\Enums\UserRole)   — isStaff() helper
   ⇄ children    child_user pivot (guardians)                  User::children / Child::guardians
 Child           name, date_of_birth?, note   (flat list — NO groups)
+                active_from (required, enrolment start) + active_until? (leave date, null =
+                still enrolled) — the „Aktivitätszeitraum" (see „Child enrolment period")
 WeeklySchedule  (Stammplan)  child + weekday 1–5 → planned_time + method + time_qualifier? + comment?
                 method = App\Enums\DepartureMethod: picked_up | sent_home (companion `with_child` is
                 Wochenplan/per-day only, NEVER the Stammplan — rejected server-side there)
@@ -80,6 +82,28 @@ Two parts: **Diese Woche** = effective plan per child for the selected week (Sta
 
 ### Editing a day — the shared `DayEditor` popup
 **One component, `resources/js/Components/DayEditor.vue`, edits any child on any date — used by BOTH the Wochenplan (grid cells, timeline, „nicht da" pills) and the Heute board („Abholzeit ändern" + „Hortfrei" pills). Do NOT add a second inline editor.** Open it with `dayEditor.value.open(child, day, dayMeta)`; it always posts to `weekly-plan.adjust` (set a plan), `absences.store` (Krank/„Kommt nicht"), or `weekly-plan.reset` (revert to Stammplan). Companion („geht mit … mit") is offered here too — the board feeds its picker via a `children` prop (each child's effective time today). A **complete plan is required**: a real pickup needs BOTH a method and a time; `with_child` needs a companion (its time mirrors them). Enforced in the popup (Speichern disabled) **and** server-side in `AdjustDayRequest` (`planned_method` required; `planned_time` required unless `with_child`). The board's older `board.override` endpoint still exists but the UI now edits through `DayEditor`/`weekly-plan.adjust`.
+
+### Child enrolment period (Aktivitätszeitraum)
+A child is only shown while **enrolled**: `Child.active_from` (required, start) … `active_until`
+(nullable leave date; null = still enrolled). Existing children were backfilled to „enrolled since
+`created_at`, open-ended". Kids are typically at the Hort ~4 years, so `active_until` is usually open
+for a long time. Filtering is always **date-relative** (never a global „is active now" flag), which is
+what keeps history intact — a child who left in 2025 still appears in 2025's board/contributions but
+not from 2026 on. Three model scopes (each accepts a `Carbon`/`DateTime` *or* a `Y-m-d` string; a null
+`active_from` is treated defensively as always-active):
+- **`activeOn($date)`** — the Hort side (every view there is anchored to a specific date): board,
+  weekly plan, standard timetable, dashboard, birthdays, excursion invites (trip date),
+  missing-Stammplan reminder + „Wochenplan fehlt" banner.
+- **`activeBetween($from,$to)`** — a week (inclusive **overlap**: active *any* day in the range) — the
+  Wochenplan and weekly digest.
+- **`activeInYear($year)`** — the accounting side (enrolment overlaps the calendar year): the
+  contributions matrix, the booking child dropdowns (year of the booking's date), and the AI
+  suggester (children active in the **booking's** year — strict, so a payment dated after a child
+  left won't attribute to them). Plus `isActiveOn($date)` on the model.
+`/children` shows active children by default with an „Ehemalige" (former) toggle for leavers. Create
+requires `active_from` (defaults to today in the form); update only re-validates it when sent (the
+form always sends it). A child with bookings still can't be *deleted* (restrictOnDelete) — leaving
+(`active_until`) is the normal „gone" path.
 
 ### Hortfrei vs. Absence — two different „not there"
 - **Hortfrei** = *structural* non-attendance: the child's Stammplan simply has no entry for that weekday (no `WeeklySchedule` row). No reason, no record. Surfaced explicitly as a muted „Heute hortfrei (Stammplan)" line on the board and per-weekday in the Wochenplan „Diese Woche nicht da" summary; names are **clickable pills** (own children for parents, all for staff) that open `DayEditor` to add a one-off pickup. A child with a same-day override is NOT listed as Hortfrei (they're on the board). Unplanned children (zero `WeeklySchedule` rows) are the „Wochenplan fehlt" case, not Hortfrei.
