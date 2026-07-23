@@ -86,7 +86,7 @@ Two parts: **Diese Woche** = effective plan per child for the selected week (Sta
 ### Child enrolment period (Aktivitätszeitraum)
 A child is only shown while **enrolled**: `Child.active_from` (required, start) … `active_until`
 (nullable leave date; null = still enrolled). Existing children were backfilled to „enrolled since
-`created_at`, open-ended". Kids are typically at the Hort ~4 years, so `active_until` is usually open
+the start of last year, open-ended". Kids are typically at the Hort ~4 years, so `active_until` is usually open
 for a long time. Filtering is always **date-relative** (never a global „is active now" flag), which is
 what keeps history intact — a child who left in 2025 still appears in 2025's board/contributions but
 not from 2026 on. Three model scopes (each accepts a `Carbon`/`DateTime` *or* a `Y-m-d` string; a null

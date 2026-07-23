@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
@@ -12,7 +13,8 @@ return new class extends Migration
     /**
      * A child's Hort enrolment period: active_from (start) and active_until (leave
      * date, null = still enrolled). Existing children are backfilled to "enrolled
-     * since they were created, open-ended".
+     * since the start of last year, open-ended" — they predate this feature, so
+     * anchor them well before any data we track rather than at their created_at.
      */
     public function up(): void
     {
@@ -22,7 +24,7 @@ return new class extends Migration
         });
 
         DB::table('children')->whereNull('active_from')->update([
-            'active_from' => DB::raw('date(created_at)'),
+            'active_from' => CarbonImmutable::now()->subYear()->startOfYear()->toDateString(),
         ]);
     }
 
