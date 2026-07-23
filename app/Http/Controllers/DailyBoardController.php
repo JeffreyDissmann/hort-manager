@@ -134,15 +134,22 @@ class DailyBoardController extends Controller
             [$date->toDateString()],
         );
         $effectiveTime = [];
+        $effectiveQualifier = [];
         foreach ($departures as $d) {
-            $effectiveTime[$d->id] = $d->planned_method === DepartureMethod::WithChild && $d->companion_child_id
-                ? ($companionPlans[$d->companion_child_id.'|'.$date->toDateString()]['time'] ?? null)
+            $isCompanion = $d->planned_method === DepartureMethod::WithChild && $d->companion_child_id;
+            $companionKey = $d->companion_child_id.'|'.$date->toDateString();
+            $effectiveTime[$d->id] = $isCompanion
+                ? ($companionPlans[$companionKey]['time'] ?? null)
                 : ($d->planned_time ? substr((string) $d->planned_time, 0, 5) : null);
+            // „geht mit … mit" also inherits the companion's bis/genau um/ab qualifier.
+            $effectiveQualifier[$d->id] = $isCompanion
+                ? ($companionPlans[$companionKey]['qualifier'] ?? null)
+                : $d->time_qualifier?->value;
         }
 
         $editable = $day['editable'];
 
-        $rows = $departures->map(function (DailyDeparture $d) use ($standard, $user, $myChildIds, $excursionByChild, $date, $childNames, $effectiveTime, $editable) {
+        $rows = $departures->map(function (DailyDeparture $d) use ($standard, $user, $myChildIds, $excursionByChild, $date, $childNames, $effectiveTime, $effectiveQualifier, $editable) {
             $dob = $d->child->date_of_birth;
             $birthday = $dob && $dob->format('m-d') === $date->format('m-d')
                 ? $date->year - $dob->year
@@ -162,8 +169,15 @@ class DailyBoardController extends Controller
                 }
             }
 
-            // „geht allein" prefix (bis/ab); the default „genau um" stays implicit.
-            $qualifier = $plannedMethod === DepartureMethod::SentHome->value ? $d->time_qualifier : null;
+            // „geht allein" prefix (bis/ab); the default „genau um" stays implicit. For
+            // „geht mit … mit" it's mirrored from the companion (see $effectiveQualifier).
+            $qualifier = match ($plannedMethod) {
+                DepartureMethod::SentHome->value => $d->time_qualifier,
+                DepartureMethod::WithChild->value => ($effectiveQualifier[$d->id] ?? null)
+                    ? TimeQualifier::from($effectiveQualifier[$d->id])
+                    : null,
+                default => null,
+            };
 
             $std = $standard[$d->child_id] ?? null;
             $overridden = $std === null

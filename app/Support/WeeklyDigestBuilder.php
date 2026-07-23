@@ -152,12 +152,16 @@ class WeeklyDigestBuilder
             return '';
         }
 
-        // „geht mit … mit": mirror the companion (time is resolved one level up).
+        // „geht mit … mit": mirror the companion (time is resolved one level up),
+        // including their bis/ab qualifier.
         if ($plan['method'] === DepartureMethod::WithChild->value && $plan['companion_child_id']) {
             $companion = $childNames[$plan['companion_child_id']] ?? '';
             $mirror = EffectivePlan::for($plan['companion_child_id'], $date);
+            $prefix = $mirror['qualifier'] && $mirror['qualifier'] !== TimeQualifier::At->value
+                ? TimeQualifier::from($mirror['qualifier'])->prefix().' '
+                : '';
 
-            return trim("geht mit {$companion} mit".($mirror['time'] ? " ({$mirror['time']})" : ''));
+            return trim("geht mit {$companion} mit".($mirror['time'] ? " ({$prefix}{$mirror['time']})" : ''));
         }
 
         $time = $plan['time'];

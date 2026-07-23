@@ -185,10 +185,15 @@ class WeeklyOverviewController extends Controller
                     'time' => $time,
                     'method' => $method,
                     // The „geht allein" time qualifier (bis/um/ab): from the override if
-                    // there is one, otherwise the Stammplan's.
-                    'qualifier' => $method === DepartureMethod::SentHome->value
-                        ? ($departure ? $departure->time_qualifier?->value : $schedule?->time_qualifier?->value)
-                        : null,
+                    // there is one, otherwise the Stammplan's. „geht mit … mit" mirrors
+                    // the companion's qualifier along with their time.
+                    'qualifier' => match ($method) {
+                        DepartureMethod::SentHome->value => $departure ? $departure->time_qualifier?->value : $schedule?->time_qualifier?->value,
+                        DepartureMethod::WithChild->value => $departure && $departure->companion_child_id
+                            ? ($companionPlans[$departure->companion_child_id.'|'.$day['date']]['qualifier'] ?? null)
+                            : null,
+                        default => null,
+                    },
                     // Companion for „geht mit … mit": { name, confirmed: null|true|false }.
                     'companion' => $companion,
                     // Shown on the cell: the override's own note, or the Stammplan comment.
@@ -397,10 +402,13 @@ class WeeklyOverviewController extends Controller
                 $departed = $departure?->status !== null && $departure?->status !== DepartureStatus::Present;
 
                 // „geht allein" prefix (bis/ab); the default „genau um" stays implicit.
-                // Use the override's qualifier if there is one, else the Stammplan's.
-                $qualifier = $method?->value === DepartureMethod::SentHome->value
-                    ? ($departure ? $departure->time_qualifier : $schedule?->time_qualifier)
-                    : null;
+                // Use the override's qualifier if there is one, else the Stammplan's. A
+                // „geht mit … mit" pickup mirrors the companion's qualifier too.
+                $qualifier = match (true) {
+                    $method === DepartureMethod::SentHome => $departure ? $departure->time_qualifier : $schedule?->time_qualifier,
+                    $method === DepartureMethod::WithChild && $departure?->companion_child_id => TimeQualifier::tryFrom($companionPlans[$departure->companion_child_id.'|'.$day['date']]['qualifier'] ?? ''),
+                    default => null,
+                };
 
                 $dayLists[$i][] = [
                     'id' => $child->id,

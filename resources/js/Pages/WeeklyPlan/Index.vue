@@ -43,10 +43,11 @@ const qualifierPrefix = computed(() =>
     Object.fromEntries(props.qualifierOptions.map((o) => [o.value, o.prefix])),
 );
 
-// The prefix to show before a sent_home time — only for the meaningful deviations
-// (bis/ab); „genau um" is the default and stays implicit to keep the cell clean.
+// The prefix to show before a time — only for the meaningful deviations (bis/ab);
+// „genau um" is the default and stays implicit to keep the cell clean. Shown for
+// „geht allein" and for „geht mit … mit" (which mirrors the companion's qualifier).
 function timePrefix(method, qualifier) {
-    if (method !== 'sent_home' || !qualifier || qualifier === 'at') {
+    if ((method !== 'sent_home' && method !== 'with_child') || !qualifier || qualifier === 'at') {
         return '';
     }
     return qualifierPrefix.value[qualifier] ?? '';

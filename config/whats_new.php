@@ -16,6 +16,15 @@ declare(strict_types=1);
 
 return [
     [
+        'version' => '2026.07.23',
+        'date' => '2026-07-23',
+        'title' => 'Mitgehen: „bis"/„ab" wird übernommen 🕒 – Danke, Julia!',
+        'items' => [
+            '🕒 Geht dein Kind mit einem anderen Kind mit, übernimmt es jetzt auch dessen Zeit-Angabe: Heißt es beim anderen Kind „ab 15:30" oder „bis 15:30", steht das nun genauso bei deinem Kind – auf „Heute", im Wochenplan und im Wochenüberblick.',
+            '💛 Danke fürs Melden, Julia!',
+        ],
+    ],
+    [
         'version' => '2026.07.18',
         'date' => '2026-07-18',
         'title' => 'Jeden Tag ansehen 📅 & Benachrichtigungen 🔔 – Danke, Julia & Stepan!',
