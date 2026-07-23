@@ -166,6 +166,9 @@ Route::middleware('auth')->group(function () {
 
         Route::get('import', [ImportController::class, 'create'])->name('import.create');
         Route::post('import', [ImportController::class, 'store'])->name('import.store');
+        // Confirm/adjust the auto-guessed column mapping before drafts are created.
+        Route::get('import/{import}/configure', [ImportController::class, 'configure'])->name('import.configure');
+        Route::post('import/{import}/configure', [ImportController::class, 'storeMapping'])->name('import.store-mapping');
         Route::get('import/{import}', [ImportController::class, 'show'])->name('import.show');
         // Import genuine duplicates the user confirmed from the summary's skipped list.
         Route::post('import/{import}/confirm-skipped', [ImportController::class, 'confirmSkipped'])->name('import.confirm-skipped');

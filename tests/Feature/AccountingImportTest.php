@@ -28,6 +28,22 @@ function uploadStatement(): UploadedFile
     return UploadedFile::fake()->createWithContent('umsatz.csv', statementCsv());
 }
 
+/** The column mapping for the standard Kontonummer;Buchungsdatum;… layout. */
+function standardMapping(): array
+{
+    return ['booking_date' => 1, 'valuta_date' => 2, 'purpose' => 3, 'amount' => 4, 'currency' => 5];
+}
+
+/** Run the two-step import (upload → confirm mapping) and return the finished Import. */
+function importStatement(Account $account, ?UploadedFile $file = null, ?array $mapping = null): Import
+{
+    test()->post('/accounting/import', ['account_id' => $account->id, 'file' => $file ?? uploadStatement()]);
+    $import = Import::latest('id')->first();
+    test()->post("/accounting/import/{$import->id}/configure", ['mapping' => $mapping ?? standardMapping()]);
+
+    return $import->refresh();
+}
+
 it('forbids non-admins from the import page', function () {
     $staff = User::factory()->staff()->create();
 
@@ -49,13 +65,44 @@ it('accepts a UTF-16 .csv but rejects other extensions with a friendly message',
     ])->assertSessionHasErrors(['file' => __('accounting.import.file_invalid')]);
 });
 
-it('imports statement rows as draft bookings with the right sign', function () {
+it('parks the upload as a pending import and sends the user to map the columns', function () {
     $admin = User::factory()->admin()->create();
     $account = Account::factory()->create();
 
     $this->actingAs($admin)
         ->post('/accounting/import', ['account_id' => $account->id, 'file' => uploadStatement()])
         ->assertRedirect();
+
+    $import = Import::latest('id')->first();
+    // No drafts yet — the file is only decoded and stashed.
+    expect(Booking::count())->toBe(0)
+        ->and($import->isMapped())->toBeFalse()
+        ->and($import->pending_columns['header'])->toContain('Buchungsdatum');
+});
+
+it('shows the mapping screen with a guessed mapping and a preview', function () {
+    $admin = User::factory()->admin()->create();
+    $account = Account::factory()->create();
+    $this->actingAs($admin)->post('/accounting/import', ['account_id' => $account->id, 'file' => uploadStatement()]);
+    $import = Import::latest('id')->first();
+
+    $this->get("/accounting/import/{$import->id}/configure")
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->component('Accounting/Import/Configure')
+            ->where('mapping.booking_date', 1)
+            ->where('mapping.amount', 4)
+            ->where('mapping.currency', 5)
+            ->where('rowCount', 2)
+            ->has('preview', 2)
+            ->has('header', 6));
+});
+
+it('imports statement rows as draft bookings with the right sign once the mapping is confirmed', function () {
+    $admin = User::factory()->admin()->create();
+    $account = Account::factory()->create();
+    $this->actingAs($admin);
+
+    $import = importStatement($account);
 
     $drafts = Booking::where('account_id', $account->id)->get();
     expect($drafts)->toHaveCount(2)
@@ -67,8 +114,35 @@ it('imports statement rows as draft bookings with the right sign', function () {
         ->and($income->category_id)->toBeNull()
         ->and($expense->kind)->toBe(BookingKind::Expense);
 
-    $import = Import::first();
-    expect($import->imported_count)->toBe(2)->and($import->duplicate_count)->toBe(0);
+    expect($import->imported_count)->toBe(2)
+        ->and($import->duplicate_count)->toBe(0)
+        ->and($import->isMapped())->toBeTrue()
+        ->and($import->pending_columns)->toBeNull(); // cleared after mapping
+});
+
+it('respects an adjusted mapping', function () {
+    $admin = User::factory()->admin()->create();
+    $account = Account::factory()->create();
+    $this->actingAs($admin);
+
+    // Point „amount" at the Kontonummer column (index 0) instead of Betrag.
+    importStatement($account, mapping: [...standardMapping(), 'amount' => 0]);
+
+    // Kontonummer 12345 → 1234500 cents on every row.
+    expect(Booking::pluck('amount_cents')->all())->toEqual([1234500, 1234500]);
+});
+
+it('rejects a mapping missing a required column', function () {
+    $admin = User::factory()->admin()->create();
+    $account = Account::factory()->create();
+    $this->actingAs($admin)->post('/accounting/import', ['account_id' => $account->id, 'file' => uploadStatement()]);
+    $import = Import::latest('id')->first();
+
+    $this->post("/accounting/import/{$import->id}/configure", [
+        'mapping' => ['booking_date' => 1, 'valuta_date' => 2, 'currency' => 5], // no purpose / amount
+    ])->assertSessionHasErrors(['mapping.purpose', 'mapping.amount']);
+
+    expect(Booking::count())->toBe(0);
 });
 
 it('skips duplicate rows on re-import', function () {
@@ -76,8 +150,8 @@ it('skips duplicate rows on re-import', function () {
     $account = Account::factory()->create();
     $this->actingAs($admin);
 
-    $this->post('/accounting/import', ['account_id' => $account->id, 'file' => uploadStatement()]);
-    $this->post('/accounting/import', ['account_id' => $account->id, 'file' => uploadStatement()]);
+    importStatement($account);
+    importStatement($account);
 
     // Still only the first two — the second upload is all duplicates.
     expect(Booking::where('account_id', $account->id)->count())->toBe(2)
@@ -89,8 +163,8 @@ it('surfaces the skipped duplicate rows on the summary for confirmation', functi
     $account = Account::factory()->create();
     $this->actingAs($admin);
 
-    $this->post('/accounting/import', ['account_id' => $account->id, 'file' => uploadStatement()]);
-    $second = $this->post('/accounting/import', ['account_id' => $account->id, 'file' => uploadStatement()]);
+    importStatement($account);
+    importStatement($account);
 
     $import = Import::latest('id')->first();
     expect($import->skipped_rows)->toHaveCount(2); // both rows were skipped as repeats
@@ -104,8 +178,8 @@ it('imports a confirmed skipped row and removes it from the skipped list', funct
     $account = Account::factory()->create();
     $this->actingAs($admin);
 
-    $this->post('/accounting/import', ['account_id' => $account->id, 'file' => uploadStatement()]);
-    $this->post('/accounting/import', ['account_id' => $account->id, 'file' => uploadStatement()]);
+    importStatement($account);
+    importStatement($account);
     $import = Import::latest('id')->first();
 
     // Confirm the first skipped row is genuine → it's imported.
@@ -123,8 +197,7 @@ it('shows a post-upload summary with the draft total', function () {
     $admin = User::factory()->admin()->create();
     $account = Account::factory()->create();
     $this->actingAs($admin);
-    $this->post('/accounting/import', ['account_id' => $account->id, 'file' => uploadStatement()]);
-    $import = Import::first();
+    $import = importStatement($account);
 
     $this->get("/accounting/import/{$import->id}")
         ->assertOk()
@@ -132,4 +205,14 @@ it('shows a post-upload summary with the draft total', function () {
             ->component('Accounting/Import/Summary')
             ->where('batch.imported_count', 2)
             ->where('draftTotal', 2));
+});
+
+it('redirects the summary of a still-unmapped import back to the mapping step', function () {
+    $admin = User::factory()->admin()->create();
+    $account = Account::factory()->create();
+    $this->actingAs($admin)->post('/accounting/import', ['account_id' => $account->id, 'file' => uploadStatement()]);
+    $import = Import::latest('id')->first();
+
+    $this->get("/accounting/import/{$import->id}")
+        ->assertRedirect("/accounting/import/{$import->id}/configure");
 });

@@ -27,6 +27,8 @@ class Import extends Model
         'imported_count',
         'duplicate_count',
         'skipped_rows',
+        'pending_columns',
+        'column_mapping',
     ];
 
     protected function casts(): array
@@ -36,7 +38,15 @@ class Import extends Model
             'imported_count' => 'integer',
             'duplicate_count' => 'integer',
             'skipped_rows' => 'array',
+            'pending_columns' => 'array',
+            'column_mapping' => 'array',
         ];
+    }
+
+    /** Whether the column mapping has been confirmed and the drafts created. */
+    public function isMapped(): bool
+    {
+        return $this->column_mapping !== null;
     }
 
     /** @return BelongsTo<Account, $this> */

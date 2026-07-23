@@ -7,12 +7,14 @@ namespace App\Http\Controllers\Accounting;
 use App\Enums\BookingKind;
 use App\Enums\BookingStatus;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Accounting\StoreImportMappingRequest;
 use App\Http\Requests\Accounting\StoreImportRequest;
 use App\Jobs\SuggestBookingCategory;
 use App\Models\Accounting\Account;
 use App\Models\Accounting\Booking;
 use App\Models\Accounting\Import;
-use App\Support\Accounting\BankStatementParser;
+use App\Support\Accounting\CsvReader;
+use App\Support\Accounting\StatementMapper;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -20,9 +22,16 @@ use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Inertia\Response;
 
-/** Admin-only bank-statement CSV import (upload + post-upload summary). */
+/**
+ * Admin-only bank-statement CSV import. Three steps: upload → confirm the
+ * auto-guessed column mapping → post-upload summary. The upload only decodes the
+ * file and stores its raw columns; drafts are created once the mapping is confirmed.
+ */
 class ImportController extends Controller
 {
+    /** How many data rows to preview on the mapping screen. */
+    private const PREVIEW_ROWS = 6;
+
     public function create(): Response
     {
         return Inertia::render('Accounting/Import/Create', [
@@ -30,23 +39,70 @@ class ImportController extends Controller
         ]);
     }
 
-    public function store(StoreImportRequest $request, BankStatementParser $parser): RedirectResponse
+    /**
+     * Decode the upload into a raw table and stash it against a pending import, then
+     * send the user to confirm the guessed column mapping. No drafts are created yet.
+     */
+    public function store(StoreImportRequest $request, CsvReader $reader): RedirectResponse
     {
         $account = Account::findOrFail($request->integer('account_id'));
-        $rows = $parser->parse($request->file('file')->get());
+        $table = $reader->read($request->file('file')->get());
+
+        if ($table['header'] === [] || $table['rows'] === []) {
+            return back()->withErrors(['file' => __('accounting.import.file_empty')]);
+        }
+
+        $import = Import::create([
+            'account_id' => $account->id,
+            'uploaded_by' => Auth::id(),
+            'filename' => $request->file('file')->getClientOriginalName(),
+            'row_count' => count($table['rows']),
+            'pending_columns' => $table,
+        ]);
+
+        return redirect()->route('accounting.import.configure', $import);
+    }
+
+    /** Confirm/adjust the column mapping for a pending import. */
+    public function configure(Import $import, StatementMapper $mapper): Response|RedirectResponse
+    {
+        if ($import->isMapped()) {
+            return redirect()->route('accounting.import.show', $import);
+        }
+
+        $table = $import->pending_columns;
+
+        return Inertia::render('Accounting/Import/Configure', [
+            'batch' => ['id' => $import->id, 'filename' => $import->filename, 'account' => $import->account?->name],
+            'header' => $table['header'],
+            'preview' => array_slice($table['rows'], 0, self::PREVIEW_ROWS),
+            'rowCount' => count($table['rows']),
+            'mapping' => $mapper->guess($table['header']),
+            'fields' => StatementMapper::FIELDS,
+            'requiredFields' => StatementMapper::REQUIRED_FIELDS,
+        ]);
+    }
+
+    /**
+     * Apply the confirmed mapping: normalize the stashed rows and create draft
+     * bookings (skipping duplicates), then finalize the import.
+     */
+    public function storeMapping(StoreImportMappingRequest $request, Import $import, StatementMapper $mapper): RedirectResponse
+    {
+        if ($import->isMapped()) {
+            return redirect()->route('accounting.import.show', $import);
+        }
+
+        $mapping = $request->mapping();
+        $rows = $mapper->normalize($import->pending_columns['rows'] ?? [], $mapping);
+
+        $account = $import->account;
 
         // Existing hashes on this account (so re-uploading overlapping months skips repeats).
         $existing = Booking::where('account_id', $account->id)
             ->whereNotNull('import_hash')
             ->pluck('import_hash')
             ->flip();
-
-        $import = Import::create([
-            'account_id' => $account->id,
-            'uploaded_by' => Auth::id(),
-            'filename' => $request->file('file')->getClientOriginalName(),
-            'row_count' => count($rows),
-        ]);
 
         $seen = [];
         $skipped = [];
@@ -67,6 +123,9 @@ class ImportController extends Controller
         }
 
         $import->update([
+            'column_mapping' => $mapping,
+            'pending_columns' => null,
+            'row_count' => count($rows),
             'imported_count' => $drafts->count(),
             'duplicate_count' => count($skipped),
             'skipped_rows' => $skipped,
@@ -144,8 +203,12 @@ class ImportController extends Controller
     }
 
     /** Post-upload summary: what was imported, skipped, and AI-analysis progress. */
-    public function show(Import $import): Response
+    public function show(Import $import): Response|RedirectResponse
     {
+        if (! $import->isMapped()) {
+            return redirect()->route('accounting.import.configure', $import);
+        }
+
         return Inertia::render('Accounting/Import/Summary', [
             'batch' => [
                 'id' => $import->id,

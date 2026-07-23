@@ -9,6 +9,7 @@ use App\Jobs\SuggestBookingCategory;
 use App\Models\Accounting\Account;
 use App\Models\Accounting\Booking;
 use App\Models\Accounting\Category;
+use App\Models\Accounting\Import;
 use App\Models\Child;
 use App\Models\User;
 use App\Services\Accounting\BookingSuggester;
@@ -26,6 +27,16 @@ function suggestionCsv(): UploadedFile
         ."12345;01.04.2026;31.03.2026;DAUERAUFTRAG Miete;-3.520,00;EUR\r\n";
 
     return UploadedFile::fake()->createWithContent('umsatz.csv', mb_convert_encoding($utf8, 'UTF-16LE', 'UTF-8'));
+}
+
+/** Two-step import of {@see suggestionCsv()}: upload then confirm the standard mapping. */
+function importSuggestionCsv(Account $account): void
+{
+    test()->post('/accounting/import', ['account_id' => $account->id, 'file' => suggestionCsv()]);
+    $import = Import::latest('id')->first();
+    test()->post("/accounting/import/{$import->id}/configure", [
+        'mapping' => ['booking_date' => 1, 'valuta_date' => 2, 'purpose' => 3, 'amount' => 4, 'currency' => 5],
+    ]);
 }
 
 beforeEach(function () {
@@ -46,9 +57,8 @@ it('moves imported drafts to suggested and stores AI suggestions', function () {
         ['category_id' => $expense->id],
     ]);
 
-    $this->actingAs($admin)
-        ->post('/accounting/import', ['account_id' => $account->id, 'file' => suggestionCsv()])
-        ->assertRedirect();
+    $this->actingAs($admin);
+    importSuggestionCsv($account);
 
     $incomeRow = Booking::where('amount_cents', 5000)->first();
     $expenseRow = Booking::where('amount_cents', -352000)->first();
@@ -71,8 +81,8 @@ it('drops a suggested category whose direction is wrong', function () {
         ['category_id' => $income->id],
     ]);
 
-    $this->actingAs($admin)
-        ->post('/accounting/import', ['account_id' => $account->id, 'file' => suggestionCsv()]);
+    $this->actingAs($admin);
+    importSuggestionCsv($account);
 
     expect(Booking::where('amount_cents', -352000)->first()->category_id)->toBeNull();
 });
@@ -102,8 +112,8 @@ it('queues one suggestion job per imported draft', function () {
     $admin = User::factory()->admin()->create();
     $account = Account::factory()->create();
 
-    $this->actingAs($admin)
-        ->post('/accounting/import', ['account_id' => $account->id, 'file' => suggestionCsv()]);
+    $this->actingAs($admin);
+    importSuggestionCsv($account);
 
     Queue::assertPushed(SuggestBookingCategory::class, 2);
 });

@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
-use App\Support\Accounting\BankStatementParser;
-use App\Support\Accounting\CsvStatementParser;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -24,11 +22,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        // Bank-statement CSV parsing (Buchhaltung import). One implementation today.
-        $this->app->bind(
-            BankStatementParser::class,
-            CsvStatementParser::class,
-        );
+        //
     }
 
     /**
