@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **hort-manager** — a management app for a German after-school daycare (*Hort*). Two-sided: **Erzieher** (staff) and **Eltern** (parents). The job it exists to do: track **when each child leaves each day, and how**.
 
-**The frontend UI language is German.** User-facing strings, labels, and routes that users see should be German (domain terms below are the canonical vocabulary). Code, comments, and identifiers stay English.
+**The frontend UI language is German** — but only the rendered UI. User-facing strings and labels are German (domain terms below are the canonical vocabulary). Everything else stays English: code, comments, identifiers, **route names _and_ URL paths**, backend messages. German is the default *display* language, not a convention that leaks into paths or code.
 
 ## Run everything through Laravel Sail
 
@@ -42,6 +42,8 @@ Two layers, both **Pest** (the fast suite is Pest running the existing PHPUnit-s
 User            role: staff | parent  (App\Enums\UserRole)   — isStaff() helper
   ⇄ children    child_user pivot (guardians)                  User::children / Child::guardians
 Child           name, date_of_birth?, note   (flat list — NO groups)
+                active_from (required, enrolment start) + active_until? (leave date, null =
+                still enrolled) — the „Aktivitätszeitraum" (see „Child enrolment period")
 WeeklySchedule  (Stammplan)  child + weekday 1–5 → planned_time + method + time_qualifier? + comment?
                 method = App\Enums\DepartureMethod: picked_up | sent_home (companion `with_child` is
                 Wochenplan/per-day only, NEVER the Stammplan — rejected server-side there)
@@ -57,7 +59,7 @@ DailyDeparture  (Tagesboard) one row per child+date (unique):
 Absence         (Krank/„Kommt nicht") one row per child+date with a required reason
                 (App\Enums\AbsenceReason: sick|away) + comment; the child is off the board/plan that day
 DailyProgram    (Tagesprogramm) one row per date: lunch + activity + homework_start/end (Hort-wide)
-                staff edit weekly at /programm; read-only on board + Abholplan
+                staff edit weekly at /program; read-only on board + Abholplan
 HomeworkDefault per-weekday default homework slot; DailyProgram homework overrides it
                 (effective = override ?? weekday default; equal-to-default is stored as no override)
 Excursion       (Ausflug)  name, date, depart_at, return_at, rsvp_deadline,
@@ -81,6 +83,28 @@ Two parts: **Diese Woche** = effective plan per child for the selected week (Sta
 ### Editing a day — the shared `DayEditor` popup
 **One component, `resources/js/Components/DayEditor.vue`, edits any child on any date — used by BOTH the Wochenplan (grid cells, timeline, „nicht da" pills) and the Heute board („Abholzeit ändern" + „Hortfrei" pills). Do NOT add a second inline editor.** Open it with `dayEditor.value.open(child, day, dayMeta)`; it always posts to `weekly-plan.adjust` (set a plan), `absences.store` (Krank/„Kommt nicht"), or `weekly-plan.reset` (revert to Stammplan). Companion („geht mit … mit") is offered here too — the board feeds its picker via a `children` prop (each child's effective time today). A **complete plan is required**: a real pickup needs BOTH a method and a time; `with_child` needs a companion (its time mirrors them). Enforced in the popup (Speichern disabled) **and** server-side in `AdjustDayRequest` (`planned_method` required; `planned_time` required unless `with_child`). The board's older `board.override` endpoint still exists but the UI now edits through `DayEditor`/`weekly-plan.adjust`.
 
+### Child enrolment period (Aktivitätszeitraum)
+A child is only shown while **enrolled**: `Child.active_from` (required, start) … `active_until`
+(nullable leave date; null = still enrolled). Existing children were backfilled to „enrolled since
+the start of last year, open-ended". Kids are typically at the Hort ~4 years, so `active_until` is usually open
+for a long time. Filtering is always **date-relative** (never a global „is active now" flag), which is
+what keeps history intact — a child who left in 2025 still appears in 2025's board/contributions but
+not from 2026 on. Three model scopes (each accepts a `Carbon`/`DateTime` *or* a `Y-m-d` string; a null
+`active_from` is treated defensively as always-active):
+- **`activeOn($date)`** — the Hort side (every view there is anchored to a specific date): board,
+  weekly plan, standard timetable, dashboard, birthdays, excursion invites (trip date),
+  missing-Stammplan reminder + „Wochenplan fehlt" banner.
+- **`activeBetween($from,$to)`** — a week (inclusive **overlap**: active *any* day in the range) — the
+  Wochenplan and weekly digest.
+- **`activeInYear($year)`** — the accounting side (enrolment overlaps the calendar year): the
+  contributions matrix, the booking child dropdowns (year of the booking's date), and the AI
+  suggester (children active in the **booking's** year — strict, so a payment dated after a child
+  left won't attribute to them). Plus `isActiveOn($date)` on the model.
+`/children` shows active children by default with an „Ehemalige" (former) toggle for leavers. Create
+requires `active_from` (defaults to today in the form); update only re-validates it when sent (the
+form always sends it). A child with bookings still can't be *deleted* (restrictOnDelete) — leaving
+(`active_until`) is the normal „gone" path.
+
 ### Hortfrei vs. Absence — two different „not there"
 - **Hortfrei** = *structural* non-attendance: the child's Stammplan simply has no entry for that weekday (no `WeeklySchedule` row). No reason, no record. Surfaced explicitly as a muted „Heute hortfrei (Stammplan)" line on the board and per-weekday in the Wochenplan „Diese Woche nicht da" summary; names are **clickable pills** (own children for parents, all for staff) that open `DayEditor` to add a one-off pickup. A child with a same-day override is NOT listed as Hortfrei (they're on the board). Unplanned children (zero `WeeklySchedule` rows) are the „Wochenplan fehlt" case, not Hortfrei.
 - **„Kommt nicht" / „Krank"** = a *reported* `Absence` for a specific date, **with a required reason** — amber, undoable, and a separate flow. The Stammplan editor's non-attendance option is deliberately named **„Hortfrei"** (not „Kommt nicht") to keep the two apart.
@@ -88,8 +112,8 @@ Two parts: **Diese Woche** = effective plan per child for the selected week (Sta
 ### Tagesboard mechanics
 `DailyBoardController` targets **today, or the next weekday on weekends**. It lazily `firstOrCreate`s a `DailyDeparture` per scheduled child from the Stammplan (carrying `time_qualifier`). A row is "overridden" when its plan differs from the Stammplan (shown as „heute geändert"). Excursions are an **overlay** (`rows[].excursion`), not a status swap — a child on a trip still gets marked picked up after returning.
 
-## Routes / nav (German URLs, English route names)
-`board` (/tagesboard, "Heute") · `weekly-plan` (/wochenplan) · `standard-plan` (/stammplan, read-only) · `children` (/children) · `excursions` (/ausfluege, staff only) · `program` (/programm, staff only). Also `role.update` (/rolle, admin self role-switch). Nav lives in `AuthenticatedLayout.vue` (role-aware; bottom tab bar on mobile; the admin „Meine Rolle" toggle sits under Benutzer). Demo logins: `erzieher@hort.test` (staff+admin) / `eltern@hort.test`, both `password`. Extra demo data via `sail artisan db:seed --class=DemoExtrasSeeder` (Hortfrei days, bis/ab qualifiers, a no-plan child).
+## Routes / nav (English URLs and route names)
+`board` (/board, "Heute") · `weekly-plan` (/weekly-plan) · `standard-plan` (/standard-plan, read-only) · `children` (/children) · `excursions` (/excursions, staff only) · `program` (/program, staff only). Also `role.update` (/role, admin self role-switch). URLs are English too — German lives only in the rendered UI, not the address bar. Nav lives in `AuthenticatedLayout.vue` (role-aware; bottom tab bar on mobile; the admin „Meine Rolle" toggle sits under Benutzer). Demo logins: `erzieher@hort.test` (staff+admin) / `eltern@hort.test`, both `password`. Extra demo data via `sail artisan db:seed --class=DemoExtrasSeeder` (Hortfrei days, bis/ab qualifiers, a no-plan child).
 
 **Links use [Laravel Wayfinder](https://github.com/laravel/wayfinder), not Ziggy.** Import typed helpers and call `.url` — e.g. `import { index as childrenIndex } from '@/routes/children'` → `:href="childrenIndex().url"`; args `childrenEdit(child.id).url`; query `weeklyPlan({ query: { week: date } }).url`. Generated files under `resources/js/{routes,actions,wayfinder}` are gitignored (regenerated by the Vite plugin on build). Watch for clashes with local symbols — alias the import (e.g. `import { mark as boardMark }`). Active-nav state is plain URL-prefix matching in `AuthenticatedLayout.vue` (Ziggy is gone).
 

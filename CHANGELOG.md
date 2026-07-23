@@ -8,6 +8,31 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Buchhaltung (accounting) — admin-only bookkeeping**: a full income/expense ledger
+  for the Hort. Bank statements are imported from CSV — now with a **flexible
+  column-mapping step**: after upload the columns (Buchungsdatum, Wertstellung,
+  Verwendungszweck, Betrag, Währung) are auto-detected from the header and shown for
+  confirmation or adjustment, with a live preview, before any drafts are created;
+  encoding (UTF-16/UTF-8), delimiter, date format and amount style are detected
+  automatically, so it's no longer tied to one bank's layout. Duplicate rows are skipped
+  and surfaced for one-tap confirmation. A local **AI model** (Ollama via `laravel/ai`)
+  suggests a category and counterparty per row, which staff review and confirm. Bookings
+  carry a category (a nestable income/expense tree), a counterparty (child / user / free
+  text), and transfers between accounts are booked as a linked pair. Two evaluations:
+  the **Auswertung** (month × category pivot of the confirmed ledger) and **Einnahmen je
+  Kind** (a child × month contributions matrix per income stream, flagging months a child
+  hasn't paid and contributions not linked to a child). Both, and the filtered bookings
+  list, **export to CSV and Excel (XLSX)**.
+- **Child enrolment period (Aktivitätszeitraum)**: each child now has an `active_from`
+  (start) and optional `active_until` (leave date; empty = still enrolled), so a child who
+  leaves the Hort disappears from the day-to-day views without erasing their history.
+  Filtering is always date-relative: the Hort side (board, Wochenplan, Stammplan,
+  birthdays, excursion invites…) shows a child only on dates they're enrolled; the
+  accounting side scopes to the selected year (the contributions matrix, the booking
+  child pickers and the AI suggester only offer children enrolled that year, and payments
+  attributed to a child not enrolled that year are surfaced separately so totals still
+  reconcile). The Kinder page lists active children by default with an „Ehemalige" toggle
+  for leavers; creating a child asks for the start date.
 - **Notification settings + weekly digest**: a „Benachrichtigungen" page (avatar menu)
   with a per-category × per-channel opt-out matrix — each notification type (departures,
   excursions, companion, missing plan, weekly digest) toggles independently for Slack

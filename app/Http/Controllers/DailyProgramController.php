@@ -31,7 +31,9 @@ class DailyProgramController extends Controller
             ->keyBy(fn (DailyProgram $p) => $p->date->toDateString());
 
         $defaults = HomeworkDefault::all()->keyBy('weekday');
-        $children = Child::query()->whereNotNull('date_of_birth')->get(['id', 'name', 'date_of_birth']);
+        $weekRange = $weekDays->pluck('date');
+        $children = Child::query()->activeBetween($weekRange->first(), $weekRange->last())
+            ->whereNotNull('date_of_birth')->get(['id', 'name', 'date_of_birth']);
 
         $days = $weekDays->map(function (array $day) use ($programs, $defaults, $children) {
             $weekday = Carbon::parse($day['date'])->dayOfWeekIso;
@@ -153,7 +155,8 @@ class DailyProgramController extends Controller
 
         foreach ($validated['defaults'] ?? [] as $row) {
             if (empty($row['start']) && empty($row['end'])) {
-                HomeworkDefault::where('weekday', $row['weekday'])->delete();
+                // Model delete (not a bulk query) so the removal is logged.
+                HomeworkDefault::where('weekday', $row['weekday'])->first()?->delete();
 
                 continue;
             }

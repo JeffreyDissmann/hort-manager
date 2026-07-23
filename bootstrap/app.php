@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Middleware\EnsureUserIsAdmin;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\SetLocale;
 use Illuminate\Foundation\Application;
@@ -22,6 +23,9 @@ return Application::configure(basePath: dirname(__DIR__))
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
         ]);
+
+        // Admin-only route groups (e.g. the Buchhaltung module).
+        $middleware->alias(['admin' => EnsureUserIsAdmin::class]);
 
         // Behind the Cloudflare Tunnel / reverse proxy — honor X-Forwarded-* (scheme, IP).
         $middleware->trustProxies(at: '*');

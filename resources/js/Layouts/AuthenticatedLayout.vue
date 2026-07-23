@@ -17,12 +17,24 @@ import {
     UserGroupIcon,
     MapIcon,
     ClipboardDocumentListIcon,
+    Squares2X2Icon,
+    BanknotesIcon,
+    ChartBarIcon,
+    UsersIcon,
+    ChevronDownIcon,
+    CheckIcon,
 } from '@heroicons/vue/24/outline';
 import { board, weeklyPlan, standardPlan, program, logout, dashboard, help, activityLog } from '@/routes';
+import { dashboard as accountingDashboard } from '@/routes/accounting';
 import { update as switchRoleRoute } from '@/routes/role';
 import { index as childrenIndex } from '@/routes/children';
 import { index as excursionsIndex } from '@/routes/excursions';
 import { index as usersIndex } from '@/routes/users';
+import { index as bookingsIndex } from '@/routes/accounting/bookings';
+import { index as accountsIndex } from '@/routes/accounting/accounts';
+import { index as categoriesIndex } from '@/routes/accounting/categories';
+import { index as reportsIndex } from '@/routes/accounting/reports';
+import { index as contributionsIndex } from '@/routes/accounting/contributions';
 import { index as pollsIndex } from '@/routes/polls';
 import { edit as profileEdit } from '@/routes/profile';
 import { edit as notificationsEdit } from '@/routes/notifications';
@@ -55,8 +67,22 @@ function switchRole(role) {
 const pendingPolls = computed(() => usePage().props.pendingPolls ?? 0);
 const pendingCompanions = computed(() => usePage().props.pendingCompanions ?? 0);
 
+// Which "world" we're in is decided purely by the URL: /accounting/* = accounting.
+const inAccounting = computed(() => usePage().url.startsWith('/accounting'));
+
 // Primary navigation — shown as top links on desktop and as a bottom tab bar on mobile.
 const navItems = computed(() => {
+    // Accounting world (admin-only) has its own top-bar items.
+    if (inAccounting.value) {
+        return [
+            // Exact match — /accounting is a prefix of every other accounting page.
+            { label: t('nav.accounting_overview'), href: accountingDashboard().url, icon: 'overview', exact: true },
+            { label: t('nav.bookings'), href: bookingsIndex().url, icon: 'bookings' },
+            { label: t('nav.reports'), href: reportsIndex().url, icon: 'chart' },
+            { label: t('nav.contributions'), href: contributionsIndex().url, icon: 'users' },
+        ];
+    }
+
     // Staff: full nav (Kinder last — changes least). Parents: Heute, Ausflüge, Abholplan.
     const items = isStaff.value
         ? [
@@ -85,12 +111,22 @@ const icons = {
     children: UserGroupIcon,
     map: MapIcon,
     food: ClipboardDocumentListIcon,
+    overview: Squares2X2Icon,
+    bookings: BanknotesIcon,
+    chart: ChartBarIcon,
+    users: UsersIcon,
 };
 
 // Active tab = current path equals the item's href or is a sub-path of it.
+// `exact` items (e.g. the accounting overview at /accounting) match only exactly,
+// since their href is a prefix of every sibling page.
 const currentPath = computed(() => usePage().url.split('?')[0]);
-function isActive(href) {
-    return currentPath.value === href || currentPath.value.startsWith(href + '/');
+function isActive(item) {
+    if (currentPath.value === item.href) {
+        return true;
+    }
+
+    return item.exact ? false : currentPath.value.startsWith(item.href + '/');
 }
 </script>
 
@@ -109,15 +145,41 @@ function isActive(href) {
                 :class="contentMax"
                 class="mx-auto flex h-16 items-center justify-between px-4 sm:px-6"
             >
-                <Link
-                    :href="dashboard().url"
-                    class="flex items-center gap-2"
-                >
-                    <ApplicationLogo class="h-9 w-9" />
-                    <span class="font-display text-2xl text-ink">
-                        {{ appName }}
-                    </span>
-                </Link>
+                <div class="flex items-center gap-1.5">
+                    <!-- House icon always links home. Non-admins' wordmark links home too. -->
+                    <Link :href="dashboard().url" class="flex items-center gap-2">
+                        <ApplicationLogo class="h-9 w-9" />
+                        <span v-if="!isAdmin" class="font-display text-2xl text-ink">{{ appName }}</span>
+                    </Link>
+
+                    <!-- Admins: the wordmark is the world switcher (Hort ↔ Buchhaltung). -->
+                    <Dropdown v-if="isAdmin" align="left" width="48">
+                        <template #trigger>
+                            <button
+                                type="button"
+                                data-testid="world-switch"
+                                class="flex items-center gap-1 font-display text-2xl text-ink transition hover:opacity-80"
+                            >
+                                {{ inAccounting ? $t('nav.accounting') : appName }}
+                                <ChevronDownIcon class="h-4 w-4 text-ink/40" />
+                            </button>
+                        </template>
+                        <template #content>
+                            <DropdownLink :href="board().url" data-testid="world-hort">
+                                <span class="inline-flex items-center gap-2">
+                                    <CheckIcon class="h-4 w-4 text-hort-teal-dark" :class="{ invisible: inAccounting }" />
+                                    {{ $t('nav.hort_world') }}
+                                </span>
+                            </DropdownLink>
+                            <DropdownLink :href="accountingDashboard().url" data-testid="world-accounting">
+                                <span class="inline-flex items-center gap-2">
+                                    <CheckIcon class="h-4 w-4 text-hort-teal-dark" :class="{ invisible: !inAccounting }" />
+                                    {{ $t('nav.accounting') }}
+                                </span>
+                            </DropdownLink>
+                        </template>
+                    </Dropdown>
+                </div>
 
                 <!-- Desktop nav links -->
                 <nav class="hidden items-center gap-1 sm:flex">
@@ -127,7 +189,7 @@ function isActive(href) {
                         :href="item.href"
                         :class="[
                             'rounded-lg px-3 py-2 text-sm font-medium transition',
-                            isActive(item.href)
+                            isActive(item)
                                 ? 'bg-hort-teal/20 text-ink'
                                 : 'text-ink/60 hover:bg-ink/5 hover:text-ink',
                         ]"
@@ -152,12 +214,6 @@ function isActive(href) {
                     </template>
                     <template #content>
                         <template v-if="isAdmin">
-                            <DropdownLink :href="usersIndex().url">
-                                {{ $t('nav.users') }}
-                            </DropdownLink>
-                            <DropdownLink :href="activityLog().url" data-testid="nav-activity-log">
-                                {{ $t('nav.activity_log') }}
-                            </DropdownLink>
                             <div class="px-4 py-2">
                                 <p class="mb-1 text-xs font-medium text-ink/50">{{ $t('nav.my_role') }}</p>
                                 <div class="flex gap-0.5 rounded-lg bg-ink/5 p-0.5">
@@ -181,6 +237,23 @@ function isActive(href) {
                                     </button>
                                 </div>
                             </div>
+                            <hr class="my-1 border-ink/10" />
+                            <DropdownLink :href="usersIndex().url">
+                                {{ $t('nav.users') }}
+                            </DropdownLink>
+                            <DropdownLink :href="activityLog().url" data-testid="nav-activity-log">
+                                {{ $t('nav.activity_log') }}
+                            </DropdownLink>
+                            <!-- Accounting config lives in the dropdown, only in that world. -->
+                            <template v-if="inAccounting">
+                                <hr class="my-1 border-ink/10" />
+                                <DropdownLink :href="accountsIndex().url" data-testid="nav-accounts">
+                                    {{ $t('nav.accounts') }}
+                                </DropdownLink>
+                                <DropdownLink :href="categoriesIndex().url" data-testid="nav-categories">
+                                    {{ $t('nav.categories') }}
+                                </DropdownLink>
+                            </template>
                             <hr class="my-1 border-ink/10" />
                         </template>
                         <DropdownLink

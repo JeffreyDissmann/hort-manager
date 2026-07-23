@@ -42,18 +42,20 @@ class WeeklyOverviewController extends Controller
         $myChildIds = $user->isStaff() ? null : $user->children()->pluck('children.id');
 
         [$week, $weekDays] = $this->resolveWeek($request);
+        $weekRange = $weekDays->pluck('date');
+        [$weekStart, $weekEnd] = [$weekRange->first(), $weekRange->last()];
 
         // "Diese Woche" is the user's editable view: a parent sees only their own
-        // children, staff see all. The standard timetable below always shows everyone.
+        // children, staff see all. Only children enrolled during the week are shown.
         $weekChildren = $user->isStaff()
-            ? Child::query()->with('weeklySchedules')->orderBy('name')->get(['id', 'name', 'date_of_birth'])
-            : $user->children()->with('weeklySchedules')->orderBy('name')->get();
+            ? Child::query()->activeBetween($weekStart, $weekEnd)->with('weeklySchedules')->orderBy('name')->get(['id', 'name', 'date_of_birth'])
+            : $user->children()->activeBetween($weekStart, $weekEnd)->with('weeklySchedules')->orderBy('name')->get();
 
-        // All children — for the companion picker and name lookups (a companion may be
-        // any child, not just one the current user manages). The picker excludes the
-        // child currently being edited client-side (which one is dynamic per edit), and
-        // the adjust endpoint enforces it with a `different:child_id` rule.
-        $allChildren = Child::query()->with('weeklySchedules')->orderBy('name')->get(['id', 'name']);
+        // Children enrolled this week — for the companion picker and name lookups (a
+        // companion may be any child, not just one the current user manages). The picker
+        // excludes the child currently being edited client-side (which one is dynamic per
+        // edit), and the adjust endpoint enforces it with a `different:child_id` rule.
+        $allChildren = Child::query()->activeBetween($weekStart, $weekEnd)->with('weeklySchedules')->orderBy('name')->get(['id', 'name']);
         $childNames = $allChildren->pluck('name', 'id');
 
         $weekDates = $weekDays->pluck('date')->all();
@@ -325,9 +327,11 @@ class WeeklyOverviewController extends Controller
      */
     private function weekTimetable(Collection $weekDays, array $excursionByChildDate, array $program, array $activities): array
     {
-        $children = Child::query()->with('weeklySchedules')->orderBy('name')->get(['id', 'name']);
+        $weekDates = $weekDays->pluck('date');
+        $children = Child::query()->activeBetween($weekDates->first(), $weekDates->last())
+            ->with('weeklySchedules')->orderBy('name')->get(['id', 'name']);
         $names = $children->pluck('name', 'id');
-        $weekDates = $weekDays->pluck('date')->all();
+        $weekDates = $weekDates->all();
 
         $departures = DailyDeparture::query()
             ->whereIn('date', $weekDates)

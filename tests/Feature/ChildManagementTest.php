@@ -7,8 +7,10 @@ namespace Tests\Feature;
 use App\Enums\DepartureMethod;
 use App\Enums\TimeQualifier;
 use App\Enums\UserRole;
+use App\Models\Accounting\Booking;
 use App\Models\Child;
 use App\Models\User;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
@@ -85,6 +87,7 @@ class ChildManagementTest extends TestCase
                 'name' => 'Liam',
                 'date_of_birth' => '2019-04-01',
                 'note' => 'Geht freitags allein',
+                'active_from' => '2026-08-01',
             ]);
 
         $child = Child::firstWhere('name', 'Liam');
@@ -92,6 +95,15 @@ class ChildManagementTest extends TestCase
         $this->assertNotNull($child);
         $response->assertRedirect(route('children.edit', $child));
         $this->assertSame('Geht freitags allein', $child->note);
+        $this->assertSame('2026-08-01', $child->active_from->toDateString());
+        $this->assertNull($child->active_until);
+    }
+
+    public function test_creating_a_child_requires_an_active_from_date(): void
+    {
+        $this->actingAs($this->staff())
+            ->post(route('children.store'), ['name' => 'Liam'])
+            ->assertSessionHasErrors('active_from');
     }
 
     public function test_creating_a_child_requires_a_name(): void
@@ -108,7 +120,7 @@ class ChildManagementTest extends TestCase
         $parent = $this->parent();
 
         $this->actingAs($parent)
-            ->post(route('children.store'), ['name' => 'Neu'])
+            ->post(route('children.store'), ['name' => 'Neu', 'active_from' => '2026-08-01'])
             ->assertRedirect();
 
         $child = Child::firstWhere('name', 'Neu');
@@ -356,5 +368,30 @@ class ChildManagementTest extends TestCase
 
         $this->assertDatabaseMissing('children', ['id' => $child->id]);
         $this->assertDatabaseMissing('weekly_schedules', ['child_id' => $child->id]);
+    }
+
+    public function test_a_child_with_bookings_cannot_be_deleted(): void
+    {
+        $child = Child::factory()->create();
+        Booking::factory()->create(['counterparty_child_id' => $child->id]);
+
+        $this->actingAs($this->staff())
+            ->from(route('children.index'))
+            ->delete(route('children.destroy', $child))
+            ->assertRedirect(route('children.index'))
+            ->assertSessionHas('error');
+
+        $this->assertDatabaseHas('children', ['id' => $child->id]);
+    }
+
+    public function test_the_database_blocks_deleting_a_child_with_bookings(): void
+    {
+        // Belt-and-suspenders: even bypassing the controller guard, the
+        // restrictOnDelete foreign key keeps a referenced child from being deleted.
+        $child = Child::factory()->create();
+        Booking::factory()->create(['counterparty_child_id' => $child->id]);
+
+        $this->expectException(QueryException::class);
+        $child->delete();
     }
 }

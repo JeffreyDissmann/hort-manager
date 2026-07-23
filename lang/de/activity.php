@@ -28,6 +28,8 @@ return [
         'rsvp_yes' => 'Zusage',
         'rsvp_no' => 'Absage',
         'guardians' => 'Betreuer',
+        'companion_yes' => 'Mitgehen: ja',
+        'companion_no' => 'Mitgehen: nein',
     ],
 
     // Subject nouns (shown for create/update/delete entries).
@@ -37,6 +39,7 @@ return [
         'absence' => 'Abwesenheit',
         'excursion' => 'Ausflug',
         'daily_program' => 'Tagesprogramm',
+        'homework_default' => 'Hausaufgaben-Standard',
         'user' => 'Benutzer',
     ],
 
@@ -60,6 +63,8 @@ return [
         'homework_start' => 'Hausaufgaben von',
         'homework_end' => 'Hausaufgaben bis',
         'homework_none' => 'Keine Hausaufgaben',
+        'start_time' => 'Hausaufgaben von',
+        'end_time' => 'Hausaufgaben bis',
         'depart_at' => 'Abfahrt',
         'return_at' => 'Rückkehr',
         'rsvp_deadline' => 'Antwortfrist',

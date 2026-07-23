@@ -16,6 +16,7 @@ return [
     'child_created' => 'Kind angelegt. Jetzt den Stammplan festlegen.',
     'schedule_saved' => 'Stammplan für :name gespeichert.',
     'child_deleted' => ':name wurde gelöscht.',
+    'child_has_bookings' => ':name kann nicht gelöscht werden, da noch Buchungen zugeordnet sind.',
 
     'plan_updated' => 'Plan für :name aktualisiert.',
     'day_reset' => ':name: Tag auf Standard zurückgesetzt.',
@@ -28,4 +29,27 @@ return [
 
     'program_saved' => 'Programm gespeichert.',
     'homework_defaults_saved' => 'Standard-Hausaufgabenzeiten gespeichert.',
+
+    'account_created' => 'Konto „:name“ angelegt.',
+    'account_updated' => 'Konto „:name“ gespeichert.',
+    'account_deleted' => 'Konto „:name“ gelöscht.',
+    'account_has_bookings' => 'Konto „:name“ hat Buchungen und kann nicht gelöscht werden. Deaktiviere es stattdessen.',
+
+    'category_created' => 'Kategorie angelegt.',
+    'category_updated' => 'Kategorie gespeichert.',
+    'category_deleted' => 'Kategorie „:name“ gelöscht.',
+    'category_has_bookings' => 'Kategorie „:name“ (oder eine Unterkategorie) hat Buchungen und kann nicht gelöscht werden. Deaktiviere sie stattdessen.',
+
+    'booking_created' => 'Buchung angelegt.',
+    'booking_updated' => 'Buchung gespeichert.',
+    'booking_deleted' => 'Buchung gelöscht.',
+    'bookings_reanalysing' => ':count Buchungen werden von der KI neu analysiert.',
+    'bookings_confirmed' => ':count Buchungen bestätigt.',
+    'ai_disabled' => 'Die KI-Analyse ist aktuell deaktiviert.',
+    'transfer_created' => 'Umbuchung angelegt.',
+
+    'import_done' => ':imported Buchungen importiert, :duplicates Duplikate übersprungen. Bitte prüfen.',
+    'import_saved' => 'Gespeichert. Es sind noch Entwürfe zu prüfen.',
+    'import_complete' => 'Alle importierten Buchungen bestätigt.',
+    'import_skipped_added' => ':count Buchung(en) nachträglich importiert.',
 ];

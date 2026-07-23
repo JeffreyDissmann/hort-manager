@@ -6,6 +6,7 @@ namespace Database\Seeders;
 
 use App\Enums\DepartureMethod;
 use App\Enums\UserRole;
+use App\Models\Accounting\Account;
 use App\Models\Child;
 use App\Models\DailyProgram;
 use App\Models\Excursion;
@@ -156,5 +157,22 @@ class DatabaseSeeder extends Seeder
                 'end_time' => $weekday === 5 ? '14:30' : '15:00',
             ]);
         }
+
+        // Buchhaltung accounts: the Hort's bank account and its cash box.
+        Account::create([
+            'name' => 'Hort-Konto',
+            'iban' => 'DE89370400440532013000',
+            'opening_balance_cents' => 250000,
+            'opening_balance_date' => now()->startOfYear()->toDateString(),
+        ]);
+        Account::create([
+            'name' => 'Bar-Kasse',
+            'opening_balance_cents' => 15000,
+            'opening_balance_date' => now()->startOfYear()->toDateString(),
+        ]);
+
+        $this->call(AccountingCategorySeeder::class);
+        // Commented out so you can test importing/adding bookings into an empty ledger.
+        // $this->call(AccountingBookingSeeder::class);
     }
 }

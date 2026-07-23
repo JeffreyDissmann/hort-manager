@@ -74,12 +74,22 @@ class WeeklyAdjustmentController extends Controller
 
         $departure->save();
 
-        activity()
-            ->causedBy($request->user())
-            ->performedOn($departure)
-            ->event('adjusted')
-            ->withChanges($this->diff($before, $this->planSnapshot($departure)))
-            ->log($child->name.' · '.$validated['date']);
+        // Manual activity() logging always writes a row (Spatie's dontLogEmptyChanges()
+        // only applies to the model-event path), so guard it ourselves: skip when the
+        // plan the user sees didn't change — re-saving an identical plan is a common
+        // DayEditor no-op that would otherwise crowd the Protokoll with empty entries.
+        // Keyed off the display diff, not $departure->wasChanged(), on purpose: a
+        // with_child re-save bumps companion_confirmed_at without changing the plan.
+        $changes = $this->diff($before, $this->planSnapshot($departure));
+
+        if ($changes['attributes'] !== []) {
+            activity()
+                ->causedBy($request->user())
+                ->performedOn($departure)
+                ->event('adjusted')
+                ->withChanges($changes)
+                ->log($child->name.' · '.$validated['date']);
+        }
 
         // Ask this row's companion family, if their confirmation is now pending.
         if ($departure->awaitingCompanionConfirmation()) {

@@ -23,7 +23,7 @@ it('lets staff mark a child picked up', function () {
     $staff = User::factory()->staff()->create();
     $child = scheduledChild('Emma');
 
-    actAndVisit($staff, '/tagesboard')
+    actAndVisit($staff, '/board')
         ->assertSee('Emma')
         ->assertPresent("@mark-picked-up-{$child->id}")
         ->click("@mark-picked-up-{$child->id}")
@@ -38,7 +38,7 @@ it('lets staff send a child home and undo it', function () {
     $staff = User::factory()->staff()->create();
     $child = scheduledChild('Ben');
 
-    actAndVisit($staff, '/tagesboard')
+    actAndVisit($staff, '/board')
         ->click("@mark-sent-home-{$child->id}")
         ->assertPresent("@undo-{$child->id}")
         ->click("@undo-{$child->id}")
@@ -52,7 +52,7 @@ it('hides the mark buttons from parents', function () {
     $parent = User::factory()->parent()->create();
     $child = Child::factory()->scheduledOn(boardWeekday(), '15:00')->withGuardian($parent)->create(['name' => 'Mia']);
 
-    actAndVisit($parent, '/tagesboard')
+    actAndVisit($parent, '/board')
         ->assertSee('Mia')
         ->assertMissing("@mark-picked-up-{$child->id}")
         ->assertMissing("@mark-sent-home-{$child->id}");
@@ -62,7 +62,7 @@ it('lets staff report a child sick from the board', function () {
     $staff = User::factory()->staff()->create();
     $child = scheduledChild('Nora');
 
-    actAndVisit($staff, '/tagesboard')
+    actAndVisit($staff, '/board')
         ->click("@report-sick-{$child->id}")
         ->fill("@absence-comment-{$child->id}", 'Fieber')
         ->click("@absence-submit-{$child->id}")
@@ -77,7 +77,7 @@ it('lets staff report a child as away („Kommt nicht") from the board', functio
     $staff = User::factory()->staff()->create();
     $child = scheduledChild('Paul');
 
-    actAndVisit($staff, '/tagesboard')
+    actAndVisit($staff, '/board')
         ->click("@report-away-{$child->id}")
         ->fill("@absence-comment-{$child->id}", 'Termin')
         ->click("@absence-submit-{$child->id}")
@@ -99,7 +99,7 @@ it('shows a confirmed excursion participant on the board', function () {
     ]);
     $excursion->children()->attach($child->id, ['response' => true]);
 
-    actAndVisit($staff, '/tagesboard')
+    actAndVisit($staff, '/board')
         ->assertSee('Frida')
         ->assertSee('Waldtag'); // the excursion overlay badge
 });

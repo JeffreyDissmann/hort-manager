@@ -10,7 +10,7 @@ it('lets an admin switch from staff to parent from the menu', function () {
     $admin = User::factory()->staff()->admin()->create();
     $child = scheduledChild('Zoe');
 
-    actAndVisit($admin, '/tagesboard')
+    actAndVisit($admin, '/board')
         ->assertPresent("@mark-picked-up-{$child->id}") // staff: buttons present
         ->click('@user-menu')
         ->click('@role-parent')
@@ -24,7 +24,7 @@ it('lets an admin switch from parent to staff from the menu', function () {
     $admin = User::factory()->parent()->admin()->create();
     $child = scheduledChild('Kai');
 
-    actAndVisit($admin, '/tagesboard')
+    actAndVisit($admin, '/board')
         ->assertSee('Kai')
         ->assertMissing("@mark-picked-up-{$child->id}") // parent: no mark buttons
         ->click('@user-menu')
@@ -37,7 +37,7 @@ it('lets an admin switch from parent to staff from the menu', function () {
 it('hides the role toggle from non-admins', function () {
     $staff = User::factory()->staff()->create();
 
-    actAndVisit($staff, '/tagesboard')
+    actAndVisit($staff, '/board')
         ->click('@user-menu')
         ->assertMissing('@role-staff')
         ->assertMissing('@role-parent');
