@@ -18,6 +18,10 @@ return [
     'active_until' => 'At the Hort until',
     'active_until_hint' => 'Leave empty while the child is still at the Hort.',
     'active_until_invalid' => 'The “until” date must be on or after the “since” date.',
+    'show_former' => 'Show former (:n)',
+    'hide_former' => 'Hide former',
+    'former_badge' => 'Former',
+    'until' => 'until :date',
     'note_label' => 'Notes (optional)',
     'note_placeholder' => 'e.g. authorised pick-up persons, activities or pick-up notes …',
 

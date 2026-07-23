@@ -60,3 +60,18 @@ it('does not remind guardians of a child who has left', function () {
     // The missing-Stammplan reminder only considers currently-enrolled children.
     expect(Child::withoutSchedule()->activeOn(now())->pluck('name'))->not->toContain('Weg');
 });
+
+it('flags each child as active or former on the roster', function () {
+    Child::factory()->create(['name' => 'Aktiv']);
+    Child::factory()->former('2025-12-31')->create(['name' => 'Weg']);
+
+    $this->actingAs(User::factory()->staff()->create())
+        ->get(route('children.index'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('Children/Index')
+            ->has('children', 2)
+            ->where('children', fn ($children) => collect($children)
+                ->firstWhere('name', 'Aktiv')['active'] === true
+                && collect($children)->firstWhere('name', 'Weg')['active'] === false
+                && collect($children)->firstWhere('name', 'Weg')['active_until'] === '2025-12-31'));
+});

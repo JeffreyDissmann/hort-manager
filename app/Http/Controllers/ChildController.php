@@ -35,12 +35,15 @@ class ChildController extends Controller
             'children' => $query
                 ->with('guardians:id,name')
                 ->orderBy('name')
-                ->get(['children.id', 'name', 'date_of_birth', 'note'])
+                ->get(['children.id', 'name', 'date_of_birth', 'note', 'active_from', 'active_until'])
                 ->map(fn (Child $child) => [
                     'id' => $child->id,
                     'name' => $child->name,
                     'date_of_birth' => $child->date_of_birth?->format('Y-m-d'),
                     'note' => $child->note,
+                    // Currently enrolled? Former children are hidden behind a toggle.
+                    'active' => $child->isActiveOn(now()),
+                    'active_until' => $child->active_until?->format('Y-m-d'),
                     'can_delete' => $user->can('delete', $child),
                     // Guardians linked to this child (open-information policy).
                     'guardians' => $child->guardians->sortBy('name')->pluck('name')->values(),

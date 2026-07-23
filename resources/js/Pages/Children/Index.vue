@@ -1,9 +1,9 @@
 <script setup>
-import { create as childrenCreate, edit as childrenEdit, destroy as childrenDestroy } from '@/routes/children';
+import { create as childrenCreate, destroy as childrenDestroy } from '@/routes/children';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { TrashIcon } from '@heroicons/vue/24/outline';
+import ChildCard from './Partials/ChildCard.vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { t } from '@/i18n';
 
 const props = defineProps({
@@ -24,13 +24,15 @@ const props = defineProps({
 const flash = computed(() => usePage().props.flash?.status);
 const flashError = computed(() => usePage().props.flash?.error);
 
-function formatDate(value) {
-    if (!value) {
-        return null;
-    }
-    const [year, month, day] = value.split('-');
-    return `${day}.${month}.${year}`;
-}
+// Active children up top; former ones (already left) sit in a separate section at
+// the bottom behind a toggle, sorted by leaving date (most recent first).
+const showFormer = ref(false);
+const activeChildren = computed(() => props.children.filter((c) => c.active));
+const formerChildren = computed(() =>
+    props.children
+        .filter((c) => !c.active)
+        .sort((a, b) => (b.active_until ?? '').localeCompare(a.active_until ?? '')),
+);
 
 function destroy(child) {
     if (
@@ -73,58 +75,8 @@ function destroy(child) {
                 <span class="text-xl leading-none">+</span> {{ $t('children.add_child') }}
             </Link>
 
-            <ul v-if="children.length" class="space-y-3">
-                <li
-                    v-for="child in children"
-                    :key="child.id"
-                    class="rounded-2xl bg-surface p-4 shadow-sm"
-                >
-                    <div class="flex items-start justify-between gap-3">
-                        <div class="min-w-0">
-                            <p class="truncate font-semibold text-ink">
-                                {{ child.name }}
-                            </p>
-                            <p
-                                v-if="formatDate(child.date_of_birth)"
-                                class="mt-0.5 text-sm text-ink/50"
-                            >
-                                * {{ formatDate(child.date_of_birth) }}
-                            </p>
-                            <p
-                                v-if="child.note"
-                                class="mt-1 line-clamp-2 text-sm text-ink/70"
-                            >
-                                {{ child.note }}
-                            </p>
-                            <p v-if="child.guardians.length" class="mt-1 flex flex-wrap items-center gap-1">
-                                <span class="text-xs text-ink/40">{{ $t('children.parents_title') }}:</span>
-                                <span
-                                    v-for="name in child.guardians"
-                                    :key="name"
-                                    class="rounded bg-hort-teal/15 px-1.5 py-0.5 text-xs font-medium text-hort-teal-dark"
-                                >
-                                    {{ name }}
-                                </span>
-                            </p>
-                        </div>
-                        <button
-                            v-if="child.can_delete"
-                            type="button"
-                            @click="destroy(child)"
-                            class="shrink-0 rounded-lg p-2 text-ink/30 transition hover:bg-red-50 hover:text-red-600"
-                            :aria-label="$t('children.delete_child')"
-                        >
-                            <TrashIcon class="h-5 w-5" />
-                        </button>
-                    </div>
-
-                    <Link
-                        :href="childrenEdit(child.id).url"
-                        class="mt-3 flex items-center justify-center gap-1 rounded-xl border-2 border-ink/10 py-2.5 text-sm font-semibold text-ink transition hover:border-hort-teal hover:bg-hort-teal/10"
-                    >
-                        {{ $t('children.edit_schedule') }}
-                    </Link>
-                </li>
+            <ul v-if="activeChildren.length" class="space-y-3">
+                <ChildCard v-for="child in activeChildren" :key="child.id" :child="child" @delete="destroy" />
             </ul>
 
             <p
@@ -138,6 +90,21 @@ function destroy(child) {
                     {{ $t('children.empty_parent') }}
                 </template>
             </p>
+
+            <!-- Former children — separated at the very bottom, behind a toggle. -->
+            <div v-if="formerChildren.length" class="border-t border-ink/10 pt-4">
+                <button
+                    type="button"
+                    class="w-full text-center text-sm text-ink/50 transition hover:text-ink"
+                    @click="showFormer = !showFormer"
+                >
+                    {{ showFormer ? $t('children.hide_former') : $t('children.show_former', { n: formerChildren.length }) }}
+                </button>
+
+                <ul v-if="showFormer" class="mt-4 space-y-3">
+                    <ChildCard v-for="child in formerChildren" :key="child.id" :child="child" @delete="destroy" />
+                </ul>
+            </div>
         </div>
     </AuthenticatedLayout>
 </template>

@@ -18,6 +18,10 @@ return [
     'active_until' => 'Im Hort bis',
     'active_until_hint' => 'Leer lassen, solange das Kind im Hort ist.',
     'active_until_invalid' => 'Das „bis"-Datum muss auf oder nach dem „seit"-Datum liegen.',
+    'show_former' => 'Ehemalige anzeigen (:n)',
+    'hide_former' => 'Ehemalige ausblenden',
+    'former_badge' => 'Ehemalig',
+    'until' => 'bis :date',
     'note_label' => 'Hinweise (optional)',
     'note_placeholder' => 'z. B. Abholberechtigte, Aktivitäten oder Hinweise zur Abholung …',
 
