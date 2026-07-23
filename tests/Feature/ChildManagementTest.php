@@ -87,6 +87,7 @@ class ChildManagementTest extends TestCase
                 'name' => 'Liam',
                 'date_of_birth' => '2019-04-01',
                 'note' => 'Geht freitags allein',
+                'active_from' => '2026-08-01',
             ]);
 
         $child = Child::firstWhere('name', 'Liam');
@@ -94,6 +95,15 @@ class ChildManagementTest extends TestCase
         $this->assertNotNull($child);
         $response->assertRedirect(route('children.edit', $child));
         $this->assertSame('Geht freitags allein', $child->note);
+        $this->assertSame('2026-08-01', $child->active_from->toDateString());
+        $this->assertNull($child->active_until);
+    }
+
+    public function test_creating_a_child_requires_an_active_from_date(): void
+    {
+        $this->actingAs($this->staff())
+            ->post(route('children.store'), ['name' => 'Liam'])
+            ->assertSessionHasErrors('active_from');
     }
 
     public function test_creating_a_child_requires_a_name(): void
@@ -110,7 +120,7 @@ class ChildManagementTest extends TestCase
         $parent = $this->parent();
 
         $this->actingAs($parent)
-            ->post(route('children.store'), ['name' => 'Neu'])
+            ->post(route('children.store'), ['name' => 'Neu', 'active_from' => '2026-08-01'])
             ->assertRedirect();
 
         $child = Child::firstWhere('name', 'Neu');

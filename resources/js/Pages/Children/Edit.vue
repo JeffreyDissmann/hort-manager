@@ -66,6 +66,8 @@ const form = useForm({
     name: props.child.name,
     date_of_birth: props.child.date_of_birth ?? '',
     note: props.child.note ?? '',
+    active_from: props.child.active_from ?? '',
+    active_until: props.child.active_until ?? '',
     schedule: props.schedule.map((day) => ({
         weekday: day.weekday,
         planned_time: day.planned_time ? day.planned_time.slice(0, 5) : '',
@@ -160,6 +162,20 @@ function destroy() {
                                 :message="form.errors.date_of_birth"
                                 class="mt-2"
                             />
+                        </div>
+
+                        <div class="grid gap-4 sm:grid-cols-2">
+                            <div>
+                                <InputLabel for="active_from" :value="$t('children.active_from')" />
+                                <DatePicker id="active_from" v-model="form.active_from" class="mt-1" />
+                                <InputError :message="form.errors.active_from" class="mt-2" />
+                            </div>
+                            <div>
+                                <InputLabel for="active_until" :value="$t('children.active_until')" />
+                                <DatePicker id="active_until" v-model="form.active_until" clearable class="mt-1" />
+                                <p class="mt-1 text-xs text-ink/40">{{ $t('children.active_until_hint') }}</p>
+                                <InputError :message="form.errors.active_until" class="mt-2" />
+                            </div>
                         </div>
 
                         <div>

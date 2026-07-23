@@ -14,6 +14,10 @@ return [
 
     'name' => 'Name',
     'date_of_birth' => 'Date of birth',
+    'active_from' => 'At the Hort since',
+    'active_until' => 'At the Hort until',
+    'active_until_hint' => 'Leave empty while the child is still at the Hort.',
+    'active_until_invalid' => 'The “until” date must be on or after the “since” date.',
     'note_label' => 'Notes (optional)',
     'note_placeholder' => 'e.g. authorised pick-up persons, activities or pick-up notes …',
 

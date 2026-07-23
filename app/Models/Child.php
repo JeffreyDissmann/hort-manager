@@ -23,7 +23,7 @@ class Child extends Model
     /** @return list<string> */
     protected function activityAttributes(): array
     {
-        return ['name', 'date_of_birth', 'note'];
+        return ['name', 'date_of_birth', 'note', 'active_from', 'active_until'];
     }
 
     protected function activityLabel(): string
@@ -35,13 +35,59 @@ class Child extends Model
         'name',
         'date_of_birth',
         'note',
+        'active_from',
+        'active_until',
     ];
 
     protected function casts(): array
     {
         return [
             'date_of_birth' => 'date:Y-m-d',
+            'active_from' => 'date:Y-m-d',
+            'active_until' => 'date:Y-m-d',
         ];
+    }
+
+    /**
+     * Enrolled on the given date: started on/before it and not yet left (a null
+     * active_from is treated as "always enrolled" for safety).
+     *
+     * @param  Builder<Child>  $query
+     */
+    public function scopeActiveOn(Builder $query, string $date): void
+    {
+        $query
+            ->where(fn (Builder $q) => $q->whereNull('active_from')->orWhereDate('active_from', '<=', $date))
+            ->where(fn (Builder $q) => $q->whereNull('active_until')->orWhereDate('active_until', '>=', $date));
+    }
+
+    /**
+     * Enrolled at any point within the date range (inclusive overlap).
+     *
+     * @param  Builder<Child>  $query
+     */
+    public function scopeActiveBetween(Builder $query, string $from, string $to): void
+    {
+        $query
+            ->where(fn (Builder $q) => $q->whereNull('active_from')->orWhereDate('active_from', '<=', $to))
+            ->where(fn (Builder $q) => $q->whereNull('active_until')->orWhereDate('active_until', '>=', $from));
+    }
+
+    /**
+     * Enrolled at any point during the calendar year (inclusive overlap).
+     *
+     * @param  Builder<Child>  $query
+     */
+    public function scopeActiveInYear(Builder $query, int $year): void
+    {
+        $query->activeBetween("{$year}-01-01", "{$year}-12-31");
+    }
+
+    /** Whether the child is enrolled on the given date. */
+    public function isActiveOn(string $date): bool
+    {
+        return ($this->active_from === null || $this->active_from->toDateString() <= $date)
+            && ($this->active_until === null || $this->active_until->toDateString() >= $date);
     }
 
     /**
