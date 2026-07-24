@@ -15,6 +15,9 @@ const props = defineProps({
     users: { type: Array, required: true },
     // Optional: restrict the category picker to one direction (used during review).
     direction: { type: String, default: null },
+    // Show the „Erstattung/Rückzahlung" (reversal) checkbox — manual create/edit only;
+    // in review the sign is fixed by the bank and the reversal is derived server-side.
+    showReversal: { type: Boolean, default: false },
 });
 
 // Counterparty is a child (income), a linked user (person), free text, or nothing.
@@ -97,6 +100,18 @@ const availableChildren = computed(() => {
             <InputLabel :value="$t('accounting.bookings.category')" />
             <CategorySelect v-model="form.category_id" :categories="categories" :direction="direction" class="mt-1" />
             <InputError :message="form.errors.category_id" class="mt-2" />
+
+            <label v-if="showReversal" class="mt-2 flex items-start gap-2 text-sm">
+                <input
+                    v-model="form.reversal"
+                    type="checkbox"
+                    class="mt-0.5 rounded border-ink/30 text-hort-teal-dark focus:ring-hort-teal"
+                />
+                <span>
+                    <span class="font-medium text-ink">{{ $t('accounting.bookings.reversal') }}</span>
+                    <span class="block text-xs text-ink/50">{{ $t('accounting.bookings.reversal_hint') }}</span>
+                </span>
+            </label>
         </div>
 
         <div class="grid gap-6 sm:grid-cols-2">

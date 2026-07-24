@@ -299,21 +299,67 @@ it('confirms the current draft with the full form and keeps the sign', function 
         ->and($draft->comment)->toBe('Miete');
 });
 
-it('rejects a review category with the wrong direction', function () {
+it('books a positive line against an expense category as a refund (reversal)', function () {
     $admin = User::factory()->admin()->create();
     $this->actingAs($admin);
-    $draft = Booking::factory()->draft()->expense()->create(['amount_cents' => -1000, 'category_id' => null]);
-    $income = Category::factory()->income()->create();
+    // A +50 credit on the bank (e.g. a store refund), awaiting review.
+    $draft = Booking::factory()->suggested()->create(['amount_cents' => 5000, 'category_id' => null]);
+    $expense = Category::factory()->expense()->create(['name' => 'Basteln']);
 
     $this->patch("/accounting/bookings/{$draft->id}/review", [
         'action' => 'confirm',
         'account_id' => $draft->account_id,
-        'category_id' => $income->id,
-        'amount' => '10',
+        'category_id' => $expense->id,
+        'amount' => '50',
         'booking_date' => '2026-04-01',
-    ])->assertSessionHasErrors('category_id');
+    ])->assertRedirect();
 
-    expect($draft->refresh()->status)->toBe(BookingStatus::Draft);
+    $draft->refresh();
+    expect($draft->status)->toBe(BookingStatus::Confirmed)
+        ->and($draft->category_id)->toBe($expense->id)
+        ->and($draft->kind)->toBe(BookingKind::Expense) // stays an expense category…
+        ->and($draft->amount_cents)->toBe(5000);        // …but the amount is positive (a credit)
+});
+
+it('stores a manual expense refund as a positive amount when marked as a reversal', function () {
+    $admin = User::factory()->admin()->create();
+    $this->actingAs($admin);
+    $account = Account::factory()->create();
+    $expense = Category::factory()->expense()->create();
+
+    $this->post('/accounting/bookings', [
+        'account_id' => $account->id,
+        'category_id' => $expense->id,
+        'amount' => '30',
+        'booking_date' => '2026-04-01',
+        'reversal' => true,
+    ])->assertRedirect();
+
+    $booking = Booking::where('category_id', $expense->id)->first();
+    expect($booking->kind)->toBe(BookingKind::Expense)
+        ->and($booking->amount_cents)->toBe(3000); // positive: money came back in
+
+    // A normal expense (no reversal) still stores as negative.
+    $this->post('/accounting/bookings', [
+        'account_id' => $account->id,
+        'category_id' => $expense->id,
+        'amount' => '30',
+        'booking_date' => '2026-04-02',
+    ]);
+    expect(Booking::where('category_id', $expense->id)->orderByDesc('id')->first()->amount_cents)->toBe(-3000);
+});
+
+it('round-trips the reversal flag into the edit form', function () {
+    $admin = User::factory()->admin()->create();
+    $this->actingAs($admin);
+    $expense = Category::factory()->expense()->create();
+    // A +30 booking on an expense category is a reversal.
+    $booking = Booking::factory()->create(['category_id' => $expense->id, 'kind' => BookingKind::Expense, 'amount_cents' => 3000]);
+
+    $this->get("/accounting/bookings/{$booking->id}/edit")
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('booking.reversal', true)
+            ->where('booking.amount', 30));
 });
 
 it('discards a draft during review', function () {

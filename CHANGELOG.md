@@ -8,6 +8,13 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Refunds / repayments (reversals)**: a booking can now run opposite to its
+  category — e.g. a store refund on an expense category is kept as a positive amount
+  (`kind` stays expense) that nets off the expenses in the Auswertung. In the draft
+  review the category picker offers all categories and the sign is taken from the
+  bank line automatically (pick the expense category → recorded as a refund); the
+  manual create/edit form gains an „Erstattung / Rückzahlung" checkbox that round-trips
+  on edit. The old „wrong direction" rejection on review is removed.
 - **Umbuchungen in the Auswertung**: internal transfers now appear as their own
   zero-sum block below Ausgaben — one row per account showing that account's signed
   movement (money out −, money in +), with the parent „Umbuchungen" row summing to

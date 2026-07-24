@@ -107,13 +107,15 @@ function send(action) {
 
                 <!-- Full editable form (same fields as the booking editor) -->
                 <div class="pt-4">
+                    <!-- No direction filter: picking an opposite-direction category (e.g.
+                         an expense category for a positive line) records a refund/reversal;
+                         the bank sign is kept and the sign is derived server-side. -->
                     <BookingFields
                         :form="form"
                         :accounts="accounts"
                         :categories="categories"
                         :children="children"
                         :users="users"
-                        :direction="booking.direction"
                     />
                 </div>
 

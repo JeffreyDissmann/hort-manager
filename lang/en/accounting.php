@@ -122,6 +122,8 @@ return [
         'reset_filters' => 'Reset filters',
         'new_category' => 'New category',
         'add_category' => 'Add category',
+        'reversal' => 'Refund / repayment',
+        'reversal_hint' => 'The amount runs opposite to the category — e.g. a refund or return on an expense (money comes in instead of out).',
         'delete_confirm' => 'Really delete this booking?',
         'edit_confirmed_confirm' => 'This booking is already confirmed. Really save the changes?',
         'pick_category' => 'Choose category …',

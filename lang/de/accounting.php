@@ -122,6 +122,8 @@ return [
         'reset_filters' => 'Filter zurücksetzen',
         'new_category' => 'Neue Kategorie',
         'add_category' => 'Kategorie hinzufügen',
+        'reversal' => 'Erstattung / Rückzahlung',
+        'reversal_hint' => 'Der Betrag fließt entgegen der Kategorie – z. B. eine Rückzahlung oder Retoure zu einer Ausgabe (kommt herein statt raus).',
         'delete_confirm' => 'Diese Buchung wirklich löschen?',
         'edit_confirmed_confirm' => 'Diese Buchung ist bereits bestätigt. Änderungen wirklich speichern?',
         'pick_category' => 'Kategorie wählen …',
