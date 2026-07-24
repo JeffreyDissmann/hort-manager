@@ -213,5 +213,11 @@ return [
         'done_title' => 'Alle Entwürfe geprüft 🎉',
         'ai_hint' => 'Kategorie und Gegenpartei wurden von der KI vorgeschlagen – bitte prüfen.',
         'confidence' => 'Sicherheit',
+        'as_transfer' => 'Als Umbuchung verbuchen',
+        'as_transfer_hint' => 'Kein Aufwand/Ertrag, sondern Geld zwischen eigenen Konten – z. B. eine Bargeldauszahlung aufs Bar-Kasse-Konto. Diese Zeile bleibt auf ihrem Konto; auf dem Gegenkonto wird die passende Gegenbuchung angelegt.',
+        'transfer_to' => 'Gegenkonto',
+        'transfer_pick' => 'Konto wählen …',
+        'make_transfer' => 'Umbuchung erstellen',
+        'transfer_same_account' => 'Bitte ein anderes Konto als das der Buchung wählen.',
     ],
 ];

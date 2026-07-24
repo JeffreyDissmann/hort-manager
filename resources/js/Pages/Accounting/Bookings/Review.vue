@@ -1,11 +1,14 @@
 <script setup>
+import { computed, ref } from 'vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
+import InputLabel from '@/Components/InputLabel.vue';
+import InputError from '@/Components/InputError.vue';
 import BookingFields from './Partials/BookingFields.vue';
 import { formatEuro } from '@/money';
 import { reviewSave as bookingsReviewSave, index as bookingsIndex } from '@/routes/accounting/bookings';
 import { Head, Link, useForm } from '@inertiajs/vue3';
-import { ArrowRightIcon, TrashIcon, ForwardIcon, SparklesIcon, ChevronLeftIcon } from '@heroicons/vue/24/outline';
+import { ArrowRightIcon, TrashIcon, ForwardIcon, SparklesIcon, ChevronLeftIcon, ArrowsRightLeftIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
     booking: { type: Object, required: true },
@@ -28,7 +31,12 @@ const form = useForm({
     counterparty_child_id: props.booking.counterparty_child_id,
     counterparty_user_id: props.booking.counterparty_user_id,
     counterparty_name: props.booking.counterparty_name ?? '',
+    to_account_id: null,
 });
+
+// „Als Umbuchung verbuchen": the counter-leg goes on another account (not this one).
+const showTransfer = ref(false);
+const otherAccounts = computed(() => props.accounts.filter((a) => a.id !== props.booking.account_id));
 
 const confidenceClass = {
     0: 'bg-red-100 text-red-700',
@@ -107,6 +115,43 @@ function send(action) {
                         :users="users"
                         :direction="booking.direction"
                     />
+                </div>
+
+                <!-- Reclassify as an internal transfer (e.g. cash withdrawal → Bar-Kasse) -->
+                <div v-if="otherAccounts.length" class="mt-4 rounded-xl bg-ink/[0.03] p-4">
+                    <button
+                        type="button"
+                        class="flex items-center gap-1.5 text-sm font-medium text-ink/70 transition hover:text-ink"
+                        data-testid="review-as-transfer"
+                        @click="showTransfer = !showTransfer"
+                    >
+                        <ArrowsRightLeftIcon class="h-4 w-4" /> {{ $t('accounting.review.as_transfer') }}
+                    </button>
+                    <div v-if="showTransfer" class="mt-3 space-y-3">
+                        <p class="text-xs text-ink/50">{{ $t('accounting.review.as_transfer_hint') }}</p>
+                        <div class="flex flex-wrap items-end gap-3">
+                            <div class="min-w-[12rem] flex-1">
+                                <InputLabel :value="$t('accounting.review.transfer_to')" />
+                                <select
+                                    v-model="form.to_account_id"
+                                    class="mt-1 block w-full rounded-md border-ink/20 shadow-sm focus:border-hort-teal focus:ring-hort-teal"
+                                >
+                                    <option :value="null">{{ $t('accounting.review.transfer_pick') }}</option>
+                                    <option v-for="a in otherAccounts" :key="a.id" :value="a.id">{{ a.name }}</option>
+                                </select>
+                            </div>
+                            <button
+                                type="button"
+                                class="flex items-center gap-1 rounded-lg bg-ink/10 px-3 py-2 text-sm font-medium text-ink transition hover:bg-ink/15 disabled:opacity-50"
+                                :disabled="!form.to_account_id || form.processing"
+                                data-testid="review-make-transfer"
+                                @click="send('transfer')"
+                            >
+                                <ArrowsRightLeftIcon class="h-4 w-4" /> {{ $t('accounting.review.make_transfer') }}
+                            </button>
+                        </div>
+                        <InputError :message="form.errors.to_account_id" />
+                    </div>
                 </div>
 
                 <!-- Actions -->

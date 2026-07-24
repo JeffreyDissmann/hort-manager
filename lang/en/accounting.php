@@ -213,5 +213,11 @@ return [
         'done_title' => 'All drafts reviewed 🎉',
         'ai_hint' => 'Category and counterparty were suggested by the AI — please review.',
         'confidence' => 'Confidence',
+        'as_transfer' => 'Book as a transfer',
+        'as_transfer_hint' => 'Not an expense/income but money moving between your own accounts — e.g. a cash withdrawal to the Bar-Kasse account. This line stays on its account; the matching leg is created on the other account.',
+        'transfer_to' => 'Other account',
+        'transfer_pick' => 'Choose account …',
+        'make_transfer' => 'Create transfer',
+        'transfer_same_account' => 'Please choose an account other than the booking’s own.',
     ],
 ];

@@ -8,6 +8,11 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Book an imported line as a transfer**: in the draft review, „Als Umbuchung
+  verbuchen" reclassifies a bank line as an internal transfer to another account
+  (e.g. a cash withdrawal → Bar-Kasse) — it reuses the imported line as one leg and
+  creates the matching leg on the chosen account, so the money isn't double-counted.
+  The sign picks the direction automatically (withdrawal → out leg, deposit → in leg).
 - **Buchhaltung (accounting) — admin-only bookkeeping**: a full income/expense ledger
   for the Hort. Bank statements are imported from CSV — now with a **flexible
   column-mapping step**: after upload the columns (Buchungsdatum, Wertstellung,

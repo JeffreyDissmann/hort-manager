@@ -14,6 +14,7 @@ use App\Jobs\SuggestBookingCategory;
 use App\Models\Accounting\Account;
 use App\Models\Accounting\Booking;
 use App\Models\Accounting\Category;
+use App\Models\Accounting\Transfer;
 use App\Models\Child;
 use App\Models\User;
 use App\Support\Accounting\CategoryOptions;
@@ -321,12 +322,23 @@ class BookingController extends Controller
     {
         abort_unless(in_array($booking->status, [BookingStatus::Draft, BookingStatus::Suggested], true), 404);
 
-        $action = $request->validate(['action' => ['required', 'in:confirm,discard,skip']])['action'];
+        $validated = $request->validate([
+            'action' => ['required', 'in:confirm,discard,skip,transfer'],
+            'to_account_id' => ['required_if:action,transfer', 'integer', 'exists:accounting_accounts,id'],
+        ]);
+        $action = $validated['action'];
 
         if ($action === 'discard') {
             $booking->delete();
         } elseif ($action === 'confirm') {
             $this->confirmDraft($request, $booking);
+        } elseif ($action === 'transfer') {
+            // Reclassify the imported line as an internal transfer to another account
+            // (e.g. a cash withdrawal → Bar-Kasse) instead of a categorized expense.
+            if ((int) $validated['to_account_id'] === $booking->account_id) {
+                throw ValidationException::withMessages(['to_account_id' => __('accounting.review.transfer_same_account')]);
+            }
+            Transfer::fromBooking($booking, (int) $validated['to_account_id']);
         }
 
         return redirect()->route('accounting.bookings.review', ['cursor' => $this->nextDraftId($booking)]);
