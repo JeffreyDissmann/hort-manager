@@ -5,11 +5,14 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import CategoryNode from './Partials/CategoryNode.vue';
 import { store as categoriesStore } from '@/routes/accounting/categories';
 import { PlusIcon } from '@heroicons/vue/24/outline';
+import { useAccountingAccess } from '@/accountingAccess';
 
 const props = defineProps({
     // { income: [...tree], expense: [...tree] }
     trees: { type: Object, required: true },
 });
+
+const { canWrite } = useAccountingAccess();
 
 // Flat "Parent › Child" options per direction — the reassignment targets when a
 // category being deleted still carries bookings.
@@ -74,11 +77,12 @@ function addRoot(direction) {
                             :key="node.id"
                             :node="node"
                             :options="options[section.key]"
+                            :can-write="canWrite"
                         />
                     </ul>
                     <p v-else class="mb-3 text-sm text-ink/40">{{ $t('accounting.categories.empty') }}</p>
 
-                    <div class="flex items-center gap-2 border-t border-ink/10 pt-3">
+                    <div v-if="canWrite" class="flex items-center gap-2 border-t border-ink/10 pt-3">
                         <input
                             v-model="rootName[section.key]"
                             type="text"

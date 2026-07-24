@@ -17,7 +17,7 @@ it('forbids non-admins from the accounts page', function () {
 });
 
 it('lists accounts with their balance for admins', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $account = Account::factory()->withOpeningBalance(10000)->create(['name' => 'Konto']);
     Booking::factory()->for($account)->create(['amount_cents' => 5000]);
     Booking::factory()->for($account)->draft()->create(['amount_cents' => 9999]); // ignored
@@ -32,7 +32,7 @@ it('lists accounts with their balance for admins', function () {
 });
 
 it('creates an account, converting euros to cents', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
 
     $this->actingAs($admin)
         ->post('/accounting/accounts', [
@@ -51,7 +51,7 @@ it('creates an account, converting euros to cents', function () {
 });
 
 it('updates an account', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $account = Account::factory()->create(['name' => 'Alt']);
 
     $this->actingAs($admin)
@@ -67,7 +67,7 @@ it('updates an account', function () {
 });
 
 it('deletes an empty account but refuses one with bookings', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $this->actingAs($admin);
 
     $empty = Account::factory()->create();
@@ -81,7 +81,7 @@ it('deletes an empty account but refuses one with bookings', function () {
 });
 
 it('validates the account name', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
 
     $this->actingAs($admin)
         ->post('/accounting/accounts', ['name' => '', 'active' => true])
@@ -89,7 +89,7 @@ it('validates the account name', function () {
 });
 
 it('rejects a non-IBAN with a friendly message', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
 
     $this->actingAs($admin)
         ->post('/accounting/accounts', ['name' => 'Konto', 'iban' => 'not-an-iban', 'active' => true])

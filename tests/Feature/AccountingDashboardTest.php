@@ -20,7 +20,7 @@ it('forbids non-admins from the accounting dashboard', function () {
 it('shows account balances at three points in time and what needs attention', function () {
     // Periods anchor to the newest booking (2026-07-10, Q3) → prev quarter-end
     // 2026-06-30, prev year-end 2025-12-31 — independent of the current date.
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $account = Account::factory()->withOpeningBalance(10000)->create();
     $child = Child::factory()->create();
 

@@ -56,6 +56,9 @@ const userName = computed(() => user.value?.name ?? '');
 const userAvatar = computed(() => user.value?.avatar ?? null);
 const isStaff = computed(() => user.value?.role === 'staff');
 const isAdmin = computed(() => user.value?.is_admin ?? false);
+// Accounting access — an axis independent of role/admin (see EnsureAccountingAccess).
+const canReadAccounting = computed(() => user.value?.can_read_accounting ?? false);
+const canWriteAccounting = computed(() => user.value?.can_write_accounting ?? false);
 
 // Admins can switch their own role (staff ↔ parent) right from the menu.
 function switchRole(role) {
@@ -72,7 +75,7 @@ const inAccounting = computed(() => usePage().url.startsWith('/accounting'));
 
 // Primary navigation — shown as top links on desktop and as a bottom tab bar on mobile.
 const navItems = computed(() => {
-    // Accounting world (admin-only) has its own top-bar items.
+    // Accounting world has its own top-bar items.
     if (inAccounting.value) {
         return [
             // Exact match — /accounting is a prefix of every other accounting page.
@@ -149,11 +152,11 @@ function isActive(item) {
                     <!-- House icon always links home. Non-admins' wordmark links home too. -->
                     <Link :href="dashboard().url" class="flex items-center gap-2">
                         <ApplicationLogo class="h-9 w-9" />
-                        <span v-if="!isAdmin" class="font-display text-2xl text-ink">{{ appName }}</span>
+                        <span v-if="!canReadAccounting" class="font-display text-2xl text-ink">{{ appName }}</span>
                     </Link>
 
-                    <!-- Admins: the wordmark is the world switcher (Hort ↔ Buchhaltung). -->
-                    <Dropdown v-if="isAdmin" align="left" width="48">
+                    <!-- Accounting users: the wordmark is the world switcher (Hort ↔ Buchhaltung). -->
+                    <Dropdown v-if="canReadAccounting" align="left" width="48">
                         <template #trigger>
                             <button
                                 type="button"
@@ -244,16 +247,16 @@ function isActive(item) {
                             <DropdownLink :href="activityLog().url" data-testid="nav-activity-log">
                                 {{ $t('nav.activity_log') }}
                             </DropdownLink>
-                            <!-- Accounting config lives in the dropdown, only in that world. -->
-                            <template v-if="inAccounting">
-                                <hr class="my-1 border-ink/10" />
-                                <DropdownLink :href="accountsIndex().url" data-testid="nav-accounts">
-                                    {{ $t('nav.accounts') }}
-                                </DropdownLink>
-                                <DropdownLink :href="categoriesIndex().url" data-testid="nav-categories">
-                                    {{ $t('nav.categories') }}
-                                </DropdownLink>
-                            </template>
+                            <hr class="my-1 border-ink/10" />
+                        </template>
+                        <!-- Accounting config — shown to accounting users, only in that world. -->
+                        <template v-if="inAccounting">
+                            <DropdownLink :href="accountsIndex().url" data-testid="nav-accounts">
+                                {{ $t('nav.accounts') }}
+                            </DropdownLink>
+                            <DropdownLink :href="categoriesIndex().url" data-testid="nav-categories">
+                                {{ $t('nav.categories') }}
+                            </DropdownLink>
                             <hr class="my-1 border-ink/10" />
                         </template>
                         <DropdownLink

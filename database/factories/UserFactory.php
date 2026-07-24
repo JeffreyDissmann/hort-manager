@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
+use App\Enums\AccountingAccess;
 use App\Enums\UserRole;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -62,5 +63,17 @@ class UserFactory extends Factory
     public function admin(): static
     {
         return $this->state(['is_admin' => true]);
+    }
+
+    /** Read-only access to the Buchhaltung module. */
+    public function accountingReader(): static
+    {
+        return $this->state(['accounting_access' => AccountingAccess::Read]);
+    }
+
+    /** Read + write access to the Buchhaltung module. */
+    public function accountingWriter(): static
+    {
+        return $this->state(['accounting_access' => AccountingAccess::Write]);
     }
 }

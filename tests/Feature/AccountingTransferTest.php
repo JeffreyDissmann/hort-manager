@@ -20,7 +20,7 @@ it('forbids non-admins from creating a transfer', function () {
 });
 
 it('creates two linked, opposite-signed legs with no category', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $this->actingAs($admin);
     $from = Account::factory()->create(['name' => 'Bar-Kasse']);
     $to = Account::factory()->create(['name' => 'Hort-Konto']);
@@ -44,7 +44,7 @@ it('creates two linked, opposite-signed legs with no category', function () {
 });
 
 it('nets to zero across both accounts', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $this->actingAs($admin);
     $from = Account::factory()->create();
     $to = Account::factory()->create();
@@ -60,7 +60,7 @@ it('nets to zero across both accounts', function () {
 });
 
 it('rejects a transfer to the same account', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $this->actingAs($admin);
     $account = Account::factory()->create();
 
@@ -73,7 +73,7 @@ it('rejects a transfer to the same account', function () {
 });
 
 it('deleting one leg removes the whole transfer', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $this->actingAs($admin);
     $from = Account::factory()->create();
     $to = Account::factory()->create();
@@ -93,7 +93,7 @@ it('deleting one leg removes the whole transfer', function () {
 });
 
 it('converts an imported booking into a transfer, reusing it as the out leg', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $this->actingAs($admin);
     $bank = Account::factory()->create(['name' => 'Hort-Konto']);
     $cash = Account::factory()->create(['name' => 'Bar-Kasse']);
@@ -130,7 +130,7 @@ it('converts an imported booking into a transfer, reusing it as the out leg', fu
 });
 
 it('reuses a positive (deposit) booking as the in leg', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $this->actingAs($admin);
     $bank = Account::factory()->create();
     $cash = Account::factory()->create();
@@ -147,7 +147,7 @@ it('reuses a positive (deposit) booking as the in leg', function () {
 });
 
 it('rejects converting to the booking’s own account', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $this->actingAs($admin);
     $bank = Account::factory()->create();
     $booking = Booking::factory()->suggested()->create(['account_id' => $bank->id, 'amount_cents' => -5000]);
@@ -160,7 +160,7 @@ it('rejects converting to the booking’s own account', function () {
 });
 
 it('requires a target account when converting to a transfer', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $this->actingAs($admin);
     $booking = Booking::factory()->suggested()->create(['amount_cents' => -5000]);
 
@@ -169,7 +169,7 @@ it('requires a target account when converting to a transfer', function () {
 });
 
 it('refuses to edit or update a single transfer leg', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $this->actingAs($admin);
     $from = Account::factory()->create();
     $to = Account::factory()->create();

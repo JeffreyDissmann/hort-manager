@@ -19,7 +19,7 @@ it('forbids non-admins from categories', function () {
 });
 
 it('renders the income and expense trees', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $root = Category::factory()->expense()->create(['name' => 'Betrieb']);
     Category::factory()->childOf($root)->create(['name' => 'Miete']);
 
@@ -34,7 +34,7 @@ it('renders the income and expense trees', function () {
 });
 
 it('creates a root category with a direction', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
 
     $this->actingAs($admin)
         ->post('/accounting/categories', ['name' => 'Essensgeld', 'direction' => 'income'])
@@ -46,7 +46,7 @@ it('creates a root category with a direction', function () {
 });
 
 it('inherits the parent direction for a child, ignoring a mismatched submission', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $parent = Category::factory()->expense()->create();
 
     $this->actingAs($admin)
@@ -61,7 +61,7 @@ it('inherits the parent direction for a child, ignoring a mismatched submission'
 });
 
 it('requires a direction for a root category', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
 
     $this->actingAs($admin)
         ->post('/accounting/categories', ['name' => 'Ohne Richtung'])
@@ -69,7 +69,7 @@ it('requires a direction for a root category', function () {
 });
 
 it('renames and deactivates a category', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $category = Category::factory()->create(['name' => 'Alt', 'active' => true]);
 
     $this->actingAs($admin)
@@ -81,7 +81,7 @@ it('renames and deactivates a category', function () {
 });
 
 it('stores a category comment and exposes it to the options helper', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $category = Category::factory()->income()->create(['name' => 'Essensgeld']);
 
     $this->actingAs($admin)
@@ -99,7 +99,7 @@ it('stores a category comment and exposes it to the options helper', function ()
 });
 
 it('deletes an empty category but refuses one with bookings in its subtree', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $this->actingAs($admin);
 
     $empty = Category::factory()->create();
@@ -116,7 +116,7 @@ it('deletes an empty category but refuses one with bookings in its subtree', fun
 });
 
 it('moves the subtree bookings to a target category, then deletes', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $this->actingAs($admin);
 
     $root = Category::factory()->expense()->create();
@@ -133,7 +133,7 @@ it('moves the subtree bookings to a target category, then deletes', function () 
 });
 
 it('refuses to move bookings to a target of the wrong direction', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $this->actingAs($admin);
 
     $root = Category::factory()->expense()->create();
@@ -146,7 +146,7 @@ it('refuses to move bookings to a target of the wrong direction', function () {
 });
 
 it('refuses to move bookings into the subtree being deleted', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $this->actingAs($admin);
 
     $root = Category::factory()->expense()->create();

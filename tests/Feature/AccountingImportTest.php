@@ -51,7 +51,7 @@ it('forbids non-admins from the import page', function () {
 });
 
 it('accepts a UTF-16 .csv but rejects other extensions with a friendly message', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $account = Account::factory()->create();
     $this->actingAs($admin);
 
@@ -66,7 +66,7 @@ it('accepts a UTF-16 .csv but rejects other extensions with a friendly message',
 });
 
 it('parks the upload as a pending import and sends the user to map the columns', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $account = Account::factory()->create();
 
     $this->actingAs($admin)
@@ -81,7 +81,7 @@ it('parks the upload as a pending import and sends the user to map the columns',
 });
 
 it('shows the mapping screen with a guessed mapping and a preview', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $account = Account::factory()->create();
     $this->actingAs($admin)->post('/accounting/import', ['account_id' => $account->id, 'file' => uploadStatement()]);
     $import = Import::latest('id')->first();
@@ -98,7 +98,7 @@ it('shows the mapping screen with a guessed mapping and a preview', function () 
 });
 
 it('imports statement rows as draft bookings with the right sign once the mapping is confirmed', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $account = Account::factory()->create();
     $this->actingAs($admin);
 
@@ -121,7 +121,7 @@ it('imports statement rows as draft bookings with the right sign once the mappin
 });
 
 it('respects an adjusted mapping', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $account = Account::factory()->create();
     $this->actingAs($admin);
 
@@ -133,7 +133,7 @@ it('respects an adjusted mapping', function () {
 });
 
 it('rejects a mapping missing a required column', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $account = Account::factory()->create();
     $this->actingAs($admin)->post('/accounting/import', ['account_id' => $account->id, 'file' => uploadStatement()]);
     $import = Import::latest('id')->first();
@@ -146,7 +146,7 @@ it('rejects a mapping missing a required column', function () {
 });
 
 it('skips duplicate rows on re-import', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $account = Account::factory()->create();
     $this->actingAs($admin);
 
@@ -159,7 +159,7 @@ it('skips duplicate rows on re-import', function () {
 });
 
 it('surfaces the skipped duplicate rows on the summary for confirmation', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $account = Account::factory()->create();
     $this->actingAs($admin);
 
@@ -174,7 +174,7 @@ it('surfaces the skipped duplicate rows on the summary for confirmation', functi
 });
 
 it('imports a confirmed skipped row and removes it from the skipped list', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $account = Account::factory()->create();
     $this->actingAs($admin);
 
@@ -194,7 +194,7 @@ it('imports a confirmed skipped row and removes it from the skipped list', funct
 });
 
 it('shows a post-upload summary with the draft total', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $account = Account::factory()->create();
     $this->actingAs($admin);
     $import = importStatement($account);
@@ -208,7 +208,7 @@ it('shows a post-upload summary with the draft total', function () {
 });
 
 it('redirects the summary of a still-unmapped import back to the mapping step', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $account = Account::factory()->create();
     $this->actingAs($admin)->post('/accounting/import', ['account_id' => $account->id, 'file' => uploadStatement()]);
     $import = Import::latest('id')->first();

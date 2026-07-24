@@ -44,7 +44,7 @@ beforeEach(function () {
 });
 
 it('moves imported drafts to suggested and stores AI suggestions', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $account = Account::factory()->create();
     $income = Category::factory()->income()->create();
     $expense = Category::factory()->expense()->create();
@@ -71,7 +71,7 @@ it('moves imported drafts to suggested and stores AI suggestions', function () {
 });
 
 it('drops a suggested category whose direction is wrong', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $account = Account::factory()->create();
     $income = Category::factory()->income()->create();
 
@@ -88,7 +88,7 @@ it('drops a suggested category whose direction is wrong', function () {
 });
 
 it('pre-fills the review form from the AI suggestion', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $income = Category::factory()->income()->create();
     $emma = Child::factory()->create(['name' => 'Emma']);
     $booking = Booking::factory()->suggested()->create([
@@ -109,7 +109,7 @@ it('pre-fills the review form from the AI suggestion', function () {
 
 it('queues one suggestion job per imported draft', function () {
     Queue::fake();
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $account = Account::factory()->create();
 
     $this->actingAs($admin);
@@ -120,7 +120,7 @@ it('queues one suggestion job per imported draft', function () {
 
 it('re-analyses unconfirmed bookings and leaves confirmed ones alone', function () {
     Queue::fake();
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $suggested = Booking::factory()->suggested()->create();
     $confirmed = Booking::factory()->create(); // factory default = confirmed
 
@@ -132,7 +132,7 @@ it('re-analyses unconfirmed bookings and leaves confirmed ones alone', function 
 });
 
 it('trusts the model: high confidence is taken at face value', function () {
-    $this->actingAs(User::factory()->admin()->create());
+    $this->actingAs(User::factory()->admin()->accountingWriter()->create());
     $expense = Category::factory()->expense()->create(); // random name, not in the purpose
     $booking = Booking::factory()->draft()->create(['amount_cents' => -6842, 'category_id' => null, 'purpose' => 'EC-POS REWE SAGT DANKE']);
 
@@ -143,7 +143,7 @@ it('trusts the model: high confidence is taken at face value', function () {
 });
 
 it('trusts the model: medium stays medium', function () {
-    $this->actingAs(User::factory()->admin()->create());
+    $this->actingAs(User::factory()->admin()->accountingWriter()->create());
     $expense = Category::factory()->expense()->create();
     $booking = Booking::factory()->draft()->create(['amount_cents' => -3520, 'category_id' => null, 'purpose' => 'DAUERAUFTRAG Miete']);
 
@@ -154,7 +154,7 @@ it('trusts the model: medium stays medium', function () {
 });
 
 it('overrides the model to low when the AI found no category (even if it claims high)', function () {
-    $this->actingAs(User::factory()->admin()->create());
+    $this->actingAs(User::factory()->admin()->accountingWriter()->create());
     $booking = Booking::factory()->draft()->create(['amount_cents' => -890, 'category_id' => null, 'purpose' => 'Kontoführung']);
 
     BookingCategorizer::fake([['category_id' => null, 'confidence' => 'high']]);
@@ -164,7 +164,7 @@ it('overrides the model to low when the AI found no category (even if it claims 
 });
 
 it('keeps the model category but flags low when a different category is named in the purpose', function () {
-    $this->actingAs(User::factory()->admin()->create());
+    $this->actingAs(User::factory()->admin()->accountingWriter()->create());
     $elternbeitrag = Category::factory()->income()->create(['name' => 'Elternbeitrag']);
     Category::factory()->income()->create(['name' => 'Vereinsbeitrag']);
 
@@ -179,7 +179,7 @@ it('keeps the model category but flags low when a different category is named in
 });
 
 it('is confident when the chosen category is literally named in the purpose', function () {
-    $this->actingAs(User::factory()->admin()->create());
+    $this->actingAs(User::factory()->admin()->accountingWriter()->create());
     $vereinsbeitrag = Category::factory()->income()->create(['name' => 'Vereinsbeitrag']);
 
     // The model's own pick matches the literally-named category → certain, despite „medium".
@@ -192,7 +192,7 @@ it('is confident when the chosen category is literally named in the purpose', fu
 });
 
 it('downgrades to low when two categories are named and the model picks a third', function () {
-    $this->actingAs(User::factory()->admin()->create());
+    $this->actingAs(User::factory()->admin()->accountingWriter()->create());
     Category::factory()->income()->create(['name' => 'Vereinsbeitrag']);
     Category::factory()->income()->create(['name' => 'Essensgeld']);
     $kaution = Category::factory()->income()->create(['name' => 'Kaution']);
@@ -206,7 +206,7 @@ it('downgrades to low when two categories are named and the model picks a third'
 });
 
 it('reviews riskiest (lowest confidence) first', function () {
-    $this->actingAs(User::factory()->admin()->create());
+    $this->actingAs(User::factory()->admin()->accountingWriter()->create());
     Booking::factory()->suggested()->create(['confidence' => SuggestionConfidence::High, 'booking_date' => '2026-04-01']);
     $risky = Booking::factory()->suggested()->create(['confidence' => SuggestionConfidence::Low, 'booking_date' => '2026-04-20']);
 
@@ -217,7 +217,7 @@ it('reviews riskiest (lowest confidence) first', function () {
 });
 
 it('never overwrites a booking confirmed while the AI was running', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $this->actingAs($admin);
 
     $keep = Category::factory()->expense()->create();
@@ -249,7 +249,7 @@ it('never overwrites a booking confirmed while the AI was running', function () 
 });
 
 it('does not attribute a booking to a child not enrolled in the booking year', function () {
-    $this->actingAs(User::factory()->admin()->create());
+    $this->actingAs(User::factory()->admin()->accountingWriter()->create());
     $income = Category::factory()->income()->create();
     $former = Child::factory()->former('2024-12-31')->create(); // left before 2026
     $booking = Booking::factory()->draft()->create(['amount_cents' => 5000, 'category_id' => null, 'booking_date' => '2026-03-01']);

@@ -13,7 +13,7 @@ use Inertia\Testing\AssertableInertia;
 uses(RefreshDatabase::class);
 
 it('breaks transfers down per account in a zero-sum block, leaving the net untouched', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $this->actingAs($admin);
     $income = Category::factory()->income()->create();
     Booking::factory()->create(['category_id' => $income->id, 'amount_cents' => 5000, 'booking_date' => '2026-01-15']);
@@ -45,7 +45,7 @@ it('forbids non-admins from the report', function () {
 });
 
 it('pivots confirmed bookings by category and month', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $income = Category::factory()->income()->create(['name' => 'Essensgeld']);
     $expense = Category::factory()->expense()->create(['name' => 'Miete']);
 
@@ -71,7 +71,7 @@ it('pivots confirmed bookings by category and month', function () {
 });
 
 it('defaults to the highest year and offers every year in the min–max range', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
 
     // Only 2024 and 2026 have bookings — 2025 should still appear (no gap).
     Booking::factory()->create(['booking_date' => '2024-05-01']);
@@ -85,7 +85,7 @@ it('defaults to the highest year and offers every year in the min–max range', 
 });
 
 it('rolls a grandchild category amount up into its parent and root rows', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $root = Category::factory()->expense()->create(['name' => 'Konsum', 'position' => 1]);
     $child = Category::factory()->childOf($root)->create(['name' => 'Lebensmittel', 'position' => 1]);
     $grand = Category::factory()->childOf($child)->create(['name' => 'Bio', 'position' => 1]);
@@ -110,7 +110,7 @@ it('forbids non-admins from exporting the report', function () {
 });
 
 it('exports the report as a CSV download', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $income = Category::factory()->income()->create(['name' => 'Essensgeld']);
     Booking::factory()->create(['category_id' => $income->id, 'amount_cents' => 5000, 'booking_date' => '2026-01-10']);
 
@@ -121,7 +121,7 @@ it('exports the report as a CSV download', function () {
 });
 
 it('exports the report as an XLSX download', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
 
     $this->actingAs($admin)
         ->get('/accounting/reports/export?year=2026&format=xlsx')

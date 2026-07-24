@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Enums\AccountingAccess;
 use App\Enums\UserRole;
 use App\Models\Concerns\LogsChanges;
 use Database\Factories\UserFactory;
@@ -47,6 +48,7 @@ class User extends Authenticatable implements HasLocalePreference
     protected $attributes = [
         'role' => UserRole::Parent->value,
         'is_admin' => false,
+        'accounting_access' => AccountingAccess::None->value,
     ];
 
     /**
@@ -61,6 +63,7 @@ class User extends Authenticatable implements HasLocalePreference
             'password' => 'hashed',
             'role' => UserRole::class,
             'is_admin' => 'boolean',
+            'accounting_access' => AccountingAccess::class,
             'notification_preferences' => 'array',
         ];
     }
@@ -90,6 +93,18 @@ class User extends Authenticatable implements HasLocalePreference
     public function isAdmin(): bool
     {
         return (bool) $this->is_admin;
+    }
+
+    /** May view the Buchhaltung (accounting) module — independent of role/admin. */
+    public function canReadAccounting(): bool
+    {
+        return $this->accounting_access->canRead();
+    }
+
+    /** May create/edit/delete in the Buchhaltung module. */
+    public function canWriteAccounting(): bool
+    {
+        return $this->accounting_access->canWrite();
     }
 
     /**

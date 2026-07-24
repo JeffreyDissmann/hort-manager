@@ -8,6 +8,13 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Accounting access as its own permission**: a per-user `accounting_access` axis
+  (kein Zugriff / nur lesen / lesen & schreiben) — independent of the Erzieher/Parent
+  role and of admin — decides who may use the Buchhaltung module. Read users can view
+  every accounting page (and export) but see no write controls; write users can edit.
+  Admins assign it on the Benutzer page (existing admins were backfilled to write so
+  nobody lost access). Enforced server-side by an `accounting` / `accounting:write`
+  middleware split over the routes, with the write buttons hidden client-side too.
 - **Refunds / repayments (reversals)**: a booking can now run opposite to its
   category — e.g. a store refund on an expense category is kept as a positive amount
   (`kind` stays expense) that nets off the expenses in the Auswertung. In the draft

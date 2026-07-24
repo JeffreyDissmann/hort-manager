@@ -143,41 +143,47 @@ Route::middleware('auth')->group(function () {
     Route::get('polls', [ExcursionRsvpController::class, 'index'])->name('polls.index');
     Route::patch('excursions/{excursion}/rsvp', [ExcursionRsvpController::class, 'update'])->name('polls.update');
 
-    // Buchhaltung — admin-only accounting module.
-    Route::middleware('admin')->prefix('accounting')->name('accounting.')->group(function () {
-        // Home of the accounting world.
+    // Buchhaltung — gated by the accounting access axis (read for viewing, write for
+    // mutations), independent of admin. See EnsureAccountingAccess.
+    Route::middleware('accounting')->prefix('accounting')->name('accounting.')->group(function () {
+        // --- Read (viewers + editors) ---
         Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
-
-        Route::resource('accounts', AccountController::class)->except('show');
-        Route::resource('categories', CategoryController::class)->only(['index', 'store', 'update', 'destroy']);
-        // Step-through review of draft bookings (before the resource's {booking} routes).
-        Route::get('bookings/review', [BookingController::class, 'review'])->name('bookings.review');
-        Route::patch('bookings/{booking}/review', [BookingController::class, 'reviewSave'])->name('bookings.review-save');
-        // Re-run the AI over all unconfirmed bookings.
-        Route::post('bookings/reanalyse', [BookingController::class, 'reanalyse'])->name('bookings.reanalyse');
-        // Bulk-confirm bookings from the overview.
-        Route::post('bookings/confirm', [BookingController::class, 'bulkConfirm'])->name('bookings.bulk-confirm');
+        Route::get('accounts', [AccountController::class, 'index'])->name('accounts.index');
+        Route::get('categories', [CategoryController::class, 'index'])->name('categories.index');
         // Export every booking matching the current filter (CSV/XLSX).
         Route::get('bookings/export', [BookingController::class, 'export'])->name('bookings.download');
-        Route::resource('bookings', BookingController::class)->except('show');
-
-        Route::get('transfers/create', [TransferController::class, 'create'])->name('transfers.create');
-        Route::post('transfers', [TransferController::class, 'store'])->name('transfers.store');
-
-        Route::get('import', [ImportController::class, 'create'])->name('import.create');
-        Route::post('import', [ImportController::class, 'store'])->name('import.store');
-        // Confirm/adjust the auto-guessed column mapping before drafts are created.
-        Route::get('import/{import}/configure', [ImportController::class, 'configure'])->name('import.configure');
-        Route::post('import/{import}/configure', [ImportController::class, 'storeMapping'])->name('import.store-mapping');
-        Route::get('import/{import}', [ImportController::class, 'show'])->name('import.show');
-        // Import genuine duplicates the user confirmed from the summary's skipped list.
-        Route::post('import/{import}/confirm-skipped', [ImportController::class, 'confirmSkipped'])->name('import.confirm-skipped');
-
+        Route::get('bookings', [BookingController::class, 'index'])->name('bookings.index');
         // Auswertung — month × category pivot of the confirmed ledger.
         Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
         Route::get('reports/export', [ReportController::class, 'export'])->name('reports.download');
         // Einnahmen je Kind — child × month matrix of contributions.
         Route::get('contributions', [ContributionController::class, 'index'])->name('contributions.index');
+
+        // --- Write (editors only) ---
+        Route::middleware('accounting:write')->group(function () {
+            Route::resource('accounts', AccountController::class)->except(['show', 'index']);
+            Route::resource('categories', CategoryController::class)->only(['store', 'update', 'destroy']);
+            // Step-through review of draft bookings (before the resource's {booking} routes).
+            Route::get('bookings/review', [BookingController::class, 'review'])->name('bookings.review');
+            Route::patch('bookings/{booking}/review', [BookingController::class, 'reviewSave'])->name('bookings.review-save');
+            // Re-run the AI over all unconfirmed bookings.
+            Route::post('bookings/reanalyse', [BookingController::class, 'reanalyse'])->name('bookings.reanalyse');
+            // Bulk-confirm bookings from the overview.
+            Route::post('bookings/confirm', [BookingController::class, 'bulkConfirm'])->name('bookings.bulk-confirm');
+            Route::resource('bookings', BookingController::class)->except(['show', 'index']);
+
+            Route::get('transfers/create', [TransferController::class, 'create'])->name('transfers.create');
+            Route::post('transfers', [TransferController::class, 'store'])->name('transfers.store');
+
+            Route::get('import', [ImportController::class, 'create'])->name('import.create');
+            Route::post('import', [ImportController::class, 'store'])->name('import.store');
+            // Confirm/adjust the auto-guessed column mapping before drafts are created.
+            Route::get('import/{import}/configure', [ImportController::class, 'configure'])->name('import.configure');
+            Route::post('import/{import}/configure', [ImportController::class, 'storeMapping'])->name('import.store-mapping');
+            Route::get('import/{import}', [ImportController::class, 'show'])->name('import.show');
+            // Import genuine duplicates the user confirmed from the summary's skipped list.
+            Route::post('import/{import}/confirm-skipped', [ImportController::class, 'confirmSkipped'])->name('import.confirm-skipped');
+        });
     });
 });
 

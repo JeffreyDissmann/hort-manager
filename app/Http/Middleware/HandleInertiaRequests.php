@@ -47,6 +47,10 @@ class HandleInertiaRequests extends Middleware
                     'avatar' => $user->avatar,
                     'role' => $user->role->value,
                     'is_admin' => $user->is_admin,
+                    // Accounting access axis (independent of role/admin) — drives nav
+                    // visibility and hiding write controls in the accounting UI.
+                    'can_read_accounting' => $user->canReadAccounting(),
+                    'can_write_accounting' => $user->canWriteAccounting(),
                     'email_verified_at' => $user->email_verified_at,
                     'locale' => $user->locale,
                 ] : null,
