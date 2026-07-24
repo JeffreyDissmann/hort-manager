@@ -6,6 +6,8 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [2026.07.24] — 2026-07-24
+
 ### Added
 
 - **Accounting access as its own permission**: a per-user `accounting_access` axis
