@@ -19,9 +19,14 @@ const props = defineProps({
     incomeTotal: { type: Number, required: true },
     expenseTotal: { type: Number, required: true },
     netTotal: { type: Number, required: true },
+    transferRows: { type: Array, default: () => [] },
+    transferMonths: { type: Array, default: () => [] },
+    transferTotal: { type: Number, default: 0 },
 });
 
-const hasData = computed(() => props.incomeRows.length > 0 || props.expenseRows.length > 0);
+const hasData = computed(
+    () => props.incomeRows.length > 0 || props.expenseRows.length > 0 || props.transferRows.length > 0,
+);
 
 function changeYear(event) {
     router.get(reportsIndex({ query: { year: event.target.value } }).url, {}, { preserveScroll: true });
@@ -55,17 +60,18 @@ const cell = (cents) => (cents === 0 ? '—' : formatEuro(cents));
 const cellClass = (cents) =>
     cents === 0 ? 'text-ink/25' : cents < 0 ? 'text-red-600' : 'text-hort-teal-dark';
 
-// Drill down to the bookings that make up a cell's total: same category subtree
-// (or income/expense kind for the section totals), confirmed, within that month or
-// the whole year. Matches how the report rolls up (confirmed, transfers excluded).
+// Drill down to the bookings that make up a cell's total: same category subtree, or
+// income/expense/transfer kind (optionally scoped to one account), confirmed, within
+// that month or the whole year. Matches how the report rolls up.
 const pad = (n) => String(n).padStart(2, '0');
-function drilldown({ category, kind, month }) {
+function drilldown({ category, kind, account, month }) {
     const range = month
         ? { from: `${props.year}-${pad(month)}-01`, to: `${props.year}-${pad(month)}-${pad(new Date(props.year, month, 0).getDate())}` }
         : { from: `${props.year}-01-01`, to: `${props.year}-12-31` };
     const query = { status: 'confirmed', ...range };
     if (category) query.category = category;
     if (kind) query.kind = kind;
+    if (account) query.account = account;
     return bookingsIndex({ query }).url;
 }
 </script>
@@ -206,6 +212,28 @@ function drilldown({ category, kind, month }) {
                                     <template v-else>{{ cell(row.total) }}</template>
                                 </td>
                             </tr>
+
+                            <!-- Umbuchungen — internal moves per account; nets to zero -->
+                            <template v-if="transferRows.length">
+                                <tr class="border-t-2 border-ink/20 bg-canvas font-semibold">
+                                    <td class="sticky left-0 z-10 bg-canvas px-3 py-2 text-ink">{{ $t('accounting.reports.transfers') }}</td>
+                                    <td v-for="(c, i) in transferMonths" :key="i" class="px-3 py-2 text-right" :class="cellClass(c)">{{ cell(c) }}</td>
+                                    <td class="px-3 py-2 text-right" :class="cellClass(transferTotal)">{{ cell(transferTotal) }}</td>
+                                </tr>
+                                <tr v-for="row in transferRows" :key="'t' + row.id" class="hover:bg-ink/5">
+                                    <td class="sticky left-0 z-10 bg-surface px-3 py-1.5 text-ink">
+                                        <span class="block pl-[18px]">{{ row.name }}</span>
+                                    </td>
+                                    <td v-for="(c, i) in row.months" :key="i" class="px-3 py-1.5 text-right" :class="cellClass(c)">
+                                        <Link v-if="c !== 0" :href="drilldown({ account: row.id, kind: 'transfer', month: i + 1 })" class="hover:underline">{{ cell(c) }}</Link>
+                                        <template v-else>{{ cell(c) }}</template>
+                                    </td>
+                                    <td class="px-3 py-1.5 text-right font-semibold" :class="cellClass(row.total)">
+                                        <Link v-if="row.total !== 0" :href="drilldown({ account: row.id, kind: 'transfer' })" class="hover:underline">{{ cell(row.total) }}</Link>
+                                        <template v-else>{{ cell(row.total) }}</template>
+                                    </td>
+                                </tr>
+                            </template>
 
                             <!-- Net -->
                             <tr class="border-t-2 border-ink/20 bg-canvas font-semibold">

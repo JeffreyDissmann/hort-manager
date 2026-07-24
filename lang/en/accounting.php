@@ -38,12 +38,13 @@ return [
 
     'reports' => [
         'title' => 'Reports',
-        'intro' => 'Income and expenses per category and month — confirmed bookings only, transfers excluded.',
+        'intro' => 'Income and expenses per category and month — confirmed bookings only. Transfers between your own accounts are listed separately per account and net to zero.',
         'year' => 'Year',
         'category' => 'Category',
         'total' => 'Σ',
         'income' => 'Income',
         'expense' => 'Expenses',
+        'transfers' => 'Transfers',
         'net' => 'Net',
         'empty' => 'No confirmed bookings for this year yet.',
     ],

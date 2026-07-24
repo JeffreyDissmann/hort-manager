@@ -8,6 +8,11 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Umbuchungen in the Auswertung**: internal transfers now appear as their own
+  zero-sum block below Ausgaben — one row per account showing that account's signed
+  movement (money out −, money in +), with the parent „Umbuchungen" row summing to
+  zero so the Saldo is untouched. Each cell drills into that account's transfer
+  bookings; included in the CSV/XLSX export.
 - **Book an imported line as a transfer**: in the draft review, „Als Umbuchung
   verbuchen" reclassifies a bank line as an internal transfer to another account
   (e.g. a cash withdrawal → Bar-Kasse) — it reuses the imported line as one leg and

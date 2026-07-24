@@ -38,12 +38,13 @@ return [
 
     'reports' => [
         'title' => 'Auswertung',
-        'intro' => 'Einnahmen und Ausgaben je Kategorie und Monat — nur bestätigte Buchungen, ohne Umbuchungen.',
+        'intro' => 'Einnahmen und Ausgaben je Kategorie und Monat — nur bestätigte Buchungen. Umbuchungen zwischen eigenen Konten sind separat je Konto ausgewiesen und heben sich in Summe auf.',
         'year' => 'Jahr',
         'category' => 'Kategorie',
         'total' => 'Σ',
         'income' => 'Einnahmen',
         'expense' => 'Ausgaben',
+        'transfers' => 'Umbuchungen',
         'net' => 'Saldo',
         'empty' => 'Für dieses Jahr gibt es noch keine bestätigten Buchungen.',
     ],
