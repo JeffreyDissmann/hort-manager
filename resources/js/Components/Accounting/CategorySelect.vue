@@ -3,7 +3,12 @@ import { computed, ref, nextTick } from 'vue';
 import { router, usePage } from '@inertiajs/vue3';
 import { store as categoriesStore, update as categoriesUpdate } from '@/routes/accounting/categories';
 import { t } from '@/i18n';
+import { useAccountingAccess } from '@/accountingAccess';
 import { PlusIcon, CheckIcon, XMarkIcon, ChatBubbleBottomCenterTextIcon } from '@heroicons/vue/24/outline';
+
+// Only editors may inline-add / edit a category's hint. This component only renders
+// on write-protected pages today; the guard keeps it safe wherever it's reused.
+const { canWrite } = useAccountingAccess();
 
 // A grouped category <select> (Einnahmen / Ausgaben, indented by depth) with an
 // inline „neue Kategorie" affordance so a missing category can be added without
@@ -116,7 +121,7 @@ function saveNew() {
                 </optgroup>
             </select>
             <button
-                v-if="selected"
+                v-if="selected && canWrite"
                 type="button"
                 class="shrink-0 rounded-lg bg-ink/5 p-2 text-ink/60 transition hover:bg-ink/10 hover:text-ink"
                 :class="{ 'text-hort-teal-dark': selected.comment }"
@@ -126,6 +131,7 @@ function saveNew() {
                 <ChatBubbleBottomCenterTextIcon class="h-5 w-5" />
             </button>
             <button
+                v-if="canWrite"
                 type="button"
                 class="shrink-0 rounded-lg bg-ink/5 p-2 text-ink/60 transition hover:bg-ink/10 hover:text-ink"
                 :title="$t('accounting.bookings.add_category')"

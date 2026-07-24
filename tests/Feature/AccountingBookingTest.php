@@ -22,7 +22,7 @@ it('forbids non-admins from bookings', function () {
 });
 
 it('lists bookings for admins', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     Booking::factory()->create(['purpose' => 'Essensgeld April']);
 
     $this->actingAs($admin)
@@ -36,7 +36,7 @@ it('lists bookings for admins', function () {
 
 it('exposes the pending-draft count and AI flag to drive list polling', function () {
     config(['accounting.ai_suggestions' => true]);
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     Booking::factory()->draft()->create();
     Booking::factory()->draft()->create();
     Booking::factory()->suggested()->create();
@@ -50,7 +50,7 @@ it('exposes the pending-draft count and AI flag to drive list polling', function
 });
 
 it('creates an income booking as a positive confirmed amount', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $this->actingAs($admin);
     $account = Account::factory()->create();
     $category = Category::factory()->income()->create();
@@ -71,7 +71,7 @@ it('creates an income booking as a positive confirmed amount', function () {
 });
 
 it('creates an expense booking as a negative amount', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $this->actingAs($admin);
     $account = Account::factory()->create();
     $category = Category::factory()->expense()->create();
@@ -87,7 +87,7 @@ it('creates an expense booking as a negative amount', function () {
 });
 
 it('defaults the valuta date to the booking date', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $this->actingAs($admin);
 
     $this->post('/accounting/bookings', [
@@ -101,7 +101,7 @@ it('defaults the valuta date to the booking date', function () {
 });
 
 it('prefers a linked user over a free-text counterparty', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $this->actingAs($admin);
     $user = User::factory()->create();
 
@@ -120,7 +120,7 @@ it('prefers a linked user over a free-text counterparty', function () {
 });
 
 it('re-signs the amount when a booking is edited', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $this->actingAs($admin);
     $booking = Booking::factory()->expense()->create(['amount_cents' => -1000]);
     $expense = Category::factory()->expense()->create();
@@ -136,7 +136,7 @@ it('re-signs the amount when a booking is edited', function () {
 });
 
 it('filters bookings by account', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $this->actingAs($admin);
     $a = Account::factory()->create();
     $b = Account::factory()->create();
@@ -148,7 +148,7 @@ it('filters bookings by account', function () {
 });
 
 it('filters suggested bookings by confidence via the status filter', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $this->actingAs($admin);
     Booking::factory()->suggested()->create(['confidence' => SuggestionConfidence::Low]);
     Booking::factory()->suggested()->create(['confidence' => SuggestionConfidence::High]);
@@ -166,7 +166,7 @@ it('filters suggested bookings by confidence via the status filter', function ()
 });
 
 it('filtering by a parent category includes its descendants', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $this->actingAs($admin);
 
     $root = Category::factory()->expense()->create();
@@ -185,7 +185,7 @@ it('filtering by a parent category includes its descendants', function () {
 });
 
 it('rejects a zero or negative amount', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $this->actingAs($admin);
 
     $this->post('/accounting/bookings', [
@@ -197,7 +197,7 @@ it('rejects a zero or negative amount', function () {
 });
 
 it('bulk-confirms the given ids, skipping uncategorised bookings', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $this->actingAs($admin);
     $withCat = Booking::factory()->suggested()->create();                       // has a category
     $noCat = Booking::factory()->suggested()->create(['category_id' => null]);   // no category
@@ -210,7 +210,7 @@ it('bulk-confirms the given ids, skipping uncategorised bookings', function () {
 });
 
 it('bulk-confirms all unconfirmed bookings matching the filter', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $this->actingAs($admin);
     Booking::factory()->count(3)->suggested()->create();
     $alreadyConfirmed = Booking::factory()->create();
@@ -223,7 +223,7 @@ it('bulk-confirms all unconfirmed bookings matching the filter', function () {
 });
 
 it('bulk-confirming all honours the active filter, leaving non-matching bookings alone', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $this->actingAs($admin);
     $accountA = Account::factory()->create();
     $accountB = Account::factory()->create();
@@ -238,7 +238,7 @@ it('bulk-confirming all honours the active filter, leaving non-matching bookings
 });
 
 it('deletes a booking', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $this->actingAs($admin);
     $booking = Booking::factory()->create();
 
@@ -247,7 +247,7 @@ it('deletes a booking', function () {
 });
 
 it('can flip a booking back to draft from the edit form', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $this->actingAs($admin);
     $booking = Booking::factory()->create(['status' => BookingStatus::Confirmed]);
     $category = Category::factory()->income()->create();
@@ -264,7 +264,7 @@ it('can flip a booking back to draft from the edit form', function () {
 });
 
 it('reviews AI-ready bookings oldest first, skipping un-analysed drafts', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $this->actingAs($admin);
     $older = Booking::factory()->suggested()->create(['booking_date' => '2026-04-01']);
     Booking::factory()->suggested()->create(['booking_date' => '2026-04-10']);
@@ -278,7 +278,7 @@ it('reviews AI-ready bookings oldest first, skipping un-analysed drafts', functi
 });
 
 it('confirms the current draft with the full form and keeps the sign', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $this->actingAs($admin);
     $draft = Booking::factory()->draft()->expense()->create(['amount_cents' => -1000, 'category_id' => null]);
     $category = Category::factory()->expense()->create();
@@ -299,25 +299,71 @@ it('confirms the current draft with the full form and keeps the sign', function 
         ->and($draft->comment)->toBe('Miete');
 });
 
-it('rejects a review category with the wrong direction', function () {
-    $admin = User::factory()->admin()->create();
+it('books a positive line against an expense category as a refund (reversal)', function () {
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $this->actingAs($admin);
-    $draft = Booking::factory()->draft()->expense()->create(['amount_cents' => -1000, 'category_id' => null]);
-    $income = Category::factory()->income()->create();
+    // A +50 credit on the bank (e.g. a store refund), awaiting review.
+    $draft = Booking::factory()->suggested()->create(['amount_cents' => 5000, 'category_id' => null]);
+    $expense = Category::factory()->expense()->create(['name' => 'Basteln']);
 
     $this->patch("/accounting/bookings/{$draft->id}/review", [
         'action' => 'confirm',
         'account_id' => $draft->account_id,
-        'category_id' => $income->id,
-        'amount' => '10',
+        'category_id' => $expense->id,
+        'amount' => '50',
         'booking_date' => '2026-04-01',
-    ])->assertSessionHasErrors('category_id');
+    ])->assertRedirect();
 
-    expect($draft->refresh()->status)->toBe(BookingStatus::Draft);
+    $draft->refresh();
+    expect($draft->status)->toBe(BookingStatus::Confirmed)
+        ->and($draft->category_id)->toBe($expense->id)
+        ->and($draft->kind)->toBe(BookingKind::Expense) // stays an expense category…
+        ->and($draft->amount_cents)->toBe(5000);        // …but the amount is positive (a credit)
+});
+
+it('stores a manual expense refund as a positive amount when marked as a reversal', function () {
+    $admin = User::factory()->admin()->accountingWriter()->create();
+    $this->actingAs($admin);
+    $account = Account::factory()->create();
+    $expense = Category::factory()->expense()->create();
+
+    $this->post('/accounting/bookings', [
+        'account_id' => $account->id,
+        'category_id' => $expense->id,
+        'amount' => '30',
+        'booking_date' => '2026-04-01',
+        'reversal' => true,
+    ])->assertRedirect();
+
+    $booking = Booking::where('category_id', $expense->id)->first();
+    expect($booking->kind)->toBe(BookingKind::Expense)
+        ->and($booking->amount_cents)->toBe(3000); // positive: money came back in
+
+    // A normal expense (no reversal) still stores as negative.
+    $this->post('/accounting/bookings', [
+        'account_id' => $account->id,
+        'category_id' => $expense->id,
+        'amount' => '30',
+        'booking_date' => '2026-04-02',
+    ]);
+    expect(Booking::where('category_id', $expense->id)->orderByDesc('id')->first()->amount_cents)->toBe(-3000);
+});
+
+it('round-trips the reversal flag into the edit form', function () {
+    $admin = User::factory()->admin()->accountingWriter()->create();
+    $this->actingAs($admin);
+    $expense = Category::factory()->expense()->create();
+    // A +30 booking on an expense category is a reversal.
+    $booking = Booking::factory()->create(['category_id' => $expense->id, 'kind' => BookingKind::Expense, 'amount_cents' => 3000]);
+
+    $this->get("/accounting/bookings/{$booking->id}/edit")
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('booking.reversal', true)
+            ->where('booking.amount', 30));
 });
 
 it('discards a draft during review', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $this->actingAs($admin);
     $draft = Booking::factory()->draft()->create();
 
@@ -328,7 +374,7 @@ it('discards a draft during review', function () {
 });
 
 it('skips a draft, advancing the cursor to the next by (confidence, id)', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $this->actingAs($admin);
     $first = Booking::factory()->suggested()->create(['confidence' => SuggestionConfidence::Low]);
     $next = Booking::factory()->suggested()->create(['confidence' => SuggestionConfidence::Low]);
@@ -343,7 +389,7 @@ it('skips a draft, advancing the cursor to the next by (confidence, id)', functi
 });
 
 it('refuses to review an already-confirmed booking', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $confirmed = Booking::factory()->create(); // factory default = confirmed
 
     $this->actingAs($admin)
@@ -352,7 +398,7 @@ it('refuses to review an already-confirmed booking', function () {
 });
 
 it('filters by kind, confirmed status and a month range (report drill-down)', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $this->actingAs($admin);
     $income = Category::factory()->income()->create();
     $expense = Category::factory()->expense()->create();
@@ -374,7 +420,7 @@ it('forbids non-admins from exporting the bookings list', function () {
 });
 
 it('exports every matching booking, not just the current page', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $this->actingAs($admin);
     Booking::factory()->count(60)->create(); // the list paginates at 50
 
@@ -385,7 +431,7 @@ it('exports every matching booking, not just the current page', function () {
 });
 
 it('exports only the bookings matching the active filter', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $this->actingAs($admin);
     $a = Account::factory()->create();
     $b = Account::factory()->create();
@@ -399,7 +445,7 @@ it('exports only the bookings matching the active filter', function () {
 });
 
 it('exports the bookings list as an XLSX download', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $this->actingAs($admin)
         ->get('/accounting/bookings/export?format=xlsx')
         ->assertOk()
@@ -407,7 +453,7 @@ it('exports the bookings list as an XLSX download', function () {
 });
 
 it('exposes children with their enrolment range to the booking form', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     Child::factory()->create(['name' => 'Emma', 'active_from' => '2025-08-01', 'active_until' => null]);
 
     $this->actingAs($admin)

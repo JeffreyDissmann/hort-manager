@@ -6,8 +6,34 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [2026.07.24] — 2026-07-24
+
 ### Added
 
+- **Accounting access as its own permission**: a per-user `accounting_access` axis
+  (kein Zugriff / nur lesen / lesen & schreiben) — independent of the Erzieher/Parent
+  role and of admin — decides who may use the Buchhaltung module. Read users can view
+  every accounting page (and export) but see no write controls; write users can edit.
+  Admins assign it on the Benutzer page (existing admins were backfilled to write so
+  nobody lost access). Enforced server-side by an `accounting` / `accounting:write`
+  middleware split over the routes, with the write buttons hidden client-side too.
+- **Refunds / repayments (reversals)**: a booking can now run opposite to its
+  category — e.g. a store refund on an expense category is kept as a positive amount
+  (`kind` stays expense) that nets off the expenses in the Auswertung. In the draft
+  review the category picker offers all categories and the sign is taken from the
+  bank line automatically (pick the expense category → recorded as a refund); the
+  manual create/edit form gains an „Erstattung / Rückzahlung" checkbox that round-trips
+  on edit. The old „wrong direction" rejection on review is removed.
+- **Umbuchungen in the Auswertung**: internal transfers now appear as their own
+  zero-sum block below Ausgaben — one row per account showing that account's signed
+  movement (money out −, money in +), with the parent „Umbuchungen" row summing to
+  zero so the Saldo is untouched. Each cell drills into that account's transfer
+  bookings; included in the CSV/XLSX export.
+- **Book an imported line as a transfer**: in the draft review, „Als Umbuchung
+  verbuchen" reclassifies a bank line as an internal transfer to another account
+  (e.g. a cash withdrawal → Bar-Kasse) — it reuses the imported line as one leg and
+  creates the matching leg on the chosen account, so the money isn't double-counted.
+  The sign picks the direction automatically (withdrawal → out leg, deposit → in leg).
 - **Buchhaltung (accounting) — admin-only bookkeeping**: a full income/expense ledger
   for the Hort. Bank statements are imported from CSV — now with a **flexible
   column-mapping step**: after upload the columns (Buchungsdatum, Wertstellung,

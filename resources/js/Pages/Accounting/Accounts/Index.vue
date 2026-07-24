@@ -11,10 +11,13 @@ import {
     destroy as accountsDestroy,
 } from '@/routes/accounting/accounts';
 import { PencilSquareIcon, TrashIcon } from '@heroicons/vue/24/outline';
+import { useAccountingAccess } from '@/accountingAccess';
 
 defineProps({
     accounts: { type: Array, required: true },
 });
+
+const { canWrite } = useAccountingAccess();
 
 function destroy(account) {
     if (confirm(t('accounting.accounts.delete_confirm', { name: account.name }))) {
@@ -35,7 +38,7 @@ function destroy(account) {
                     </p>
                     <h2 class="text-xl font-semibold text-ink">{{ $t('accounting.accounts.title') }}</h2>
                 </div>
-                <Link :href="accountsCreate().url">
+                <Link v-if="canWrite" :href="accountsCreate().url">
                     <PrimaryButton>{{ $t('accounting.accounts.new') }}</PrimaryButton>
                 </Link>
             </div>
@@ -81,7 +84,7 @@ function destroy(account) {
                         </p>
                     </div>
 
-                    <div class="flex shrink-0 items-center gap-1">
+                    <div v-if="canWrite" class="flex shrink-0 items-center gap-1">
                         <Link
                             :href="accountsEdit(account.id).url"
                             class="rounded-lg p-2 text-ink/50 transition hover:bg-ink/5 hover:text-ink"

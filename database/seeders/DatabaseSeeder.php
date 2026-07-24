@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
+use App\Enums\AccountingAccess;
 use App\Enums\DepartureMethod;
 use App\Enums\UserRole;
 use App\Models\Accounting\Account;
@@ -29,6 +30,7 @@ class DatabaseSeeder extends Seeder
             'email' => 'erzieher@hort.test',
             'role' => UserRole::Staff,
             'is_admin' => true,
+            'accounting_access' => AccountingAccess::Write,
         ]);
 
         $parent = User::factory()->create([

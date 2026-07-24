@@ -48,6 +48,9 @@ class BookingRequest extends FormRequest
             'counterparty_child_id' => ['nullable', Rule::exists('children', 'id')],
             'counterparty_user_id' => ['nullable', Rule::exists('users', 'id')],
             'counterparty_name' => ['nullable', 'string', 'max:255'],
+            // A „reversal" flips the cash-flow sign against the category's normal
+            // direction — e.g. a refund on an expense category (money comes back in).
+            'reversal' => ['sometimes', 'boolean'],
         ];
     }
 
@@ -75,6 +78,11 @@ class BookingRequest extends FormRequest
         $category = Category::findOrFail((int) $data['category_id']);
         $magnitude = (int) round((float) $data['amount'] * 100);
 
+        // A reversal flips the sign against the category's normal direction (a refund
+        // on an expense stays kind=expense but with a positive amount, so the report
+        // nets it off the expenses).
+        $sign = $category->direction->sign() * (! empty($data['reversal']) ? -1 : 1);
+
         // Counterparty precedence: child (income) beats user (person) beats free text.
         $childId = ! empty($data['counterparty_child_id']) ? (int) $data['counterparty_child_id'] : null;
         $userId = ! $childId && ! empty($data['counterparty_user_id']) ? (int) $data['counterparty_user_id'] : null;
@@ -83,7 +91,7 @@ class BookingRequest extends FormRequest
             'account_id' => (int) $data['account_id'],
             'category_id' => $category->id,
             'kind' => BookingKind::from($category->direction->value),
-            'amount_cents' => $magnitude * $category->direction->sign(),
+            'amount_cents' => $magnitude * $sign,
             'currency' => 'EUR',
             'booking_date' => Carbon::parse($data['booking_date'])->toDateString(),
             'valuta_date' => Carbon::parse(($data['valuta_date'] ?? null) ?: $data['booking_date'])->toDateString(),

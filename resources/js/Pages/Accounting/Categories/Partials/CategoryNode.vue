@@ -24,6 +24,8 @@ const props = defineProps({
     depth: { type: Number, default: 0 },
     // Flat { id, path } reassignment targets for this direction.
     options: { type: Array, default: () => [] },
+    // Read-only accounting users see the tree but none of the edit controls.
+    canWrite: { type: Boolean, default: false },
 });
 
 const renaming = ref(false);
@@ -165,7 +167,7 @@ function confirmMove() {
                         {{ node.comment }}
                     </span>
                 </div>
-                <div class="flex shrink-0 items-center gap-0.5 opacity-0 transition group-hover:opacity-100">
+                <div v-if="canWrite" class="flex shrink-0 items-center gap-0.5 opacity-0 transition group-hover:opacity-100">
                     <button
                         type="button"
                         class="rounded p-1 text-ink/50 hover:bg-ink/10 hover:text-ink"
@@ -253,6 +255,7 @@ function confirmMove() {
                 :node="child"
                 :depth="depth + 1"
                 :options="options"
+                :can-write="canWrite"
             />
         </ul>
     </li>

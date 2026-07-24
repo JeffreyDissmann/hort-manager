@@ -8,6 +8,7 @@ use App\Enums\BookingKind;
 use App\Enums\BookingStatus;
 use App\Enums\CategoryDirection;
 use App\Http\Controllers\Controller;
+use App\Models\Accounting\Account;
 use App\Models\Accounting\Booking;
 use App\Support\Accounting\CategoryOptions;
 use App\Support\Accounting\SpreadsheetExport;
@@ -22,7 +23,9 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
  * Admin-only „Auswertung": a month × category pivot of the confirmed ledger for a
  * chosen year. Income and expense are shown as separate blocks (categories rolled
  * up over their subtree) with per-month and per-category totals and a monthly net.
- * Transfers are internal moves and are excluded.
+ * Transfers are internal moves: they're shown in a separate „Umbuchungen" block,
+ * broken down per account (each account's signed movement), whose total nets to zero
+ * so it never distorts the income/expense net.
  */
 class ReportController extends Controller
 {
@@ -90,6 +93,11 @@ class ReportController extends Controller
 
         $netMonths = collect(range(1, 12))->map(fn (int $m): int => $incomeMonths[$m] + $expenseMonths[$m])->all();
 
+        // Transfers: a per-account breakdown of the internal moves. Each account shows
+        // its own signed movement (money out −, money in +); summed across accounts the
+        // months net to zero, so the block is a neutral memo below the P&L.
+        [$transferRows, $transferMonths] = $this->transfers($year);
+
         return [
             'monthLabels' => collect(range(1, 12))
                 ->map(fn (int $m): string => CarbonImmutable::create($year, $m, 1)->translatedFormat('M'))->all(),
@@ -101,6 +109,9 @@ class ReportController extends Controller
             'incomeTotal' => array_sum($incomeMonths),
             'expenseTotal' => array_sum($expenseMonths),
             'netTotal' => array_sum($netMonths),
+            'transferRows' => $transferRows,
+            'transferMonths' => array_values($transferMonths),
+            'transferTotal' => array_sum($transferMonths),
         ];
     }
 
@@ -133,9 +144,56 @@ class ReportController extends Controller
             }
         }
 
+        // Umbuchungen — a per-account, zero-sum memo block.
+        if ($data['transferRows'] !== []) {
+            $rows[] = ['type' => 'total', 'cells' => $amountRow(__('accounting.reports.transfers'), $data['transferMonths'], $data['transferTotal'])];
+            foreach ($data['transferRows'] as $row) {
+                $rows[] = ['type' => 'row', 'cells' => $amountRow('  '.$row['name'], $row['months'], $row['total'])];
+            }
+        }
+
         $rows[] = ['type' => 'total', 'cells' => $amountRow(__('accounting.reports.net'), $data['netMonths'], $data['netTotal'])];
 
         return $rows;
+    }
+
+    /**
+     * The per-account transfer breakdown for the year: one row per account that had
+     * any internal move, each carrying its 12 signed monthly sums and a total, plus
+     * the per-month totals across all accounts (which net to zero).
+     *
+     * @return array{0: list<array{id:int, name:string, months:list<int>, total:int}>, 1: array<int, int>}
+     */
+    private function transfers(int $year): array
+    {
+        $transfers = Booking::query()
+            ->where('status', BookingStatus::Confirmed)
+            ->where('kind', BookingKind::Transfer)
+            ->whereYear('booking_date', $year)
+            ->get(['account_id', 'amount_cents', 'booking_date']);
+
+        $perAccount = [];
+        $months = array_fill(1, 12, 0);
+        foreach ($transfers as $transfer) {
+            $month = $transfer->booking_date->month;
+            $perAccount[$transfer->account_id][$month] = ($perAccount[$transfer->account_id][$month] ?? 0) + $transfer->amount_cents;
+            $months[$month] += $transfer->amount_cents;
+        }
+
+        $names = Account::whereIn('id', array_keys($perAccount))->pluck('name', 'id');
+
+        $rows = collect($perAccount)
+            ->map(fn (array $accountMonths, int $accountId): array => [
+                'id' => (int) $accountId,
+                'name' => $names[$accountId] ?? '',
+                'months' => collect(range(1, 12))->map(fn (int $m): int => $accountMonths[$m] ?? 0)->all(),
+                'total' => array_sum($accountMonths),
+            ])
+            ->sortBy('name')
+            ->values()
+            ->all();
+
+        return [$rows, $months];
     }
 
     /**

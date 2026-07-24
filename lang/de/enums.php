@@ -9,6 +9,11 @@ return [
         'staff' => 'Erzieher:in',
         'parent' => 'Elternteil',
     ],
+    'accounting_access' => [
+        'none' => 'Kein Zugriff',
+        'read' => 'Nur lesen',
+        'write' => 'Lesen & schreiben',
+    ],
     'absence_reason' => [
         'sick' => 'Krank',
         'away' => 'Kommt nicht',

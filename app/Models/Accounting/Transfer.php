@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models\Accounting;
 
 use App\Enums\BookingKind;
+use App\Enums\BookingStatus;
 use App\Models\User;
 use Database\Factories\Accounting\TransferFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -56,6 +57,55 @@ class Transfer extends Model
 
             $out = $leg($fromAccountId, -$magnitude);
             $in = $leg($toAccountId, $magnitude);
+
+            $transfer = static::create([
+                'out_booking_id' => $out->id,
+                'in_booking_id' => $in->id,
+                'created_by' => Auth::id(),
+            ]);
+
+            Booking::whereKey([$out->id, $in->id])->update(['transfer_id' => $transfer->id]);
+
+            return $transfer;
+        });
+    }
+
+    /**
+     * Turn an existing (imported) booking into an internal transfer: reuse it as its
+     * own leg and create the matching opposite leg on the other account, so the money
+     * isn't double-counted. Used to reclassify e.g. a bank cash withdrawal as a
+     * Hort-Konto → Bar-Kasse transfer straight from the review.
+     */
+    public static function fromBooking(Booking $booking, int $otherAccountId): self
+    {
+        return DB::transaction(function () use ($booking, $otherAccountId): self {
+            // The matching opposite leg on the other account (negated amount).
+            $otherLeg = Booking::create([
+                'account_id' => $otherAccountId,
+                'category_id' => null,
+                'kind' => BookingKind::Transfer,
+                'status' => BookingStatus::Confirmed,
+                'amount_cents' => -$booking->amount_cents,
+                'currency' => $booking->currency,
+                'booking_date' => $booking->booking_date->toDateString(),
+                'valuta_date' => ($booking->valuta_date ?? $booking->booking_date)->toDateString(),
+                'purpose' => $booking->purpose,
+                'comment' => $booking->comment,
+            ]);
+
+            // Reuse the original booking as its own leg — no category, no counterparty.
+            $booking->update([
+                'kind' => BookingKind::Transfer,
+                'status' => BookingStatus::Confirmed,
+                'category_id' => null,
+                'counterparty_child_id' => null,
+                'counterparty_user_id' => null,
+                'counterparty_name' => null,
+                'confidence' => null,
+            ]);
+
+            // out = the negative (source) leg, in = the positive (target) leg.
+            [$out, $in] = $booking->amount_cents < 0 ? [$booking, $otherLeg] : [$otherLeg, $booking];
 
             $transfer = static::create([
                 'out_booking_id' => $out->id,

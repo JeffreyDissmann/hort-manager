@@ -6,6 +6,7 @@ import PrimaryButton from '@/Components/PrimaryButton.vue';
 import Pagination from '@/Components/Pagination.vue';
 import { formatEuro } from '@/money';
 import { t } from '@/i18n';
+import { useAccountingAccess } from '@/accountingAccess';
 import {
     index as bookingsIndex,
     create as bookingsCreate,
@@ -30,6 +31,9 @@ const props = defineProps({
     pendingCount: { type: Number, default: 0 },
     aiEnabled: { type: Boolean, default: false },
 });
+
+// Read-only accounting users see the list but none of the write controls.
+const { canWrite } = useAccountingAccess();
 
 // While the AI is still analysing imported drafts and the current filter shows
 // nothing yet, poll so the freshly-suggested rows appear on their own. Stops as
@@ -163,42 +167,44 @@ function destroy(booking) {
                             <TableCellsIcon class="h-4 w-4" /> Excel
                         </a>
                     </div>
-                    <button
-                        v-if="unconfirmedCount > 0"
-                        type="button"
-                        class="flex items-center gap-1 rounded-lg bg-ink/5 px-3 py-2 text-sm font-medium text-ink transition hover:bg-ink/10"
-                        data-testid="bookings-reanalyse"
-                        @click="reanalyse"
-                    >
-                        <SparklesIcon class="h-4 w-4" /> {{ $t('accounting.bookings.reanalyse') }}
-                    </button>
-                    <Link
-                        v-if="reviewCount > 0"
-                        :href="bookingsReview().url"
-                        class="flex items-center gap-1 rounded-lg bg-amber-100 px-3 py-2 text-sm font-medium text-amber-800 transition hover:bg-amber-200"
-                        data-testid="bookings-review"
-                    >
-                        <ClipboardDocumentCheckIcon class="h-4 w-4" />
-                        {{ $t('accounting.bookings.review_button') }} ({{ reviewCount }})
-                    </Link>
-                    <Link
-                        :href="importCreate().url"
-                        class="flex items-center gap-1 rounded-lg bg-ink/5 px-3 py-2 text-sm font-medium text-ink transition hover:bg-ink/10"
-                        data-testid="bookings-import"
-                    >
-                        <ArrowUpTrayIcon class="h-4 w-4" /> {{ $t('nav.import') }}
-                    </Link>
-                    <Link
-                        :href="transfersCreate().url"
-                        class="flex items-center gap-1 rounded-lg bg-ink/5 px-3 py-2 text-sm font-medium text-ink transition hover:bg-ink/10"
-                    >
-                        <ArrowsRightLeftIcon class="h-4 w-4" /> {{ $t('accounting.transfers.new') }}
-                    </Link>
-                    <Link :href="bookingsCreate().url">
-                        <PrimaryButton>
-                            <PlusIcon class="mr-1 h-4 w-4" /> {{ $t('accounting.bookings.new') }}
-                        </PrimaryButton>
-                    </Link>
+                    <template v-if="canWrite">
+                        <button
+                            v-if="unconfirmedCount > 0"
+                            type="button"
+                            class="flex items-center gap-1 rounded-lg bg-ink/5 px-3 py-2 text-sm font-medium text-ink transition hover:bg-ink/10"
+                            data-testid="bookings-reanalyse"
+                            @click="reanalyse"
+                        >
+                            <SparklesIcon class="h-4 w-4" /> {{ $t('accounting.bookings.reanalyse') }}
+                        </button>
+                        <Link
+                            v-if="reviewCount > 0"
+                            :href="bookingsReview().url"
+                            class="flex items-center gap-1 rounded-lg bg-amber-100 px-3 py-2 text-sm font-medium text-amber-800 transition hover:bg-amber-200"
+                            data-testid="bookings-review"
+                        >
+                            <ClipboardDocumentCheckIcon class="h-4 w-4" />
+                            {{ $t('accounting.bookings.review_button') }} ({{ reviewCount }})
+                        </Link>
+                        <Link
+                            :href="importCreate().url"
+                            class="flex items-center gap-1 rounded-lg bg-ink/5 px-3 py-2 text-sm font-medium text-ink transition hover:bg-ink/10"
+                            data-testid="bookings-import"
+                        >
+                            <ArrowUpTrayIcon class="h-4 w-4" /> {{ $t('nav.import') }}
+                        </Link>
+                        <Link
+                            :href="transfersCreate().url"
+                            class="flex items-center gap-1 rounded-lg bg-ink/5 px-3 py-2 text-sm font-medium text-ink transition hover:bg-ink/10"
+                        >
+                            <ArrowsRightLeftIcon class="h-4 w-4" /> {{ $t('accounting.transfers.new') }}
+                        </Link>
+                        <Link :href="bookingsCreate().url">
+                            <PrimaryButton>
+                                <PlusIcon class="mr-1 h-4 w-4" /> {{ $t('accounting.bookings.new') }}
+                            </PrimaryButton>
+                        </Link>
+                    </template>
                 </div>
             </div>
         </template>
@@ -228,7 +234,7 @@ function destroy(booking) {
             </div>
 
             <!-- Bulk-confirm bar -->
-            <div v-if="hasSelection" class="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-hort-teal/10 p-3">
+            <div v-if="canWrite && hasSelection" class="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-hort-teal/10 p-3">
                 <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
                     <span class="font-medium text-ink">
                         {{ selectAllMatching
@@ -266,7 +272,7 @@ function destroy(booking) {
                 <table v-else class="w-full text-sm">
                     <thead class="border-b border-ink/10 text-left text-xs uppercase tracking-wide text-ink/40">
                         <tr>
-                            <th class="w-8 px-3 py-2">
+                            <th v-if="canWrite" class="w-8 px-3 py-2">
                                 <input
                                     v-if="confirmableRows.length"
                                     type="checkbox"
@@ -286,7 +292,7 @@ function destroy(booking) {
                     </thead>
                     <tbody class="divide-y divide-ink/5">
                         <tr v-for="b in bookings.data" :key="b.id" class="hover:bg-ink/5" :class="{ 'bg-hort-teal/5': selectAllMatching ? b.can_confirm : selectedIds.has(b.id) }">
-                            <td class="px-3 py-2">
+                            <td v-if="canWrite" class="px-3 py-2">
                                 <input
                                     v-if="b.can_confirm"
                                     type="checkbox"
@@ -339,7 +345,7 @@ function destroy(booking) {
                                 {{ formatEuro(b.amount_cents) }}
                             </td>
                             <td class="whitespace-nowrap px-3 py-2">
-                                <div class="flex items-center justify-end gap-1">
+                                <div v-if="canWrite" class="flex items-center justify-end gap-1">
                                     <Link v-if="!b.is_transfer" :href="bookingsEdit(b.id).url" class="rounded p-1 text-ink/50 hover:bg-ink/10 hover:text-ink" :aria-label="$t('common.edit')">
                                         <PencilSquareIcon class="h-4 w-4" />
                                     </Link>

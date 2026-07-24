@@ -27,6 +27,7 @@ const form = useForm({
     counterparty_child_id: props.booking.counterparty_child_id,
     counterparty_user_id: props.booking.counterparty_user_id,
     counterparty_name: props.booking.counterparty_name ?? '',
+    reversal: props.booking.reversal ?? false,
     status: props.booking.status,
 });
 
@@ -50,7 +51,7 @@ function submit() {
 
         <div class="mx-auto max-w-2xl">
             <form @submit.prevent="submit" class="rounded-2xl bg-surface p-6 shadow-sm">
-                <BookingFields :form="form" :accounts="accounts" :categories="categories" :children="children" :users="users" />
+                <BookingFields :form="form" :accounts="accounts" :categories="categories" :children="children" :users="users" show-reversal />
 
                 <div class="mt-6 border-t border-ink/10 pt-4">
                     <InputLabel for="status" :value="$t('accounting.bookings.status')" />

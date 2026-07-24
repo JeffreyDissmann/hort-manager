@@ -14,6 +14,7 @@ use App\Jobs\SuggestBookingCategory;
 use App\Models\Accounting\Account;
 use App\Models\Accounting\Booking;
 use App\Models\Accounting\Category;
+use App\Models\Accounting\Transfer;
 use App\Models\Child;
 use App\Models\User;
 use App\Support\Accounting\CategoryOptions;
@@ -215,6 +216,11 @@ class BookingController extends Controller
                 'category_id' => $booking->category_id,
                 // Positive magnitude in euros for the input; sign is re-derived on save.
                 'amount' => abs($booking->amount_cents) / 100,
+                // True when the amount runs opposite to the category's normal direction
+                // (a refund/reversal) — so the checkbox and sign round-trip on save.
+                'reversal' => $booking->category
+                    ? (($booking->amount_cents >= 0) !== ($booking->category->direction === CategoryDirection::Income))
+                    : false,
                 'booking_date' => $booking->booking_date?->format('Y-m-d'),
                 'valuta_date' => $booking->valuta_date?->format('Y-m-d'),
                 'purpose' => $booking->purpose,
@@ -321,12 +327,23 @@ class BookingController extends Controller
     {
         abort_unless(in_array($booking->status, [BookingStatus::Draft, BookingStatus::Suggested], true), 404);
 
-        $action = $request->validate(['action' => ['required', 'in:confirm,discard,skip']])['action'];
+        $validated = $request->validate([
+            'action' => ['required', 'in:confirm,discard,skip,transfer'],
+            'to_account_id' => ['required_if:action,transfer', 'integer', 'exists:accounting_accounts,id'],
+        ]);
+        $action = $validated['action'];
 
         if ($action === 'discard') {
             $booking->delete();
         } elseif ($action === 'confirm') {
             $this->confirmDraft($request, $booking);
+        } elseif ($action === 'transfer') {
+            // Reclassify the imported line as an internal transfer to another account
+            // (e.g. a cash withdrawal → Bar-Kasse) instead of a categorized expense.
+            if ((int) $validated['to_account_id'] === $booking->account_id) {
+                throw ValidationException::withMessages(['to_account_id' => __('accounting.review.transfer_same_account')]);
+            }
+            Transfer::fromBooking($booking, (int) $validated['to_account_id']);
         }
 
         return redirect()->route('accounting.bookings.review', ['cursor' => $this->nextDraftId($booking)]);
@@ -354,17 +371,17 @@ class BookingController extends Controller
     }
 
     /**
-     * Validate the full form (shared rules) and confirm a draft. The bank sign is
-     * fixed, so the chosen category's direction must match it.
+     * Validate the full form (shared rules) and confirm a draft. The bank sign is the
+     * truth: whichever category is chosen, the stored amount keeps the bank's sign, so
+     * an opposite-direction category is recorded as a reversal (e.g. a refund on an
+     * expense category shows as a positive amount that nets off the expenses).
      */
     private function confirmDraft(Request $request, Booking $booking): void
     {
         $data = $request->validate(BookingRequest::bookingRules());
 
-        $expected = $booking->amount_cents >= 0 ? CategoryDirection::Income : CategoryDirection::Expense;
-        if (Category::findOrFail((int) $data['category_id'])->direction !== $expected) {
-            throw ValidationException::withMessages(['category_id' => __('accounting.import.wrong_direction')]);
-        }
+        $category = Category::findOrFail((int) $data['category_id']);
+        $data['reversal'] = ($booking->amount_cents >= 0) !== ($category->direction === CategoryDirection::Income);
 
         $booking->update([
             ...BookingRequest::attributesFor($data),

@@ -2,13 +2,41 @@
 
 declare(strict_types=1);
 
+use App\Models\Accounting\Account;
 use App\Models\Accounting\Booking;
 use App\Models\Accounting\Category;
+use App\Models\Accounting\Transfer;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia;
 
 uses(RefreshDatabase::class);
+
+it('breaks transfers down per account in a zero-sum block, leaving the net untouched', function () {
+    $admin = User::factory()->admin()->accountingWriter()->create();
+    $this->actingAs($admin);
+    $income = Category::factory()->income()->create();
+    Booking::factory()->create(['category_id' => $income->id, 'amount_cents' => 5000, 'booking_date' => '2026-01-15']);
+
+    $bank = Account::factory()->create(['name' => 'Hort-Konto']);
+    $cash = Account::factory()->create(['name' => 'Bar-Kasse']);
+    Transfer::record(fromAccountId: $bank->id, toAccountId: $cash->id, amountCents: 5000, bookingDate: '2026-01-20');
+
+    $this->get('/accounting/reports?year=2026')
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->has('transferRows', 2)
+            // Bar-Kasse sorts before Hort-Konto; it received +50, the bank lost −50.
+            ->where('transferRows.0.name', 'Bar-Kasse')
+            ->where('transferRows.0.months.0', 5000)
+            ->where('transferRows.0.total', 5000)
+            ->where('transferRows.1.name', 'Hort-Konto')
+            ->where('transferRows.1.months.0', -5000)
+            ->where('transferRows.1.total', -5000)
+            ->where('transferMonths.0', 0)   // the block nets to zero per month
+            ->where('transferTotal', 0)
+            ->where('incomeTotal', 5000)     // …so the P&L is unaffected
+            ->where('netTotal', 5000));
+});
 
 it('forbids non-admins from the report', function () {
     $this->actingAs(User::factory()->staff()->create())
@@ -17,7 +45,7 @@ it('forbids non-admins from the report', function () {
 });
 
 it('pivots confirmed bookings by category and month', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $income = Category::factory()->income()->create(['name' => 'Essensgeld']);
     $expense = Category::factory()->expense()->create(['name' => 'Miete']);
 
@@ -43,7 +71,7 @@ it('pivots confirmed bookings by category and month', function () {
 });
 
 it('defaults to the highest year and offers every year in the min–max range', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
 
     // Only 2024 and 2026 have bookings — 2025 should still appear (no gap).
     Booking::factory()->create(['booking_date' => '2024-05-01']);
@@ -57,7 +85,7 @@ it('defaults to the highest year and offers every year in the min–max range', 
 });
 
 it('rolls a grandchild category amount up into its parent and root rows', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $root = Category::factory()->expense()->create(['name' => 'Konsum', 'position' => 1]);
     $child = Category::factory()->childOf($root)->create(['name' => 'Lebensmittel', 'position' => 1]);
     $grand = Category::factory()->childOf($child)->create(['name' => 'Bio', 'position' => 1]);
@@ -82,7 +110,7 @@ it('forbids non-admins from exporting the report', function () {
 });
 
 it('exports the report as a CSV download', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $income = Category::factory()->income()->create(['name' => 'Essensgeld']);
     Booking::factory()->create(['category_id' => $income->id, 'amount_cents' => 5000, 'booking_date' => '2026-01-10']);
 
@@ -93,7 +121,7 @@ it('exports the report as a CSV download', function () {
 });
 
 it('exports the report as an XLSX download', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
 
     $this->actingAs($admin)
         ->get('/accounting/reports/export?year=2026&format=xlsx')

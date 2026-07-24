@@ -18,7 +18,7 @@ it('forbids non-admins from the contributions view', function () {
 });
 
 it('builds a child × month matrix of confirmed contributions in the selected group', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $group = Category::factory()->income()->create(['name' => 'Beiträge', 'position' => 1]);
     $elternbeitrag = Category::factory()->childOf($group)->create(['name' => 'Elternbeitrag', 'position' => 1]);
     $emma = Child::factory()->create(['name' => 'Emma']);
@@ -48,7 +48,7 @@ it('builds a child × month matrix of confirmed contributions in the selected gr
 });
 
 it('defaults to the first income group and can switch groups', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $beitraege = Category::factory()->income()->create(['name' => 'Beiträge', 'position' => 1]);
     $ertraege = Category::factory()->income()->create(['name' => 'Erträge', 'position' => 2]);
     $elternbeitrag = Category::factory()->childOf($beitraege)->create(['name' => 'Elternbeitrag']);
@@ -75,7 +75,7 @@ it('defaults to the first income group and can switch groups', function () {
 });
 
 it('shows every sub-category per child, unpaid ones as zero rows', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $group = Category::factory()->income()->create(['name' => 'Beiträge', 'position' => 1]);
     $elternbeitrag = Category::factory()->childOf($group)->create(['name' => 'Elternbeitrag', 'position' => 1]);
     Category::factory()->childOf($group)->create(['name' => 'Essensgeld', 'position' => 2]);
@@ -96,7 +96,7 @@ it('shows every sub-category per child, unpaid ones as zero rows', function () {
 });
 
 it('collects child-less contributions into the unassigned bucket', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $group = Category::factory()->income()->create(['name' => 'Beiträge', 'position' => 1]);
     $elternbeitrag = Category::factory()->childOf($group)->create(['name' => 'Elternbeitrag']);
     $emma = Child::factory()->create(['name' => 'Emma']);
@@ -114,7 +114,7 @@ it('collects child-less contributions into the unassigned bucket', function () {
 });
 
 it('links the bookings list to the misassigned income', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $group = Category::factory()->income()->create(['name' => 'Beiträge', 'position' => 1]);
     $elternbeitrag = Category::factory()->childOf($group)->create(['name' => 'Elternbeitrag']);
     $emma = Child::factory()->create(['name' => 'Emma']);
@@ -131,7 +131,7 @@ it('links the bookings list to the misassigned income', function () {
 });
 
 it('rolls a grandchild-category contribution up into its top-level stream', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $group = Category::factory()->income()->create(['name' => 'Beiträge', 'position' => 1]);
     $stream = Category::factory()->childOf($group)->create(['name' => 'Elternbeitrag', 'position' => 1]);
     $grand = Category::factory()->childOf($stream)->create(['name' => '2026', 'position' => 1]);
@@ -150,7 +150,7 @@ it('rolls a grandchild-category contribution up into its top-level stream', func
 });
 
 it('only lists children enrolled in the selected year', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $group = Category::factory()->income()->create(['name' => 'Beiträge', 'position' => 1]);
     Category::factory()->childOf($group)->create(['name' => 'Elternbeitrag']);
     Child::factory()->create(['name' => 'Aktiv']);            // enrolled since 2020, open
@@ -164,7 +164,7 @@ it('only lists children enrolled in the selected year', function () {
 });
 
 it('surfaces contributions attributed to a child not enrolled that year, so the totals reconcile', function () {
-    $admin = User::factory()->admin()->create();
+    $admin = User::factory()->admin()->accountingWriter()->create();
     $group = Category::factory()->income()->create(['name' => 'Beiträge', 'position' => 1]);
     $elternbeitrag = Category::factory()->childOf($group)->create(['name' => 'Elternbeitrag']);
     $weg = Child::factory()->former('2024-12-31')->create(['name' => 'Weg']); // left before 2026
