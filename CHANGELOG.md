@@ -6,6 +6,8 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [2026.07.25] — 2026-07-25
+
 ### Added
 
 - **Convert a booking to a transfer from the edit window**: the „Als Umbuchung
