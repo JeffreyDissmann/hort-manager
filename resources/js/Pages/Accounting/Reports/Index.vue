@@ -2,8 +2,10 @@
 import { computed, ref, watch } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { ChevronRightIcon, DocumentTextIcon, TableCellsIcon } from '@heroicons/vue/24/outline';
+import Dropdown from '@/Components/Dropdown.vue';
+import { ChevronRightIcon, ChevronDownIcon, DocumentTextIcon, TableCellsIcon } from '@heroicons/vue/24/outline';
 import { formatEuro } from '@/money';
+import { t } from '@/i18n';
 import { index as reportsIndex, download as reportsExport } from '@/routes/accounting/reports';
 import { index as bookingsIndex } from '@/routes/accounting/bookings';
 
@@ -22,14 +24,58 @@ const props = defineProps({
     transferRows: { type: Array, default: () => [] },
     transferMonths: { type: Array, default: () => [] },
     transferTotal: { type: Number, default: 0 },
+    accounts: { type: Array, default: () => [] },
+    selectedAccounts: { type: Array, default: () => [] },
 });
 
 const hasData = computed(
     () => props.incomeRows.length > 0 || props.expenseRows.length > 0 || props.transferRows.length > 0,
 );
 
+// --- Account filter (which accounts feed the summary; all by default) -------
+const selectedIds = ref(new Set(props.selectedAccounts));
+// Keep in sync when the server resolves the effective set (e.g. empty → all).
+watch(() => props.selectedAccounts, (ids) => (selectedIds.value = new Set(ids)));
+
+const allSelected = computed(() => props.accounts.length > 0 && selectedIds.value.size === props.accounts.length);
+const accountsLabel = computed(() => {
+    if (allSelected.value || selectedIds.value.size === 0) {
+        return t('accounting.reports.all_accounts');
+    }
+    if (selectedIds.value.size === 1) {
+        return props.accounts.find((a) => a.id === [...selectedIds.value][0])?.name ?? '';
+    }
+    return t('accounting.reports.n_accounts', { count: selectedIds.value.size });
+});
+
+// Only carry `accounts` when it's a real subset — absent means „all" (the default).
+function queryWith(extra = {}) {
+    const query = { year: props.year, ...extra };
+    if (!allSelected.value && selectedIds.value.size > 0) {
+        query.accounts = [...selectedIds.value];
+    }
+    return query;
+}
+
+function reload() {
+    router.get(reportsIndex({ query: queryWith() }).url, {}, { preserveScroll: true, preserveState: true });
+}
+
+function toggleAccount(id) {
+    const next = new Set(selectedIds.value);
+    next.has(id) ? next.delete(id) : next.add(id);
+    selectedIds.value = next;
+    reload();
+}
+function selectAllAccounts() {
+    selectedIds.value = new Set(props.accounts.map((a) => a.id));
+    reload();
+}
+
+const exportUrl = (format) => reportsExport({ query: queryWith({ format }) }).url;
+
 function changeYear(event) {
-    router.get(reportsIndex({ query: { year: event.target.value } }).url, {}, { preserveScroll: true });
+    router.get(reportsIndex({ query: queryWith({ year: event.target.value }) }).url, {}, { preserveScroll: true, preserveState: true });
 }
 
 // --- Collapsible parent categories ----------------------------------------
@@ -87,15 +133,53 @@ function drilldown({ category, kind, account, month }) {
                     <h2 class="text-xl font-semibold text-ink">{{ $t('accounting.reports.title') }}</h2>
                 </div>
                 <div class="flex flex-wrap items-center gap-3">
+                    <!-- Which accounts feed the summary (all by default) -->
+                    <Dropdown v-if="accounts.length > 1" align="right" width="48">
+                        <template #trigger>
+                            <button
+                                type="button"
+                                class="flex items-center gap-1.5 rounded-md border border-ink/20 px-3 py-1.5 text-sm text-ink transition hover:bg-ink/5"
+                                data-testid="report-accounts"
+                            >
+                                {{ $t('accounting.reports.accounts') }}: {{ accountsLabel }}
+                                <ChevronDownIcon class="h-4 w-4 text-ink/40" />
+                            </button>
+                        </template>
+                        <template #content>
+                            <button
+                                type="button"
+                                class="flex w-full items-center px-4 py-2 text-left text-sm text-ink/70 transition hover:bg-ink/5"
+                                :class="{ 'font-semibold text-ink': allSelected }"
+                                @click="selectAllAccounts"
+                            >
+                                {{ $t('accounting.reports.all_accounts') }}
+                            </button>
+                            <hr class="my-1 border-ink/10" />
+                            <label
+                                v-for="a in accounts"
+                                :key="a.id"
+                                class="flex cursor-pointer items-center gap-2 px-4 py-2 text-sm text-ink transition hover:bg-ink/5"
+                            >
+                                <input
+                                    type="checkbox"
+                                    :checked="selectedIds.has(a.id)"
+                                    class="rounded border-ink/20 text-hort-teal-dark focus:ring-hort-teal"
+                                    @change="toggleAccount(a.id)"
+                                />
+                                {{ a.name }}
+                            </label>
+                        </template>
+                    </Dropdown>
+
                     <div v-if="hasData" class="flex items-center gap-1">
                         <a
-                            :href="reportsExport({ query: { year, format: 'csv' } }).url"
+                            :href="exportUrl('csv')"
                             class="flex items-center gap-1 rounded-lg bg-ink/5 px-3 py-2 text-sm font-medium text-ink transition hover:bg-ink/10"
                         >
                             <DocumentTextIcon class="h-4 w-4" /> CSV
                         </a>
                         <a
-                            :href="reportsExport({ query: { year, format: 'xlsx' } }).url"
+                            :href="exportUrl('xlsx')"
                             class="flex items-center gap-1 rounded-lg bg-ink/5 px-3 py-2 text-sm font-medium text-ink transition hover:bg-ink/10"
                         >
                             <TableCellsIcon class="h-4 w-4" /> Excel

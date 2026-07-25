@@ -6,6 +6,14 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **Account filter on the Auswertung**: a „Konten" dropdown scopes the whole summary
+  (income/expense pivot, Saldo and the Umbuchungen block) to the selected accounts —
+  all accounts by default, or e.g. just the Bar-Kasse to see only the movements and
+  transfers that touched the cash account. Carries through the year switch and the
+  CSV/Excel export.
+
 ## [2026.07.24] — 2026-07-24
 
 ### Added

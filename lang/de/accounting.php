@@ -46,6 +46,9 @@ return [
         'expense' => 'Ausgaben',
         'transfers' => 'Umbuchungen',
         'net' => 'Saldo',
+        'accounts' => 'Konten',
+        'all_accounts' => 'Alle Konten',
+        'n_accounts' => ':count Konten',
         'empty' => 'Für dieses Jahr gibt es noch keine bestätigten Buchungen.',
     ],
 

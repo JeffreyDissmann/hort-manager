@@ -46,6 +46,9 @@ return [
         'expense' => 'Expenses',
         'transfers' => 'Transfers',
         'net' => 'Net',
+        'accounts' => 'Accounts',
+        'all_accounts' => 'All accounts',
+        'n_accounts' => ':count accounts',
         'empty' => 'No confirmed bookings for this year yet.',
     ],
 
