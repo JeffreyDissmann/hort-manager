@@ -6,6 +6,37 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [2026.07.25] — 2026-07-25
+
+### Added
+
+- **Convert a booking to a transfer from the edit window**: the „Als Umbuchung
+  verbuchen" action, previously only in the AI review, is now available when editing an
+  existing booking too.
+- **Account filter on the Auswertung**: a „Konten" dropdown scopes the whole summary
+  (income/expense pivot, Saldo and the Umbuchungen block) to the selected accounts —
+  all accounts by default, or e.g. just the Bar-Kasse to see only the movements and
+  transfers that touched the cash account. Carries through the year switch and the
+  CSV/Excel export.
+
+### Changed
+
+- **Clearer Buchung/Umbuchung editing**: the review and edit windows now use one
+  segmented „Buchung | Umbuchung" control instead of a separate transfer panel. Picking
+  Umbuchung swaps the categorization fields for a focused transfer sub-form (read-only
+  line summary + Gegenkonto) and turns the primary button into „Umbuchung erstellen"; the
+  normal Save is no longer shown in that mode, and switching back to Buchung is the way
+  out. The „wird als Erstattung verbucht" refund hint now sits directly under the
+  category picker. Both windows share `BookingFields`, `BookingModeToggle` and
+  `TransferForm`.
+
+### Fixed
+
+- **Review confirm/discard/skip no longer silently fails**: the step-through review form
+  posts `to_account_id` (null unless converting), which a non-nullable rule rejected as
+  „not an integer" (422 → the page just reappeared). Confirming, discarding and skipping
+  a draft in the review work again. (Regression since 2026.07.24.)
+
 ## [2026.07.24] — 2026-07-24
 
 ### Added

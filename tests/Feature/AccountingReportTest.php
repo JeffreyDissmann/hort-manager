@@ -38,6 +38,39 @@ it('breaks transfers down per account in a zero-sum block, leaving the net untou
             ->where('netTotal', 5000));
 });
 
+it('scopes the summary to the selected accounts', function () {
+    $admin = User::factory()->admin()->accountingWriter()->create();
+    $this->actingAs($admin);
+    $bank = Account::factory()->create(['name' => 'Hort-Konto']);
+    $cash = Account::factory()->create(['name' => 'Bar-Kasse']);
+    $income = Category::factory()->income()->create();
+    $expense = Category::factory()->expense()->create();
+
+    Booking::factory()->create(['account_id' => $bank->id, 'category_id' => $income->id, 'amount_cents' => 5000, 'booking_date' => '2026-01-10']);
+    Booking::factory()->expense()->create(['account_id' => $cash->id, 'category_id' => $expense->id, 'amount_cents' => -3000, 'booking_date' => '2026-01-12']);
+    Transfer::record(fromAccountId: $bank->id, toAccountId: $cash->id, amountCents: 2000, bookingDate: '2026-01-20');
+
+    // Default: all accounts (ordered by name → Bar-Kasse, Hort-Konto).
+    $this->get('/accounting/reports?year=2026')
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('incomeTotal', 5000)
+            ->where('expenseTotal', -3000)
+            ->has('transferRows', 2)
+            ->where('transferMonths.0', 0)                  // both legs → nets to zero
+            ->where('selectedAccounts', [$cash->id, $bank->id]));
+
+    // Scoped to the cash account only.
+    $this->get('/accounting/reports?year=2026&accounts[]='.$cash->id)
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('selectedAccounts', [$cash->id])
+            ->where('incomeTotal', 0)                       // the income was on the bank → excluded
+            ->where('expenseTotal', -3000)                  // the cash expense stays
+            ->has('transferRows', 1)                        // only the cash leg
+            ->where('transferRows.0.name', 'Bar-Kasse')
+            ->where('transferRows.0.total', 2000)
+            ->where('transferMonths.0', 2000));             // one side only → no longer zero
+});
+
 it('forbids non-admins from the report', function () {
     $this->actingAs(User::factory()->staff()->create())
         ->get('/accounting/reports')

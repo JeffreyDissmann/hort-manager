@@ -2,9 +2,9 @@
 import { computed, ref } from 'vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
-import InputLabel from '@/Components/InputLabel.vue';
-import InputError from '@/Components/InputError.vue';
 import BookingFields from './Partials/BookingFields.vue';
+import BookingModeToggle from '@/Components/Accounting/BookingModeToggle.vue';
+import TransferForm from '@/Components/Accounting/TransferForm.vue';
 import { formatEuro } from '@/money';
 import { reviewSave as bookingsReviewSave, index as bookingsIndex } from '@/routes/accounting/bookings';
 import { Head, Link, useForm } from '@inertiajs/vue3';
@@ -34,9 +34,19 @@ const form = useForm({
     to_account_id: null,
 });
 
-// „Als Umbuchung verbuchen": the counter-leg goes on another account (not this one).
-const showTransfer = ref(false);
-const otherAccounts = computed(() => props.accounts.filter((a) => a.id !== props.booking.account_id));
+// Intent: a normal „Buchung" or an „Umbuchung" (transfer to another own account).
+const mode = ref('booking');
+const toAccountId = ref(null);
+
+function createTransfer() {
+    form.to_account_id = toAccountId.value;
+    send('transfer');
+}
+
+// A picked category whose direction is opposite the bank sign is a refund/reversal;
+// the sign stays anchored to the statement (derived server-side on confirm).
+const selectedCategory = computed(() => props.categories.find((c) => c.id === form.category_id) ?? null);
+const isReversal = computed(() => !!selectedCategory.value && selectedCategory.value.direction !== props.booking.direction);
 
 const confidenceClass = {
     0: 'bg-red-100 text-red-700',
@@ -105,8 +115,13 @@ function send(action) {
                     </span>
                 </div>
 
-                <!-- Full editable form (same fields as the booking editor) -->
-                <div class="pt-4">
+                <!-- Intent: normal booking vs. internal transfer (needs ≥2 accounts) -->
+                <div v-if="accounts.length > 1" class="pt-4">
+                    <BookingModeToggle v-model="mode" />
+                </div>
+
+                <!-- Booking: the full editable form -->
+                <div v-if="mode === 'booking'" class="pt-4">
                     <!-- No direction filter: picking an opposite-direction category (e.g.
                          an expense category for a positive line) records a refund/reversal;
                          the bank sign is kept and the sign is derived server-side. -->
@@ -116,44 +131,29 @@ function send(action) {
                         :categories="categories"
                         :children="children"
                         :users="users"
-                    />
+                    >
+                        <template #category-note>
+                            <p
+                                v-if="isReversal"
+                                class="mt-2 rounded-lg bg-amber-500/10 px-3 py-2 text-xs font-medium text-amber-700 dark:text-amber-500"
+                                data-testid="review-reversal-note"
+                            >
+                                {{ $t('accounting.review.reversal_note') }}
+                            </p>
+                        </template>
+                    </BookingFields>
                 </div>
 
-                <!-- Reclassify as an internal transfer (e.g. cash withdrawal → Bar-Kasse) -->
-                <div v-if="otherAccounts.length" class="mt-4 rounded-xl bg-ink/[0.03] p-4">
-                    <button
-                        type="button"
-                        class="flex items-center gap-1.5 text-sm font-medium text-ink/70 transition hover:text-ink"
-                        data-testid="review-as-transfer"
-                        @click="showTransfer = !showTransfer"
-                    >
-                        <ArrowsRightLeftIcon class="h-4 w-4" /> {{ $t('accounting.review.as_transfer') }}
-                    </button>
-                    <div v-if="showTransfer" class="mt-3 space-y-3">
-                        <p class="text-xs text-ink/50">{{ $t('accounting.review.as_transfer_hint') }}</p>
-                        <div class="flex flex-wrap items-end gap-3">
-                            <div class="min-w-[12rem] flex-1">
-                                <InputLabel :value="$t('accounting.review.transfer_to')" />
-                                <select
-                                    v-model="form.to_account_id"
-                                    class="mt-1 block w-full rounded-md border-ink/20 shadow-sm focus:border-hort-teal focus:ring-hort-teal"
-                                >
-                                    <option :value="null">{{ $t('accounting.review.transfer_pick') }}</option>
-                                    <option v-for="a in otherAccounts" :key="a.id" :value="a.id">{{ a.name }}</option>
-                                </select>
-                            </div>
-                            <button
-                                type="button"
-                                class="flex items-center gap-1 rounded-lg bg-ink/10 px-3 py-2 text-sm font-medium text-ink transition hover:bg-ink/15 disabled:opacity-50"
-                                :disabled="!form.to_account_id || form.processing"
-                                data-testid="review-make-transfer"
-                                @click="send('transfer')"
-                            >
-                                <ArrowsRightLeftIcon class="h-4 w-4" /> {{ $t('accounting.review.make_transfer') }}
-                            </button>
-                        </div>
-                        <InputError :message="form.errors.to_account_id" />
-                    </div>
+                <!-- Umbuchung: the focused transfer sub-form -->
+                <div v-else class="pt-4">
+                    <TransferForm
+                        v-model:to-account-id="toAccountId"
+                        :accounts="accounts"
+                        :current-account-id="booking.account_id"
+                        :from-account-name="booking.account"
+                        :amount-cents="booking.amount_cents"
+                        :error="form.errors.to_account_id"
+                    />
                 </div>
 
                 <!-- Actions -->
@@ -174,8 +174,20 @@ function send(action) {
                             <ForwardIcon class="h-4 w-4" /> {{ $t('accounting.review.skip') }}
                         </button>
                     </div>
-                    <PrimaryButton :disabled="form.processing || !form.category_id" @click="send('confirm')">
+                    <PrimaryButton
+                        v-if="mode === 'booking'"
+                        :disabled="form.processing || !form.category_id"
+                        @click="send('confirm')"
+                    >
                         {{ $t('accounting.review.confirm_next') }} <ArrowRightIcon class="ml-1 h-4 w-4" />
+                    </PrimaryButton>
+                    <PrimaryButton
+                        v-else
+                        :disabled="form.processing || !toAccountId"
+                        data-testid="make-transfer"
+                        @click="createTransfer"
+                    >
+                        <ArrowsRightLeftIcon class="mr-1 h-4 w-4" /> {{ $t('accounting.review.make_transfer') }}
                     </PrimaryButton>
                 </div>
             </div>

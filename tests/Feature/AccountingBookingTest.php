@@ -321,6 +321,37 @@ it('books a positive line against an expense category as a refund (reversal)', f
         ->and($draft->amount_cents)->toBe(5000);        // …but the amount is positive (a credit)
 });
 
+it('confirms a review draft even when the form posts a null to_account_id', function () {
+    // Regression: the review form always posts to_account_id (null unless converting to
+    // a transfer). A non-nullable rule wrongly rejected it as „not an integer" → 422.
+    $admin = User::factory()->admin()->accountingWriter()->create();
+    $this->actingAs($admin);
+    $income = Category::factory()->income()->create();
+    $draft = Booking::factory()->suggested()->create(['amount_cents' => 5000, 'category_id' => null]);
+
+    $this->patch("/accounting/bookings/{$draft->id}/review", [
+        'action' => 'confirm',
+        'account_id' => $draft->account_id,
+        'category_id' => $income->id,
+        'amount' => '50',
+        'booking_date' => '2026-04-01',
+        'to_account_id' => null,
+    ])->assertSessionHasNoErrors()->assertRedirect();
+
+    expect($draft->refresh()->status)->toBe(BookingStatus::Confirmed);
+});
+
+it('discards a draft even with a null to_account_id in the payload', function () {
+    $admin = User::factory()->admin()->accountingWriter()->create();
+    $this->actingAs($admin);
+    $draft = Booking::factory()->suggested()->create();
+
+    $this->patch("/accounting/bookings/{$draft->id}/review", ['action' => 'discard', 'to_account_id' => null])
+        ->assertSessionHasNoErrors()->assertRedirect();
+
+    expect(Booking::find($draft->id))->toBeNull();
+});
+
 it('stores a manual expense refund as a positive amount when marked as a reversal', function () {
     $admin = User::factory()->admin()->accountingWriter()->create();
     $this->actingAs($admin);

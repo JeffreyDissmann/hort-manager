@@ -216,6 +216,8 @@ class BookingController extends Controller
                 'category_id' => $booking->category_id,
                 // Positive magnitude in euros for the input; sign is re-derived on save.
                 'amount' => abs($booking->amount_cents) / 100,
+                // Signed cents — for the transfer sub-form's read-only line summary.
+                'amount_cents' => $booking->amount_cents,
                 // True when the amount runs opposite to the category's normal direction
                 // (a refund/reversal) — so the checkbox and sign round-trip on save.
                 'reversal' => $booking->category
@@ -250,6 +252,32 @@ class BookingController extends Controller
         return redirect()
             ->route('accounting.bookings.index')
             ->with('status', __('flash.booking_updated'));
+    }
+
+    /**
+     * Reclassify an existing (already-saved) booking as an internal transfer to
+     * another account — the edit-window equivalent of the review's „Als Umbuchung
+     * verbuchen". Reuses the booking as one leg and creates the matching leg, so the
+     * amount isn't double-counted.
+     */
+    public function convertToTransfer(Request $request, Booking $booking): RedirectResponse
+    {
+        // A transfer leg is already part of a transfer — nothing to convert.
+        abort_if((bool) $booking->transfer, 403);
+
+        $validated = $request->validate([
+            'to_account_id' => ['required', 'integer', 'exists:accounting_accounts,id'],
+        ]);
+
+        if ((int) $validated['to_account_id'] === $booking->account_id) {
+            throw ValidationException::withMessages(['to_account_id' => __('accounting.review.transfer_same_account')]);
+        }
+
+        Transfer::fromBooking($booking, (int) $validated['to_account_id']);
+
+        return redirect()
+            ->route('accounting.bookings.index')
+            ->with('status', __('flash.transfer_created'));
     }
 
     public function destroy(Booking $booking): RedirectResponse
@@ -329,7 +357,9 @@ class BookingController extends Controller
 
         $validated = $request->validate([
             'action' => ['required', 'in:confirm,discard,skip,transfer'],
-            'to_account_id' => ['required_if:action,transfer', 'integer', 'exists:accounting_accounts,id'],
+            // The review form always posts to_account_id (null unless converting) — must
+            // be nullable so a normal confirm/discard/skip isn't rejected as „not an int".
+            'to_account_id' => ['nullable', 'required_if:action,transfer', 'integer', 'exists:accounting_accounts,id'],
         ]);
         $action = $validated['action'];
 

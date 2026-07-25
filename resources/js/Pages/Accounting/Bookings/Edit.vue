@@ -1,11 +1,15 @@
 <script setup>
+import { computed, ref } from 'vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import BookingFields from './Partials/BookingFields.vue';
-import { update as bookingsUpdate, index as bookingsIndex } from '@/routes/accounting/bookings';
+import BookingModeToggle from '@/Components/Accounting/BookingModeToggle.vue';
+import TransferForm from '@/Components/Accounting/TransferForm.vue';
+import { update as bookingsUpdate, index as bookingsIndex, convertTransfer as bookingsConvertTransfer } from '@/routes/accounting/bookings';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import { t } from '@/i18n';
+import { ArrowsRightLeftIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
     booking: { type: Object, required: true },
@@ -38,6 +42,17 @@ function submit() {
     }
     form.put(bookingsUpdate(props.booking.id).url);
 }
+
+// Intent: a normal „Buchung" or an „Umbuchung" (transfer to another own account).
+const mode = ref('booking');
+const toAccountId = ref(null);
+const transferForm = useForm({ to_account_id: null });
+const fromAccountName = computed(() => props.accounts.find((a) => a.id === props.booking.account_id)?.name ?? '');
+
+function createTransfer() {
+    transferForm.to_account_id = toAccountId.value;
+    transferForm.post(bookingsConvertTransfer(props.booking.id).url);
+}
 </script>
 
 <template>
@@ -51,24 +66,48 @@ function submit() {
 
         <div class="mx-auto max-w-2xl">
             <form @submit.prevent="submit" class="rounded-2xl bg-surface p-6 shadow-sm">
-                <BookingFields :form="form" :accounts="accounts" :categories="categories" :children="children" :users="users" show-reversal />
+                <!-- Intent: normal booking vs. internal transfer (needs ≥2 accounts) -->
+                <BookingModeToggle v-if="accounts.length > 1" v-model="mode" class="mb-6" />
 
-                <div class="mt-6 border-t border-ink/10 pt-4">
-                    <InputLabel for="status" :value="$t('accounting.bookings.status')" />
-                    <select
-                        id="status"
-                        v-model="form.status"
-                        class="mt-1 block w-full max-w-xs rounded-md border-ink/20 shadow-sm focus:border-hort-teal focus:ring-hort-teal"
-                    >
-                        <option v-for="s in statuses" :key="s.value" :value="s.value">{{ s.label }}</option>
-                    </select>
-                </div>
+                <template v-if="mode === 'booking'">
+                    <BookingFields :form="form" :accounts="accounts" :categories="categories" :children="children" :users="users" show-reversal />
+
+                    <div class="mt-6 border-t border-ink/10 pt-4">
+                        <InputLabel for="status" :value="$t('accounting.bookings.status')" />
+                        <select
+                            id="status"
+                            v-model="form.status"
+                            class="mt-1 block w-full max-w-xs rounded-md border-ink/20 shadow-sm focus:border-hort-teal focus:ring-hort-teal"
+                        >
+                            <option v-for="s in statuses" :key="s.value" :value="s.value">{{ s.label }}</option>
+                        </select>
+                    </div>
+                </template>
+
+                <TransferForm
+                    v-else
+                    v-model:to-account-id="toAccountId"
+                    :accounts="accounts"
+                    :current-account-id="booking.account_id"
+                    :from-account-name="fromAccountName"
+                    :amount-cents="booking.amount_cents"
+                    :error="transferForm.errors.to_account_id"
+                />
 
                 <div class="mt-6 flex items-center justify-end gap-4">
                     <Link :href="bookingsIndex().url" class="text-sm text-ink/70 hover:text-ink">
                         {{ $t('common.cancel') }}
                     </Link>
-                    <PrimaryButton :disabled="form.processing">{{ $t('common.save') }}</PrimaryButton>
+                    <PrimaryButton v-if="mode === 'booking'" :disabled="form.processing">{{ $t('common.save') }}</PrimaryButton>
+                    <PrimaryButton
+                        v-else
+                        type="button"
+                        :disabled="transferForm.processing || !toAccountId"
+                        data-testid="make-transfer"
+                        @click="createTransfer"
+                    >
+                        <ArrowsRightLeftIcon class="mr-1 h-4 w-4" /> {{ $t('accounting.review.make_transfer') }}
+                    </PrimaryButton>
                 </div>
             </form>
         </div>

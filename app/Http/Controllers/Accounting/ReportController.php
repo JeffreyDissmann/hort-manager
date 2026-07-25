@@ -34,10 +34,16 @@ class ReportController extends Controller
         $years = $this->availableYears();
         $year = $request->integer('year') ?: (int) $years->first();
 
+        $accounts = Account::orderBy('name')->get(['id', 'name']);
+        $accountIds = $this->selectedAccountIds($request, $accounts);
+
         return Inertia::render('Accounting/Reports/Index', [
             'year' => $year,
             'years' => $years,
-            ...$this->data($year),
+            // Which accounts feed the summary (all by default) + the pickable list.
+            'accounts' => $accounts,
+            'selectedAccounts' => $accountIds,
+            ...$this->data($year, $accountIds),
         ]);
     }
 
@@ -47,15 +53,38 @@ class ReportController extends Controller
         $year = $request->integer('year') ?: (int) $this->availableYears()->first();
         $xlsx = strtolower((string) $request->string('format')) === 'xlsx';
 
-        return SpreadsheetExport::download($this->matrix($this->data($year)), "report-{$year}", $xlsx);
+        $accounts = Account::orderBy('name')->get(['id', 'name']);
+        $accountIds = $this->selectedAccountIds($request, $accounts);
+
+        return SpreadsheetExport::download($this->matrix($this->data($year, $accountIds)), "report-{$year}", $xlsx);
     }
 
     /**
-     * The full month × category pivot for a year, shared by the view and the export.
+     * The account ids the summary is scoped to. Absent or empty → all accounts (the
+     * default), so a summary always covers something; otherwise the chosen subset.
      *
+     * @param  Collection<int, Account>  $accounts
+     * @return list<int>
+     */
+    private function selectedAccountIds(Request $request, Collection $accounts): array
+    {
+        $all = $accounts->pluck('id')->all();
+        $requested = collect($request->input('accounts', []))
+            ->map(fn ($id): int => (int) $id)
+            ->intersect($all)
+            ->values();
+
+        return $requested->isEmpty() ? $all : $requested->all();
+    }
+
+    /**
+     * The full month × category pivot for a year, scoped to the given accounts,
+     * shared by the view and the export.
+     *
+     * @param  list<int>  $accountIds
      * @return array<string, mixed>
      */
-    private function data(int $year): array
+    private function data(int $year, array $accountIds): array
     {
         // Confirmed, categorised, non-transfer bookings for the year (a Hort's ledger
         // is small enough to bucket per category/month in PHP — no DB-specific SQL).
@@ -63,6 +92,7 @@ class ReportController extends Controller
             ->where('status', BookingStatus::Confirmed)
             ->where('kind', '!=', BookingKind::Transfer)
             ->whereNotNull('category_id')
+            ->whereIn('account_id', $accountIds)
             ->whereYear('booking_date', $year)
             ->get(['category_id', 'amount_cents', 'booking_date']);
 
@@ -94,9 +124,10 @@ class ReportController extends Controller
         $netMonths = collect(range(1, 12))->map(fn (int $m): int => $incomeMonths[$m] + $expenseMonths[$m])->all();
 
         // Transfers: a per-account breakdown of the internal moves. Each account shows
-        // its own signed movement (money out −, money in +); summed across accounts the
-        // months net to zero, so the block is a neutral memo below the P&L.
-        [$transferRows, $transferMonths] = $this->transfers($year);
+        // its own signed movement (money out −, money in +); across all accounts the
+        // months net to zero, so the block is a neutral memo below the P&L. When the
+        // summary is scoped to a subset it shows just those accounts' movements.
+        [$transferRows, $transferMonths] = $this->transfers($year, $accountIds);
 
         return [
             'monthLabels' => collect(range(1, 12))
@@ -158,17 +189,20 @@ class ReportController extends Controller
     }
 
     /**
-     * The per-account transfer breakdown for the year: one row per account that had
-     * any internal move, each carrying its 12 signed monthly sums and a total, plus
-     * the per-month totals across all accounts (which net to zero).
+     * The per-account transfer breakdown for the year, scoped to the given accounts:
+     * one row per account that had any internal move, each carrying its 12 signed
+     * monthly sums and a total, plus the per-month totals across those accounts (which
+     * net to zero only when all accounts are included).
      *
+     * @param  list<int>  $accountIds
      * @return array{0: list<array{id:int, name:string, months:list<int>, total:int}>, 1: array<int, int>}
      */
-    private function transfers(int $year): array
+    private function transfers(int $year, array $accountIds): array
     {
         $transfers = Booking::query()
             ->where('status', BookingStatus::Confirmed)
             ->where('kind', BookingKind::Transfer)
+            ->whereIn('account_id', $accountIds)
             ->whereYear('booking_date', $year)
             ->get(['account_id', 'amount_cents', 'booking_date']);
 
