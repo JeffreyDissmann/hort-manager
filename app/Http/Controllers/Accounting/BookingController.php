@@ -216,6 +216,8 @@ class BookingController extends Controller
                 'category_id' => $booking->category_id,
                 // Positive magnitude in euros for the input; sign is re-derived on save.
                 'amount' => abs($booking->amount_cents) / 100,
+                // Signed cents — for the transfer sub-form's read-only line summary.
+                'amount_cents' => $booking->amount_cents,
                 // True when the amount runs opposite to the category's normal direction
                 // (a refund/reversal) — so the checkbox and sign round-trip on save.
                 'reversal' => $booking->category
@@ -355,7 +357,9 @@ class BookingController extends Controller
 
         $validated = $request->validate([
             'action' => ['required', 'in:confirm,discard,skip,transfer'],
-            'to_account_id' => ['required_if:action,transfer', 'integer', 'exists:accounting_accounts,id'],
+            // The review form always posts to_account_id (null unless converting) — must
+            // be nullable so a normal confirm/discard/skip isn't rejected as „not an int".
+            'to_account_id' => ['nullable', 'required_if:action,transfer', 'integer', 'exists:accounting_accounts,id'],
         ]);
         $action = $validated['action'];
 

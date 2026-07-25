@@ -101,6 +101,9 @@ const availableChildren = computed(() => {
             <CategorySelect v-model="form.category_id" :categories="categories" :direction="direction" class="mt-1" />
             <InputError :message="form.errors.category_id" class="mt-2" />
 
+            <!-- e.g. the review's „wird als Erstattung verbucht" note, right under the picker -->
+            <slot name="category-note" />
+
             <label v-if="showReversal" class="mt-2 flex items-start gap-2 text-sm">
                 <input
                     v-model="form.reversal"
