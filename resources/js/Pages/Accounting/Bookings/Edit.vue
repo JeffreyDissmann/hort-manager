@@ -1,11 +1,14 @@
 <script setup>
+import { computed, ref } from 'vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import InputLabel from '@/Components/InputLabel.vue';
+import InputError from '@/Components/InputError.vue';
 import BookingFields from './Partials/BookingFields.vue';
-import { update as bookingsUpdate, index as bookingsIndex } from '@/routes/accounting/bookings';
+import { update as bookingsUpdate, index as bookingsIndex, convertTransfer as bookingsConvertTransfer } from '@/routes/accounting/bookings';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import { t } from '@/i18n';
+import { ArrowsRightLeftIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
     booking: { type: Object, required: true },
@@ -37,6 +40,16 @@ function submit() {
         return;
     }
     form.put(bookingsUpdate(props.booking.id).url);
+}
+
+// „Als Umbuchung verbuchen": reclassify this booking as an internal transfer to
+// another account (reuses this line as one leg, creates the matching leg).
+const showTransfer = ref(false);
+const transferForm = useForm({ to_account_id: null });
+const otherAccounts = computed(() => props.accounts.filter((a) => a.id !== props.booking.account_id));
+
+function convertToTransfer() {
+    transferForm.post(bookingsConvertTransfer(props.booking.id).url);
 }
 </script>
 
@@ -71,6 +84,43 @@ function submit() {
                     <PrimaryButton :disabled="form.processing">{{ $t('common.save') }}</PrimaryButton>
                 </div>
             </form>
+
+            <!-- Reclassify this booking as an internal transfer (e.g. a cash withdrawal → Bar-Kasse) -->
+            <div v-if="otherAccounts.length" class="mt-4 rounded-2xl bg-surface p-5 shadow-sm">
+                <button
+                    type="button"
+                    class="flex items-center gap-1.5 text-sm font-medium text-ink/70 transition hover:text-ink"
+                    data-testid="edit-as-transfer"
+                    @click="showTransfer = !showTransfer"
+                >
+                    <ArrowsRightLeftIcon class="h-4 w-4" /> {{ $t('accounting.review.as_transfer') }}
+                </button>
+                <div v-if="showTransfer" class="mt-3 space-y-3">
+                    <p class="text-xs text-ink/50">{{ $t('accounting.review.as_transfer_hint') }}</p>
+                    <div class="flex flex-wrap items-end gap-3">
+                        <div class="min-w-[12rem] flex-1">
+                            <InputLabel :value="$t('accounting.review.transfer_to')" />
+                            <select
+                                v-model="transferForm.to_account_id"
+                                class="mt-1 block w-full rounded-md border-ink/20 shadow-sm focus:border-hort-teal focus:ring-hort-teal"
+                            >
+                                <option :value="null">{{ $t('accounting.review.transfer_pick') }}</option>
+                                <option v-for="a in otherAccounts" :key="a.id" :value="a.id">{{ a.name }}</option>
+                            </select>
+                        </div>
+                        <button
+                            type="button"
+                            class="flex items-center gap-1 rounded-lg bg-ink/10 px-3 py-2 text-sm font-medium text-ink transition hover:bg-ink/15 disabled:opacity-50"
+                            :disabled="!transferForm.to_account_id || transferForm.processing"
+                            data-testid="edit-make-transfer"
+                            @click="convertToTransfer"
+                        >
+                            <ArrowsRightLeftIcon class="h-4 w-4" /> {{ $t('accounting.review.make_transfer') }}
+                        </button>
+                    </div>
+                    <InputError :message="transferForm.errors.to_account_id" />
+                </div>
+            </div>
         </div>
     </AuthenticatedLayout>
 </template>

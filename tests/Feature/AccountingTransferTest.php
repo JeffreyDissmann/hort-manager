@@ -168,6 +168,65 @@ it('requires a target account when converting to a transfer', function () {
         ->assertSessionHasErrors('to_account_id');
 });
 
+it('converts an existing (confirmed) booking to a transfer from the edit window', function () {
+    $admin = User::factory()->admin()->accountingWriter()->create();
+    $this->actingAs($admin);
+    $bank = Account::factory()->create(['name' => 'Hort-Konto']);
+    $cash = Account::factory()->create(['name' => 'Bar-Kasse']);
+    // A confirmed expense that turns out to be a cash withdrawal.
+    $booking = Booking::factory()->expense()->create(['account_id' => $bank->id, 'amount_cents' => -5000]);
+
+    $this->post("/accounting/bookings/{$booking->id}/convert-transfer", ['to_account_id' => $cash->id])
+        ->assertRedirect('/accounting/bookings');
+
+    $booking->refresh();
+    expect($booking->kind)->toBe(BookingKind::Transfer)
+        ->and($booking->transfer_id)->not->toBeNull();
+
+    $transfer = Transfer::first();
+    expect($transfer->outBooking->account_id)->toBe($bank->id)    // −50 stays on the bank
+        ->and($transfer->inBooking->account_id)->toBe($cash->id)  // +50 on the cash box
+        ->and($transfer->inBooking->amount_cents)->toBe(5000)
+        ->and(Booking::where('kind', BookingKind::Transfer)->count())->toBe(2);
+});
+
+it('rejects converting to the booking’s own account from the edit window', function () {
+    $admin = User::factory()->admin()->accountingWriter()->create();
+    $this->actingAs($admin);
+    $bank = Account::factory()->create();
+    $booking = Booking::factory()->expense()->create(['account_id' => $bank->id, 'amount_cents' => -5000]);
+
+    $this->post("/accounting/bookings/{$booking->id}/convert-transfer", ['to_account_id' => $bank->id])
+        ->assertSessionHasErrors('to_account_id');
+
+    expect(Transfer::count())->toBe(0);
+});
+
+it('refuses to convert a booking that is already a transfer leg', function () {
+    $admin = User::factory()->admin()->accountingWriter()->create();
+    $this->actingAs($admin);
+    $from = Account::factory()->create();
+    $to = Account::factory()->create();
+    $other = Account::factory()->create();
+    Transfer::record(fromAccountId: $from->id, toAccountId: $to->id, amountCents: 3000, bookingDate: '2026-04-10');
+    $leg = Booking::where('kind', BookingKind::Transfer)->first();
+
+    $this->post("/accounting/bookings/{$leg->id}/convert-transfer", ['to_account_id' => $other->id])
+        ->assertForbidden();
+});
+
+it('forbids a read-only user from converting a booking to a transfer', function () {
+    $this->actingAs(User::factory()->accountingReader()->create());
+    $bank = Account::factory()->create();
+    $cash = Account::factory()->create();
+    $booking = Booking::factory()->expense()->create(['account_id' => $bank->id, 'amount_cents' => -5000]);
+
+    $this->post("/accounting/bookings/{$booking->id}/convert-transfer", ['to_account_id' => $cash->id])
+        ->assertForbidden();
+
+    expect(Transfer::count())->toBe(0);
+});
+
 it('refuses to edit or update a single transfer leg', function () {
     $admin = User::factory()->admin()->accountingWriter()->create();
     $this->actingAs($admin);

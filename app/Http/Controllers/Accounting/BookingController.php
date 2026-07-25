@@ -252,6 +252,32 @@ class BookingController extends Controller
             ->with('status', __('flash.booking_updated'));
     }
 
+    /**
+     * Reclassify an existing (already-saved) booking as an internal transfer to
+     * another account — the edit-window equivalent of the review's „Als Umbuchung
+     * verbuchen". Reuses the booking as one leg and creates the matching leg, so the
+     * amount isn't double-counted.
+     */
+    public function convertToTransfer(Request $request, Booking $booking): RedirectResponse
+    {
+        // A transfer leg is already part of a transfer — nothing to convert.
+        abort_if((bool) $booking->transfer, 403);
+
+        $validated = $request->validate([
+            'to_account_id' => ['required', 'integer', 'exists:accounting_accounts,id'],
+        ]);
+
+        if ((int) $validated['to_account_id'] === $booking->account_id) {
+            throw ValidationException::withMessages(['to_account_id' => __('accounting.review.transfer_same_account')]);
+        }
+
+        Transfer::fromBooking($booking, (int) $validated['to_account_id']);
+
+        return redirect()
+            ->route('accounting.bookings.index')
+            ->with('status', __('flash.transfer_created'));
+    }
+
     public function destroy(Booking $booking): RedirectResponse
     {
         // A transfer leg can't be deleted alone — remove the whole transfer.
