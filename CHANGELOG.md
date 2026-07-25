@@ -6,6 +6,14 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- **Tidier bookings header**: Import (most-used) is now the primary action with an
+  attached „more" chevron for „Neue Buchung" / „Neue Umbuchung"; export collapses to a
+  primary „Export Excel" with „Export CSV" under a chevron. In the review's Umbuchung
+  mode the action button no longer wraps on mobile (stacks full-width) and the AI
+  category hint is hidden (it doesn't apply to a transfer).
+
 ## [2026.07.25] — 2026-07-25
 
 ### Added

@@ -125,6 +125,8 @@ return [
         'reset_filters' => 'Filter zurücksetzen',
         'new_category' => 'Neue Kategorie',
         'add_category' => 'Kategorie hinzufügen',
+        'export_excel' => 'Export Excel',
+        'export_csv' => 'Export CSV',
         'reversal' => 'Erstattung / Rückzahlung',
         'reversal_hint' => 'Der Betrag fließt entgegen der Kategorie – z. B. eine Rückzahlung oder Retoure zu einer Ausgabe (kommt herein statt raus).',
         'delete_confirm' => 'Diese Buchung wirklich löschen?',
