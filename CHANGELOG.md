@@ -6,6 +6,14 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- **CSV import no longer crashes on Windows-1252/Latin-1 files**: German bank exports
+  are often single-byte encoded (umlauts, ß, €). The reader only handled UTF-16/UTF-8,
+  so the malformed bytes crashed `json_encode` when stashing the decoded rows
+  („Malformed UTF-8 characters"). It now converts non-UTF files from Windows-1252 to
+  valid UTF-8. (Regression since the flexible import in 2026.07.24.)
+
 ### Changed
 
 - **Tidier bookings header**: Import (most-used) is now the primary action with an
