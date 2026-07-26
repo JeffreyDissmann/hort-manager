@@ -8,6 +8,9 @@ use Illuminate\Support\Facades\Http;
 beforeEach(function () {
     config()->set('services.paperless.url', 'https://paperless.test');
     config()->set('services.paperless.token', 'secret-token');
+    // Don't inherit the developer's .env field ids — each test sets what it needs.
+    config()->set('services.paperless.booking_field', null);
+    config()->set('services.paperless.amount_field', null);
 });
 
 it('is disabled without a url and token', function () {
@@ -71,6 +74,76 @@ it('omits the custom-field filter when no booking field is configured', function
     (new PaperlessService)->search('rewe');
 
     Http::assertSent(fn ($request) => ! isset($request['custom_field_query']));
+});
+
+it('resolves the correspondent name when requested', function () {
+    Http::fake([
+        'paperless.test/api/correspondents*' => Http::response(['results' => [['id' => 23, 'name' => 'REWE Markt']]]),
+        'paperless.test/api/documents*' => Http::response(['results' => [
+            ['id' => 12, 'title' => 'Kassenbon', 'created' => '2026-03-31', 'correspondent' => 23],
+            ['id' => 13, 'title' => 'Ohne', 'created' => '2026-03-30', 'correspondent' => null],
+        ]]),
+    ]);
+
+    $results = (new PaperlessService)->search('rewe', withCorrespondent: true);
+
+    expect($results[0]['correspondent'])->toBe('REWE Markt')
+        ->and($results[1]['correspondent'])->toBeNull();
+});
+
+it('omits the correspondent field when not requested', function () {
+    Http::fake(['paperless.test/api/documents*' => Http::response(['results' => [
+        ['id' => 12, 'title' => 'Kassenbon', 'created' => '2026-03-31', 'correspondent' => 23],
+    ]])]);
+
+    expect((new PaperlessService)->search('rewe')[0])->not->toHaveKey('correspondent');
+});
+
+it('ranks an exact amount match first, then text+date, deduped', function () {
+    config()->set('services.paperless.amount_field', 1);
+
+    Http::fake(['paperless.test/api/documents*' => Http::sequence()
+        ->push(['results' => [['id' => 4, 'title' => 'Exact', 'created' => '2026-01-07']]])
+        ->push(['results' => [['id' => 4, 'title' => 'Exact', 'created' => '2026-01-07'], ['id' => 7, 'title' => 'Text', 'created' => '2026-01-02']]]),
+    ]);
+
+    $results = (new PaperlessService)->candidatesFor('REWE', 85.76, '2026-01-07', limit: 5);
+
+    expect(collect($results)->pluck('id')->all())->toBe([4, 7]);
+    Http::assertSent(fn ($r) => ($r['custom_field_query'] ?? null) === json_encode([1, 'exact', '85.76']));
+    Http::assertSent(fn ($r) => ($r['created__date__gte'] ?? null) === '2025-12-31' && ($r['created__date__lte'] ?? null) === '2026-01-14');
+});
+
+it('combines the amount and not-linked filters when both are configured', function () {
+    config()->set('services.paperless.amount_field', 1);
+    config()->set('services.paperless.booking_field', 4);
+    Http::fake(['paperless.test/api/documents*' => Http::response(['results' => []])]);
+
+    (new PaperlessService)->candidatesFor('REWE', 85.76, null, limit: 5);
+
+    Http::assertSent(fn ($r) => ($r['custom_field_query'] ?? null) === json_encode(['AND', [[1, 'exact', '85.76'], [4, 'exists', false]]]));
+});
+
+it('skips the amount query when no amount field is configured', function () {
+    Http::fake(['paperless.test/api/documents*' => Http::response(['results' => [['id' => 7, 'title' => 'T', 'created' => null]]])]);
+
+    $results = (new PaperlessService)->candidatesFor('REWE', 85.76, '2026-01-07', limit: 5);
+
+    expect(collect($results)->pluck('id')->all())->toBe([7]);
+    Http::assertSentCount(1);
+});
+
+it('extracts the document amount from the monetary custom field', function () {
+    config()->set('services.paperless.amount_field', 1);
+    Http::fake(['paperless.test/api/documents*' => Http::response(['results' => [
+        ['id' => 4, 'title' => 'Kassenbon', 'created' => '2026-01-07', 'custom_fields' => [['field' => 1, 'value' => 'EUR85.76']]],
+        ['id' => 5, 'title' => 'Ohne Betrag', 'created' => '2026-01-08', 'custom_fields' => []],
+    ]])]);
+
+    $results = (new PaperlessService)->search('rewe');
+
+    expect($results[0]['amount_cents'])->toBe(8576)
+        ->and($results[1]['amount_cents'])->toBeNull();
 });
 
 it('sends the token as a Token header, not Bearer', function () {

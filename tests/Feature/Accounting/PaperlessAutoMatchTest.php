@@ -18,6 +18,8 @@ uses(RefreshDatabase::class);
 beforeEach(function () {
     config()->set('services.paperless.url', 'https://paperless.test');
     config()->set('services.paperless.token', 'secret-token');
+    config()->set('services.paperless.booking_field', null);
+    config()->set('services.paperless.amount_field', null);
     config()->set('accounting.ai_suggestions', true);
     // The category suggester runs first; keep it a no-op so we isolate the receipt match.
     BookingCategorizer::fake([[]]);

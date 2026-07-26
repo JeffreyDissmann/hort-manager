@@ -59,6 +59,9 @@ return [
         // link is visible/filterable from inside Paperless too. The app never creates
         // or alters field definitions. Unset → one-directional link only.
         'booking_field' => env('PAPERLESS_BOOKING_FIELD'),
+        // Id of a monetary custom field holding the document's total. When set, receipt
+        // suggestions/matching filter on an exact amount match (a near-unique signal).
+        'amount_field' => env('PAPERLESS_AMOUNT_FIELD'),
     ],
 
 ];

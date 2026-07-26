@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 use App\Ai\Agents\ReceiptMatcher;
 use App\Models\Accounting\Booking;
-use App\Models\User;
 use App\Services\Accounting\PaperlessMatcher;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -14,6 +13,8 @@ uses(RefreshDatabase::class);
 beforeEach(function () {
     config()->set('services.paperless.url', 'https://paperless.test');
     config()->set('services.paperless.token', 'secret-token');
+    config()->set('services.paperless.booking_field', null);
+    config()->set('services.paperless.amount_field', null);
     config()->set('accounting.ai_suggestions', true);
 });
 
@@ -88,20 +89,4 @@ it('is empty when the query has no identifying fields', function () {
 
     expect(app(PaperlessMatcher::class)->match(['purpose' => '', 'counterparty' => null]))
         ->toBe(['best' => null, 'candidates' => []]);
-});
-
-it('exposes the suggest endpoint to accounting editors', function () {
-    $admin = User::factory()->admin()->accountingWriter()->create();
-    fakePaperlessSearch([['id' => 44, 'title' => 'REWE-Beleg', 'created' => '2026-03-30']]);
-    ReceiptMatcher::fake([['document_id' => 44, 'confidence' => 'high']]);
-
-    $this->actingAs($admin)
-        ->postJson('/accounting/paperless/suggest', [
-            'purpose' => 'REWE SAGT DANKE',
-            'counterparty' => 'REWE',
-            'amount' => 19.95,
-            'date' => '2026-03-31',
-        ])
-        ->assertOk()
-        ->assertJson(['best' => ['id' => 44, 'confidence' => 'high']]);
 });

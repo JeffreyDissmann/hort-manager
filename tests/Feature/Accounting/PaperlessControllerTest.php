@@ -12,6 +12,8 @@ uses(RefreshDatabase::class);
 beforeEach(function () {
     config()->set('services.paperless.url', 'https://paperless.test');
     config()->set('services.paperless.token', 'secret-token');
+    config()->set('services.paperless.booking_field', null);
+    config()->set('services.paperless.amount_field', null);
     $this->admin = User::factory()->admin()->accountingWriter()->create();
 });
 
@@ -26,6 +28,39 @@ it('proxies a full-text search', function () {
         ->getJson('/accounting/paperless/search?q=rewe')
         ->assertOk()
         ->assertJson(['results' => [['id' => 12, 'title' => 'REWE Beleg']]]);
+});
+
+it('uses amount + date suggestions when a booking context is sent', function () {
+    config()->set('services.paperless.amount_field', 1);
+
+    Http::fake(['paperless.test/api/documents*' => Http::sequence()
+        ->push(['results' => [['id' => 4, 'title' => 'Exact', 'created' => '2026-01-07']]])
+        ->push(['results' => [['id' => 7, 'title' => 'Text', 'created' => '2026-01-02']]]),
+    ]);
+
+    $this->actingAs($this->admin)
+        ->getJson('/accounting/paperless/search?q=REWE&amount=85.76&near=2026-01-07')
+        ->assertOk()
+        ->assertJsonPath('results.0.id', 4);
+
+    Http::assertSent(fn ($r) => ($r['custom_field_query'] ?? null) === json_encode([1, 'exact', '85.76']));
+});
+
+it('caps search results to the requested limit', function () {
+    Http::fake([
+        'paperless.test/api/documents*' => Http::response([
+            'results' => [
+                ['id' => 1, 'title' => 'A', 'created' => null],
+                ['id' => 2, 'title' => 'B', 'created' => null],
+                ['id' => 3, 'title' => 'C', 'created' => null],
+            ],
+        ]),
+    ]);
+
+    $this->actingAs($this->admin)
+        ->getJson('/accounting/paperless/search?q=x&limit=2')
+        ->assertOk()
+        ->assertJsonCount(2, 'results');
 });
 
 it('hides documents already linked to a booking from search', function () {

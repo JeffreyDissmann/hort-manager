@@ -22,7 +22,8 @@ class PaperlessMatcher
     public function __construct(private readonly PaperlessService $paperless) {}
 
     /**
-     * Match against a saved booking (import auto-match path).
+     * Match against a saved booking (import auto-match path). The valuta (value) date is
+     * the receipt's likely date — prefer it over the booking date.
      *
      * @return array{best: array{id:int, title:string, created:?string, confidence:?string}|null, candidates: list<array{id:int, title:string, created:?string}>}
      */
@@ -32,7 +33,7 @@ class PaperlessMatcher
             'purpose' => $booking->purpose,
             'counterparty' => $booking->counterpartyLabel(),
             'amount' => round(abs($booking->amount_cents) / 100, 2),
-            'date' => $booking->booking_date?->format('Y-m-d'),
+            'date' => ($booking->valuta_date ?? $booking->booking_date)?->format('Y-m-d'),
         ]);
     }
 
@@ -44,11 +45,16 @@ class PaperlessMatcher
      */
     public function match(array $context): array
     {
-        $query = $this->query($context);
-        // Ask for OCR content too — the model matches on vendor/amount/date, but the
-        // caller only needs the lean fields, so strip content before returning. Skip
-        // documents already linked to another booking.
-        $rich = $query === '' ? [] : $this->paperless->search($query, withContent: true, excludeIds: Booking::linkedDocumentIds());
+        // Gather candidates by amount + text/date; ask for OCR content so the model can
+        // confirm vendor/amount/date. The caller only needs the lean fields, so strip
+        // content before returning. Already-linked documents are skipped.
+        $rich = $this->paperless->candidatesFor(
+            $this->query($context),
+            isset($context['amount']) ? (float) $context['amount'] : null,
+            $context['date'] ?? null,
+            withContent: true,
+            excludeIds: Booking::linkedDocumentIds(),
+        );
         $lean = array_map(fn (array $d): array => ['id' => $d['id'], 'title' => $d['title'], 'created' => $d['created']], $rich);
 
         return [

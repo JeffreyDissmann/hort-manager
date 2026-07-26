@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Accounting;
 
 use Illuminate\Http\Client\Response;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -18,6 +19,12 @@ use Throwable;
  */
 class PaperlessService
 {
+    /** How many days around the reference (valuta) date a receipt may be dated. */
+    private const NEAR_WINDOW_DAYS = 7;
+
+    /** Memoised id → name map of Paperless correspondents (resolved once per instance). */
+    private ?array $correspondentNames = null;
+
     /** Both the base URL and an API token must be set for the integration to work. */
     public function enabled(): bool
     {
@@ -29,11 +36,12 @@ class PaperlessService
      * $withContent to also include an OCR snippet (used by the AI matcher to check
      * vendor/amount/date — Paperless already returns it, so this costs no extra call).
      * $excludeIds drops documents already linked to a booking so they aren't offered twice.
+     * $withCorrespondent resolves the correspondent name for display in the picker.
      *
      * @param  list<int>  $excludeIds
-     * @return list<array{id:int, title:string, created:?string, content?:string}>
+     * @return list<array{id:int, title:string, created:?string, correspondent?:?string, content?:string}>
      */
-    public function search(string $query, int $limit = 8, bool $withContent = false, array $excludeIds = []): array
+    public function search(string $query, int $limit = 8, bool $withContent = false, array $excludeIds = [], bool $withCorrespondent = false): array
     {
         $query = trim($query);
 
@@ -41,29 +49,79 @@ class PaperlessService
             return [];
         }
 
-        try {
-            $params = [
-                'query' => $query,
-                // Over-fetch so the excluded (already-linked) ones don't shrink the list.
-                'page_size' => min($limit + count($excludeIds), 100),
-            ];
+        return $this->request($this->unlinkedParams(['query' => $query]), $limit, $withContent, $withCorrespondent, $excludeIds);
+    }
 
-            // Ask Paperless itself to omit documents that already carry a booking link
-            // (the custom field is set) — covers links made by any tool, not just this app.
-            $fieldId = $this->bookingFieldId();
-            if ($fieldId !== null) {
-                $params['custom_field_query'] = json_encode([$fieldId, 'exists', false]);
+    /**
+     * Find candidate receipts for a booking, strongest signal first: an exact amount
+     * match (near-unique) then a full-text query narrowed to a date window around the
+     * booking's (valuta) date. Both skip already-linked documents. Best-effort.
+     *
+     * @param  list<int>  $excludeIds
+     * @return list<array{id:int, title:string, created:?string, correspondent?:?string, content?:string}>
+     */
+    public function candidatesFor(string $text, ?float $amount, ?string $nearDate, int $limit = 5, bool $withContent = false, bool $withCorrespondent = false, array $excludeIds = []): array
+    {
+        if (! $this->enabled()) {
+            return [];
+        }
+
+        // 1. Exact amount match on the configured monetary field — the strongest signal.
+        $results = [];
+        $amountField = $this->amountFieldId();
+        if ($amountField !== null && $amount !== null && $amount > 0) {
+            $conditions = [[$amountField, 'exact', number_format($amount, 2, '.', '')]];
+            if (($bookingField = $this->bookingFieldId()) !== null) {
+                $conditions[] = [$bookingField, 'exists', false];
+            }
+            $query = count($conditions) > 1 ? ['AND', $conditions] : $conditions[0];
+            $results = $this->request(['custom_field_query' => json_encode($query)], $limit, $withContent, $withCorrespondent, $excludeIds);
+        }
+
+        // 2. Full-text query within a date window around the reference date — the fallback.
+        $text = trim($text);
+        if ($text !== '' && count($results) < $limit) {
+            $params = $this->unlinkedParams(['query' => $text]);
+            if ($nearDate !== null && $nearDate !== '') {
+                $reference = Carbon::parse($nearDate);
+                $params['created__date__gte'] = $reference->copy()->subDays(self::NEAR_WINDOW_DAYS)->toDateString();
+                $params['created__date__lte'] = $reference->copy()->addDays(self::NEAR_WINDOW_DAYS)->toDateString();
             }
 
+            $seen = array_flip(array_column($results, 'id'));
+            foreach ($this->request($params, $limit, $withContent, $withCorrespondent, $excludeIds) as $document) {
+                if (! isset($seen[$document['id']])) {
+                    $results[] = $document;
+                }
+            }
+            $results = array_slice($results, 0, $limit);
+        }
+
+        return $results;
+    }
+
+    /**
+     * Run one documents query and shape the results: map, drop already-linked ids, cap.
+     *
+     * @param  array<string, mixed>  $params
+     * @param  list<int>  $excludeIds
+     * @return list<array<string, mixed>>
+     */
+    private function request(array $params, int $limit, bool $withContent, bool $withCorrespondent, array $excludeIds): array
+    {
+        try {
+            // Over-fetch so the excluded (already-linked) ones don't shrink the list.
+            $params['page_size'] = min($limit + count($excludeIds), 100);
             $response = Http::paperless()->get('documents/', $params);
 
             if ($response->failed()) {
                 return [];
             }
 
+            $correspondents = $withCorrespondent ? $this->correspondentNames() : null;
             $exclude = array_flip($excludeIds);
             $results = array_values(array_filter(
-                array_map(fn (array $d): array => $this->mapDocument($d, $withContent), $response->json('results', [])),
+                array_map(fn (array $d): array => $this->mapDocument($d, $withContent, $correspondents), $response->json('results', [])),
                 fn (array $d): bool => ! isset($exclude[$d['id']]),
             ));
 
@@ -73,6 +131,21 @@ class PaperlessService
 
             return [];
         }
+    }
+
+    /**
+     * Add the „not already linked to a booking" filter (custom field unset) to a query.
+     *
+     * @param  array<string, mixed>  $params
+     * @return array<string, mixed>
+     */
+    private function unlinkedParams(array $params): array
+    {
+        if (($fieldId = $this->bookingFieldId()) !== null) {
+            $params['custom_field_query'] = json_encode([$fieldId, 'exists', false]);
+        }
+
+        return $params;
     }
 
     /**
@@ -164,6 +237,14 @@ class PaperlessService
         return filled($field) ? (int) $field : null;
     }
 
+    /** The configured monetary custom-field id holding the document total, or null. */
+    public function amountFieldId(): ?int
+    {
+        $field = config('services.paperless.amount_field');
+
+        return filled($field) ? (int) $field : null;
+    }
+
     /** Fetch a binary endpoint, returning the raw response for the caller to stream. */
     private function stream(string $path): ?Response
     {
@@ -184,9 +265,10 @@ class PaperlessService
 
     /**
      * @param  array<string, mixed>  $document
-     * @return array{id:int, title:string, created:?string, content?:string}
+     * @param  array<int, string>|null  $correspondents  id → name map, or null to skip resolving
+     * @return array{id:int, title:string, created:?string, correspondent?:?string, amount_cents?:?int, content?:string}
      */
-    private function mapDocument(array $document, bool $withContent = false): array
+    private function mapDocument(array $document, bool $withContent = false, ?array $correspondents = null): array
     {
         $mapped = [
             'id' => (int) ($document['id'] ?? 0),
@@ -194,11 +276,66 @@ class PaperlessService
             'created' => $document['created'] ?? null,
         ];
 
+        if ($correspondents !== null) {
+            $mapped['correspondent'] = $correspondents[$document['correspondent'] ?? null] ?? null;
+        }
+
+        // The document total from the monetary custom field (e.g. „EUR85.76" → 8576 cents).
+        if (($amountField = $this->amountFieldId()) !== null) {
+            $mapped['amount_cents'] = $this->documentAmountCents($document['custom_fields'] ?? [], $amountField);
+        }
+
         // A trimmed OCR snippet — enough to carry the vendor, total and date.
         if ($withContent) {
             $mapped['content'] = mb_substr(trim((string) ($document['content'] ?? '')), 0, 600);
         }
 
         return $mapped;
+    }
+
+    /**
+     * Parse the monetary custom field's value („EUR85.76", „85,76") into integer cents.
+     *
+     * @param  array<int, array{field?:int, value?:mixed}>  $customFields
+     */
+    private function documentAmountCents(array $customFields, int $fieldId): ?int
+    {
+        foreach ($customFields as $field) {
+            if ((int) ($field['field'] ?? 0) !== $fieldId) {
+                continue;
+            }
+
+            $raw = str_replace(',', '.', (string) ($field['value'] ?? ''));
+            $number = preg_replace('/[^0-9.\-]/', '', $raw);
+
+            return is_numeric($number) ? (int) round(((float) $number) * 100) : null;
+        }
+
+        return null;
+    }
+
+    /**
+     * Best-effort id → name map of correspondents (for display). Empty when the API
+     * token can't see them; resolved once and reused.
+     *
+     * @return array<int, string>
+     */
+    private function correspondentNames(): array
+    {
+        if ($this->correspondentNames !== null) {
+            return $this->correspondentNames;
+        }
+
+        try {
+            $response = Http::paperless()->get('correspondents/', ['page_size' => 500]);
+
+            return $this->correspondentNames = $response->successful()
+                ? collect($response->json('results', []))->pluck('name', 'id')->map(fn ($n): string => (string) $n)->all()
+                : [];
+        } catch (Throwable $e) {
+            Log::warning('Paperless correspondents fetch failed: '.$e->getMessage());
+
+            return $this->correspondentNames = [];
+        }
     }
 }

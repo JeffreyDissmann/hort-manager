@@ -24,7 +24,7 @@ const props = defineProps({
     paperlessUrl: { type: String, default: null },
 });
 
-// Human-readable counterparty for the AI receipt suggestion.
+// Human-readable counterparty, used to build the receipt-search query.
 const counterpartyLabel = computed(() => {
     if (props.form.counterparty_child_id) {
         return props.children.find((c) => c.id === props.form.counterparty_child_id)?.name ?? null;
@@ -35,12 +35,10 @@ const counterpartyLabel = computed(() => {
     return props.form.counterparty_name || null;
 });
 
-const suggestContext = computed(() => ({
-    purpose: props.form.purpose,
-    counterparty: counterpartyLabel.value,
-    amount: props.form.amount,
-    date: props.form.booking_date,
-}));
+// Query for the picker's „similar documents" suggestions: counterparty + purpose.
+const paperlessQuery = computed(() => [counterpartyLabel.value, props.form.purpose].filter(Boolean).join(' ').trim());
+// Valuta (value) date is the receipt's likely date; fall back to the booking date.
+const paperlessNearDate = computed(() => props.form.valuta_date || props.form.booking_date || '');
 
 // Counterparty is a child (income), a linked user (person), free text, or nothing.
 const mode = ref(
@@ -219,7 +217,9 @@ const availableChildren = computed(() => {
             v-if="paperlessEnabled"
             :form="form"
             :paperless-url="paperlessUrl"
-            :suggest-context="suggestContext"
+            :initial-query="paperlessQuery"
+            :amount="form.amount"
+            :near-date="paperlessNearDate"
         />
     </div>
 </template>

@@ -6,7 +6,6 @@ namespace App\Http\Controllers\Accounting;
 
 use App\Http\Controllers\Controller;
 use App\Models\Accounting\Booking;
-use App\Services\Accounting\PaperlessMatcher;
 use App\Services\Accounting\PaperlessService;
 use Illuminate\Http\Client\Response as ClientResponse;
 use Illuminate\Http\JsonResponse;
@@ -24,30 +23,26 @@ class PaperlessController extends Controller
 {
     public function __construct(private readonly PaperlessService $paperless) {}
 
-    /** Full-text search for the picker dropdown; already-linked documents are hidden. */
+    /**
+     * Full-text search for the picker (typed query or the booking's own „similar docs"
+     * suggestions). Already-linked documents are hidden.
+     */
     public function search(Request $request): JsonResponse
     {
         $query = (string) $request->query('q', '');
+        $limit = max(1, min((int) $request->integer('limit', 8), 20));
+        $excludeIds = Booking::linkedDocumentIds();
 
-        return response()->json([
-            'results' => $this->paperless->search($query, excludeIds: Booking::linkedDocumentIds()),
-        ]);
-    }
+        // A booking context (amount and/or valuta date) → precise suggestions ranked by
+        // exact amount then date proximity. A bare query is a plain full-text search.
+        $amount = $request->filled('amount') ? abs((float) $request->input('amount')) : null;
+        $near = (string) $request->query('near', '');
 
-    /**
-     * Suggest the best-matching document for the current booking form („KI-Vorschlag").
-     * Works from loose form fields so it serves both the create and edit forms.
-     */
-    public function suggest(Request $request, PaperlessMatcher $matcher): JsonResponse
-    {
-        $data = $request->validate([
-            'purpose' => ['nullable', 'string', 'max:2000'],
-            'counterparty' => ['nullable', 'string', 'max:255'],
-            'amount' => ['nullable', 'numeric'],
-            'date' => ['nullable', 'date'],
-        ]);
+        $results = ($amount !== null || $near !== '')
+            ? $this->paperless->candidatesFor($query, $amount, $near ?: null, limit: $limit, withCorrespondent: true, excludeIds: $excludeIds)
+            : $this->paperless->search($query, limit: $limit, excludeIds: $excludeIds, withCorrespondent: true);
 
-        return response()->json($matcher->match($data));
+        return response()->json(['results' => $results]);
     }
 
     /** Resolve a single document (the paste-id / paste-URL flow). */
