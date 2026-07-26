@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { Head, Link, usePage } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { ClipboardDocumentCheckIcon, ChartBarIcon, UsersIcon, CheckCircleIcon, CalendarDaysIcon } from '@heroicons/vue/24/outline';
+import Sparkline from '@/Components/Accounting/Sparkline.vue';
 import { formatEuro } from '@/money';
 import { index as bookingsIndex } from '@/routes/accounting/bookings';
 import { index as reportsIndex } from '@/routes/accounting/reports';
@@ -89,6 +90,7 @@ const balanceClass = (cents) => (cents < 0 ? 'text-red-600' : 'text-hort-teal-da
                                     <span class="block font-normal normal-case text-ink/30">{{ shortDate(periods.quarter) }}</span>
                                 </th>
                                 <th class="py-2 text-right font-medium">{{ $t('accounting.dashboard.balance_current') }}</th>
+                                <th class="py-2 pl-4 text-right font-medium">{{ $t('accounting.dashboard.trend') }}</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-ink/5">
@@ -97,6 +99,11 @@ const balanceClass = (cents) => (cents < 0 ? 'text-red-600' : 'text-hort-teal-da
                                 <td class="py-2 text-right text-ink/60">{{ formatEuro(a.balance_year_cents) }}</td>
                                 <td class="py-2 text-right text-ink/60">{{ formatEuro(a.balance_quarter_cents) }}</td>
                                 <td class="py-2 text-right font-semibold" :class="balanceClass(a.balance_cents)">{{ formatEuro(a.balance_cents) }}</td>
+                                <td class="py-2 pl-4">
+                                    <div class="flex justify-end">
+                                        <Sparkline :points="a.balance_series" />
+                                    </div>
+                                </td>
                             </tr>
                         </tbody>
                     </table>

@@ -15,6 +15,7 @@ return [
         'balance_current' => 'Current',
         'balance_quarter' => 'Prev. quarter',
         'balance_year' => 'Prev. year',
+        'trend' => 'Trend',
         'no_accounts' => 'No accounts yet.',
         'review' => 'To review',
         'review_hint' => ':count booking(s) awaiting confirmation.',
@@ -49,6 +50,8 @@ return [
         'accounts' => 'Accounts',
         'all_accounts' => 'All accounts',
         'n_accounts' => ':count accounts',
+        'no_data' => 'No data',
+        'other' => 'Other',
         'empty' => 'No confirmed bookings for this year yet.',
     ],
 

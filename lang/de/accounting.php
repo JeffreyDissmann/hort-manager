@@ -15,6 +15,7 @@ return [
         'balance_current' => 'Aktuell',
         'balance_quarter' => 'Vorquartal',
         'balance_year' => 'Vorjahr',
+        'trend' => 'Verlauf',
         'no_accounts' => 'Noch keine Konten angelegt.',
         'review' => 'Zu prüfen',
         'review_hint' => ':count Buchung(en) warten auf Bestätigung.',
@@ -49,6 +50,8 @@ return [
         'accounts' => 'Konten',
         'all_accounts' => 'Alle Konten',
         'n_accounts' => ':count Konten',
+        'no_data' => 'Keine Daten',
+        'other' => 'Sonstige',
         'empty' => 'Für dieses Jahr gibt es noch keine bestätigten Buchungen.',
     ],
 

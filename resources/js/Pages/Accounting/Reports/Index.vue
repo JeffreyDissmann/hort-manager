@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import Dropdown from '@/Components/Dropdown.vue';
+import DonutChart from '@/Components/Accounting/DonutChart.vue';
 import { ChevronRightIcon, ChevronDownIcon, DocumentTextIcon, TableCellsIcon } from '@heroicons/vue/24/outline';
 import { formatEuro } from '@/money';
 import { t } from '@/i18n';
@@ -27,6 +28,12 @@ const props = defineProps({
     accounts: { type: Array, default: () => [] },
     selectedAccounts: { type: Array, default: () => [] },
 });
+
+// Donut slices = the top-level (root) category totals for each direction.
+const rootSegments = (rows) =>
+    rows.filter((r) => r.depth === 0).map((r) => ({ id: r.id, label: r.name, value: r.total }));
+const incomeSegments = computed(() => rootSegments(props.incomeRows));
+const expenseSegments = computed(() => rootSegments(props.expenseRows));
 
 const hasData = computed(
     () => props.incomeRows.length > 0 || props.expenseRows.length > 0 || props.transferRows.length > 0,
@@ -120,6 +127,9 @@ function drilldown({ category, kind, account, month }) {
     if (account) query.account = account;
     return bookingsIndex({ query }).url;
 }
+
+// Donut slice → the ledger for that category (whole year).
+const openCategory = (id) => router.visit(drilldown({ category: id }));
 </script>
 
 <template>
@@ -132,13 +142,25 @@ function drilldown({ category, kind, account, month }) {
                     <p class="text-xs font-semibold uppercase tracking-wide text-ink/40">{{ $t('accounting.title') }}</p>
                     <h2 class="text-xl font-semibold text-ink">{{ $t('accounting.reports.title') }}</h2>
                 </div>
-                <div class="flex flex-wrap items-center gap-3">
+                <div class="flex flex-wrap items-center gap-2">
+                    <label class="flex items-center gap-2 text-sm text-ink/60">
+                        {{ $t('accounting.reports.year') }}
+                        <select
+                            :value="year"
+                            data-testid="report-year"
+                            class="rounded-md border-ink/20 text-sm focus:border-hort-teal focus:ring-hort-teal"
+                            @change="changeYear"
+                        >
+                            <option v-for="y in years" :key="y" :value="y">{{ y }}</option>
+                        </select>
+                    </label>
+
                     <!-- Which accounts feed the summary (all by default) -->
                     <Dropdown v-if="accounts.length > 1" align="right" width="48">
                         <template #trigger>
                             <button
                                 type="button"
-                                class="flex items-center gap-1.5 rounded-md border border-ink/20 px-3 py-1.5 text-sm text-ink transition hover:bg-ink/5"
+                                class="flex items-center gap-1.5 rounded-md border border-ink/20 px-3 py-2 text-sm text-ink transition hover:bg-ink/5"
                                 data-testid="report-accounts"
                             >
                                 {{ $t('accounting.reports.accounts') }}: {{ accountsLabel }}
@@ -171,37 +193,55 @@ function drilldown({ category, kind, account, month }) {
                         </template>
                     </Dropdown>
 
-                    <div v-if="hasData" class="flex items-center gap-1">
-                        <a
-                            :href="exportUrl('csv')"
-                            class="flex items-center gap-1 rounded-lg bg-ink/5 px-3 py-2 text-sm font-medium text-ink transition hover:bg-ink/10"
-                        >
-                            <DocumentTextIcon class="h-4 w-4" /> CSV
-                        </a>
+                    <!-- Export: Excel standard, CSV under „more" (same as the bookings page) -->
+                    <div v-if="hasData" class="inline-flex items-center">
                         <a
                             :href="exportUrl('xlsx')"
-                            class="flex items-center gap-1 rounded-lg bg-ink/5 px-3 py-2 text-sm font-medium text-ink transition hover:bg-ink/10"
+                            class="flex items-center gap-1 rounded-l-lg bg-ink/5 px-3 py-2 text-sm font-medium text-ink transition hover:bg-ink/10"
                         >
-                            <TableCellsIcon class="h-4 w-4" /> Excel
+                            <TableCellsIcon class="h-4 w-4" /> {{ $t('accounting.bookings.export_excel') }}
                         </a>
+                        <Dropdown align="right" width="48">
+                            <template #trigger>
+                                <button
+                                    type="button"
+                                    class="flex items-center rounded-r-lg border-l border-ink/10 bg-ink/5 px-2 py-2.5 text-ink transition hover:bg-ink/10"
+                                >
+                                    <ChevronDownIcon class="h-4 w-4" />
+                                </button>
+                            </template>
+                            <template #content>
+                                <a
+                                    :href="exportUrl('csv')"
+                                    class="flex items-center gap-2 px-4 py-2 text-sm text-ink/80 transition hover:bg-ink/5"
+                                >
+                                    <DocumentTextIcon class="h-4 w-4" /> {{ $t('accounting.bookings.export_csv') }}
+                                </a>
+                            </template>
+                        </Dropdown>
                     </div>
-                    <label class="flex items-center gap-2 text-sm text-ink/60">
-                        {{ $t('accounting.reports.year') }}
-                        <select
-                            :value="year"
-                            data-testid="report-year"
-                            class="rounded-md border-ink/20 text-sm focus:border-hort-teal focus:ring-hort-teal"
-                            @change="changeYear"
-                        >
-                            <option v-for="y in years" :key="y" :value="y">{{ y }}</option>
-                        </select>
-                    </label>
                 </div>
             </div>
         </template>
 
         <div class="space-y-4">
             <p class="text-sm text-ink/50">{{ $t('accounting.reports.intro') }}</p>
+
+            <!-- Income / expense breakdown by top-level category -->
+            <div v-if="hasData" class="grid gap-4 sm:grid-cols-2">
+                <DonutChart
+                    :title="$t('accounting.reports.income')"
+                    :segments="incomeSegments"
+                    :empty-label="$t('accounting.reports.no_data')"
+                    @select="openCategory"
+                />
+                <DonutChart
+                    :title="$t('accounting.reports.expense')"
+                    :segments="expenseSegments"
+                    :empty-label="$t('accounting.reports.no_data')"
+                    @select="openCategory"
+                />
+            </div>
 
             <div class="overflow-hidden rounded-2xl bg-surface shadow-sm">
                 <p v-if="!hasData" class="p-6 text-center text-ink/50">{{ $t('accounting.reports.empty') }}</p>

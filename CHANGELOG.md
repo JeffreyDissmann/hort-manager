@@ -6,6 +6,19 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **Charts on the accounting pages**: the Auswertung gets two donuts (Einnahmen /
+  Ausgaben) breaking the year down by top-level category — sorted, with a „Sonstige"
+  fold for the tail, the total in the hole, and slices that drill into the ledger;
+  they respect the account filter. The Übersicht gains a per-account balance
+  **sparkline** (running month-end balance, teal up / red down) in a „Verlauf" column.
+
+### Changed
+
+- The Auswertung export matches the bookings page — a „Export Excel" split button with
+  „Export CSV" under the chevron — and the header controls are tidied into one row.
+
 ### Fixed
 
 - **CSV import no longer crashes on Windows-1252/Latin-1 files**: German bank exports
