@@ -53,7 +53,7 @@ const balanceClass = (cents) => (cents < 0 ? 'text-red-600' : 'text-hort-teal-da
 
                 <!-- Attention: bookings still to review -->
                 <Link
-                    :href="bookingsIndex().url"
+                    :href="reviewCount > 0 ? bookingsIndex({ query: { status: 'review' } }).url : bookingsIndex().url"
                     class="flex items-center gap-3 rounded-2xl p-4 shadow-sm transition hover:shadow"
                     :class="reviewCount > 0 ? 'bg-amber-500/10' : 'bg-surface'"
                 >

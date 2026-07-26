@@ -40,6 +40,8 @@ class Booking extends Model
         'valuta_date',
         'purpose',
         'comment',
+        'paperless_document_id',
+        'paperless_document_title',
         'counterparty_user_id',
         'counterparty_child_id',
         'counterparty_name',

@@ -72,5 +72,12 @@ class AppServiceProvider extends ServiceProvider
             ->withToken(config('services.slack.notifications.bot_user_oauth_token'))
             ->timeout(10)
             ->retry(2, 200, throw: false));
+
+        // One configured Paperless-ngx REST client (service-account token) shared by
+        // PaperlessService. Auth is a „Token <key>" header, not Bearer.
+        Http::macro('paperless', fn (): PendingRequest => Http::baseUrl(rtrim((string) config('services.paperless.url'), '/').'/api')
+            ->withToken((string) config('services.paperless.token'), 'Token')
+            ->acceptJson()
+            ->timeout(15));
     }
 }

@@ -17,6 +17,8 @@ const props = defineProps({
     categories: { type: Array, required: true },
     children: { type: Array, default: () => [] },
     users: { type: Array, required: true },
+    paperlessEnabled: { type: Boolean, default: false },
+    paperlessUrl: { type: String, default: null },
 });
 
 const form = useForm({
@@ -31,6 +33,8 @@ const form = useForm({
     counterparty_child_id: props.booking.counterparty_child_id,
     counterparty_user_id: props.booking.counterparty_user_id,
     counterparty_name: props.booking.counterparty_name ?? '',
+    paperless_document_id: props.booking.paperless_document_id ?? null,
+    paperless_document_title: props.booking.paperless_document_title ?? null,
     to_account_id: null,
 });
 
@@ -131,6 +135,8 @@ function send(action) {
                         :categories="categories"
                         :children="children"
                         :users="users"
+                        :paperless-enabled="paperlessEnabled"
+                        :paperless-url="paperlessUrl"
                     >
                         <template #category-note>
                             <p

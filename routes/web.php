@@ -9,6 +9,8 @@ use App\Http\Controllers\Accounting\CategoryController;
 use App\Http\Controllers\Accounting\ContributionController;
 use App\Http\Controllers\Accounting\DashboardController;
 use App\Http\Controllers\Accounting\ImportController;
+use App\Http\Controllers\Accounting\PaperlessController;
+use App\Http\Controllers\Accounting\PaperlessReviewController;
 use App\Http\Controllers\Accounting\ReportController;
 use App\Http\Controllers\Accounting\TransferController;
 use App\Http\Controllers\ActivityLogController;
@@ -159,6 +161,12 @@ Route::middleware('auth')->group(function () {
         // Einnahmen je Kind — child × month matrix of contributions.
         Route::get('contributions', [ContributionController::class, 'index'])->name('contributions.index');
 
+        // Paperless document archive — proxied so the API token stays server-side.
+        Route::get('paperless/search', [PaperlessController::class, 'search'])->name('paperless.search');
+        Route::get('paperless/documents/{document}', [PaperlessController::class, 'find'])->name('paperless.documents.show')->whereNumber('document');
+        Route::get('paperless/documents/{document}/thumb', [PaperlessController::class, 'thumbnail'])->name('paperless.documents.thumb')->whereNumber('document');
+        Route::get('paperless/documents/{document}/download', [PaperlessController::class, 'download'])->name('paperless.documents.download')->whereNumber('document');
+
         // --- Write (editors only) ---
         Route::middleware('accounting:write')->group(function () {
             Route::resource('accounts', AccountController::class)->except(['show', 'index']);
@@ -168,6 +176,14 @@ Route::middleware('auth')->group(function () {
             Route::patch('bookings/{booking}/review', [BookingController::class, 'reviewSave'])->name('bookings.review-save');
             // Re-run the AI over all unconfirmed bookings.
             Route::post('bookings/reanalyse', [BookingController::class, 'reanalyse'])->name('bookings.reanalyse');
+            // Re-run the deterministic Paperless receipt link over unconfirmed bookings.
+            Route::post('bookings/relink-receipts', [BookingController::class, 'relinkReceipts'])->name('bookings.relink-receipts');
+
+            // „Belege zuordnen" — walk unlinked Paperless receipts, attach or create bookings.
+            Route::get('paperless/review', [PaperlessReviewController::class, 'index'])->name('paperless.review');
+            Route::post('paperless/attach', [PaperlessReviewController::class, 'attach'])->name('paperless.attach');
+            Route::post('paperless/bookings', [PaperlessReviewController::class, 'createBooking'])->name('paperless.bookings.store');
+            Route::post('paperless/ignore', [PaperlessReviewController::class, 'ignore'])->name('paperless.ignore');
             // Bulk-confirm bookings from the overview.
             Route::post('bookings/confirm', [BookingController::class, 'bulkConfirm'])->name('bookings.bulk-confirm');
             // Reclassify an existing booking as an internal transfer to another account.

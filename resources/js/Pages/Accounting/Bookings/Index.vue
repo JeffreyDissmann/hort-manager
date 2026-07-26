@@ -16,12 +16,15 @@ import {
     destroy as bookingsDestroy,
     review as bookingsReview,
     reanalyse as bookingsReanalyse,
+    relinkReceipts as bookingsRelinkReceipts,
     bulkConfirm as bookingsBulkConfirm,
     download as bookingsExport,
 } from '@/routes/accounting/bookings';
+import { review as paperlessReview } from '@/routes/accounting/paperless';
 import { create as transfersCreate } from '@/routes/accounting/transfers';
 import { create as importCreate } from '@/routes/accounting/import';
-import { PencilSquareIcon, TrashIcon, PlusIcon, ArrowsRightLeftIcon, ArrowUpTrayIcon, DocumentTextIcon, TableCellsIcon, ClipboardDocumentCheckIcon, SparklesIcon, CheckIcon, ArrowPathIcon, ChevronDownIcon } from '@heroicons/vue/24/outline';
+import { thumb as paperlessThumb } from '@/routes/accounting/paperless/documents';
+import { PencilSquareIcon, TrashIcon, PlusIcon, ArrowsRightLeftIcon, ArrowUpTrayIcon, DocumentTextIcon, TableCellsIcon, ClipboardDocumentCheckIcon, SparklesIcon, CheckIcon, ArrowPathIcon, ChevronDownIcon, PaperClipIcon, MagnifyingGlassIcon, BuildingLibraryIcon, TagIcon, ArrowsUpDownIcon, CheckCircleIcon, XMarkIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
     bookings: { type: Object, required: true }, // paginator
@@ -32,7 +35,32 @@ const props = defineProps({
     confirmableTotal: { type: Number, default: 0 },
     pendingCount: { type: Number, default: 0 },
     aiEnabled: { type: Boolean, default: false },
+    paperlessEnabled: { type: Boolean, default: false },
+    paperlessUrl: { type: String, default: null },
 });
+
+// Deep link to a booking's linked receipt in Paperless (null when unavailable).
+const receiptUrl = (b) => (props.paperlessUrl && b.paperless_document_id ? `${props.paperlessUrl}/documents/${b.paperless_document_id}/` : null);
+
+// Hover preview of a linked receipt — teleported to <body> so the table's overflow
+// doesn't clip it, positioned just left of the hovered paperclip.
+const preview = ref({ id: null, top: 0, left: 0 });
+const receiptThumb = (id) => paperlessThumb(id).url;
+
+function showPreview(event, id) {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const width = 160;
+    const height = 224;
+    preview.value = {
+        id,
+        left: Math.max(8, rect.left - width - 8),
+        top: Math.min(Math.max(8, rect.top + rect.height / 2 - height / 2), window.innerHeight - height - 8),
+    };
+}
+
+function hidePreview() {
+    preview.value = { ...preview.value, id: null };
+}
 
 // Read-only accounting users see the list but none of the write controls.
 const { canWrite } = useAccountingAccess();
@@ -99,11 +127,22 @@ function reanalyse() {
     }
 }
 
+function relinkReceipts() {
+    router.post(bookingsRelinkReceipts().url, {}, { preserveScroll: true });
+}
+
+// The Auswertung drill-down may pass several accounts; the single-select reflects one
+// (results are already scoped server-side), otherwise „Alle".
+const initialAccount = Array.isArray(props.filters.account)
+    ? (props.filters.account.length === 1 ? String(props.filters.account[0]) : '')
+    : (props.filters.account ?? '');
+
 const filters = reactive({
-    account: props.filters.account ?? '',
+    account: initialAccount,
     category: props.filters.category ?? '',
     kind: props.filters.kind ?? '',
     status: props.filters.status ?? '',
+    paperless: props.filters.paperless ?? '',
     from: props.filters.from ?? '',
     to: props.filters.to ?? '',
     search: props.filters.search ?? '',
@@ -115,6 +154,7 @@ const confidenceDot = { 0: 'bg-red-500', 1: 'bg-amber-500', 2: 'bg-hort-teal-dar
 
 let searchTimer = null;
 const activeFilters = () => Object.fromEntries(Object.entries(filters).filter(([, v]) => v !== '' && v !== null));
+const hasActiveFilters = computed(() => Object.keys(activeFilters()).length > 0);
 
 function apply() {
     router.get(bookingsIndex().url, activeFilters(), { preserveState: true, preserveScroll: true, replace: true });
@@ -185,24 +225,67 @@ function destroy(booking) {
                         </Dropdown>
                     </div>
                     <template v-if="canWrite">
-                        <button
-                            v-if="unconfirmedCount > 0"
-                            type="button"
-                            class="flex items-center gap-1 rounded-lg bg-ink/5 px-3 py-2 text-sm font-medium text-ink transition hover:bg-ink/10"
-                            data-testid="bookings-reanalyse"
-                            @click="reanalyse"
-                        >
-                            <SparklesIcon class="h-4 w-4" /> {{ $t('accounting.bookings.reanalyse') }}
-                        </button>
-                        <Link
-                            v-if="reviewCount > 0"
-                            :href="bookingsReview().url"
-                            class="flex items-center gap-1 rounded-lg bg-amber-100 px-3 py-2 text-sm font-medium text-amber-800 transition hover:bg-amber-200"
-                            data-testid="bookings-review"
-                        >
-                            <ClipboardDocumentCheckIcon class="h-4 w-4" />
-                            {{ $t('accounting.bookings.review_button') }} ({{ reviewCount }})
-                        </Link>
+                        <!-- Review drafts (primary) with the re-run actions under the chevron -->
+                        <div v-if="reviewCount > 0" class="inline-flex items-center">
+                            <Link
+                                :href="bookingsReview().url"
+                                class="flex items-center gap-1 rounded-l-lg bg-amber-100 px-3 py-2 text-sm font-medium text-amber-800 transition hover:bg-amber-200"
+                                data-testid="bookings-review"
+                            >
+                                <ClipboardDocumentCheckIcon class="h-4 w-4" />
+                                {{ $t('accounting.bookings.review_button') }} ({{ reviewCount }})
+                            </Link>
+                            <Dropdown align="right" width="48">
+                                <template #trigger>
+                                    <button
+                                        type="button"
+                                        class="flex items-center rounded-r-lg border-l border-amber-200 bg-amber-100 px-2 py-2 text-amber-800 transition hover:bg-amber-200"
+                                        data-testid="bookings-review-more"
+                                    >
+                                        <ChevronDownIcon class="h-4 w-4" />
+                                    </button>
+                                </template>
+                                <template #content>
+                                    <button
+                                        type="button"
+                                        class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-ink transition hover:bg-ink/5"
+                                        data-testid="bookings-reanalyse"
+                                        @click="reanalyse"
+                                    >
+                                        <SparklesIcon class="h-4 w-4" /> {{ $t('accounting.bookings.reanalyse') }}
+                                    </button>
+                                    <button
+                                        v-if="paperlessEnabled"
+                                        type="button"
+                                        class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-ink transition hover:bg-ink/5"
+                                        data-testid="bookings-relink-receipts"
+                                        @click="relinkReceipts"
+                                    >
+                                        <PaperClipIcon class="h-4 w-4" /> {{ $t('accounting.bookings.relink_receipts') }}
+                                    </button>
+                                </template>
+                            </Dropdown>
+                        </div>
+                        <!-- Nothing suggested yet, but drafts exist → keep the re-run actions reachable -->
+                        <template v-else-if="unconfirmedCount > 0">
+                            <button
+                                type="button"
+                                class="flex items-center gap-1 rounded-lg bg-ink/5 px-3 py-2 text-sm font-medium text-ink transition hover:bg-ink/10"
+                                data-testid="bookings-reanalyse"
+                                @click="reanalyse"
+                            >
+                                <SparklesIcon class="h-4 w-4" /> {{ $t('accounting.bookings.reanalyse') }}
+                            </button>
+                            <button
+                                v-if="paperlessEnabled"
+                                type="button"
+                                class="flex items-center gap-1 rounded-lg bg-ink/5 px-3 py-2 text-sm font-medium text-ink transition hover:bg-ink/10"
+                                data-testid="bookings-relink-receipts"
+                                @click="relinkReceipts"
+                            >
+                                <PaperClipIcon class="h-4 w-4" /> {{ $t('accounting.bookings.relink_receipts') }}
+                            </button>
+                        </template>
                         <!-- Import (most-used) is the primary action; „Neue Buchung" and
                              „Neue Umbuchung" live under the attached „more" chevron. -->
                         <div class="inline-flex items-center">
@@ -230,6 +313,9 @@ function destroy(booking) {
                                     <DropdownLink :href="transfersCreate().url" data-testid="bookings-transfer">
                                         <span class="flex items-center gap-2"><ArrowsRightLeftIcon class="h-4 w-4" /> {{ $t('accounting.transfers.new') }}</span>
                                     </DropdownLink>
+                                    <DropdownLink v-if="paperlessEnabled" :href="paperlessReview().url" data-testid="bookings-assign-receipts">
+                                        <span class="flex items-center gap-2"><PaperClipIcon class="h-4 w-4" /> {{ $t('accounting.paperless_review.nav') }}</span>
+                                    </DropdownLink>
                                 </template>
                             </Dropdown>
                         </div>
@@ -239,27 +325,67 @@ function destroy(booking) {
         </template>
 
         <div class="space-y-4">
-            <!-- Filters -->
-            <div class="grid grid-cols-2 gap-2 rounded-2xl bg-surface p-4 shadow-sm sm:grid-cols-3 lg:grid-cols-7">
-                <select v-model="filters.account" class="rounded-md border-ink/20 text-sm focus:border-hort-teal focus:ring-hort-teal">
-                    <option value="">{{ $t('accounting.bookings.all_accounts') }}</option>
-                    <option v-for="a in filterOptions.accounts" :key="a.id" :value="a.id">{{ a.name }}</option>
-                </select>
-                <select v-model="filters.category" class="rounded-md border-ink/20 text-sm focus:border-hort-teal focus:ring-hort-teal">
-                    <option value="">{{ $t('accounting.bookings.all_categories') }}</option>
-                    <option v-for="c in filterOptions.categories" :key="c.id" :value="c.id">{{ c.path }}</option>
-                </select>
-                <select v-model="filters.kind" class="rounded-md border-ink/20 text-sm focus:border-hort-teal focus:ring-hort-teal">
-                    <option value="">{{ $t('accounting.bookings.all_kinds') }}</option>
-                    <option v-for="k in filterOptions.kinds" :key="k.value" :value="k.value">{{ k.label }}</option>
-                </select>
-                <select v-model="filters.status" class="rounded-md border-ink/20 text-sm focus:border-hort-teal focus:ring-hort-teal">
-                    <option value="">{{ $t('accounting.bookings.all_statuses') }}</option>
-                    <option v-for="s in filterOptions.statusFilter" :key="s.value" :value="s.value">{{ s.label }}</option>
-                </select>
-                <input v-model="filters.from" type="date" :aria-label="$t('accounting.bookings.from')" class="rounded-md border-ink/20 text-sm focus:border-hort-teal focus:ring-hort-teal" />
-                <input v-model="filters.to" type="date" :aria-label="$t('accounting.bookings.to')" class="rounded-md border-ink/20 text-sm focus:border-hort-teal focus:ring-hort-teal" />
-                <input v-model="filters.search" type="search" :placeholder="$t('accounting.bookings.search')" class="col-span-2 rounded-md border-ink/20 text-sm focus:border-hort-teal focus:ring-hort-teal sm:col-span-3 lg:col-span-1" />
+            <!-- Filters: search leads (with date range); filters read as an iconed toolbar below -->
+            <div class="space-y-2 rounded-2xl bg-surface p-4 shadow-sm">
+                <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <div class="relative w-full sm:flex-1">
+                        <MagnifyingGlassIcon class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/40" />
+                        <input v-model="filters.search" type="search" :placeholder="$t('accounting.bookings.search')" class="w-full rounded-md border-ink/20 pl-9 text-sm focus:border-hort-teal focus:ring-hort-teal" />
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <input v-model="filters.from" type="date" :aria-label="$t('accounting.bookings.from')" class="w-full flex-1 rounded-md border-ink/20 text-sm focus:border-hort-teal focus:ring-hort-teal sm:w-40 sm:flex-none" />
+                        <span class="shrink-0 text-ink/40">–</span>
+                        <input v-model="filters.to" type="date" :aria-label="$t('accounting.bookings.to')" class="w-full flex-1 rounded-md border-ink/20 text-sm focus:border-hort-teal focus:ring-hort-teal sm:w-40 sm:flex-none" />
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-2 sm:grid-cols-3" :class="paperlessEnabled ? 'lg:grid-cols-5' : 'lg:grid-cols-4'">
+                    <div class="relative">
+                        <BuildingLibraryIcon class="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/40" />
+                        <select v-model="filters.account" class="w-full rounded-md border-ink/20 pl-8 text-sm focus:border-hort-teal focus:ring-hort-teal">
+                            <option value="">{{ $t('accounting.bookings.all_accounts') }}</option>
+                            <option v-for="a in filterOptions.accounts" :key="a.id" :value="a.id">{{ a.name }}</option>
+                        </select>
+                    </div>
+                    <div class="relative">
+                        <TagIcon class="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/40" />
+                        <select v-model="filters.category" class="w-full rounded-md border-ink/20 pl-8 text-sm focus:border-hort-teal focus:ring-hort-teal">
+                            <option value="">{{ $t('accounting.bookings.all_categories') }}</option>
+                            <option v-for="c in filterOptions.categories" :key="c.id" :value="c.id">{{ c.path }}</option>
+                        </select>
+                    </div>
+                    <div class="relative">
+                        <ArrowsUpDownIcon class="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/40" />
+                        <select v-model="filters.kind" class="w-full rounded-md border-ink/20 pl-8 text-sm focus:border-hort-teal focus:ring-hort-teal">
+                            <option value="">{{ $t('accounting.bookings.all_kinds') }}</option>
+                            <option v-for="k in filterOptions.kinds" :key="k.value" :value="k.value">{{ k.label }}</option>
+                        </select>
+                    </div>
+                    <div class="relative">
+                        <CheckCircleIcon class="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/40" />
+                        <select v-model="filters.status" class="w-full rounded-md border-ink/20 pl-8 text-sm focus:border-hort-teal focus:ring-hort-teal">
+                            <option value="">{{ $t('accounting.bookings.all_statuses') }}</option>
+                            <option v-for="s in filterOptions.statusFilter" :key="s.value" :value="s.value">{{ s.label }}</option>
+                        </select>
+                    </div>
+                    <div v-if="paperlessEnabled" class="relative">
+                        <PaperClipIcon class="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/40" />
+                        <select v-model="filters.paperless" class="w-full rounded-md border-ink/20 pl-8 text-sm focus:border-hort-teal focus:ring-hort-teal">
+                            <option value="">{{ $t('accounting.bookings.all_receipts') }}</option>
+                            <option value="linked">{{ $t('accounting.bookings.with_receipt') }}</option>
+                            <option value="unlinked">{{ $t('accounting.bookings.without_receipt') }}</option>
+                        </select>
+                    </div>
+                </div>
+                <div v-if="hasActiveFilters" class="flex justify-end">
+                    <button
+                        type="button"
+                        class="inline-flex items-center gap-1 rounded-md px-2 py-1 text-sm font-medium text-ink/60 transition hover:bg-ink/5 hover:text-ink"
+                        data-testid="bookings-reset-filters"
+                        @click="reset"
+                    >
+                        <XMarkIcon class="h-4 w-4" /> {{ $t('accounting.bookings.reset_filters') }}
+                    </button>
+                </div>
             </div>
 
             <!-- Bulk-confirm bar -->
@@ -374,13 +500,31 @@ function destroy(booking) {
                                 {{ formatEuro(b.amount_cents) }}
                             </td>
                             <td class="whitespace-nowrap px-3 py-2">
-                                <div v-if="canWrite" class="flex items-center justify-end gap-1">
-                                    <Link v-if="!b.is_transfer" :href="bookingsEdit(b.id).url" class="rounded p-1 text-ink/50 hover:bg-ink/10 hover:text-ink" :aria-label="$t('common.edit')">
-                                        <PencilSquareIcon class="h-4 w-4" />
-                                    </Link>
-                                    <button type="button" class="rounded p-1 text-ink/50 hover:bg-red-50 hover:text-red-600" :aria-label="$t('common.delete')" @click="destroy(b)">
-                                        <TrashIcon class="h-4 w-4" />
-                                    </button>
+                                <div class="flex items-center justify-end gap-1">
+                                    <a
+                                        v-if="receiptUrl(b)"
+                                        :href="receiptUrl(b)"
+                                        target="_blank"
+                                        rel="noopener"
+                                        class="rounded p-1 text-hort-teal-dark hover:bg-ink/10"
+                                        :title="$t('accounting.paperless.has_document')"
+                                        :aria-label="$t('accounting.paperless.open')"
+                                        data-testid="booking-receipt-link"
+                                        @mouseenter="showPreview($event, b.paperless_document_id)"
+                                        @mouseleave="hidePreview"
+                                        @focus="showPreview($event, b.paperless_document_id)"
+                                        @blur="hidePreview"
+                                    >
+                                        <PaperClipIcon class="h-4 w-4" />
+                                    </a>
+                                    <template v-if="canWrite">
+                                        <Link v-if="!b.is_transfer" :href="bookingsEdit(b.id).url" class="rounded p-1 text-ink/50 hover:bg-ink/10 hover:text-ink" :aria-label="$t('common.edit')">
+                                            <PencilSquareIcon class="h-4 w-4" />
+                                        </Link>
+                                        <button type="button" class="rounded p-1 text-ink/50 hover:bg-red-50 hover:text-red-600" :aria-label="$t('common.delete')" @click="destroy(b)">
+                                            <TrashIcon class="h-4 w-4" />
+                                        </button>
+                                    </template>
                                 </div>
                             </td>
                         </tr>
@@ -391,5 +535,20 @@ function destroy(booking) {
             <!-- Pagination -->
             <Pagination :paginator="bookings" />
         </div>
+
+        <!-- Hover preview of a linked receipt (teleported so the table's overflow can't clip it) -->
+        <Teleport to="body">
+            <div
+                v-if="preview.id"
+                class="pointer-events-none fixed z-50"
+                :style="{ top: `${preview.top}px`, left: `${preview.left}px` }"
+            >
+                <img
+                    :src="receiptThumb(preview.id)"
+                    alt=""
+                    class="h-56 w-40 rounded-lg border border-ink/10 bg-surface object-cover object-top shadow-xl ring-1 ring-black/5"
+                />
+            </div>
+        </Teleport>
     </AuthenticatedLayout>
 </template>

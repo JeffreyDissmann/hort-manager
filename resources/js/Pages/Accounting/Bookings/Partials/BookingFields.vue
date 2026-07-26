@@ -5,6 +5,7 @@ import TextInput from '@/Components/TextInput.vue';
 import InputError from '@/Components/InputError.vue';
 import DatePicker from '@/Components/DatePicker.vue';
 import CategorySelect from '@/Components/Accounting/CategorySelect.vue';
+import PaperlessPicker from '@/Components/Accounting/PaperlessPicker.vue';
 import { activeInYear, yearOf } from '@/childActivity';
 
 const props = defineProps({
@@ -18,7 +19,26 @@ const props = defineProps({
     // Show the „Erstattung/Rückzahlung" (reversal) checkbox — manual create/edit only;
     // in review the sign is fixed by the bank and the reversal is derived server-side.
     showReversal: { type: Boolean, default: false },
+    // Paperless document link (hidden unless the integration is configured).
+    paperlessEnabled: { type: Boolean, default: false },
+    paperlessUrl: { type: String, default: null },
 });
+
+// Human-readable counterparty, used to build the receipt-search query.
+const counterpartyLabel = computed(() => {
+    if (props.form.counterparty_child_id) {
+        return props.children.find((c) => c.id === props.form.counterparty_child_id)?.name ?? null;
+    }
+    if (props.form.counterparty_user_id) {
+        return props.users.find((u) => u.id === props.form.counterparty_user_id)?.name ?? null;
+    }
+    return props.form.counterparty_name || null;
+});
+
+// Query for the picker's „similar documents" suggestions: counterparty + purpose.
+const paperlessQuery = computed(() => [counterpartyLabel.value, props.form.purpose].filter(Boolean).join(' ').trim());
+// Valuta (value) date is the receipt's likely date; fall back to the booking date.
+const paperlessNearDate = computed(() => props.form.valuta_date || props.form.booking_date || '');
 
 // Counterparty is a child (income), a linked user (person), free text, or nothing.
 const mode = ref(
@@ -192,5 +212,14 @@ const availableChildren = computed(() => {
             ></textarea>
             <InputError :message="form.errors.comment" class="mt-2" />
         </div>
+
+        <PaperlessPicker
+            v-if="paperlessEnabled"
+            :form="form"
+            :paperless-url="paperlessUrl"
+            :initial-query="paperlessQuery"
+            :amount="form.amount"
+            :near-date="paperlessNearDate"
+        />
     </div>
 </template>

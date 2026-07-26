@@ -135,6 +135,102 @@ it('re-signs the amount when a booking is edited', function () {
     expect($booking->refresh()->amount_cents)->toBe(-4250);
 });
 
+it('links a booking to a paperless document on save', function () {
+    $admin = User::factory()->admin()->accountingWriter()->create();
+    $this->actingAs($admin);
+    $booking = Booking::factory()->expense()->create();
+    $category = Category::factory()->expense()->create();
+
+    $this->put("/accounting/bookings/{$booking->id}", [
+        'account_id' => $booking->account_id,
+        'category_id' => $category->id,
+        'amount' => '19.95',
+        'booking_date' => '2026-03-31',
+        'paperless_document_id' => 57,
+        'paperless_document_title' => 'Kassenbon BLUMENERDE',
+    ])->assertRedirect();
+
+    expect($booking->refresh())
+        ->paperless_document_id->toBe(57)
+        ->paperless_document_title->toBe('Kassenbon BLUMENERDE');
+});
+
+it('unlinks a paperless document when the id is cleared', function () {
+    $admin = User::factory()->admin()->accountingWriter()->create();
+    $this->actingAs($admin);
+    $booking = Booking::factory()->expense()->create([
+        'paperless_document_id' => 57,
+        'paperless_document_title' => 'Kassenbon BLUMENERDE',
+    ]);
+    $category = Category::factory()->expense()->create();
+
+    $this->put("/accounting/bookings/{$booking->id}", [
+        'account_id' => $booking->account_id,
+        'category_id' => $category->id,
+        'amount' => '19.95',
+        'booking_date' => '2026-03-31',
+        'paperless_document_id' => null,
+    ])->assertRedirect();
+
+    expect($booking->refresh())
+        ->paperless_document_id->toBeNull()
+        ->paperless_document_title->toBeNull();
+});
+
+it('rejects a non-integer paperless document id', function () {
+    $admin = User::factory()->admin()->accountingWriter()->create();
+    $this->actingAs($admin);
+    $booking = Booking::factory()->expense()->create();
+
+    $this->put("/accounting/bookings/{$booking->id}", [
+        'account_id' => $booking->account_id,
+        'category_id' => Category::factory()->expense()->create()->id,
+        'amount' => '19.95',
+        'booking_date' => '2026-03-31',
+        'paperless_document_id' => 'not-a-number',
+    ])->assertSessionHasErrors('paperless_document_id');
+});
+
+it('exposes a linked receipt id and the paperless url on the index', function () {
+    config()->set('services.paperless.url', 'https://paperless.test');
+    config()->set('services.paperless.token', 'secret');
+    $admin = User::factory()->admin()->accountingWriter()->create();
+    Booking::factory()->create(['paperless_document_id' => 4]);
+
+    $this->actingAs($admin)
+        ->get('/accounting/bookings')
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('paperlessUrl', 'https://paperless.test')
+            ->where('bookings.data.0.paperless_document_id', 4)
+        );
+});
+
+it('filters to bookings awaiting confirmation via status=review', function () {
+    $admin = User::factory()->admin()->accountingWriter()->create();
+    $this->actingAs($admin);
+    Booking::factory()->draft()->create();
+    Booking::factory()->suggested()->create();
+    Booking::factory()->create(); // confirmed
+
+    $this->get('/accounting/bookings?status=review')
+        ->assertInertia(fn (AssertableInertia $page) => $page->has('bookings.data', 2));
+});
+
+it('filters bookings by whether a receipt is linked', function () {
+    $admin = User::factory()->admin()->accountingWriter()->create();
+    $this->actingAs($admin);
+    Booking::factory()->create(['paperless_document_id' => 4]);
+    Booking::factory()->create(['paperless_document_id' => null]);
+
+    $this->get('/accounting/bookings?paperless=linked')
+        ->assertInertia(fn (AssertableInertia $page) => $page->has('bookings.data', 1)
+            ->where('bookings.data.0.paperless_document_id', 4));
+
+    $this->get('/accounting/bookings?paperless=unlinked')
+        ->assertInertia(fn (AssertableInertia $page) => $page->has('bookings.data', 1)
+            ->where('bookings.data.0.paperless_document_id', null));
+});
+
 it('filters bookings by account', function () {
     $admin = User::factory()->admin()->accountingWriter()->create();
     $this->actingAs($admin);
@@ -145,6 +241,20 @@ it('filters bookings by account', function () {
 
     $this->get('/accounting/bookings?account='.$a->id)
         ->assertInertia(fn (AssertableInertia $page) => $page->has('bookings.data', 1));
+});
+
+it('filters bookings by several accounts (Auswertung drill-down)', function () {
+    $admin = User::factory()->admin()->accountingWriter()->create();
+    $this->actingAs($admin);
+    $a = Account::factory()->create();
+    $b = Account::factory()->create();
+    $c = Account::factory()->create();
+    Booking::factory()->for($a)->create();
+    Booking::factory()->for($b)->create();
+    Booking::factory()->for($c)->create();
+
+    $this->get('/accounting/bookings?account[]='.$a->id.'&account[]='.$b->id)
+        ->assertInertia(fn (AssertableInertia $page) => $page->has('bookings.data', 2));
 });
 
 it('filters suggested bookings by confidence via the status filter', function () {
