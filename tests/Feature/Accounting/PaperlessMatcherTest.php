@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use App\Ai\Agents\PaperlessMatcher as PaperlessMatcherAgent;
+use App\Ai\Agents\ReceiptMatcher;
 use App\Models\Accounting\Booking;
 use App\Models\User;
 use App\Services\Accounting\PaperlessMatcher;
@@ -27,7 +27,7 @@ it('shortlists candidates and lets the AI pick the best match', function () {
         ['id' => 44, 'title' => 'REWE-Einkaufsbeleg Lebensmittel', 'created' => '2026-03-30'],
         ['id' => 50, 'title' => 'Lebensmittel-Einkaufsbeleg', 'created' => '2026-03-28'],
     ]);
-    PaperlessMatcherAgent::fake([['document_id' => 44, 'confidence' => 'high']]);
+    ReceiptMatcher::fake([['document_id' => 44, 'confidence' => 'high']]);
 
     $result = app(PaperlessMatcher::class)->match([
         'purpose' => 'REWE SAGT DANKE',
@@ -46,7 +46,7 @@ it('excludes documents already linked to a booking from matching', function () {
         ['id' => 44, 'title' => 'Already linked', 'created' => '2026-03-30', 'content' => 'x'],
         ['id' => 50, 'title' => 'Free receipt', 'created' => '2026-03-28', 'content' => 'y'],
     ]);
-    PaperlessMatcherAgent::fake([['document_id' => 50, 'confidence' => 'high']]);
+    ReceiptMatcher::fake([['document_id' => 50, 'confidence' => 'high']]);
 
     $result = app(PaperlessMatcher::class)->match(['purpose' => 'REWE']);
 
@@ -56,7 +56,7 @@ it('excludes documents already linked to a booking from matching', function () {
 
 it('returns no best pick when the AI declines', function () {
     fakePaperlessSearch([['id' => 44, 'title' => 'REWE', 'created' => '2026-03-30']]);
-    PaperlessMatcherAgent::fake([['document_id' => null, 'confidence' => 'low']]);
+    ReceiptMatcher::fake([['document_id' => null, 'confidence' => 'low']]);
 
     $result = app(PaperlessMatcher::class)->match(['purpose' => 'unklar', 'counterparty' => 'x']);
 
@@ -76,7 +76,7 @@ it('returns candidates but no best pick when AI is disabled', function () {
 
 it('returns nothing when there are no candidates and never calls the AI', function () {
     fakePaperlessSearch([]);
-    PaperlessMatcherAgent::fake([['document_id' => 44, 'confidence' => 'high']]); // must not be consumed
+    ReceiptMatcher::fake([['document_id' => 44, 'confidence' => 'high']]); // must not be consumed
 
     $result = app(PaperlessMatcher::class)->match(['purpose' => 'nichts']);
 
@@ -93,7 +93,7 @@ it('is empty when the query has no identifying fields', function () {
 it('exposes the suggest endpoint to accounting editors', function () {
     $admin = User::factory()->admin()->accountingWriter()->create();
     fakePaperlessSearch([['id' => 44, 'title' => 'REWE-Beleg', 'created' => '2026-03-30']]);
-    PaperlessMatcherAgent::fake([['document_id' => 44, 'confidence' => 'high']]);
+    ReceiptMatcher::fake([['document_id' => 44, 'confidence' => 'high']]);
 
     $this->actingAs($admin)
         ->postJson('/accounting/paperless/suggest', [

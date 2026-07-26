@@ -3,11 +3,15 @@
 declare(strict_types=1);
 
 use App\Ai\Agents\BookingCategorizer;
-use App\Ai\Agents\PaperlessMatcher as PaperlessMatcherAgent;
+use App\Ai\Agents\ReceiptMatcher;
 use App\Jobs\SuggestBookingCategory;
+use App\Jobs\SyncPaperlessBookingLink;
 use App\Models\Accounting\Booking;
+use App\Services\Accounting\BookingSuggester;
+use App\Services\Accounting\PaperlessMatcher;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Queue;
 
 uses(RefreshDatabase::class);
 
@@ -23,7 +27,7 @@ it('auto-links a high-confidence receipt during the import AI pass', function ()
     Http::fake(['paperless.test/api/documents*' => Http::response([
         'results' => [['id' => 57, 'title' => 'Kassenbon Blumenerde-Kauf', 'created' => '2026-03-31']],
     ])]);
-    PaperlessMatcherAgent::fake([['document_id' => 57, 'confidence' => 'high']]);
+    ReceiptMatcher::fake([['document_id' => 57, 'confidence' => 'high']]);
 
     $booking = Booking::factory()->draft()->create(['purpose' => 'REWE BLUMENERDE']);
 
@@ -34,11 +38,30 @@ it('auto-links a high-confidence receipt during the import AI pass', function ()
         ->paperless_document_title->toBe('Kassenbon Blumenerde-Kauf');
 });
 
+it('dispatches the Paperless write-back after an auto-link', function () {
+    Http::fake(['paperless.test/api/documents*' => Http::response([
+        'results' => [['id' => 57, 'title' => 'Kassenbon Blumenerde-Kauf', 'created' => '2026-03-31']],
+    ])]);
+    ReceiptMatcher::fake([['document_id' => 57, 'confidence' => 'high']]);
+    Queue::fake();
+
+    $booking = Booking::factory()->draft()->create(['purpose' => 'REWE BLUMENERDE']);
+
+    // Run the job body directly so Queue::fake only records the inner write-back dispatch.
+    (new SuggestBookingCategory($booking->id))->handle(
+        app(BookingSuggester::class),
+        app(PaperlessMatcher::class),
+    );
+
+    expect($booking->refresh()->paperless_document_id)->toBe(57);
+    Queue::assertPushed(SyncPaperlessBookingLink::class, fn ($job) => $job->bookingId === $booking->id);
+});
+
 it('does not auto-link a merely medium-confidence match', function () {
     Http::fake(['paperless.test/api/documents*' => Http::response([
         'results' => [['id' => 57, 'title' => 'Kassenbon', 'created' => '2026-03-31']],
     ])]);
-    PaperlessMatcherAgent::fake([['document_id' => 57, 'confidence' => 'medium']]);
+    ReceiptMatcher::fake([['document_id' => 57, 'confidence' => 'medium']]);
 
     $booking = Booking::factory()->draft()->create(['purpose' => 'unklar']);
 

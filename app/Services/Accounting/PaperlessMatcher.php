@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Accounting;
 
-use App\Ai\Agents\PaperlessMatcher as PaperlessMatcherAgent;
+use App\Ai\Agents\ReceiptMatcher;
 use App\Models\Accounting\Booking;
 use Illuminate\Support\Facades\Log;
 use Laravel\Ai\Enums\Lab;
@@ -79,7 +79,7 @@ class PaperlessMatcher
         }
 
         try {
-            $response = (new PaperlessMatcherAgent($candidates))->prompt(
+            $response = (new ReceiptMatcher($candidates))->prompt(
                 json_encode($context, JSON_UNESCAPED_UNICODE),
                 provider: Lab::Ollama,
                 model: (string) config('ai.providers.ollama.model'),

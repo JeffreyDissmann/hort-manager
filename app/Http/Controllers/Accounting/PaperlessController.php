@@ -8,10 +8,11 @@ use App\Http\Controllers\Controller;
 use App\Models\Accounting\Booking;
 use App\Services\Accounting\PaperlessMatcher;
 use App\Services\Accounting\PaperlessService;
+use Illuminate\Http\Client\Response as ClientResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response as HttpResponse;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * Thin proxy between the booking form and the Paperless archive. Search + lookup
@@ -59,29 +60,25 @@ class PaperlessController extends Controller
         return response()->json($found);
     }
 
-    /** Stream the document thumbnail. */
-    public function thumbnail(int $document): StreamedResponse
+    /** Relay the document thumbnail through the app. */
+    public function thumbnail(int $document): HttpResponse
     {
-        return $this->stream($this->paperless->thumbnail($document), 'image/webp');
+        return $this->relay($this->paperless->thumbnail($document), 'image/webp');
     }
 
-    /** Stream the original document file. */
-    public function download(int $document): StreamedResponse
+    /** Relay the original document file through the app. */
+    public function download(int $document): HttpResponse
     {
-        return $this->stream($this->paperless->download($document), 'application/octet-stream');
+        return $this->relay($this->paperless->download($document), 'application/octet-stream');
     }
 
     /** Relay an upstream Paperless binary response, or 404 when it isn't available. */
-    private function stream(?\Illuminate\Http\Client\Response $upstream, string $fallbackType): StreamedResponse
+    private function relay(?ClientResponse $upstream, string $fallbackType): HttpResponse
     {
         abort_if($upstream === null, Response::HTTP_NOT_FOUND);
 
-        $contentType = $upstream->header('Content-Type') ?: $fallbackType;
-
-        return response()->stream(function () use ($upstream): void {
-            echo $upstream->body();
-        }, Response::HTTP_OK, [
-            'Content-Type' => $contentType,
+        return response($upstream->body(), Response::HTTP_OK, [
+            'Content-Type' => $upstream->header('Content-Type') ?: $fallbackType,
             'Cache-Control' => 'private, max-age=300',
         ]);
     }

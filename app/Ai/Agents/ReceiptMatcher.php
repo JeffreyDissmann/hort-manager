@@ -16,7 +16,7 @@ use Laravel\Ai\Promptable;
  * when none convincingly fits. Runs on the same local Ollama model as the app's other
  * AI features.
  */
-class PaperlessMatcher implements Agent, HasStructuredOutput
+class ReceiptMatcher implements Agent, HasStructuredOutput
 {
     use Promptable;
 

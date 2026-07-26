@@ -33,6 +33,8 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 /** Admin-only list + manual entry of ledger bookings. */
 class BookingController extends Controller
 {
+    public function __construct(private readonly PaperlessService $paperless) {}
+
     /** Category id → its child rows, memoised per request (applyFilters runs twice). */
     private ?Collection $childrenByParent = null;
 
@@ -361,8 +363,7 @@ class BookingController extends Controller
                     'active_until' => $c->active_until?->format('Y-m-d'),
                 ]),
             'users' => User::orderBy('name')->get(['id', 'name']),
-            'paperlessEnabled' => app(PaperlessService::class)->enabled(),
-            'paperlessUrl' => app(PaperlessService::class)->enabled() ? rtrim((string) config('services.paperless.url'), '/') : null,
+            ...$this->paperlessProps(),
         ]);
     }
 
@@ -563,9 +564,21 @@ class BookingController extends Controller
                     'active_until' => $c->active_until?->format('Y-m-d'),
                 ]),
             'users' => User::orderBy('name')->get(['id', 'name']),
-            'paperlessEnabled' => app(PaperlessService::class)->enabled(),
-            // Base URL for the „in Paperless öffnen" deep link (null when disabled).
-            'paperlessUrl' => app(PaperlessService::class)->enabled() ? rtrim((string) config('services.paperless.url'), '/') : null,
+            ...$this->paperlessProps(),
+        ];
+    }
+
+    /**
+     * Shared Paperless picker props: whether the integration is on, and the base URL
+     * for the „in Paperless öffnen" deep link (null when disabled).
+     *
+     * @return array{paperlessEnabled: bool, paperlessUrl: ?string}
+     */
+    private function paperlessProps(): array
+    {
+        return [
+            'paperlessEnabled' => $this->paperless->enabled(),
+            'paperlessUrl' => $this->paperless->baseUrl(),
         ];
     }
 

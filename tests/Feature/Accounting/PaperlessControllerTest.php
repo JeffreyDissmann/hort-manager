@@ -74,7 +74,7 @@ it('streams the thumbnail with the upstream content type and no token', function
     $response = $this->actingAs($this->admin)->get('/accounting/paperless/documents/12/thumb');
 
     $response->assertOk()->assertHeader('Content-Type', 'image/webp');
-    expect($response->streamedContent())->toBe('BINARYIMAGE')
+    expect($response->content())->toBe('BINARYIMAGE')
         ->not->toContain('secret-token');
 });
 

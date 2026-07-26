@@ -113,37 +113,10 @@ class PaperlessService
         return $this->stream("documents/{$id}/download/");
     }
 
-    /** Deep link into the Paperless web UI (for users with direct access). */
-    public function deepLink(int $id): ?string
+    /** The Paperless base URL (no trailing slash) for building deep links, or null when disabled. */
+    public function baseUrl(): ?string
     {
-        if (! $this->enabled()) {
-            return null;
-        }
-
-        return rtrim((string) config('services.paperless.url'), '/')."/documents/{$id}/";
-    }
-
-    /**
-     * Accept a bare document id or a Paperless URL (…/documents/123,
-     * …/documents/123/details) and return the id, or null if unrecognisable.
-     */
-    public function parseInput(string $raw): ?int
-    {
-        $raw = trim($raw);
-
-        if ($raw === '') {
-            return null;
-        }
-
-        if (ctype_digit($raw)) {
-            return (int) $raw;
-        }
-
-        if (preg_match('#/documents/(\d+)#', $raw, $matches) === 1) {
-            return (int) $matches[1];
-        }
-
-        return null;
+        return $this->enabled() ? rtrim((string) config('services.paperless.url'), '/') : null;
     }
 
     /**

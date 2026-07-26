@@ -20,7 +20,7 @@ it('is disabled without a url and token', function () {
     expect($service->enabled())->toBeFalse()
         ->and($service->search('rewe'))->toBe([])
         ->and($service->find(1))->toBeNull()
-        ->and($service->deepLink(1))->toBeNull();
+        ->and($service->baseUrl())->toBeNull();
 });
 
 it('maps full-text search results', function () {
@@ -96,18 +96,8 @@ it('returns null for an unknown document', function () {
     expect((new PaperlessService)->find(99))->toBeNull();
 });
 
-it('builds a deep link into the paperless ui', function () {
-    expect((new PaperlessService)->deepLink(12))->toBe('https://paperless.test/documents/12/');
-});
-
-it('parses a bare id or a paperless url', function () {
-    $service = new PaperlessService;
-
-    expect($service->parseInput('12'))->toBe(12)
-        ->and($service->parseInput('https://paperless.test/documents/34'))->toBe(34)
-        ->and($service->parseInput('https://paperless.test/documents/56/details'))->toBe(56)
-        ->and($service->parseInput('nonsense'))->toBeNull()
-        ->and($service->parseInput(''))->toBeNull();
+it('exposes the base url for building deep links', function () {
+    expect((new PaperlessService)->baseUrl())->toBe('https://paperless.test');
 });
 
 it('writes the booking deep-link into the configured custom field, keeping others', function () {
