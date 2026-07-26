@@ -45,11 +45,15 @@ class PaperlessMatcher
     public function match(array $context): array
     {
         $query = $this->query($context);
-        $candidates = $query === '' ? [] : $this->paperless->search($query);
+        // Ask for OCR content too — the model matches on vendor/amount/date, but the
+        // caller only needs the lean fields, so strip content before returning. Skip
+        // documents already linked to another booking.
+        $rich = $query === '' ? [] : $this->paperless->search($query, withContent: true, excludeIds: Booking::linkedDocumentIds());
+        $lean = array_map(fn (array $d): array => ['id' => $d['id'], 'title' => $d['title'], 'created' => $d['created']], $rich);
 
         return [
-            'best' => $candidates === [] ? null : $this->rank($context, $candidates),
-            'candidates' => $candidates,
+            'best' => $rich === [] ? null : $this->rank($context, $rich),
+            'candidates' => $lean,
         ];
     }
 
@@ -94,6 +98,11 @@ class PaperlessMatcher
 
         $match = collect($candidates)->firstWhere('id', (int) $documentId);
 
-        return $match === null ? null : [...$match, 'confidence' => $response['confidence'] ?? null];
+        return $match === null ? null : [
+            'id' => $match['id'],
+            'title' => $match['title'],
+            'created' => $match['created'],
+            'confidence' => $response['confidence'] ?? null,
+        ];
     }
 }

@@ -21,7 +21,7 @@ class PaperlessMatcher implements Agent, HasStructuredOutput
     use Promptable;
 
     /**
-     * @param  list<array{id:int, title:string, created:?string}>  $candidates
+     * @param  list<array{id:int, title:string, created:?string, content?:string}>  $candidates
      */
     public function __construct(private readonly array $candidates) {}
 
@@ -34,8 +34,13 @@ class PaperlessMatcher implements Agent, HasStructuredOutput
     public function instructions(): string
     {
         $candidates = collect($this->candidates)
-            ->map(fn (array $c): string => "  {$c['id']} · ".($c['created'] ?? '?')." · {$c['title']}")
-            ->implode("\n");
+            ->map(function (array $c): string {
+                $line = "  ID {$c['id']} · Datum ".($c['created'] ?? '?')." · Titel: {$c['title']}";
+                $content = trim((string) ($c['content'] ?? ''));
+
+                return $content !== '' ? $line."\n    Beleginhalt: ".preg_replace('/\s+/', ' ', $content) : $line;
+            })
+            ->implode("\n\n");
 
         return <<<TXT
         Du ordnest einer Buchhaltungs-Buchung den passenden Beleg (Rechnung, Kassenbon,
@@ -43,16 +48,19 @@ class PaperlessMatcher implements Agent, HasStructuredOutput
 
         Regeln:
         - Wähle nur eine Dokument-ID aus der Liste unten. Erfinde niemals IDs.
-        - Der Beleg muss zur Buchung passen: Händler/Zweck ähnlich UND das Belegdatum
-          liegt nahe am Buchungsdatum (meist wenige Tage davor).
+        - Der Beleg muss zur Buchung passen. Prüfe im „Beleginhalt" (OCR-Text):
+          1. HÄNDLER/ZWECK stimmen überein,
+          2. der BETRAG der Buchung taucht im Beleg auf (z. B. „SUMME EUR 19,95"),
+          3. das Belegdatum liegt nahe am Buchungsdatum (meist wenige Tage davor).
+        - Der Betrag ist das stärkste Signal: passt er exakt, ist das ein klarer Treffer.
         - Passt kein Dokument überzeugend, gib document_id = null zurück. Rate nicht.
         - Schätze deine Sicherheit ehrlich ein:
-          „high": Händler/Zweck und Datum passen eindeutig.
-          „medium": Plausibel, aber nicht sicher.
+          „high": Betrag stimmt überein UND Händler/Zweck passen.
+          „medium": Händler passt, aber der Betrag ist nicht eindeutig.
           „low": Unsicher.
-          Sei bei „high" streng – nur bei einem klaren Treffer.
+          Sei bei „high" streng.
 
-        Kandidaten-Dokumente (id · Datum · Titel):
+        Kandidaten-Dokumente:
         {$candidates}
 
         Gib genau ein Ergebnis-Objekt für die eine übergebene Buchung zurück.

@@ -39,6 +39,40 @@ it('maps full-text search results', function () {
         ->and($results[0])->toBe(['id' => 12, 'title' => 'REWE Beleg', 'created' => '2026-05-01T00:00:00Z']);
 });
 
+it('drops excluded (already-linked) documents from the results', function () {
+    Http::fake([
+        'paperless.test/api/documents/*' => Http::response([
+            'results' => [
+                ['id' => 12, 'title' => 'A', 'created' => null],
+                ['id' => 34, 'title' => 'B', 'created' => null],
+                ['id' => 56, 'title' => 'C', 'created' => null],
+            ],
+        ]),
+    ]);
+
+    $results = (new PaperlessService)->search('x', excludeIds: [34]);
+
+    expect(collect($results)->pluck('id')->all())->toBe([12, 56]);
+});
+
+it('asks Paperless to omit documents that already have the booking field set', function () {
+    config()->set('services.paperless.booking_field', 4);
+    Http::fake(['paperless.test/api/documents*' => Http::response(['results' => []])]);
+
+    (new PaperlessService)->search('rewe');
+
+    Http::assertSent(fn ($request) => $request['custom_field_query'] === json_encode([4, 'exists', false]));
+});
+
+it('omits the custom-field filter when no booking field is configured', function () {
+    config()->set('services.paperless.booking_field', null);
+    Http::fake(['paperless.test/api/documents*' => Http::response(['results' => []])]);
+
+    (new PaperlessService)->search('rewe');
+
+    Http::assertSent(fn ($request) => ! isset($request['custom_field_query']));
+});
+
 it('sends the token as a Token header, not Bearer', function () {
     Http::fake(['paperless.test/api/*' => Http::response(['results' => []])]);
 

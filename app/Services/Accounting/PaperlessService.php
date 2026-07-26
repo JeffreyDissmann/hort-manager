@@ -25,11 +25,15 @@ class PaperlessService
     }
 
     /**
-     * Full-text search. Returns a lean list of hits for the picker/matcher.
+     * Full-text search. Returns a lean list of hits for the picker; pass
+     * $withContent to also include an OCR snippet (used by the AI matcher to check
+     * vendor/amount/date — Paperless already returns it, so this costs no extra call).
+     * $excludeIds drops documents already linked to a booking so they aren't offered twice.
      *
-     * @return list<array{id:int, title:string, created:?string}>
+     * @param  list<int>  $excludeIds
+     * @return list<array{id:int, title:string, created:?string, content?:string}>
      */
-    public function search(string $query, int $limit = 8): array
+    public function search(string $query, int $limit = 8, bool $withContent = false, array $excludeIds = []): array
     {
         $query = trim($query);
 
@@ -38,16 +42,32 @@ class PaperlessService
         }
 
         try {
-            $response = Http::paperless()->get('documents/', [
+            $params = [
                 'query' => $query,
-                'page_size' => $limit,
-            ]);
+                // Over-fetch so the excluded (already-linked) ones don't shrink the list.
+                'page_size' => min($limit + count($excludeIds), 100),
+            ];
+
+            // Ask Paperless itself to omit documents that already carry a booking link
+            // (the custom field is set) — covers links made by any tool, not just this app.
+            $fieldId = $this->bookingFieldId();
+            if ($fieldId !== null) {
+                $params['custom_field_query'] = json_encode([$fieldId, 'exists', false]);
+            }
+
+            $response = Http::paperless()->get('documents/', $params);
 
             if ($response->failed()) {
                 return [];
             }
 
-            return array_map($this->mapDocument(...), $response->json('results', []));
+            $exclude = array_flip($excludeIds);
+            $results = array_values(array_filter(
+                array_map(fn (array $d): array => $this->mapDocument($d, $withContent), $response->json('results', [])),
+                fn (array $d): bool => ! isset($exclude[$d['id']]),
+            ));
+
+            return array_slice($results, 0, $limit);
         } catch (Throwable $e) {
             Log::warning('Paperless search failed: '.$e->getMessage());
 
@@ -191,14 +211,21 @@ class PaperlessService
 
     /**
      * @param  array<string, mixed>  $document
-     * @return array{id:int, title:string, created:?string}
+     * @return array{id:int, title:string, created:?string, content?:string}
      */
-    private function mapDocument(array $document): array
+    private function mapDocument(array $document, bool $withContent = false): array
     {
-        return [
+        $mapped = [
             'id' => (int) ($document['id'] ?? 0),
             'title' => (string) ($document['title'] ?? ''),
             'created' => $document['created'] ?? null,
         ];
+
+        // A trimmed OCR snippet — enough to carry the vendor, total and date.
+        if ($withContent) {
+            $mapped['content'] = mb_substr(trim((string) ($document['content'] ?? '')), 0, 600);
+        }
+
+        return $mapped;
     }
 }

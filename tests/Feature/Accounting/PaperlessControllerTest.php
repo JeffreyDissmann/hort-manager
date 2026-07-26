@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Models\Accounting\Booking;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -25,6 +26,25 @@ it('proxies a full-text search', function () {
         ->getJson('/accounting/paperless/search?q=rewe')
         ->assertOk()
         ->assertJson(['results' => [['id' => 12, 'title' => 'REWE Beleg']]]);
+});
+
+it('hides documents already linked to a booking from search', function () {
+    Booking::factory()->create(['paperless_document_id' => 12]);
+
+    Http::fake([
+        'paperless.test/api/documents*' => Http::response([
+            'results' => [
+                ['id' => 12, 'title' => 'Already linked', 'created' => null],
+                ['id' => 34, 'title' => 'Free', 'created' => null],
+            ],
+        ]),
+    ]);
+
+    $this->actingAs($this->admin)
+        ->getJson('/accounting/paperless/search?q=beleg')
+        ->assertOk()
+        ->assertJsonPath('results.0.id', 34)
+        ->assertJsonCount(1, 'results');
 });
 
 it('resolves a document by id', function () {

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Accounting;
 
 use App\Http\Controllers\Controller;
+use App\Models\Accounting\Booking;
 use App\Services\Accounting\PaperlessMatcher;
 use App\Services\Accounting\PaperlessService;
 use Illuminate\Http\JsonResponse;
@@ -22,12 +23,14 @@ class PaperlessController extends Controller
 {
     public function __construct(private readonly PaperlessService $paperless) {}
 
-    /** Full-text search for the picker dropdown. */
+    /** Full-text search for the picker dropdown; already-linked documents are hidden. */
     public function search(Request $request): JsonResponse
     {
         $query = (string) $request->query('q', '');
 
-        return response()->json(['results' => $this->paperless->search($query)]);
+        return response()->json([
+            'results' => $this->paperless->search($query, excludeIds: Booking::linkedDocumentIds()),
+        ]);
     }
 
     /**

@@ -81,6 +81,22 @@ class Booking extends Model
         $query->where('status', BookingStatus::Confirmed);
     }
 
+    /**
+     * The Paperless document ids already linked to a booking — so search/AI matching
+     * don't offer a receipt that's already attached elsewhere.
+     *
+     * @return list<int>
+     */
+    public static function linkedDocumentIds(): array
+    {
+        return static::query()
+            ->whereNotNull('paperless_document_id')
+            ->distinct()
+            ->pluck('paperless_document_id')
+            ->map(fn ($id): int => (int) $id)
+            ->all();
+    }
+
     /** @param Builder<Booking> $query */
     public function scopeDraft(Builder $query): void
     {

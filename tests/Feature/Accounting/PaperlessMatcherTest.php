@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Ai\Agents\PaperlessMatcher as PaperlessMatcherAgent;
+use App\Models\Accounting\Booking;
 use App\Models\User;
 use App\Services\Accounting\PaperlessMatcher;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -37,6 +38,20 @@ it('shortlists candidates and lets the AI pick the best match', function () {
 
     expect($result['candidates'])->toHaveCount(2)
         ->and($result['best'])->toMatchArray(['id' => 44, 'title' => 'REWE-Einkaufsbeleg Lebensmittel', 'confidence' => 'high']);
+});
+
+it('excludes documents already linked to a booking from matching', function () {
+    Booking::factory()->create(['paperless_document_id' => 44]);
+    fakePaperlessSearch([
+        ['id' => 44, 'title' => 'Already linked', 'created' => '2026-03-30', 'content' => 'x'],
+        ['id' => 50, 'title' => 'Free receipt', 'created' => '2026-03-28', 'content' => 'y'],
+    ]);
+    PaperlessMatcherAgent::fake([['document_id' => 50, 'confidence' => 'high']]);
+
+    $result = app(PaperlessMatcher::class)->match(['purpose' => 'REWE']);
+
+    expect(collect($result['candidates'])->pluck('id')->all())->toBe([50])
+        ->and($result['best']['id'])->toBe(50);
 });
 
 it('returns no best pick when the AI declines', function () {
