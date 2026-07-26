@@ -141,6 +141,7 @@ return [
         'review_button' => 'Review drafts',
         'reanalyse' => 'Re-analyse',
         'reanalyse_confirm' => 'Have the AI re-assess all unconfirmed bookings?',
+        'relink_receipts' => 'Link receipts',
         'status' => 'Review status',
         'selected_count' => ':count selected',
         'select_all_matching' => 'Select all :count',

@@ -9,10 +9,12 @@ use App\Enums\BookingStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Accounting\StoreImportMappingRequest;
 use App\Http\Requests\Accounting\StoreImportRequest;
+use App\Jobs\LinkBookingReceipt;
 use App\Jobs\SuggestBookingCategory;
 use App\Models\Accounting\Account;
 use App\Models\Accounting\Booking;
 use App\Models\Accounting\Import;
+use App\Services\Accounting\PaperlessService;
 use App\Support\Accounting\CsvReader;
 use App\Support\Accounting\StatementMapper;
 use Illuminate\Http\RedirectResponse;
@@ -131,7 +133,7 @@ class ImportController extends Controller
             'skipped_rows' => $skipped,
         ]);
 
-        $this->queueSuggestions($drafts);
+        $this->enrichDrafts($drafts);
 
         return redirect()->route('accounting.import.show', $import);
     }
@@ -162,7 +164,7 @@ class ImportController extends Controller
             'duplicate_count' => max(0, $import->duplicate_count - $created->count()),
         ]);
 
-        $this->queueSuggestions($created);
+        $this->enrichDrafts($created);
 
         return back()->with('status', __('flash.import_skipped_added', ['count' => $created->count()]));
     }
@@ -190,13 +192,18 @@ class ImportController extends Controller
     }
 
     /**
-     * Queue the AI pass: one job per draft, globally serialized (one Ollama call at a
-     * time). Drafts flip to "suggested" as each completes. Off in tests / when Ollama is off.
+     * Enrich fresh drafts with two independent best-effort steps. The deterministic
+     * Paperless receipt link goes first: it's fast and unlocked, so receipts appear
+     * right away instead of waiting behind the slow, serialized (Ollama) AI backlog.
      *
      * @param  Collection<int, Booking>  $drafts
      */
-    private function queueSuggestions(Collection $drafts): void
+    private function enrichDrafts(Collection $drafts): void
     {
+        if (app(PaperlessService::class)->enabled()) {
+            $drafts->each(fn (Booking $b) => LinkBookingReceipt::dispatch($b->id));
+        }
+
         if (config('accounting.ai_suggestions')) {
             $drafts->each(fn (Booking $b) => SuggestBookingCategory::dispatch($b->id));
         }

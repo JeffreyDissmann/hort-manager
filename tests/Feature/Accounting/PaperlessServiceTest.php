@@ -133,6 +133,39 @@ it('skips the amount query when no amount field is configured', function () {
     Http::assertSentCount(1);
 });
 
+it('returns a confident match only for a unique exact-amount document', function () {
+    config()->set('services.paperless.amount_field', 1);
+
+    Http::fake(['paperless.test/api/documents*' => Http::response([
+        'results' => [['id' => 4, 'title' => 'Kassenbon', 'created' => '2026-01-07']],
+    ])]);
+
+    $match = (new PaperlessService)->confidentMatch(85.76, '2026-01-07');
+
+    expect($match)->toMatchArray(['id' => 4, 'title' => 'Kassenbon']);
+    Http::assertSent(fn ($r) => ($r['custom_field_query'] ?? null) === json_encode([1, 'exact', '85.76'])
+        && ($r['created__date__gte'] ?? null) === '2025-12-31');
+});
+
+it('returns no confident match when several documents share the amount', function () {
+    config()->set('services.paperless.amount_field', 1);
+
+    Http::fake(['paperless.test/api/documents*' => Http::response([
+        'results' => [
+            ['id' => 4, 'title' => 'A', 'created' => '2026-01-07'],
+            ['id' => 5, 'title' => 'B', 'created' => '2026-01-08'],
+        ],
+    ])]);
+
+    expect((new PaperlessService)->confidentMatch(85.76, '2026-01-07'))->toBeNull();
+});
+
+it('returns no confident match without an amount field', function () {
+    Http::preventStrayRequests();
+
+    expect((new PaperlessService)->confidentMatch(85.76, '2026-01-07'))->toBeNull();
+});
+
 it('extracts the document amount from the monetary custom field', function () {
     config()->set('services.paperless.amount_field', 1);
     Http::fake(['paperless.test/api/documents*' => Http::response(['results' => [

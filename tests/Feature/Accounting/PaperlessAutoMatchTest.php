@@ -2,13 +2,12 @@
 
 declare(strict_types=1);
 
-use App\Ai\Agents\BookingCategorizer;
-use App\Ai\Agents\ReceiptMatcher;
-use App\Jobs\SuggestBookingCategory;
+use App\Enums\BookingStatus;
+use App\Jobs\LinkBookingReceipt;
 use App\Jobs\SyncPaperlessBookingLink;
 use App\Models\Accounting\Booking;
-use App\Services\Accounting\BookingSuggester;
-use App\Services\Accounting\PaperlessMatcher;
+use App\Models\User;
+use App\Services\Accounting\PaperlessService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
@@ -19,66 +18,92 @@ beforeEach(function () {
     config()->set('services.paperless.url', 'https://paperless.test');
     config()->set('services.paperless.token', 'secret-token');
     config()->set('services.paperless.booking_field', null);
-    config()->set('services.paperless.amount_field', null);
-    config()->set('accounting.ai_suggestions', true);
-    // The category suggester runs first; keep it a no-op so we isolate the receipt match.
-    BookingCategorizer::fake([[]]);
+    config()->set('services.paperless.amount_field', 1);
 });
 
-it('auto-links a high-confidence receipt during the import AI pass', function () {
+function runLink(int $bookingId): void
+{
+    (new LinkBookingReceipt($bookingId))->handle(app(PaperlessService::class));
+}
+
+it('links a unique exact-amount receipt to an unconfirmed booking', function () {
     Http::fake(['paperless.test/api/documents*' => Http::response([
-        'results' => [['id' => 57, 'title' => 'Kassenbon Blumenerde-Kauf', 'created' => '2026-03-31']],
+        'results' => [['id' => 4, 'title' => 'Kassenbon', 'created' => '2026-01-07', 'custom_fields' => [['field' => 1, 'value' => 'EUR85.76']]]],
     ])]);
-    ReceiptMatcher::fake([['document_id' => 57, 'confidence' => 'high']]);
-
-    $booking = Booking::factory()->draft()->create(['purpose' => 'REWE BLUMENERDE']);
-
-    SuggestBookingCategory::dispatchSync($booking->id);
-
-    expect($booking->refresh())
-        ->paperless_document_id->toBe(57)
-        ->paperless_document_title->toBe('Kassenbon Blumenerde-Kauf');
-});
-
-it('dispatches the Paperless write-back after an auto-link', function () {
-    Http::fake(['paperless.test/api/documents*' => Http::response([
-        'results' => [['id' => 57, 'title' => 'Kassenbon Blumenerde-Kauf', 'created' => '2026-03-31']],
-    ])]);
-    ReceiptMatcher::fake([['document_id' => 57, 'confidence' => 'high']]);
     Queue::fake();
 
-    $booking = Booking::factory()->draft()->create(['purpose' => 'REWE BLUMENERDE']);
+    $booking = Booking::factory()->draft()->create(['amount_cents' => -8576, 'booking_date' => '2026-01-09', 'valuta_date' => '2026-01-07']);
 
-    // Run the job body directly so Queue::fake only records the inner write-back dispatch.
-    (new SuggestBookingCategory($booking->id))->handle(
-        app(BookingSuggester::class),
-        app(PaperlessMatcher::class),
-    );
+    runLink($booking->id);
 
-    expect($booking->refresh()->paperless_document_id)->toBe(57);
+    expect($booking->refresh())
+        ->paperless_document_id->toBe(4)
+        ->paperless_document_title->toBe('Kassenbon');
     Queue::assertPushed(SyncPaperlessBookingLink::class, fn ($job) => $job->bookingId === $booking->id);
 });
 
-it('does not auto-link a merely medium-confidence match', function () {
+it('does not link when several documents share the amount (ambiguous)', function () {
     Http::fake(['paperless.test/api/documents*' => Http::response([
-        'results' => [['id' => 57, 'title' => 'Kassenbon', 'created' => '2026-03-31']],
+        'results' => [
+            ['id' => 4, 'title' => 'A', 'created' => '2026-01-07', 'custom_fields' => [['field' => 1, 'value' => 'EUR85.76']]],
+            ['id' => 5, 'title' => 'B', 'created' => '2026-01-08', 'custom_fields' => [['field' => 1, 'value' => 'EUR85.76']]],
+        ],
     ])]);
-    ReceiptMatcher::fake([['document_id' => 57, 'confidence' => 'medium']]);
 
-    $booking = Booking::factory()->draft()->create(['purpose' => 'unklar']);
+    $booking = Booking::factory()->draft()->create(['amount_cents' => -8576, 'valuta_date' => '2026-01-07']);
 
-    SuggestBookingCategory::dispatchSync($booking->id);
+    runLink($booking->id);
 
     expect($booking->refresh()->paperless_document_id)->toBeNull();
 });
 
-it('leaves the booking unlinked when Paperless is disabled', function () {
+it('does not link a confirmed booking', function () {
+    Http::fake(['paperless.test/api/documents*' => Http::response([
+        'results' => [['id' => 4, 'title' => 'Kassenbon', 'created' => '2026-01-07', 'custom_fields' => [['field' => 1, 'value' => 'EUR85.76']]]],
+    ])]);
+
+    $booking = Booking::factory()->create(['status' => BookingStatus::Confirmed, 'amount_cents' => -8576, 'valuta_date' => '2026-01-07']);
+
+    runLink($booking->id);
+
+    expect($booking->refresh()->paperless_document_id)->toBeNull();
+});
+
+it('does not link when no receipt matches the amount', function () {
+    Http::fake(['paperless.test/api/documents*' => Http::response(['results' => []])]);
+
+    $booking = Booking::factory()->draft()->create(['amount_cents' => -8576, 'valuta_date' => '2026-01-07']);
+
+    runLink($booking->id);
+
+    expect($booking->refresh()->paperless_document_id)->toBeNull();
+});
+
+it('does nothing when Paperless is disabled', function () {
     config()->set('services.paperless.url', null);
     Http::preventStrayRequests();
 
-    $booking = Booking::factory()->draft()->create(['purpose' => 'REWE']);
+    $booking = Booking::factory()->draft()->create(['amount_cents' => -8576, 'valuta_date' => '2026-01-07']);
 
-    SuggestBookingCategory::dispatchSync($booking->id);
+    runLink($booking->id);
 
     expect($booking->refresh()->paperless_document_id)->toBeNull();
+});
+
+it('the relink button queues a receipt job per unconfirmed unlinked booking', function () {
+    Queue::fake();
+    $admin = User::factory()->admin()->accountingWriter()->create();
+
+    $draft = Booking::factory()->draft()->create();
+    $suggested = Booking::factory()->suggested()->create();
+    Booking::factory()->create(); // confirmed — excluded
+    Booking::factory()->draft()->create(['paperless_document_id' => 9]); // already linked — excluded
+
+    $this->actingAs($admin)
+        ->post('/accounting/bookings/relink-receipts')
+        ->assertRedirect();
+
+    Queue::assertPushed(LinkBookingReceipt::class, 2);
+    Queue::assertPushed(LinkBookingReceipt::class, fn ($job) => $job->bookingId === $draft->id);
+    Queue::assertPushed(LinkBookingReceipt::class, fn ($job) => $job->bookingId === $suggested->id);
 });

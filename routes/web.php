@@ -175,6 +175,8 @@ Route::middleware('auth')->group(function () {
             Route::patch('bookings/{booking}/review', [BookingController::class, 'reviewSave'])->name('bookings.review-save');
             // Re-run the AI over all unconfirmed bookings.
             Route::post('bookings/reanalyse', [BookingController::class, 'reanalyse'])->name('bookings.reanalyse');
+            // Re-run the deterministic Paperless receipt link over unconfirmed bookings.
+            Route::post('bookings/relink-receipts', [BookingController::class, 'relinkReceipts'])->name('bookings.relink-receipts');
             // Bulk-confirm bookings from the overview.
             Route::post('bookings/confirm', [BookingController::class, 'bulkConfirm'])->name('bookings.bulk-confirm');
             // Reclassify an existing booking as an internal transfer to another account.

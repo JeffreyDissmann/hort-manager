@@ -68,14 +68,8 @@ class PaperlessService
 
         // 1. Exact amount match on the configured monetary field — the strongest signal.
         $results = [];
-        $amountField = $this->amountFieldId();
-        if ($amountField !== null && $amount !== null && $amount > 0) {
-            $conditions = [[$amountField, 'exact', number_format($amount, 2, '.', '')]];
-            if (($bookingField = $this->bookingFieldId()) !== null) {
-                $conditions[] = [$bookingField, 'exists', false];
-            }
-            $query = count($conditions) > 1 ? ['AND', $conditions] : $conditions[0];
-            $results = $this->request(['custom_field_query' => json_encode($query)], $limit, $withContent, $withCorrespondent, $excludeIds);
+        if ($amount !== null && $amount > 0 && ($amountQuery = $this->amountUnlinkedQuery($amount)) !== null) {
+            $results = $this->request(['custom_field_query' => $amountQuery], $limit, $withContent, $withCorrespondent, $excludeIds);
         }
 
         // 2. Full-text query within a date window around the reference date — the fallback.
@@ -98,6 +92,58 @@ class PaperlessService
         }
 
         return $results;
+    }
+
+    /**
+     * The one confident, deterministic auto-link candidate for a booking: the single
+     * unlinked document whose amount custom field exactly equals the booking amount,
+     * within the valuta date window. Null when there's no amount field, no match, or the
+     * match is ambiguous (several same-amount documents) — those are left for the user.
+     *
+     * @param  list<int>  $excludeIds
+     * @return array{id:int, title:string, created:?string}|null
+     */
+    public function confidentMatch(?float $amount, ?string $nearDate, array $excludeIds = []): ?array
+    {
+        if (! $this->enabled() || $amount === null || $amount <= 0) {
+            return null;
+        }
+
+        $amountQuery = $this->amountUnlinkedQuery($amount);
+        if ($amountQuery === null) {
+            return null;
+        }
+
+        $params = ['custom_field_query' => $amountQuery];
+        if ($nearDate !== null && $nearDate !== '') {
+            $reference = Carbon::parse($nearDate);
+            $params['created__date__gte'] = $reference->copy()->subDays(self::NEAR_WINDOW_DAYS)->toDateString();
+            $params['created__date__lte'] = $reference->copy()->addDays(self::NEAR_WINDOW_DAYS)->toDateString();
+        }
+
+        // Fetch two so an ambiguous (multiple same-amount) match can be detected and skipped.
+        $results = $this->request($params, 2, false, false, $excludeIds);
+
+        return count($results) === 1 ? $results[0] : null;
+    }
+
+    /**
+     * The custom_field_query for „amount equals $amount AND not already linked", or null
+     * when no amount custom field is configured.
+     */
+    private function amountUnlinkedQuery(float $amount): ?string
+    {
+        $amountField = $this->amountFieldId();
+        if ($amountField === null) {
+            return null;
+        }
+
+        $conditions = [[$amountField, 'exact', number_format($amount, 2, '.', '')]];
+        if (($bookingField = $this->bookingFieldId()) !== null) {
+            $conditions[] = [$bookingField, 'exists', false];
+        }
+
+        return json_encode(count($conditions) > 1 ? ['AND', $conditions] : $conditions[0]);
     }
 
     /**

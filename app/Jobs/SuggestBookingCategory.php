@@ -4,10 +4,8 @@ declare(strict_types=1);
 
 namespace App\Jobs;
 
-use App\Enums\BookingStatus;
 use App\Models\Accounting\Booking;
 use App\Services\Accounting\BookingSuggester;
-use App\Services\Accounting\PaperlessMatcher;
 use DateTimeInterface;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -49,51 +47,12 @@ class SuggestBookingCategory implements ShouldQueue
         return [(new WithoutOverlapping('ollama-suggest'))->releaseAfter(3)->expireAfter(120)];
     }
 
-    public function handle(BookingSuggester $suggester, PaperlessMatcher $matcher): void
+    public function handle(BookingSuggester $suggester): void
     {
         $booking = Booking::find($this->bookingId);
 
-        if (! $booking) {
-            return;
-        }
-
-        $suggester->suggest($booking);
-
-        $this->autoLinkReceipt($booking->refresh(), $matcher);
-    }
-
-    /**
-     * Best-effort: link the archived receipt to a freshly-imported draft, but only on a
-     * high-confidence match so a wrong document is never auto-attached (the reviewer can
-     * still link one by hand). No-op when Paperless is off or nothing convincingly fits.
-     */
-    private function autoLinkReceipt(Booking $booking, PaperlessMatcher $matcher): void
-    {
-        // Only unreviewed rows that don't already carry a link.
-        if (! in_array($booking->status, [BookingStatus::Draft, BookingStatus::Suggested], true) || $booking->paperless_document_id) {
-            return;
-        }
-
-        $best = $matcher->forBooking($booking)['best'];
-
-        if ($best === null || ($best['confidence'] ?? null) !== 'high') {
-            return;
-        }
-
-        // Conditional update: never overwrite a link a reviewer added meanwhile, and
-        // never touch a booking already confirmed while the (slow) AI call ran.
-        $linked = Booking::whereKey($booking->id)
-            ->whereIn('status', [BookingStatus::Draft, BookingStatus::Suggested])
-            ->whereNull('paperless_document_id')
-            ->update([
-                'paperless_document_id' => $best['id'],
-                'paperless_document_title' => $best['title'],
-            ]);
-
-        // Write the reverse link back into Paperless (query-builder update above skips
-        // model events, so dispatch the sync explicitly).
-        if ($linked) {
-            SyncPaperlessBookingLink::dispatch($booking->id);
+        if ($booking) {
+            $suggester->suggest($booking);
         }
     }
 }

@@ -44,6 +44,8 @@ return [
     'booking_updated' => 'Booking saved.',
     'booking_deleted' => 'Booking deleted.',
     'bookings_reanalysing' => ':count bookings are being re-analysed by the AI.',
+    'receipts_relinking' => 'Looking for receipts on :count bookings.',
+    'paperless_disabled' => 'Paperless is not configured.',
     'bookings_confirmed' => ':count bookings confirmed.',
     'ai_disabled' => 'AI analysis is currently disabled.',
     'transfer_created' => 'Transfer created.',

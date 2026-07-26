@@ -10,6 +10,7 @@ use App\Enums\CategoryDirection;
 use App\Enums\SuggestionConfidence;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Accounting\BookingRequest;
+use App\Jobs\LinkBookingReceipt;
 use App\Jobs\SuggestBookingCategory;
 use App\Jobs\SyncPaperlessBookingLink;
 use App\Models\Accounting\Account;
@@ -101,6 +102,7 @@ class BookingController extends Controller
             // drain, so freshly-analysed rows appear without a manual reload.
             'pendingCount' => Booking::where('status', BookingStatus::Draft)->count(),
             'aiEnabled' => (bool) config('accounting.ai_suggestions'),
+            'paperlessEnabled' => $this->paperless->enabled(),
             // How many unconfirmed+categorised bookings match the current filter
             // (the count „select all matching" would bulk-confirm).
             'confirmableTotal' => Booking::needsReview()->whereNotNull('category_id')
@@ -419,6 +421,28 @@ class BookingController extends Controller
         }
 
         return back()->with('status', __('flash.bookings_reanalysing', ['count' => $ids->count()]));
+    }
+
+    /**
+     * Re-run the deterministic Paperless receipt link over every unconfirmed, unlinked
+     * booking (transfers excluded). No AI — just an exact amount + valuta-date match.
+     */
+    public function relinkReceipts(): RedirectResponse
+    {
+        if (! $this->paperless->enabled()) {
+            return back()->with('status', __('flash.paperless_disabled'));
+        }
+
+        $ids = Booking::needsReview()
+            ->whereNull('paperless_document_id')
+            ->where('kind', '!=', BookingKind::Transfer)
+            ->pluck('id');
+
+        foreach ($ids as $id) {
+            LinkBookingReceipt::dispatch($id);
+        }
+
+        return back()->with('status', __('flash.receipts_relinking', ['count' => $ids->count()]));
     }
 
     /**

@@ -141,6 +141,7 @@ return [
         'review_button' => 'Entwürfe prüfen',
         'reanalyse' => 'Neu analysieren',
         'reanalyse_confirm' => 'Alle nicht bestätigten Buchungen von der KI neu bewerten lassen?',
+        'relink_receipts' => 'Belege verknüpfen',
         'status' => 'Prüfstatus',
         'selected_count' => ':count ausgewählt',
         'select_all_matching' => 'Alle :count auswählen',

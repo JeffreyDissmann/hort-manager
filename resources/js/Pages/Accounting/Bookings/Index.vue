@@ -16,6 +16,7 @@ import {
     destroy as bookingsDestroy,
     review as bookingsReview,
     reanalyse as bookingsReanalyse,
+    relinkReceipts as bookingsRelinkReceipts,
     bulkConfirm as bookingsBulkConfirm,
     download as bookingsExport,
 } from '@/routes/accounting/bookings';
@@ -32,6 +33,7 @@ const props = defineProps({
     confirmableTotal: { type: Number, default: 0 },
     pendingCount: { type: Number, default: 0 },
     aiEnabled: { type: Boolean, default: false },
+    paperlessEnabled: { type: Boolean, default: false },
 });
 
 // Read-only accounting users see the list but none of the write controls.
@@ -97,6 +99,10 @@ function reanalyse() {
     if (confirm(t('accounting.bookings.reanalyse_confirm'))) {
         router.post(bookingsReanalyse().url, {}, { preserveScroll: true });
     }
+}
+
+function relinkReceipts() {
+    router.post(bookingsRelinkReceipts().url, {}, { preserveScroll: true });
 }
 
 const filters = reactive({
@@ -193,6 +199,15 @@ function destroy(booking) {
                             @click="reanalyse"
                         >
                             <SparklesIcon class="h-4 w-4" /> {{ $t('accounting.bookings.reanalyse') }}
+                        </button>
+                        <button
+                            v-if="paperlessEnabled && unconfirmedCount > 0"
+                            type="button"
+                            class="flex items-center gap-1 rounded-lg bg-ink/5 px-3 py-2 text-sm font-medium text-ink transition hover:bg-ink/10"
+                            data-testid="bookings-relink-receipts"
+                            @click="relinkReceipts"
+                        >
+                            <PaperClipIcon class="h-4 w-4" /> {{ $t('accounting.bookings.relink_receipts') }}
                         </button>
                         <Link
                             v-if="reviewCount > 0"
