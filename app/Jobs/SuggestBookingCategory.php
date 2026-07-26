@@ -82,12 +82,18 @@ class SuggestBookingCategory implements ShouldQueue
 
         // Conditional update: never overwrite a link a reviewer added meanwhile, and
         // never touch a booking already confirmed while the (slow) AI call ran.
-        Booking::whereKey($booking->id)
+        $linked = Booking::whereKey($booking->id)
             ->whereIn('status', [BookingStatus::Draft, BookingStatus::Suggested])
             ->whereNull('paperless_document_id')
             ->update([
                 'paperless_document_id' => $best['id'],
                 'paperless_document_title' => $best['title'],
             ]);
+
+        // Write the reverse link back into Paperless (query-builder update above skips
+        // model events, so dispatch the sync explicitly).
+        if ($linked) {
+            SyncPaperlessBookingLink::dispatch($booking->id);
+        }
     }
 }

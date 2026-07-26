@@ -11,6 +11,7 @@ use App\Enums\SuggestionConfidence;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Accounting\BookingRequest;
 use App\Jobs\SuggestBookingCategory;
+use App\Jobs\SyncPaperlessBookingLink;
 use App\Models\Accounting\Account;
 use App\Models\Accounting\Booking;
 use App\Models\Accounting\Category;
@@ -196,7 +197,11 @@ class BookingController extends Controller
 
     public function store(BookingRequest $request): RedirectResponse
     {
-        Booking::create([...$request->toAttributes(), 'status' => BookingStatus::Confirmed]);
+        $booking = Booking::create([...$request->toAttributes(), 'status' => BookingStatus::Confirmed]);
+
+        if ($booking->paperless_document_id) {
+            SyncPaperlessBookingLink::dispatch($booking->id);
+        }
 
         return redirect()
             ->route('accounting.bookings.index')
@@ -247,7 +252,13 @@ class BookingController extends Controller
             $attributes['status'] = BookingStatus::from($request->string('status')->value());
         }
 
+        $previousDocumentId = $booking->paperless_document_id;
         $booking->update($attributes);
+
+        // Keep the Paperless side in sync whenever the document link changed.
+        if ($booking->paperless_document_id !== $previousDocumentId) {
+            SyncPaperlessBookingLink::dispatch($booking->id, $previousDocumentId);
+        }
 
         return redirect()
             ->route('accounting.bookings.index')
