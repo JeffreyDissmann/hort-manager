@@ -9,6 +9,7 @@ use App\Http\Controllers\Accounting\CategoryController;
 use App\Http\Controllers\Accounting\ContributionController;
 use App\Http\Controllers\Accounting\DashboardController;
 use App\Http\Controllers\Accounting\ImportController;
+use App\Http\Controllers\Accounting\PaperlessController;
 use App\Http\Controllers\Accounting\ReportController;
 use App\Http\Controllers\Accounting\TransferController;
 use App\Http\Controllers\ActivityLogController;
@@ -158,6 +159,12 @@ Route::middleware('auth')->group(function () {
         Route::get('reports/export', [ReportController::class, 'export'])->name('reports.download');
         // Einnahmen je Kind — child × month matrix of contributions.
         Route::get('contributions', [ContributionController::class, 'index'])->name('contributions.index');
+
+        // Paperless document archive — proxied so the API token stays server-side.
+        Route::get('paperless/search', [PaperlessController::class, 'search'])->name('paperless.search');
+        Route::get('paperless/documents/{document}', [PaperlessController::class, 'find'])->name('paperless.documents.show')->whereNumber('document');
+        Route::get('paperless/documents/{document}/thumb', [PaperlessController::class, 'thumbnail'])->name('paperless.documents.thumb')->whereNumber('document');
+        Route::get('paperless/documents/{document}/download', [PaperlessController::class, 'download'])->name('paperless.documents.download')->whereNumber('document');
 
         // --- Write (editors only) ---
         Route::middleware('accounting:write')->group(function () {
