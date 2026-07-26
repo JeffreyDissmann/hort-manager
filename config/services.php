@@ -49,4 +49,16 @@ return [
         ],
     ],
 
+    // Paperless-ngx document archive. With no url+token the integration is inert
+    // (booking↔document linking and receipt auto-match silently disabled).
+    'paperless' => [
+        'url' => env('PAPERLESS_URL'),
+        'token' => env('PAPERLESS_TOKEN'),
+        // Id of a pre-existing Paperless custom field. When set, linking a booking
+        // writes the booking's deep-link URL into this field on the document, so the
+        // link is visible/filterable from inside Paperless too. The app never creates
+        // or alters field definitions. Unset → one-directional link only.
+        'booking_field' => env('PAPERLESS_BOOKING_FIELD'),
+    ],
+
 ];
