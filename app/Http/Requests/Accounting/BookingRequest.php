@@ -45,6 +45,9 @@ class BookingRequest extends FormRequest
             'valuta_date' => ['nullable', 'date'],
             'purpose' => ['nullable', 'string', 'max:2000'],
             'comment' => ['nullable', 'string', 'max:2000'],
+            // Optional link to a document in the external Paperless archive.
+            'paperless_document_id' => ['nullable', 'integer', 'min:1'],
+            'paperless_document_title' => ['nullable', 'string', 'max:255'],
             'counterparty_child_id' => ['nullable', Rule::exists('children', 'id')],
             'counterparty_user_id' => ['nullable', Rule::exists('users', 'id')],
             'counterparty_name' => ['nullable', 'string', 'max:255'],
@@ -97,6 +100,9 @@ class BookingRequest extends FormRequest
             'valuta_date' => Carbon::parse(($data['valuta_date'] ?? null) ?: $data['booking_date'])->toDateString(),
             'purpose' => $data['purpose'] ?? null,
             'comment' => $data['comment'] ?? null,
+            // Null id clears the link (and its cached title); title only kept alongside an id.
+            'paperless_document_id' => ! empty($data['paperless_document_id']) ? (int) $data['paperless_document_id'] : null,
+            'paperless_document_title' => ! empty($data['paperless_document_id']) ? ($data['paperless_document_title'] ?? null) : null,
             'counterparty_child_id' => $childId,
             'counterparty_user_id' => $userId,
             'counterparty_name' => ($childId || $userId) ? null : ($data['counterparty_name'] ?? null),

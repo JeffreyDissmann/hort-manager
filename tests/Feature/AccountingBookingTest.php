@@ -135,6 +135,62 @@ it('re-signs the amount when a booking is edited', function () {
     expect($booking->refresh()->amount_cents)->toBe(-4250);
 });
 
+it('links a booking to a paperless document on save', function () {
+    $admin = User::factory()->admin()->accountingWriter()->create();
+    $this->actingAs($admin);
+    $booking = Booking::factory()->expense()->create();
+    $category = Category::factory()->expense()->create();
+
+    $this->put("/accounting/bookings/{$booking->id}", [
+        'account_id' => $booking->account_id,
+        'category_id' => $category->id,
+        'amount' => '19.95',
+        'booking_date' => '2026-03-31',
+        'paperless_document_id' => 57,
+        'paperless_document_title' => 'Kassenbon BLUMENERDE',
+    ])->assertRedirect();
+
+    expect($booking->refresh())
+        ->paperless_document_id->toBe(57)
+        ->paperless_document_title->toBe('Kassenbon BLUMENERDE');
+});
+
+it('unlinks a paperless document when the id is cleared', function () {
+    $admin = User::factory()->admin()->accountingWriter()->create();
+    $this->actingAs($admin);
+    $booking = Booking::factory()->expense()->create([
+        'paperless_document_id' => 57,
+        'paperless_document_title' => 'Kassenbon BLUMENERDE',
+    ]);
+    $category = Category::factory()->expense()->create();
+
+    $this->put("/accounting/bookings/{$booking->id}", [
+        'account_id' => $booking->account_id,
+        'category_id' => $category->id,
+        'amount' => '19.95',
+        'booking_date' => '2026-03-31',
+        'paperless_document_id' => null,
+    ])->assertRedirect();
+
+    expect($booking->refresh())
+        ->paperless_document_id->toBeNull()
+        ->paperless_document_title->toBeNull();
+});
+
+it('rejects a non-integer paperless document id', function () {
+    $admin = User::factory()->admin()->accountingWriter()->create();
+    $this->actingAs($admin);
+    $booking = Booking::factory()->expense()->create();
+
+    $this->put("/accounting/bookings/{$booking->id}", [
+        'account_id' => $booking->account_id,
+        'category_id' => Category::factory()->expense()->create()->id,
+        'amount' => '19.95',
+        'booking_date' => '2026-03-31',
+        'paperless_document_id' => 'not-a-number',
+    ])->assertSessionHasErrors('paperless_document_id');
+});
+
 it('filters bookings by account', function () {
     $admin = User::factory()->admin()->accountingWriter()->create();
     $this->actingAs($admin);
