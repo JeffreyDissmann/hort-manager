@@ -191,33 +191,67 @@ function destroy(booking) {
                         </Dropdown>
                     </div>
                     <template v-if="canWrite">
-                        <button
-                            v-if="unconfirmedCount > 0"
-                            type="button"
-                            class="flex items-center gap-1 rounded-lg bg-ink/5 px-3 py-2 text-sm font-medium text-ink transition hover:bg-ink/10"
-                            data-testid="bookings-reanalyse"
-                            @click="reanalyse"
-                        >
-                            <SparklesIcon class="h-4 w-4" /> {{ $t('accounting.bookings.reanalyse') }}
-                        </button>
-                        <button
-                            v-if="paperlessEnabled && unconfirmedCount > 0"
-                            type="button"
-                            class="flex items-center gap-1 rounded-lg bg-ink/5 px-3 py-2 text-sm font-medium text-ink transition hover:bg-ink/10"
-                            data-testid="bookings-relink-receipts"
-                            @click="relinkReceipts"
-                        >
-                            <PaperClipIcon class="h-4 w-4" /> {{ $t('accounting.bookings.relink_receipts') }}
-                        </button>
-                        <Link
-                            v-if="reviewCount > 0"
-                            :href="bookingsReview().url"
-                            class="flex items-center gap-1 rounded-lg bg-amber-100 px-3 py-2 text-sm font-medium text-amber-800 transition hover:bg-amber-200"
-                            data-testid="bookings-review"
-                        >
-                            <ClipboardDocumentCheckIcon class="h-4 w-4" />
-                            {{ $t('accounting.bookings.review_button') }} ({{ reviewCount }})
-                        </Link>
+                        <!-- Review drafts (primary) with the re-run actions under the chevron -->
+                        <div v-if="reviewCount > 0" class="inline-flex items-center">
+                            <Link
+                                :href="bookingsReview().url"
+                                class="flex items-center gap-1 rounded-l-lg bg-amber-100 px-3 py-2 text-sm font-medium text-amber-800 transition hover:bg-amber-200"
+                                data-testid="bookings-review"
+                            >
+                                <ClipboardDocumentCheckIcon class="h-4 w-4" />
+                                {{ $t('accounting.bookings.review_button') }} ({{ reviewCount }})
+                            </Link>
+                            <Dropdown align="right" width="48">
+                                <template #trigger>
+                                    <button
+                                        type="button"
+                                        class="flex items-center rounded-r-lg border-l border-amber-200 bg-amber-100 px-2 py-2 text-amber-800 transition hover:bg-amber-200"
+                                        data-testid="bookings-review-more"
+                                    >
+                                        <ChevronDownIcon class="h-4 w-4" />
+                                    </button>
+                                </template>
+                                <template #content>
+                                    <button
+                                        type="button"
+                                        class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-ink transition hover:bg-ink/5"
+                                        data-testid="bookings-reanalyse"
+                                        @click="reanalyse"
+                                    >
+                                        <SparklesIcon class="h-4 w-4" /> {{ $t('accounting.bookings.reanalyse') }}
+                                    </button>
+                                    <button
+                                        v-if="paperlessEnabled"
+                                        type="button"
+                                        class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-ink transition hover:bg-ink/5"
+                                        data-testid="bookings-relink-receipts"
+                                        @click="relinkReceipts"
+                                    >
+                                        <PaperClipIcon class="h-4 w-4" /> {{ $t('accounting.bookings.relink_receipts') }}
+                                    </button>
+                                </template>
+                            </Dropdown>
+                        </div>
+                        <!-- Nothing suggested yet, but drafts exist → keep the re-run actions reachable -->
+                        <template v-else-if="unconfirmedCount > 0">
+                            <button
+                                type="button"
+                                class="flex items-center gap-1 rounded-lg bg-ink/5 px-3 py-2 text-sm font-medium text-ink transition hover:bg-ink/10"
+                                data-testid="bookings-reanalyse"
+                                @click="reanalyse"
+                            >
+                                <SparklesIcon class="h-4 w-4" /> {{ $t('accounting.bookings.reanalyse') }}
+                            </button>
+                            <button
+                                v-if="paperlessEnabled"
+                                type="button"
+                                class="flex items-center gap-1 rounded-lg bg-ink/5 px-3 py-2 text-sm font-medium text-ink transition hover:bg-ink/10"
+                                data-testid="bookings-relink-receipts"
+                                @click="relinkReceipts"
+                            >
+                                <PaperClipIcon class="h-4 w-4" /> {{ $t('accounting.bookings.relink_receipts') }}
+                            </button>
+                        </template>
                         <!-- Import (most-used) is the primary action; „Neue Buchung" and
                              „Neue Umbuchung" live under the attached „more" chevron. -->
                         <div class="inline-flex items-center">
