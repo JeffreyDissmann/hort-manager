@@ -40,7 +40,6 @@ class LinkBookingReceipt implements ShouldQueue
         $match = $paperless->confidentMatch(
             abs($booking->amount_cents) / 100,
             ($booking->valuta_date ?? $booking->booking_date)?->format('Y-m-d'),
-            Booking::linkedDocumentIds(),
         );
 
         if ($match === null) {

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Accounting;
 
+use App\Models\Accounting\Booking;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
@@ -35,13 +36,12 @@ class PaperlessService
      * Full-text search. Returns a lean list of hits for the picker; pass
      * $withContent to also include an OCR snippet (used by the AI matcher to check
      * vendor/amount/date — Paperless already returns it, so this costs no extra call).
-     * $excludeIds drops documents already linked to a booking so they aren't offered twice.
      * $withCorrespondent resolves the correspondent name for display in the picker.
+     * Already-linked documents are dropped (see request()).
      *
-     * @param  list<int>  $excludeIds
      * @return list<array{id:int, title:string, created:?string, correspondent?:?string, content?:string}>
      */
-    public function search(string $query, int $limit = 8, bool $withContent = false, array $excludeIds = [], bool $withCorrespondent = false): array
+    public function search(string $query, int $limit = 8, bool $withContent = false, bool $withCorrespondent = false): array
     {
         $query = trim($query);
 
@@ -49,7 +49,7 @@ class PaperlessService
             return [];
         }
 
-        return $this->request($this->unlinkedParams(['query' => $query]), $limit, $withContent, $withCorrespondent, $excludeIds);
+        return $this->request($this->unlinkedParams(['query' => $query]), $limit, $withContent, $withCorrespondent);
     }
 
     /**
@@ -57,10 +57,9 @@ class PaperlessService
      * match (near-unique) then a full-text query narrowed to a date window around the
      * booking's (valuta) date. Both skip already-linked documents. Best-effort.
      *
-     * @param  list<int>  $excludeIds
      * @return list<array{id:int, title:string, created:?string, correspondent?:?string, content?:string}>
      */
-    public function candidatesFor(string $text, ?float $amount, ?string $nearDate, int $limit = 5, bool $withContent = false, bool $withCorrespondent = false, array $excludeIds = []): array
+    public function candidatesFor(string $text, ?float $amount, ?string $nearDate, int $limit = 5, bool $withContent = false, bool $withCorrespondent = false): array
     {
         if (! $this->enabled()) {
             return [];
@@ -69,7 +68,7 @@ class PaperlessService
         // 1. Exact amount match on the configured monetary field — the strongest signal.
         $results = [];
         if ($amount !== null && $amount > 0 && ($amountQuery = $this->amountUnlinkedQuery($amount)) !== null) {
-            $results = $this->request(['custom_field_query' => $amountQuery], $limit, $withContent, $withCorrespondent, $excludeIds);
+            $results = $this->request(['custom_field_query' => $amountQuery], $limit, $withContent, $withCorrespondent);
         }
 
         // 2. Full-text query within a date window around the reference date — the fallback.
@@ -83,7 +82,7 @@ class PaperlessService
             }
 
             $seen = array_flip(array_column($results, 'id'));
-            foreach ($this->request($params, $limit, $withContent, $withCorrespondent, $excludeIds) as $document) {
+            foreach ($this->request($params, $limit, $withContent, $withCorrespondent) as $document) {
                 if (! isset($seen[$document['id']])) {
                     $results[] = $document;
                 }
@@ -95,15 +94,57 @@ class PaperlessService
     }
 
     /**
+     * The unlinked financial documents to walk in the „Belege zuordnen" wizard: not yet
+     * linked (booking field empty — which also excludes ignored ones) AND carrying an
+     * amount (the monetary field is set), created within the given range. Requires both
+     * custom fields configured; returns [] otherwise.
+     *
+     * @return list<array{id:int, title:string, created:?string, correspondent?:?string, amount_cents?:?int}>
+     */
+    public function reviewCandidates(?string $from = null, ?string $to = null, int $limit = 200): array
+    {
+        $bookingField = $this->bookingFieldId();
+        $amountField = $this->amountFieldId();
+
+        if (! $this->enabled() || $bookingField === null || $amountField === null) {
+            return [];
+        }
+
+        $params = [
+            'custom_field_query' => json_encode(['AND', [[$bookingField, 'exists', false], [$amountField, 'exists', true]]]),
+            'ordering' => 'created',
+        ];
+        if ($from !== null && $from !== '') {
+            $params['created__date__gte'] = Carbon::parse($from)->toDateString();
+        }
+        if ($to !== null && $to !== '') {
+            $params['created__date__lte'] = Carbon::parse($to)->toDateString();
+        }
+
+        return $this->request($params, $limit, false, true);
+    }
+
+    /** Mark a document as „not a booking" by writing the ignore sentinel into the booking field. */
+    public function ignore(int $documentId): void
+    {
+        $this->setBookingLink($documentId, $this->ignoredMarker());
+    }
+
+    /** The sentinel URL stored in the booking custom field to mark an ignored document. */
+    public function ignoredMarker(): string
+    {
+        return url('/accounting/paperless/ignored');
+    }
+
+    /**
      * The one confident, deterministic auto-link candidate for a booking: the single
      * unlinked document whose amount custom field exactly equals the booking amount,
      * within the valuta date window. Null when there's no amount field, no match, or the
      * match is ambiguous (several same-amount documents) — those are left for the user.
      *
-     * @param  list<int>  $excludeIds
      * @return array{id:int, title:string, created:?string}|null
      */
-    public function confidentMatch(?float $amount, ?string $nearDate, array $excludeIds = []): ?array
+    public function confidentMatch(?float $amount, ?string $nearDate): ?array
     {
         if (! $this->enabled() || $amount === null || $amount <= 0) {
             return null;
@@ -122,7 +163,7 @@ class PaperlessService
         }
 
         // Fetch two so an ambiguous (multiple same-amount) match can be detected and skipped.
-        $results = $this->request($params, 2, false, false, $excludeIds);
+        $results = $this->request($params, 2, false, false);
 
         return count($results) === 1 ? $results[0] : null;
     }
@@ -150,14 +191,14 @@ class PaperlessService
      * Run one documents query and shape the results: map, drop already-linked ids, cap.
      *
      * @param  array<string, mixed>  $params
-     * @param  list<int>  $excludeIds
      * @return list<array<string, mixed>>
      */
-    private function request(array $params, int $limit, bool $withContent, bool $withCorrespondent, array $excludeIds): array
+    private function request(array $params, int $limit, bool $withContent, bool $withCorrespondent): array
     {
         try {
-            // Over-fetch so the excluded (already-linked) ones don't shrink the list.
-            $params['page_size'] = min($limit + count($excludeIds), 100);
+            // Over-fetch a little so documents filtered out below (linked in the write-back
+            // lag window) don't shrink the page.
+            $params['page_size'] = min($limit + 10, 250);
             $response = Http::paperless()->get('documents/', $params);
 
             if ($response->failed()) {
@@ -165,11 +206,13 @@ class PaperlessService
             }
 
             $correspondents = $withCorrespondent ? $this->correspondentNames() : null;
-            $exclude = array_flip($excludeIds);
-            $results = array_values(array_filter(
-                array_map(fn (array $d): array => $this->mapDocument($d, $withContent, $correspondents), $response->json('results', [])),
-                fn (array $d): bool => ! isset($exclude[$d['id']]),
-            ));
+            $documents = array_map(fn (array $d): array => $this->mapDocument($d, $withContent, $correspondents), $response->json('results', []));
+
+            // Drop any already linked in our DB — a bounded check scoped to just this page's
+            // ids (never loads the full linked set), a safety net for the brief window before
+            // the Paperless write-back propagates / when the custom field isn't configured.
+            $linked = $this->linkedAmong(array_column($documents, 'id'));
+            $results = array_values(array_filter($documents, fn (array $d): bool => ! isset($linked[$d['id']])));
 
             return array_slice($results, 0, $limit);
         } catch (Throwable $e) {
@@ -177,6 +220,25 @@ class PaperlessService
 
             return [];
         }
+    }
+
+    /**
+     * Which of the given Paperless document ids are already linked to a booking — a bounded
+     * whereIn (page-sized), so it scales no matter how many links exist overall.
+     *
+     * @param  list<int>  $ids
+     * @return array<int, true>
+     */
+    private function linkedAmong(array $ids): array
+    {
+        if ($ids === []) {
+            return [];
+        }
+
+        return array_fill_keys(
+            Booking::query()->whereIn('paperless_document_id', $ids)->pluck('paperless_document_id')->all(),
+            true,
+        );
     }
 
     /**

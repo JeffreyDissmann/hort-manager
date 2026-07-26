@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Accounting;
 
 use App\Http\Controllers\Controller;
-use App\Models\Accounting\Booking;
 use App\Services\Accounting\PaperlessService;
 use Illuminate\Http\Client\Response as ClientResponse;
 use Illuminate\Http\JsonResponse;
@@ -31,7 +30,6 @@ class PaperlessController extends Controller
     {
         $query = (string) $request->query('q', '');
         $limit = max(1, min((int) $request->integer('limit', 8), 20));
-        $excludeIds = Booking::linkedDocumentIds();
 
         // A booking context (amount and/or valuta date) → precise suggestions ranked by
         // exact amount then date proximity. A bare query is a plain full-text search.
@@ -39,8 +37,8 @@ class PaperlessController extends Controller
         $near = (string) $request->query('near', '');
 
         $results = ($amount !== null || $near !== '')
-            ? $this->paperless->candidatesFor($query, $amount, $near ?: null, limit: $limit, withCorrespondent: true, excludeIds: $excludeIds)
-            : $this->paperless->search($query, limit: $limit, excludeIds: $excludeIds, withCorrespondent: true);
+            ? $this->paperless->candidatesFor($query, $amount, $near ?: null, limit: $limit, withCorrespondent: true)
+            : $this->paperless->search($query, limit: $limit, withCorrespondent: true);
 
         return response()->json(['results' => $results]);
     }

@@ -2,8 +2,12 @@
 
 declare(strict_types=1);
 
+use App\Models\Accounting\Booking;
 use App\Services\Accounting\PaperlessService;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+
+uses(RefreshDatabase::class);
 
 beforeEach(function () {
     config()->set('services.paperless.url', 'https://paperless.test');
@@ -42,7 +46,9 @@ it('maps full-text search results', function () {
         ->and($results[0])->toBe(['id' => 12, 'title' => 'REWE Beleg', 'created' => '2026-05-01T00:00:00Z']);
 });
 
-it('drops excluded (already-linked) documents from the results', function () {
+it('drops documents already linked to a booking (bounded, page-scoped)', function () {
+    Booking::factory()->create(['paperless_document_id' => 34]);
+
     Http::fake([
         'paperless.test/api/documents/*' => Http::response([
             'results' => [
@@ -53,7 +59,7 @@ it('drops excluded (already-linked) documents from the results', function () {
         ]),
     ]);
 
-    $results = (new PaperlessService)->search('x', excludeIds: [34]);
+    $results = (new PaperlessService)->search('x');
 
     expect(collect($results)->pluck('id')->all())->toBe([12, 56]);
 });
@@ -177,6 +183,42 @@ it('extracts the document amount from the monetary custom field', function () {
 
     expect($results[0]['amount_cents'])->toBe(8576)
         ->and($results[1]['amount_cents'])->toBeNull();
+});
+
+it('lists unlinked documents that have an amount, within a date range', function () {
+    config()->set('services.paperless.booking_field', 4);
+    config()->set('services.paperless.amount_field', 1);
+    Http::fake(['paperless.test/api/documents*' => Http::response(['results' => [
+        ['id' => 8, 'title' => 'Kassenbon', 'created' => '2026-01-07', 'custom_fields' => [['field' => 1, 'value' => 'EUR12.00']]],
+    ]])]);
+
+    $results = (new PaperlessService)->reviewCandidates('2026-01-01', '2026-01-31');
+
+    expect(collect($results)->pluck('id')->all())->toBe([8]);
+    Http::assertSent(fn ($r) => ($r['custom_field_query'] ?? null) === json_encode(['AND', [[4, 'exists', false], [1, 'exists', true]]])
+        && ($r['created__date__gte'] ?? null) === '2026-01-01'
+        && ($r['created__date__lte'] ?? null) === '2026-01-31');
+});
+
+it('has no review candidates without both custom fields configured', function () {
+    config()->set('services.paperless.booking_field', 4);
+    config()->set('services.paperless.amount_field', null);
+    Http::preventStrayRequests();
+
+    expect((new PaperlessService)->reviewCandidates('2026-01-01', '2026-01-31'))->toBe([]);
+});
+
+it('ignores a document by writing the sentinel into the booking field', function () {
+    config()->set('services.paperless.booking_field', 4);
+    Http::fake(['paperless.test/api/documents/8/' => Http::sequence()
+        ->push(['id' => 8, 'custom_fields' => []])
+        ->push(['id' => 8])]);
+
+    $service = new PaperlessService;
+    $service->ignore(8);
+
+    Http::assertSent(fn ($r) => $r->method() === 'PATCH'
+        && $r['custom_fields'] === [['field' => 4, 'value' => $service->ignoredMarker()]]);
 });
 
 it('sends the token as a Token header, not Bearer', function () {
