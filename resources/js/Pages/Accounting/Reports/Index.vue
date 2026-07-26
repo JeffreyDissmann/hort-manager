@@ -124,7 +124,14 @@ function drilldown({ category, kind, account, month }) {
     const query = { status: 'confirmed', ...range };
     if (category) query.category = category;
     if (kind) query.kind = kind;
-    if (account) query.account = account;
+    if (account) {
+        // A per-account (transfer) cell → that specific account.
+        query.account = account;
+    } else if (!allSelected.value && selectedIds.value.size > 0) {
+        // Otherwise carry the report's selected-accounts scope.
+        const ids = [...selectedIds.value];
+        query.account = ids.length === 1 ? ids[0] : ids;
+    }
     return bookingsIndex({ query }).url;
 }
 

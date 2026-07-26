@@ -243,6 +243,20 @@ it('filters bookings by account', function () {
         ->assertInertia(fn (AssertableInertia $page) => $page->has('bookings.data', 1));
 });
 
+it('filters bookings by several accounts (Auswertung drill-down)', function () {
+    $admin = User::factory()->admin()->accountingWriter()->create();
+    $this->actingAs($admin);
+    $a = Account::factory()->create();
+    $b = Account::factory()->create();
+    $c = Account::factory()->create();
+    Booking::factory()->for($a)->create();
+    Booking::factory()->for($b)->create();
+    Booking::factory()->for($c)->create();
+
+    $this->get('/accounting/bookings?account[]='.$a->id.'&account[]='.$b->id)
+        ->assertInertia(fn (AssertableInertia $page) => $page->has('bookings.data', 2));
+});
+
 it('filters suggested bookings by confidence via the status filter', function () {
     $admin = User::factory()->admin()->accountingWriter()->create();
     $this->actingAs($admin);

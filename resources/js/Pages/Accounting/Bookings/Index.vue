@@ -131,8 +131,14 @@ function relinkReceipts() {
     router.post(bookingsRelinkReceipts().url, {}, { preserveScroll: true });
 }
 
+// The Auswertung drill-down may pass several accounts; the single-select reflects one
+// (results are already scoped server-side), otherwise „Alle".
+const initialAccount = Array.isArray(props.filters.account)
+    ? (props.filters.account.length === 1 ? String(props.filters.account[0]) : '')
+    : (props.filters.account ?? '');
+
 const filters = reactive({
-    account: props.filters.account ?? '',
+    account: initialAccount,
     category: props.filters.category ?? '',
     kind: props.filters.kind ?? '',
     status: props.filters.status ?? '',

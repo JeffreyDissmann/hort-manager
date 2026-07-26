@@ -15,6 +15,7 @@ beforeEach(function () {
     // Don't inherit the developer's .env field ids — each test sets what it needs.
     config()->set('services.paperless.booking_field', null);
     config()->set('services.paperless.amount_field', null);
+    config()->set('services.paperless.payment_field', null);
 });
 
 it('is disabled without a url and token', function () {

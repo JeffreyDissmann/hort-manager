@@ -495,7 +495,8 @@ class BookingController extends Controller
     private function applyFilters(Builder $query, array $filters): void
     {
         $query
-            ->when($filters['account'] ?? null, fn ($q, $v) => $q->where('account_id', $v))
+            // One account or several (the Auswertung drill-down carries the selected subset).
+            ->when($filters['account'] ?? null, fn ($q, $v) => $q->whereIn('account_id', array_filter((array) $v, fn ($id): bool => filled($id))))
             // A category filter includes the whole subtree (parent + all descendants).
             ->when($filters['category'] ?? null, fn ($q, $v) => $q->whereIn('category_id', $this->categorySubtreeIds((int) $v)))
             ->when($filters['kind'] ?? null, fn ($q, $v) => $q->where('kind', $v))
