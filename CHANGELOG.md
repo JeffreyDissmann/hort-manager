@@ -6,6 +6,31 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [2026.07.26.1] — 2026-07-26
+
+### Added
+
+- **Paperless-ngx integration for accounting receipts.** Link a booking to a document
+  in an external Paperless archive: search / paste an ID or URL / pick from suggestions,
+  with a proxied thumbnail, hover preview, open-in-Paperless and download (the API token
+  stays server-side). The link is written back into a Paperless custom field (two-way),
+  and an amber warning flags a receipt whose amount doesn't match the booking. The
+  bookings list shows a receipt paperclip and a „Beleg" (with/without) filter. All
+  behind a single best-effort `PaperlessService`; inert when unconfigured.
+- **Deterministic receipt auto-linking on import** (exact amount within a valuta-date
+  window — no AI), running ahead of the category AI, plus a „Belege verknüpfen" button
+  to re-run it over unconfirmed bookings.
+- **„Belege zuordnen" wizard** (under „Aus Paperless importieren") to work through
+  unlinked receipts: gated behind finishing the review, a date-range + Zahlungsart
+  filter, then per receipt attach it to a matching booking, create a booking from it
+  (prefilled), skip, or mark „kein Beleg".
+- A combined **„Zu prüfen" status filter** (draft + suggested); the dashboard card links
+  straight to it.
+
+### Fixed
+
+- The Auswertung drill-down now carries the selected-accounts scope to the bookings list.
+
 ## [2026.07.26] — 2026-07-26
 
 ### Added
