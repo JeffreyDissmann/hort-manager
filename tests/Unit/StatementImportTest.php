@@ -32,6 +32,20 @@ it('reads a comma-delimited UTF-8 file too', function () {
         ->and($table['rows'][0])->toBe(['2026-04-05', 'Test Ümlaut', '12.34']);
 });
 
+it('decodes a Windows-1252 (Latin-1) file to valid UTF-8', function () {
+    // German bank exports are often single-byte Windows-1252; the raw bytes are not
+    // valid UTF-8 and would crash json_encode when stashed on the import.
+    $utf8 = "Datum;Zweck;Betrag\r\n01.04.2026;Bürobedarf & Gebühr für Müller;-12,50\r\n";
+    $latin1 = mb_convert_encoding($utf8, 'Windows-1252', 'UTF-8');
+    expect(mb_check_encoding($latin1, 'UTF-8'))->toBeFalse(); // sanity: really not UTF-8
+
+    $table = (new CsvReader)->read($latin1);
+
+    expect($table['rows'][0][1])->toBe('Bürobedarf & Gebühr für Müller')
+        ->and(mb_check_encoding($table['rows'][0][1], 'UTF-8'))->toBeTrue()
+        ->and(json_encode($table))->not->toBeFalse(); // survives JSON storage
+});
+
 it('guesses the column mapping from German header names', function () {
     $header = ['Kontonummer', 'Buchungsdatum', 'Valuta', 'Verwendungszweck', 'Betrag', 'Waehrung'];
 

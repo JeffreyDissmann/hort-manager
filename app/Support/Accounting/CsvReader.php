@@ -63,7 +63,12 @@ class CsvReader
         return $best;
     }
 
-    /** Decode UTF-16 to UTF-8; pass through if already UTF-8, then strip a BOM. */
+    /**
+     * Normalize the upload to valid UTF-8 (so it survives JSON storage), handling the
+     * three encodings German bank exports actually use: UTF-16, UTF-8, and the
+     * single-byte Windows-1252/Latin-1 (umlauts, ß, €). Malformed bytes would otherwise
+     * crash json_encode when the decoded rows are stashed on the import.
+     */
     private function toUtf8(string $contents): string
     {
         $bom = substr($contents, 0, 2);
@@ -74,6 +79,9 @@ class CsvReader
             $contents = mb_convert_encoding($contents, 'UTF-8', 'UTF-16BE');
         } elseif ($bom === "\xFF\xFE" || str_contains(substr($contents, 0, 200), "\0")) {
             $contents = mb_convert_encoding($contents, 'UTF-8', 'UTF-16LE');
+        } elseif (! mb_check_encoding($contents, 'UTF-8')) {
+            // Not UTF-16 and not valid UTF-8 → assume Windows-1252 (superset of Latin-1).
+            $contents = mb_convert_encoding($contents, 'UTF-8', 'Windows-1252');
         }
 
         return preg_replace('/^\x{FEFF}/u', '', $contents) ?? $contents;

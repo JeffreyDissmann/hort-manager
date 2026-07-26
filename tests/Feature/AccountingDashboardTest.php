@@ -38,6 +38,8 @@ it('shows account balances at three points in time and what needs attention', fu
             ->where('accounts.0.balance_cents', 20000)         // 10000 + 5000 + 3000 + 2000
             ->where('accounts.0.balance_quarter_cents', 18000) // up to 2026-06-30 (excludes 07-10)
             ->where('accounts.0.balance_year_cents', 10000)    // up to 2025-12-31 (opening only)
+            // Running month-end balances Jan…Jul 2026 (opening 10000; +5000 Apr, +3000 May, +2000 Jul).
+            ->where('accounts.0.balance_series', [10000, 10000, 10000, 15000, 18000, 18000, 20000])
             ->where('periods.quarter', '2026-06-30')
             ->where('periods.year', '2025-12-31')
             ->where('reviewCount', 1)

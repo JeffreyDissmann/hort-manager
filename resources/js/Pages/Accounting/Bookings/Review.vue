@@ -101,8 +101,8 @@ function send(action) {
                     </p>
                 </div>
 
-                <!-- AI suggestion hint + confidence -->
-                <div v-if="booking.ai_suggested" class="mt-3 flex items-center gap-2">
+                <!-- AI suggestion hint + confidence (about the category — not shown for transfers) -->
+                <div v-if="booking.ai_suggested && mode === 'booking'" class="mt-3 flex items-center gap-2">
                     <span class="flex items-center gap-1 text-xs font-medium text-hort-teal-dark">
                         <SparklesIcon class="h-4 w-4" /> {{ $t('accounting.review.ai_hint') }}
                     </span>
@@ -157,7 +157,7 @@ function send(action) {
                 </div>
 
                 <!-- Actions -->
-                <div class="mt-6 flex items-center justify-between gap-2 border-t border-ink/10 pt-4">
+                <div class="mt-6 flex flex-col gap-3 border-t border-ink/10 pt-4 sm:flex-row sm:items-center sm:justify-between">
                     <div class="flex gap-2">
                         <button
                             type="button"
@@ -176,6 +176,7 @@ function send(action) {
                     </div>
                     <PrimaryButton
                         v-if="mode === 'booking'"
+                        class="w-full justify-center whitespace-nowrap sm:w-auto"
                         :disabled="form.processing || !form.category_id"
                         @click="send('confirm')"
                     >
@@ -183,6 +184,7 @@ function send(action) {
                     </PrimaryButton>
                     <PrimaryButton
                         v-else
+                        class="w-full justify-center whitespace-nowrap sm:w-auto"
                         :disabled="form.processing || !toAccountId"
                         data-testid="make-transfer"
                         @click="createTransfer"

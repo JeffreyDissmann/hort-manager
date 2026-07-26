@@ -4,6 +4,8 @@ import { Head, Link, router, usePoll } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import Pagination from '@/Components/Pagination.vue';
+import Dropdown from '@/Components/Dropdown.vue';
+import DropdownLink from '@/Components/DropdownLink.vue';
 import { formatEuro } from '@/money';
 import { t } from '@/i18n';
 import { useAccountingAccess } from '@/accountingAccess';
@@ -19,7 +21,7 @@ import {
 } from '@/routes/accounting/bookings';
 import { create as transfersCreate } from '@/routes/accounting/transfers';
 import { create as importCreate } from '@/routes/accounting/import';
-import { PencilSquareIcon, TrashIcon, PlusIcon, ArrowsRightLeftIcon, ArrowUpTrayIcon, DocumentTextIcon, TableCellsIcon, ClipboardDocumentCheckIcon, SparklesIcon, CheckIcon, ArrowPathIcon } from '@heroicons/vue/24/outline';
+import { PencilSquareIcon, TrashIcon, PlusIcon, ArrowsRightLeftIcon, ArrowUpTrayIcon, DocumentTextIcon, TableCellsIcon, ClipboardDocumentCheckIcon, SparklesIcon, CheckIcon, ArrowPathIcon, ChevronDownIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
     bookings: { type: Object, required: true }, // paginator
@@ -152,20 +154,35 @@ function destroy(booking) {
                     <h2 class="text-xl font-semibold text-ink">{{ $t('accounting.bookings.title') }}</h2>
                 </div>
                 <div class="flex flex-wrap items-center justify-end gap-2">
-                    <div class="flex items-center gap-1">
-                        <a
-                            :href="exportUrl('csv')"
-                            class="flex items-center gap-1 rounded-lg bg-ink/5 px-3 py-2 text-sm font-medium text-ink transition hover:bg-ink/10"
-                            data-testid="bookings-export-csv"
-                        >
-                            <DocumentTextIcon class="h-4 w-4" /> CSV
-                        </a>
+                    <!-- Export: Excel is the standard; CSV lives under the „more" chevron. -->
+                    <div class="inline-flex items-center">
                         <a
                             :href="exportUrl('xlsx')"
-                            class="flex items-center gap-1 rounded-lg bg-ink/5 px-3 py-2 text-sm font-medium text-ink transition hover:bg-ink/10"
+                            class="flex items-center gap-1 rounded-l-lg bg-ink/5 px-3 py-2 text-sm font-medium text-ink transition hover:bg-ink/10"
+                            data-testid="bookings-export-xlsx"
                         >
-                            <TableCellsIcon class="h-4 w-4" /> Excel
+                            <TableCellsIcon class="h-4 w-4" /> {{ $t('accounting.bookings.export_excel') }}
                         </a>
+                        <Dropdown align="right" width="48">
+                            <template #trigger>
+                                <button
+                                    type="button"
+                                    class="flex items-center rounded-r-lg border-l border-ink/10 bg-ink/5 px-2 py-2.5 text-ink transition hover:bg-ink/10"
+                                    data-testid="bookings-export-more"
+                                >
+                                    <ChevronDownIcon class="h-4 w-4" />
+                                </button>
+                            </template>
+                            <template #content>
+                                <a
+                                    :href="exportUrl('csv')"
+                                    class="flex items-center gap-2 px-4 py-2 text-sm text-ink/80 transition hover:bg-ink/5"
+                                    data-testid="bookings-export-csv"
+                                >
+                                    <DocumentTextIcon class="h-4 w-4" /> {{ $t('accounting.bookings.export_csv') }}
+                                </a>
+                            </template>
+                        </Dropdown>
                     </div>
                     <template v-if="canWrite">
                         <button
@@ -186,24 +203,36 @@ function destroy(booking) {
                             <ClipboardDocumentCheckIcon class="h-4 w-4" />
                             {{ $t('accounting.bookings.review_button') }} ({{ reviewCount }})
                         </Link>
-                        <Link
-                            :href="importCreate().url"
-                            class="flex items-center gap-1 rounded-lg bg-ink/5 px-3 py-2 text-sm font-medium text-ink transition hover:bg-ink/10"
-                            data-testid="bookings-import"
-                        >
-                            <ArrowUpTrayIcon class="h-4 w-4" /> {{ $t('nav.import') }}
-                        </Link>
-                        <Link
-                            :href="transfersCreate().url"
-                            class="flex items-center gap-1 rounded-lg bg-ink/5 px-3 py-2 text-sm font-medium text-ink transition hover:bg-ink/10"
-                        >
-                            <ArrowsRightLeftIcon class="h-4 w-4" /> {{ $t('accounting.transfers.new') }}
-                        </Link>
-                        <Link :href="bookingsCreate().url">
-                            <PrimaryButton>
-                                <PlusIcon class="mr-1 h-4 w-4" /> {{ $t('accounting.bookings.new') }}
-                            </PrimaryButton>
-                        </Link>
+                        <!-- Import (most-used) is the primary action; „Neue Buchung" and
+                             „Neue Umbuchung" live under the attached „more" chevron. -->
+                        <div class="inline-flex items-center">
+                            <Link
+                                :href="importCreate().url"
+                                class="flex items-center gap-1.5 rounded-l-md bg-gray-800 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-white transition hover:bg-gray-700 dark:bg-ink dark:text-hort-navy dark:hover:bg-ink/90"
+                                data-testid="bookings-import"
+                            >
+                                <ArrowUpTrayIcon class="h-4 w-4" /> {{ $t('nav.import') }}
+                            </Link>
+                            <Dropdown align="right" width="48">
+                                <template #trigger>
+                                    <button
+                                        type="button"
+                                        class="flex items-center rounded-r-md border-l border-white/20 bg-gray-800 px-2 py-2 text-white transition hover:bg-gray-700 dark:border-hort-navy/20 dark:bg-ink dark:text-hort-navy dark:hover:bg-ink/90"
+                                        data-testid="bookings-more"
+                                    >
+                                        <ChevronDownIcon class="h-4 w-4" />
+                                    </button>
+                                </template>
+                                <template #content>
+                                    <DropdownLink :href="bookingsCreate().url" data-testid="bookings-new">
+                                        <span class="flex items-center gap-2"><PlusIcon class="h-4 w-4" /> {{ $t('accounting.bookings.new') }}</span>
+                                    </DropdownLink>
+                                    <DropdownLink :href="transfersCreate().url" data-testid="bookings-transfer">
+                                        <span class="flex items-center gap-2"><ArrowsRightLeftIcon class="h-4 w-4" /> {{ $t('accounting.transfers.new') }}</span>
+                                    </DropdownLink>
+                                </template>
+                            </Dropdown>
+                        </div>
                     </template>
                 </div>
             </div>

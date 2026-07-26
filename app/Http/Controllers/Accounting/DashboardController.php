@@ -25,6 +25,8 @@ class DashboardController extends Controller
         $prevQuarterEnd = $reference->startOfQuarter()->subDay();
         $prevYearEnd = $reference->startOfYear()->subDay();
 
+        $series = $this->balanceSeries($reference);
+
         return Inertia::render('Accounting/Dashboard', [
             // Balances at three points in time, summed in the DB (no per-account N+1).
             'accounts' => Account::query()
@@ -39,6 +41,8 @@ class DashboardController extends Controller
                     'balance_cents' => $a->opening_balance_cents + (int) $a->confirmed_cents,
                     'balance_quarter_cents' => $a->opening_balance_cents + (int) $a->quarter_cents,
                     'balance_year_cents' => $a->opening_balance_cents + (int) $a->year_cents,
+                    // Running month-end balance through the reference year (for the sparkline).
+                    'balance_series' => $series[$a->id] ?? [],
                 ]),
             'periods' => [
                 'quarter' => $prevQuarterEnd->toDateString(),
@@ -49,5 +53,46 @@ class DashboardController extends Controller
             // The data is accurate up to the newest confirmed booking.
             'asOf' => $newest ? CarbonImmutable::parse($newest)->toDateString() : null,
         ]);
+    }
+
+    /**
+     * Per-account running month-end balance through the reference year (Jan … the
+     * reference month), for the dashboard sparklines. One query, bucketed in PHP.
+     *
+     * @return array<int, list<int>> account id → month-end balances
+     */
+    private function balanceSeries(CarbonImmutable $reference): array
+    {
+        $year = $reference->year;
+        $lastMonth = $reference->month;
+
+        $accounts = Account::query()->get(['id', 'opening_balance_cents']);
+
+        // Balance carried into the year, and each in-year month's delta, per account.
+        $base = [];
+        $monthly = [];
+        Booking::query()
+            ->where('status', BookingStatus::Confirmed)
+            ->get(['account_id', 'amount_cents', 'booking_date'])
+            ->each(function (Booking $b) use (&$base, &$monthly, $year): void {
+                if ($b->booking_date->year < $year) {
+                    $base[$b->account_id] = ($base[$b->account_id] ?? 0) + $b->amount_cents;
+                } elseif ($b->booking_date->year === $year) {
+                    $monthly[$b->account_id][$b->booking_date->month] = ($monthly[$b->account_id][$b->booking_date->month] ?? 0) + $b->amount_cents;
+                }
+            });
+
+        $series = [];
+        foreach ($accounts as $account) {
+            $running = $account->opening_balance_cents + ($base[$account->id] ?? 0);
+            $points = [];
+            for ($m = 1; $m <= $lastMonth; $m++) {
+                $running += $monthly[$account->id][$m] ?? 0;
+                $points[] = $running;
+            }
+            $series[$account->id] = $points;
+        }
+
+        return $series;
     }
 }

@@ -94,7 +94,7 @@ function createTransfer() {
                     :error="transferForm.errors.to_account_id"
                 />
 
-                <div class="mt-6 flex items-center justify-end gap-4">
+                <div class="mt-6 flex flex-wrap items-center justify-end gap-x-4 gap-y-3">
                     <Link :href="bookingsIndex().url" class="text-sm text-ink/70 hover:text-ink">
                         {{ $t('common.cancel') }}
                     </Link>
@@ -102,6 +102,7 @@ function createTransfer() {
                     <PrimaryButton
                         v-else
                         type="button"
+                        class="whitespace-nowrap"
                         :disabled="transferForm.processing || !toAccountId"
                         data-testid="make-transfer"
                         @click="createTransfer"
