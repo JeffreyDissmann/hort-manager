@@ -195,9 +195,10 @@ class PaperlessService
     }
 
     /**
-     * Resolve a single document by id (for the paste-id / paste-URL flow).
+     * Resolve a single document by id (paste-id / URL flow + the linked-state card),
+     * including its correspondent and amount for display.
      *
-     * @return array{id:int, title:string, created:?string}|null
+     * @return array{id:int, title:string, created:?string, correspondent?:?string, amount_cents?:?int}|null
      */
     public function find(int $id): ?array
     {
@@ -212,7 +213,7 @@ class PaperlessService
                 return null;
             }
 
-            return $this->mapDocument($response->json());
+            return $this->mapDocument($response->json(), correspondents: $this->correspondentNames());
         } catch (Throwable $e) {
             Log::warning("Paperless lookup failed for #{$id}: ".$e->getMessage());
 

@@ -162,6 +162,8 @@ return [
         'open' => 'Open in Paperless',
         'download' => 'Download',
         'remove' => 'Remove',
+        'remove_confirm' => 'Really remove the linked receipt?',
+        'amount_mismatch' => 'Amount differs',
         'has_document' => 'Document linked',
     ],
 

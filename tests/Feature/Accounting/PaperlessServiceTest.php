@@ -189,11 +189,12 @@ it('sends the token as a Token header, not Bearer', function () {
 
 it('resolves a single document by id', function () {
     Http::fake([
-        'paperless.test/api/documents/12/' => Http::response(['id' => 12, 'title' => 'REWE Beleg', 'created' => '2026-05-01T00:00:00Z']),
+        'paperless.test/api/documents/12/' => Http::response(['id' => 12, 'title' => 'REWE Beleg', 'created' => '2026-05-01T00:00:00Z', 'correspondent' => 23]),
+        'paperless.test/api/correspondents*' => Http::response(['results' => [['id' => 23, 'name' => 'REWE']]]),
     ]);
 
     expect((new PaperlessService)->find(12))
-        ->toBe(['id' => 12, 'title' => 'REWE Beleg', 'created' => '2026-05-01T00:00:00Z']);
+        ->toMatchArray(['id' => 12, 'title' => 'REWE Beleg', 'created' => '2026-05-01T00:00:00Z', 'correspondent' => 'REWE']);
 });
 
 it('returns null for an unknown document', function () {

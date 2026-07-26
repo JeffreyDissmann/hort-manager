@@ -162,6 +162,8 @@ return [
         'open' => 'In Paperless öffnen',
         'download' => 'Herunterladen',
         'remove' => 'Entfernen',
+        'remove_confirm' => 'Verknüpften Beleg wirklich entfernen?',
+        'amount_mismatch' => 'Betrag weicht ab',
         'has_document' => 'Beleg verknüpft',
     ],
 
