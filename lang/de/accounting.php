@@ -150,6 +150,22 @@ return [
         'confirm_selected_hint' => 'Nur Buchungen mit Kategorie werden bestätigt.',
     ],
 
+    'paperless' => [
+        'label' => 'Beleg (Paperless)',
+        'none' => 'Kein Beleg verknüpft.',
+        'search_placeholder' => 'Beleg suchen oder ID/Link einfügen …',
+        'searching' => 'Suche …',
+        'no_results' => 'Keine Belege gefunden.',
+        'not_found' => 'Kein Dokument mit dieser ID/URL gefunden.',
+        'ai_suggest' => 'KI-Vorschlag',
+        'ai_searching' => 'KI sucht passenden Beleg …',
+        'ai_none' => 'Kein passender Beleg gefunden.',
+        'open' => 'In Paperless öffnen',
+        'download' => 'Herunterladen',
+        'remove' => 'Entfernen',
+        'has_document' => 'Beleg verknüpft',
+    ],
+
     'transfers' => [
         'new' => 'Neue Umbuchung',
         'title' => 'Umbuchung zwischen Konten',

@@ -21,7 +21,7 @@ import {
 } from '@/routes/accounting/bookings';
 import { create as transfersCreate } from '@/routes/accounting/transfers';
 import { create as importCreate } from '@/routes/accounting/import';
-import { PencilSquareIcon, TrashIcon, PlusIcon, ArrowsRightLeftIcon, ArrowUpTrayIcon, DocumentTextIcon, TableCellsIcon, ClipboardDocumentCheckIcon, SparklesIcon, CheckIcon, ArrowPathIcon, ChevronDownIcon } from '@heroicons/vue/24/outline';
+import { PencilSquareIcon, TrashIcon, PlusIcon, ArrowsRightLeftIcon, ArrowUpTrayIcon, DocumentTextIcon, TableCellsIcon, ClipboardDocumentCheckIcon, SparklesIcon, CheckIcon, ArrowPathIcon, ChevronDownIcon, PaperClipIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
     bookings: { type: Object, required: true }, // paginator
@@ -351,6 +351,11 @@ function destroy(booking) {
                                     <ArrowsRightLeftIcon class="h-3 w-3" /> {{ $t('accounting.bookings.transfer') }}
                                 </span>
                                 <span v-else class="text-ink">{{ b.category ?? '—' }}</span>
+                                <PaperClipIcon
+                                    v-if="b.has_document"
+                                    class="ml-1 inline h-3.5 w-3.5 text-ink/40"
+                                    :title="$t('accounting.paperless.has_document')"
+                                />
                                 <!-- Full purpose while unconfirmed, so it's easy to check; truncated once confirmed. -->
                                 <span
                                     v-if="b.purpose"

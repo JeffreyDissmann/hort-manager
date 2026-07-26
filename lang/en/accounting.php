@@ -150,6 +150,22 @@ return [
         'confirm_selected_hint' => 'Only categorised bookings will be confirmed.',
     ],
 
+    'paperless' => [
+        'label' => 'Receipt (Paperless)',
+        'none' => 'No document linked.',
+        'search_placeholder' => 'Search a document or paste an ID/link …',
+        'searching' => 'Searching …',
+        'no_results' => 'No documents found.',
+        'not_found' => 'No document found for that ID/URL.',
+        'ai_suggest' => 'AI suggestion',
+        'ai_searching' => 'AI is looking for a matching document …',
+        'ai_none' => 'No matching document found.',
+        'open' => 'Open in Paperless',
+        'download' => 'Download',
+        'remove' => 'Remove',
+        'has_document' => 'Document linked',
+    ],
+
     'transfers' => [
         'new' => 'New transfer',
         'title' => 'Transfer between accounts',

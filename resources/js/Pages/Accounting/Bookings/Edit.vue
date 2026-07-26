@@ -18,6 +18,8 @@ const props = defineProps({
     children: { type: Array, default: () => [] },
     users: { type: Array, required: true },
     statuses: { type: Array, required: true },
+    paperlessEnabled: { type: Boolean, default: false },
+    paperlessUrl: { type: String, default: null },
 });
 
 const form = useForm({
@@ -32,6 +34,8 @@ const form = useForm({
     counterparty_user_id: props.booking.counterparty_user_id,
     counterparty_name: props.booking.counterparty_name ?? '',
     reversal: props.booking.reversal ?? false,
+    paperless_document_id: props.booking.paperless_document_id ?? null,
+    paperless_document_title: props.booking.paperless_document_title ?? null,
     status: props.booking.status,
 });
 
@@ -70,7 +74,16 @@ function createTransfer() {
                 <BookingModeToggle v-if="accounts.length > 1" v-model="mode" class="mb-6" />
 
                 <template v-if="mode === 'booking'">
-                    <BookingFields :form="form" :accounts="accounts" :categories="categories" :children="children" :users="users" show-reversal />
+                    <BookingFields
+                        :form="form"
+                        :accounts="accounts"
+                        :categories="categories"
+                        :children="children"
+                        :users="users"
+                        :paperless-enabled="paperlessEnabled"
+                        :paperless-url="paperlessUrl"
+                        show-reversal
+                    />
 
                     <div class="mt-6 border-t border-ink/10 pt-4">
                         <InputLabel for="status" :value="$t('accounting.bookings.status')" />

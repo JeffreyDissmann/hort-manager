@@ -18,6 +18,7 @@ use App\Models\Accounting\Category;
 use App\Models\Accounting\Transfer;
 use App\Models\Child;
 use App\Models\User;
+use App\Services\Accounting\PaperlessService;
 use App\Support\Accounting\CategoryOptions;
 use App\Support\Accounting\SpreadsheetExport;
 use Illuminate\Database\Eloquent\Builder;
@@ -79,6 +80,7 @@ class BookingController extends Controller
                     'amount_cents' => $b->amount_cents,
                     'counterparty' => $b->counterpartyLabel(),
                     'purpose' => $b->purpose,
+                    'has_document' => $b->paperless_document_id !== null,
                     // Confirmable in bulk: unconfirmed and already categorised.
                     'can_confirm' => ! $isTransfer
                         && in_array($b->status, [BookingStatus::Draft, BookingStatus::Suggested], true)
@@ -235,6 +237,8 @@ class BookingController extends Controller
                 'counterparty_child_id' => $booking->counterparty_child_id,
                 'counterparty_user_id' => $booking->counterparty_user_id,
                 'counterparty_name' => $booking->counterparty_name,
+                'paperless_document_id' => $booking->paperless_document_id,
+                'paperless_document_title' => $booking->paperless_document_title,
                 'status' => $booking->status->value,
             ],
             'statuses' => $this->enumOptions(BookingStatus::cases()),
@@ -340,6 +344,9 @@ class BookingController extends Controller
                 'counterparty_child_id' => $booking->counterparty_child_id,
                 'counterparty_user_id' => $booking->counterparty_user_id,
                 'counterparty_name' => $booking->counterparty_name,
+                // Seed the picker with any receipt the import auto-matched.
+                'paperless_document_id' => $booking->paperless_document_id,
+                'paperless_document_title' => $booking->paperless_document_title,
                 'ai_suggested' => $booking->status === BookingStatus::Suggested,
                 'confidence' => $booking->confidence?->value,
             ],
@@ -354,6 +361,8 @@ class BookingController extends Controller
                     'active_until' => $c->active_until?->format('Y-m-d'),
                 ]),
             'users' => User::orderBy('name')->get(['id', 'name']),
+            'paperlessEnabled' => app(PaperlessService::class)->enabled(),
+            'paperlessUrl' => app(PaperlessService::class)->enabled() ? rtrim((string) config('services.paperless.url'), '/') : null,
         ]);
     }
 
@@ -424,10 +433,15 @@ class BookingController extends Controller
         $category = Category::findOrFail((int) $data['category_id']);
         $data['reversal'] = ($booking->amount_cents >= 0) !== ($category->direction === CategoryDirection::Income);
 
+        $previousDocumentId = $booking->paperless_document_id;
         $booking->update([
             ...BookingRequest::attributesFor($data),
             'status' => BookingStatus::Confirmed,
         ]);
+
+        if ($booking->paperless_document_id !== $previousDocumentId) {
+            SyncPaperlessBookingLink::dispatch($booking->id, $previousDocumentId);
+        }
     }
 
     /** The next AI-ready booking after the given one in (confidence, id) order. */
@@ -549,6 +563,9 @@ class BookingController extends Controller
                     'active_until' => $c->active_until?->format('Y-m-d'),
                 ]),
             'users' => User::orderBy('name')->get(['id', 'name']),
+            'paperlessEnabled' => app(PaperlessService::class)->enabled(),
+            // Base URL for the „in Paperless öffnen" deep link (null when disabled).
+            'paperlessUrl' => app(PaperlessService::class)->enabled() ? rtrim((string) config('services.paperless.url'), '/') : null,
         ];
     }
 

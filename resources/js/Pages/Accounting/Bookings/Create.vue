@@ -10,6 +10,8 @@ defineProps({
     categories: { type: Array, required: true },
     children: { type: Array, default: () => [] },
     users: { type: Array, required: true },
+    paperlessEnabled: { type: Boolean, default: false },
+    paperlessUrl: { type: String, default: null },
 });
 
 const form = useForm({
@@ -24,6 +26,8 @@ const form = useForm({
     counterparty_user_id: null,
     counterparty_name: '',
     reversal: false,
+    paperless_document_id: null,
+    paperless_document_title: null,
 });
 
 function submit() {
@@ -42,7 +46,16 @@ function submit() {
 
         <div class="mx-auto max-w-2xl">
             <form @submit.prevent="submit" class="rounded-2xl bg-surface p-6 shadow-sm">
-                <BookingFields :form="form" :accounts="accounts" :categories="categories" :children="children" :users="users" show-reversal />
+                <BookingFields
+                    :form="form"
+                    :accounts="accounts"
+                    :categories="categories"
+                    :children="children"
+                    :users="users"
+                    :paperless-enabled="paperlessEnabled"
+                    :paperless-url="paperlessUrl"
+                    show-reversal
+                />
 
                 <div class="mt-6 flex items-center justify-end gap-4">
                     <Link :href="bookingsIndex().url" class="text-sm text-ink/70 hover:text-ink">
