@@ -6,6 +6,8 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [2026.07.26] — 2026-07-26
+
 ### Added
 
 - **Charts on the accounting pages**: the Auswertung gets two donuts (Einnahmen /
@@ -16,6 +18,11 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **Tidier bookings header**: Import (most-used) is now the primary action with an
+  attached „more" chevron for „Neue Buchung" / „Neue Umbuchung"; export collapses to a
+  primary „Export Excel" with „Export CSV" under a chevron. In the review's Umbuchung
+  mode the action button no longer wraps on mobile (stacks full-width) and the AI
+  category hint is hidden (it doesn't apply to a transfer).
 - The Auswertung export matches the bookings page — a „Export Excel" split button with
   „Export CSV" under the chevron — and the header controls are tidied into one row.
 
@@ -26,14 +33,6 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   so the malformed bytes crashed `json_encode` when stashing the decoded rows
   („Malformed UTF-8 characters"). It now converts non-UTF files from Windows-1252 to
   valid UTF-8. (Regression since the flexible import in 2026.07.24.)
-
-### Changed
-
-- **Tidier bookings header**: Import (most-used) is now the primary action with an
-  attached „more" chevron for „Neue Buchung" / „Neue Umbuchung"; export collapses to a
-  primary „Export Excel" with „Export CSV" under a chevron. In the review's Umbuchung
-  mode the action button no longer wraps on mobile (stacks full-width) and the AI
-  category hint is hidden (it doesn't apply to a transfer).
 
 ## [2026.07.25] — 2026-07-25
 
