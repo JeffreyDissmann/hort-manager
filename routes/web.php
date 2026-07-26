@@ -179,6 +179,8 @@ Route::middleware('auth')->group(function () {
             Route::post('bookings/confirm', [BookingController::class, 'bulkConfirm'])->name('bookings.bulk-confirm');
             // Reclassify an existing booking as an internal transfer to another account.
             Route::post('bookings/{booking}/convert-transfer', [BookingController::class, 'convertToTransfer'])->name('bookings.convert-transfer');
+            // Suggest the best-matching Paperless document for the booking form.
+            Route::post('paperless/suggest', [PaperlessController::class, 'suggest'])->name('paperless.suggest');
             Route::resource('bookings', BookingController::class)->except(['show', 'index']);
 
             Route::get('transfers/create', [TransferController::class, 'create'])->name('transfers.create');

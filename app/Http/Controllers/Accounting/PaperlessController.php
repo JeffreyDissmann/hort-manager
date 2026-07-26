@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Accounting;
 
 use App\Http\Controllers\Controller;
+use App\Services\Accounting\PaperlessMatcher;
 use App\Services\Accounting\PaperlessService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -27,6 +28,22 @@ class PaperlessController extends Controller
         $query = (string) $request->query('q', '');
 
         return response()->json(['results' => $this->paperless->search($query)]);
+    }
+
+    /**
+     * Suggest the best-matching document for the current booking form („KI-Vorschlag").
+     * Works from loose form fields so it serves both the create and edit forms.
+     */
+    public function suggest(Request $request, PaperlessMatcher $matcher): JsonResponse
+    {
+        $data = $request->validate([
+            'purpose' => ['nullable', 'string', 'max:2000'],
+            'counterparty' => ['nullable', 'string', 'max:255'],
+            'amount' => ['nullable', 'numeric'],
+            'date' => ['nullable', 'date'],
+        ]);
+
+        return response()->json($matcher->match($data));
     }
 
     /** Resolve a single document (the paste-id / paste-URL flow). */
