@@ -188,6 +188,7 @@ class BookingController extends Controller
         $suggested = BookingStatus::Suggested;
 
         return [
+            ['value' => 'review', 'label' => __('accounting.bookings.status_review')],
             ['value' => BookingStatus::Draft->value, 'label' => BookingStatus::Draft->label()],
             ['value' => $suggested->value, 'label' => $suggested->label()],
             ...collect(SuggestionConfidence::cases())->map(fn (SuggestionConfidence $c): array => [
@@ -498,8 +499,14 @@ class BookingController extends Controller
             // A category filter includes the whole subtree (parent + all descendants).
             ->when($filters['category'] ?? null, fn ($q, $v) => $q->whereIn('category_id', $this->categorySubtreeIds((int) $v)))
             ->when($filters['kind'] ?? null, fn ($q, $v) => $q->where('kind', $v))
-            // The status filter may carry a confidence sub-selection, e.g. „suggested:low".
+            // „review" = everything still awaiting confirmation (draft + suggested); otherwise
+            // a single status, which may carry a confidence sub-selection, e.g. „suggested:low".
             ->when($filters['status'] ?? null, function ($q, $v): void {
+                if ($v === 'review') {
+                    $q->whereIn('status', [BookingStatus::Draft, BookingStatus::Suggested]);
+
+                    return;
+                }
                 [$status, $confidence] = array_pad(explode(':', (string) $v, 2), 2, null);
                 $q->where('status', $status);
                 if ($confidence !== null && $confidence !== '') {

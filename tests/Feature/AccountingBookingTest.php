@@ -205,6 +205,17 @@ it('exposes a linked receipt id and the paperless url on the index', function ()
         );
 });
 
+it('filters to bookings awaiting confirmation via status=review', function () {
+    $admin = User::factory()->admin()->accountingWriter()->create();
+    $this->actingAs($admin);
+    Booking::factory()->draft()->create();
+    Booking::factory()->suggested()->create();
+    Booking::factory()->create(); // confirmed
+
+    $this->get('/accounting/bookings?status=review')
+        ->assertInertia(fn (AssertableInertia $page) => $page->has('bookings.data', 2));
+});
+
 it('filters bookings by whether a receipt is linked', function () {
     $admin = User::factory()->admin()->accountingWriter()->create();
     $this->actingAs($admin);

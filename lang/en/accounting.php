@@ -123,6 +123,7 @@ return [
         'all_categories' => 'All categories',
         'all_kinds' => 'All kinds',
         'all_statuses' => 'All statuses',
+        'status_review' => 'To review',
         'all_receipts' => 'Receipt: any',
         'with_receipt' => 'With receipt',
         'without_receipt' => 'Without receipt',
