@@ -41,7 +41,7 @@ class BookingController extends Controller
 
     public function index(Request $request): Response
     {
-        $filters = $request->only(['account', 'category', 'kind', 'status', 'from', 'to', 'search', 'unassigned']);
+        $filters = $request->only(['account', 'category', 'kind', 'status', 'paperless', 'from', 'to', 'search', 'unassigned']);
         $categories = CategoryOptions::flat(onlyActive: false);
         $paths = collect($categories)->keyBy('id');
 
@@ -83,7 +83,7 @@ class BookingController extends Controller
                     'amount_cents' => $b->amount_cents,
                     'counterparty' => $b->counterpartyLabel(),
                     'purpose' => $b->purpose,
-                    'has_document' => $b->paperless_document_id !== null,
+                    'paperless_document_id' => $b->paperless_document_id,
                     // Confirmable in bulk: unconfirmed and already categorised.
                     'can_confirm' => ! $isTransfer
                         && in_array($b->status, [BookingStatus::Draft, BookingStatus::Suggested], true)
@@ -103,6 +103,8 @@ class BookingController extends Controller
             'pendingCount' => Booking::where('status', BookingStatus::Draft)->count(),
             'aiEnabled' => (bool) config('accounting.ai_suggestions'),
             'paperlessEnabled' => $this->paperless->enabled(),
+            // Base URL for the per-row „open receipt in Paperless" link (null when disabled).
+            'paperlessUrl' => $this->paperless->baseUrl(),
             // How many unconfirmed+categorised bookings match the current filter
             // (the count „select all matching" would bulk-confirm).
             'confirmableTotal' => Booking::needsReview()->whereNotNull('category_id')
@@ -121,7 +123,7 @@ class BookingController extends Controller
     /** Download every booking matching the current filter (not just the page) as CSV/XLSX. */
     public function export(Request $request): BinaryFileResponse
     {
-        $filters = $request->only(['account', 'category', 'kind', 'status', 'from', 'to', 'search', 'unassigned']);
+        $filters = $request->only(['account', 'category', 'kind', 'status', 'paperless', 'from', 'to', 'search', 'unassigned']);
         $xlsx = strtolower((string) $request->string('format')) === 'xlsx';
         $paths = collect(CategoryOptions::flat(onlyActive: false))->keyBy('id');
 
@@ -509,6 +511,10 @@ class BookingController extends Controller
             ->when($filters['unassigned'] ?? null, fn ($q) => $q
                 ->where('kind', BookingKind::Income)
                 ->whereNull('counterparty_child_id'))
+            // Has / doesn't have a linked Paperless receipt.
+            ->when($filters['paperless'] ?? null, fn ($q, $v) => $v === 'linked'
+                ? $q->whereNotNull('paperless_document_id')
+                : $q->whereNull('paperless_document_id'))
             ->when($filters['from'] ?? null, fn ($q, $v) => $q->whereDate('booking_date', '>=', $v))
             ->when($filters['to'] ?? null, fn ($q, $v) => $q->whereDate('booking_date', '<=', $v))
             ->when($filters['search'] ?? null, fn ($q, $v) => $q->where(fn ($w) => $w

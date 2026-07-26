@@ -191,6 +191,35 @@ it('rejects a non-integer paperless document id', function () {
     ])->assertSessionHasErrors('paperless_document_id');
 });
 
+it('exposes a linked receipt id and the paperless url on the index', function () {
+    config()->set('services.paperless.url', 'https://paperless.test');
+    config()->set('services.paperless.token', 'secret');
+    $admin = User::factory()->admin()->accountingWriter()->create();
+    Booking::factory()->create(['paperless_document_id' => 4]);
+
+    $this->actingAs($admin)
+        ->get('/accounting/bookings')
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('paperlessUrl', 'https://paperless.test')
+            ->where('bookings.data.0.paperless_document_id', 4)
+        );
+});
+
+it('filters bookings by whether a receipt is linked', function () {
+    $admin = User::factory()->admin()->accountingWriter()->create();
+    $this->actingAs($admin);
+    Booking::factory()->create(['paperless_document_id' => 4]);
+    Booking::factory()->create(['paperless_document_id' => null]);
+
+    $this->get('/accounting/bookings?paperless=linked')
+        ->assertInertia(fn (AssertableInertia $page) => $page->has('bookings.data', 1)
+            ->where('bookings.data.0.paperless_document_id', 4));
+
+    $this->get('/accounting/bookings?paperless=unlinked')
+        ->assertInertia(fn (AssertableInertia $page) => $page->has('bookings.data', 1)
+            ->where('bookings.data.0.paperless_document_id', null));
+});
+
 it('filters bookings by account', function () {
     $admin = User::factory()->admin()->accountingWriter()->create();
     $this->actingAs($admin);
