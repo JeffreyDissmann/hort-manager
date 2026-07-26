@@ -200,6 +200,26 @@ it('lists unlinked documents that have an amount, within a date range', function
         && ($r['created__date__lte'] ?? null) === '2026-01-31');
 });
 
+it('filters review candidates by payment type and resolves its label', function () {
+    config()->set('services.paperless.booking_field', 4);
+    config()->set('services.paperless.amount_field', 1);
+    config()->set('services.paperless.payment_field', 3);
+    Http::fake([
+        'paperless.test/api/custom_fields*' => Http::response(['results' => [
+            ['id' => 3, 'name' => 'Zahlungsart', 'data_type' => 'select', 'extra_data' => ['select_options' => [['id' => 'bar1', 'label' => 'Bar']]]],
+        ]]),
+        'paperless.test/api/correspondents*' => Http::response(['results' => []]),
+        'paperless.test/api/documents*' => Http::response(['results' => [
+            ['id' => 8, 'title' => 'Kassenbon', 'created' => '2026-01-07', 'custom_fields' => [['field' => 3, 'value' => 'bar1']]],
+        ]]),
+    ]);
+
+    $results = (new PaperlessService)->reviewCandidates('2026-01-01', '2026-01-31', 'bar1');
+
+    expect($results[0]['payment'])->toBe('Bar');
+    Http::assertSent(fn ($r) => ($r['custom_field_query'] ?? null) === json_encode(['AND', [[4, 'exists', false], [1, 'exists', true], [3, 'exact', 'bar1']]]));
+});
+
 it('has no review candidates without both custom fields configured', function () {
     config()->set('services.paperless.booking_field', 4);
     config()->set('services.paperless.amount_field', null);

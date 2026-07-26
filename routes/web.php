@@ -10,6 +10,7 @@ use App\Http\Controllers\Accounting\ContributionController;
 use App\Http\Controllers\Accounting\DashboardController;
 use App\Http\Controllers\Accounting\ImportController;
 use App\Http\Controllers\Accounting\PaperlessController;
+use App\Http\Controllers\Accounting\PaperlessReviewController;
 use App\Http\Controllers\Accounting\ReportController;
 use App\Http\Controllers\Accounting\TransferController;
 use App\Http\Controllers\ActivityLogController;
@@ -177,6 +178,12 @@ Route::middleware('auth')->group(function () {
             Route::post('bookings/reanalyse', [BookingController::class, 'reanalyse'])->name('bookings.reanalyse');
             // Re-run the deterministic Paperless receipt link over unconfirmed bookings.
             Route::post('bookings/relink-receipts', [BookingController::class, 'relinkReceipts'])->name('bookings.relink-receipts');
+
+            // „Belege zuordnen" — walk unlinked Paperless receipts, attach or create bookings.
+            Route::get('paperless/review', [PaperlessReviewController::class, 'index'])->name('paperless.review');
+            Route::post('paperless/attach', [PaperlessReviewController::class, 'attach'])->name('paperless.attach');
+            Route::post('paperless/bookings', [PaperlessReviewController::class, 'createBooking'])->name('paperless.bookings.store');
+            Route::post('paperless/ignore', [PaperlessReviewController::class, 'ignore'])->name('paperless.ignore');
             // Bulk-confirm bookings from the overview.
             Route::post('bookings/confirm', [BookingController::class, 'bulkConfirm'])->name('bookings.bulk-confirm');
             // Reclassify an existing booking as an internal transfer to another account.

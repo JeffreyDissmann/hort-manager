@@ -20,6 +20,7 @@ import {
     bulkConfirm as bookingsBulkConfirm,
     download as bookingsExport,
 } from '@/routes/accounting/bookings';
+import { review as paperlessReview } from '@/routes/accounting/paperless';
 import { create as transfersCreate } from '@/routes/accounting/transfers';
 import { create as importCreate } from '@/routes/accounting/import';
 import { thumb as paperlessThumb } from '@/routes/accounting/paperless/documents';
@@ -305,6 +306,9 @@ function destroy(booking) {
                                     </DropdownLink>
                                     <DropdownLink :href="transfersCreate().url" data-testid="bookings-transfer">
                                         <span class="flex items-center gap-2"><ArrowsRightLeftIcon class="h-4 w-4" /> {{ $t('accounting.transfers.new') }}</span>
+                                    </DropdownLink>
+                                    <DropdownLink v-if="paperlessEnabled" :href="paperlessReview().url" data-testid="bookings-assign-receipts">
+                                        <span class="flex items-center gap-2"><PaperClipIcon class="h-4 w-4" /> {{ $t('accounting.paperless_review.nav') }}</span>
                                     </DropdownLink>
                                 </template>
                             </Dropdown>

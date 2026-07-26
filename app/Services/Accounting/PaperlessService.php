@@ -26,6 +26,9 @@ class PaperlessService
     /** Memoised id → name map of Paperless correspondents (resolved once per instance). */
     private ?array $correspondentNames = null;
 
+    /** Memoised payment-type select options (resolved once per instance). */
+    private ?array $paymentOptions = null;
+
     /** Both the base URL and an API token must be set for the integration to work. */
     public function enabled(): bool
     {
@@ -96,12 +99,12 @@ class PaperlessService
     /**
      * The unlinked financial documents to walk in the „Belege zuordnen" wizard: not yet
      * linked (booking field empty — which also excludes ignored ones) AND carrying an
-     * amount (the monetary field is set), created within the given range. Requires both
-     * custom fields configured; returns [] otherwise.
+     * amount (the monetary field is set), created within the given range and optionally of
+     * a given payment type. Requires the booking + amount fields; returns [] otherwise.
      *
-     * @return list<array{id:int, title:string, created:?string, correspondent?:?string, amount_cents?:?int}>
+     * @return list<array{id:int, title:string, created:?string, correspondent?:?string, amount_cents?:?int, payment?:?string}>
      */
-    public function reviewCandidates(?string $from = null, ?string $to = null, int $limit = 200): array
+    public function reviewCandidates(?string $from = null, ?string $to = null, ?string $payment = null, int $limit = 200): array
     {
         $bookingField = $this->bookingFieldId();
         $amountField = $this->amountFieldId();
@@ -110,8 +113,13 @@ class PaperlessService
             return [];
         }
 
+        $conditions = [[$bookingField, 'exists', false], [$amountField, 'exists', true]];
+        if ($payment !== null && $payment !== '' && ($paymentField = $this->paymentFieldId()) !== null) {
+            $conditions[] = [$paymentField, 'exact', $payment];
+        }
+
         $params = [
-            'custom_field_query' => json_encode(['AND', [[$bookingField, 'exists', false], [$amountField, 'exists', true]]]),
+            'custom_field_query' => json_encode(['AND', $conditions]),
             'ordering' => 'created',
         ];
         if ($from !== null && $from !== '') {
@@ -354,6 +362,45 @@ class PaperlessService
         return filled($field) ? (int) $field : null;
     }
 
+    /** The configured „select" custom-field id for the payment type, or null. */
+    public function paymentFieldId(): ?int
+    {
+        $field = config('services.paperless.payment_field');
+
+        return filled($field) ? (int) $field : null;
+    }
+
+    /**
+     * The payment-type select options (id + label) for the wizard filter, resolved once
+     * from the custom field definition. Empty when not configured.
+     *
+     * @return list<array{id:string, label:string}>
+     */
+    public function paymentOptions(): array
+    {
+        if ($this->paymentOptions !== null) {
+            return $this->paymentOptions;
+        }
+
+        $fieldId = $this->paymentFieldId();
+        if (! $this->enabled() || $fieldId === null) {
+            return $this->paymentOptions = [];
+        }
+
+        try {
+            $field = collect(Http::paperless()->get('custom_fields/', ['page_size' => 100])->json('results', []))
+                ->firstWhere('id', $fieldId);
+
+            return $this->paymentOptions = collect($field['extra_data']['select_options'] ?? [])
+                ->map(fn (array $o): array => ['id' => (string) ($o['id'] ?? ''), 'label' => (string) ($o['label'] ?? '')])
+                ->all();
+        } catch (Throwable $e) {
+            Log::warning('Paperless payment options fetch failed: '.$e->getMessage());
+
+            return $this->paymentOptions = [];
+        }
+    }
+
     /** Fetch a binary endpoint, returning the raw response for the caller to stream. */
     private function stream(string $path): ?Response
     {
@@ -394,12 +441,40 @@ class PaperlessService
             $mapped['amount_cents'] = $this->documentAmountCents($document['custom_fields'] ?? [], $amountField);
         }
 
+        // The payment type, resolved from the select field's option id to its label.
+        if ($this->paymentFieldId() !== null) {
+            $mapped['payment'] = $this->paymentLabel($document['custom_fields'] ?? []);
+        }
+
         // A trimmed OCR snippet — enough to carry the vendor, total and date.
         if ($withContent) {
             $mapped['content'] = mb_substr(trim((string) ($document['content'] ?? '')), 0, 600);
         }
 
         return $mapped;
+    }
+
+    /**
+     * Resolve the payment-type label from the select field's option id on a document.
+     *
+     * @param  array<int, array{field?:int, value?:mixed}>  $customFields
+     */
+    private function paymentLabel(array $customFields): ?string
+    {
+        $fieldId = $this->paymentFieldId();
+        $optionId = null;
+        foreach ($customFields as $field) {
+            if ((int) ($field['field'] ?? 0) === $fieldId) {
+                $optionId = $field['value'] ?? null;
+                break;
+            }
+        }
+
+        if ($optionId === null) {
+            return null;
+        }
+
+        return collect($this->paymentOptions())->firstWhere('id', (string) $optionId)['label'] ?? null;
     }
 
     /**

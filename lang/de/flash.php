@@ -46,6 +46,8 @@ return [
     'bookings_reanalysing' => ':count Buchungen werden von der KI neu analysiert.',
     'receipts_relinking' => 'Belege werden für :count Buchungen gesucht.',
     'paperless_disabled' => 'Paperless ist nicht eingerichtet.',
+    'receipt_attached' => 'Beleg verknüpft.',
+    'receipt_ignored' => 'Beleg als „kein Beleg" markiert.',
     'bookings_confirmed' => ':count Buchungen bestätigt.',
     'ai_disabled' => 'Die KI-Analyse ist aktuell deaktiviert.',
     'transfer_created' => 'Umbuchung angelegt.',

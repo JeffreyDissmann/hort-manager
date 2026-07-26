@@ -62,6 +62,9 @@ return [
         // Id of a monetary custom field holding the document's total. When set, receipt
         // suggestions/matching filter on an exact amount match (a near-unique signal).
         'amount_field' => env('PAPERLESS_AMOUNT_FIELD'),
+        // Id of a „select" custom field holding the payment type (Bar, EC-Karte, …). When
+        // set, the receipt-assignment wizard shows it and can filter by it.
+        'payment_field' => env('PAPERLESS_PAYMENT_FIELD'),
     ],
 
 ];
