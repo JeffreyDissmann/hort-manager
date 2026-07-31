@@ -2,7 +2,7 @@
 import { update as usersUpdate, sync as usersSync, destroy as usersDestroy } from '@/routes/users';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import Avatar from '@/Components/Avatar.vue';
-import { ArrowPathIcon, TrashIcon } from '@heroicons/vue/24/outline';
+import { ArrowPathIcon, TrashIcon, UserCircleIcon } from '@heroicons/vue/24/outline';
 import { Head, router, usePage } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import { t } from '@/i18n';
@@ -116,7 +116,7 @@ function save(user, changes) {
                     </div>
 
                     <!-- Controls: their own full-width row on mobile, inline on desktop. -->
-                    <div class="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+                    <div class="flex w-full flex-wrap items-end gap-2 sm:w-auto">
                         <label class="flex min-w-0 flex-1 flex-col gap-1 sm:w-auto sm:flex-none">
                             <span class="text-xs text-ink/40">{{ $t('users.role_label') }}</span>
                             <select
@@ -131,7 +131,7 @@ function save(user, changes) {
                         </label>
 
                         <label
-                            class="flex shrink-0 cursor-pointer items-center gap-2 self-end rounded-lg bg-ink/5 px-3 py-2 text-sm font-medium text-ink sm:self-auto"
+                            class="flex shrink-0 cursor-pointer items-center gap-2 rounded-lg bg-ink/5 px-3 py-2 text-sm font-medium text-ink"
                         >
                             <input
                                 type="checkbox"
@@ -159,11 +159,19 @@ function save(user, changes) {
                             v-if="!user.is_self"
                             type="button"
                             @click="destroy(user)"
-                            class="shrink-0 self-end rounded-lg p-2 text-ink/30 transition hover:bg-red-50 hover:text-red-600 sm:self-auto"
+                            class="shrink-0 rounded-lg p-2 text-ink/30 transition hover:bg-red-50 hover:text-red-600"
                             :aria-label="$t('users.delete_aria')"
                         >
                             <TrashIcon class="h-5 w-5" />
                         </button>
+                        <!-- Own row: no delete, but keep the slot filled so every row's controls line up. -->
+                        <span
+                            v-else
+                            class="shrink-0 rounded-lg p-2 text-hort-teal-dark"
+                            :title="$t('users.self_suffix')"
+                        >
+                            <UserCircleIcon class="h-5 w-5" />
+                        </span>
                     </div>
                 </li>
             </ul>

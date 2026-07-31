@@ -83,6 +83,17 @@ it('attaches a document to a chosen booking', function () {
     Queue::assertPushed(SyncPaperlessBookingLink::class, fn ($job) => $job->bookingId === $booking->id);
 });
 
+it('will not attach a document already linked to another booking', function () {
+    Booking::factory()->create(['paperless_document_id' => 8]); // 8 is taken
+    $booking = Booking::factory()->create(['paperless_document_id' => null]);
+
+    $this->actingAs($this->admin)
+        ->post('/accounting/paperless/attach', ['document_id' => 8, 'booking_id' => $booking->id])
+        ->assertStatus(422);
+
+    expect($booking->refresh()->paperless_document_id)->toBeNull();
+});
+
 it('will not attach to a booking that is already linked', function () {
     $booking = Booking::factory()->create(['paperless_document_id' => 5]);
 

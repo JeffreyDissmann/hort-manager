@@ -477,11 +477,10 @@ function destroy(booking) {
                                     <ArrowsRightLeftIcon class="h-3 w-3" /> {{ $t('accounting.bookings.transfer') }}
                                 </span>
                                 <span v-else class="text-ink">{{ b.category ?? '—' }}</span>
-                                <!-- Full purpose while unconfirmed, so it's easy to check; truncated once confirmed. -->
+                                <!-- Full purpose, wrapped over multiple lines so it's always readable. -->
                                 <span
                                     v-if="b.purpose"
-                                    class="block text-xs text-ink/40"
-                                    :class="b.status === 'confirmed' ? 'max-w-xs truncate' : 'whitespace-pre-wrap break-words'"
+                                    class="block whitespace-pre-wrap break-words text-xs text-ink/40"
                                 >
                                     {{ b.purpose }}
                                 </span>

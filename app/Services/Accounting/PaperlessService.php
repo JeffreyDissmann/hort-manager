@@ -77,12 +77,7 @@ class PaperlessService
         // 2. Full-text query within a date window around the reference date — the fallback.
         $text = trim($text);
         if ($text !== '' && count($results) < $limit) {
-            $params = $this->unlinkedParams(['query' => $text]);
-            if ($nearDate !== null && $nearDate !== '') {
-                $reference = Carbon::parse($nearDate);
-                $params['created__date__gte'] = $reference->copy()->subDays(self::NEAR_WINDOW_DAYS)->toDateString();
-                $params['created__date__lte'] = $reference->copy()->addDays(self::NEAR_WINDOW_DAYS)->toDateString();
-            }
+            $params = $this->unlinkedParams(['query' => $text]) + $this->dateWindow($nearDate);
 
             $seen = array_flip(array_column($results, 'id'));
             foreach ($this->request($params, $limit, $withContent, $withCorrespondent) as $document) {
@@ -163,12 +158,7 @@ class PaperlessService
             return null;
         }
 
-        $params = ['custom_field_query' => $amountQuery];
-        if ($nearDate !== null && $nearDate !== '') {
-            $reference = Carbon::parse($nearDate);
-            $params['created__date__gte'] = $reference->copy()->subDays(self::NEAR_WINDOW_DAYS)->toDateString();
-            $params['created__date__lte'] = $reference->copy()->addDays(self::NEAR_WINDOW_DAYS)->toDateString();
-        }
+        $params = ['custom_field_query' => $amountQuery] + $this->dateWindow($nearDate);
 
         // Fetch two so an ambiguous (multiple same-amount) match can be detected and skipped.
         $results = $this->request($params, 2, false, false);
@@ -250,6 +240,25 @@ class PaperlessService
     }
 
     /**
+     * The created-date window params around a reference (valuta) date, or [] if none.
+     *
+     * @return array<string, string>
+     */
+    private function dateWindow(?string $nearDate): array
+    {
+        if ($nearDate === null || $nearDate === '') {
+            return [];
+        }
+
+        $reference = Carbon::parse($nearDate);
+
+        return [
+            'created__date__gte' => $reference->copy()->subDays(self::NEAR_WINDOW_DAYS)->toDateString(),
+            'created__date__lte' => $reference->copy()->addDays(self::NEAR_WINDOW_DAYS)->toDateString(),
+        ];
+    }
+
+    /**
      * Add the „not already linked to a booking" filter (custom field unset) to a query.
      *
      * @param  array<string, mixed>  $params
@@ -266,9 +275,9 @@ class PaperlessService
 
     /**
      * Resolve a single document by id (paste-id / URL flow + the linked-state card),
-     * including its correspondent and amount for display.
+     * including its correspondent, amount and payment type for display.
      *
-     * @return array{id:int, title:string, created:?string, correspondent?:?string, amount_cents?:?int}|null
+     * @return array{id:int, title:string, created:?string, correspondent?:?string, amount_cents?:?int, payment?:?string}|null
      */
     public function find(int $id): ?array
     {
