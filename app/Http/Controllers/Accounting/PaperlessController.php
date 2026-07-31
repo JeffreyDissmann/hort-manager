@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Accounting;
 
 use App\Http\Controllers\Controller;
+use App\Models\Accounting\Booking;
 use App\Services\Accounting\PaperlessService;
 use Illuminate\Http\Client\Response as ClientResponse;
 use Illuminate\Http\JsonResponse;
@@ -16,7 +17,9 @@ use Symfony\Component\HttpFoundation\Response;
  * Thin proxy between the booking form and the Paperless archive. Search + lookup
  * return JSON for the picker; thumbnail + download stream the binary through the app
  * so the API token never reaches the browser and the user needs no direct Paperless
- * access. Everything 404s / returns empty when the integration is not configured.
+ * access. Search/find/download are editor-only (archive-wide reads); the thumbnail is
+ * readable but scoped to documents linked to a booking. Everything 404s / returns
+ * empty when the integration is not configured.
  */
 class PaperlessController extends Controller
 {
@@ -53,26 +56,51 @@ class PaperlessController extends Controller
         return response()->json($found);
     }
 
-    /** Relay the document thumbnail through the app. */
-    public function thumbnail(int $document): HttpResponse
+    /**
+     * Relay the document thumbnail. Readable, but a read-only user may only fetch the
+     * thumbnail of a document that's actually linked to a booking — otherwise they could
+     * enumerate the whole archive. The type is forced to the known thumbnail format so a
+     * malicious document can't be served as inline HTML/SVG.
+     */
+    public function thumbnail(Request $request, int $document): HttpResponse
     {
-        return $this->relay($this->paperless->thumbnail($document), 'image/webp');
+        abort_unless($this->mayView($request, $document), Response::HTTP_FORBIDDEN);
+
+        $body = $this->relayBody($this->paperless->thumbnail($document));
+
+        return response($body, Response::HTTP_OK, [
+            'Content-Type' => 'image/webp',
+            'X-Content-Type-Options' => 'nosniff',
+            'Cache-Control' => 'private, max-age=300',
+        ]);
     }
 
-    /** Relay the original document file through the app. */
+    /** Relay the original document file as a forced download (editors only, see routes). */
     public function download(int $document): HttpResponse
     {
-        return $this->relay($this->paperless->download($document), 'application/octet-stream');
+        $body = $this->relayBody($this->paperless->download($document));
+
+        return response($body, Response::HTTP_OK, [
+            'Content-Type' => 'application/octet-stream',
+            // Force a download so a document stored as HTML/SVG can't execute same-origin.
+            'Content-Disposition' => 'attachment; filename="beleg-'.$document.'"',
+            'X-Content-Type-Options' => 'nosniff',
+            'Cache-Control' => 'private, max-age=300',
+        ]);
     }
 
-    /** Relay an upstream Paperless binary response, or 404 when it isn't available. */
-    private function relay(?ClientResponse $upstream, string $fallbackType): HttpResponse
+    /** May the requester view this document? Editors always; readers only if it's linked. */
+    private function mayView(Request $request, int $document): bool
+    {
+        return $request->user()->canWriteAccounting()
+            || Booking::where('paperless_document_id', $document)->exists();
+    }
+
+    /** The upstream binary body, or 404 when Paperless didn't return it. */
+    private function relayBody(?ClientResponse $upstream): string
     {
         abort_if($upstream === null, Response::HTTP_NOT_FOUND);
 
-        return response($upstream->body(), Response::HTTP_OK, [
-            'Content-Type' => $upstream->header('Content-Type') ?: $fallbackType,
-            'Cache-Control' => 'private, max-age=300',
-        ]);
+        return $upstream->body();
     }
 }

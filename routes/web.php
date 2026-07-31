@@ -161,11 +161,10 @@ Route::middleware('auth')->group(function () {
         // Einnahmen je Kind — child × month matrix of contributions.
         Route::get('contributions', [ContributionController::class, 'index'])->name('contributions.index');
 
-        // Paperless document archive — proxied so the API token stays server-side.
-        Route::get('paperless/search', [PaperlessController::class, 'search'])->name('paperless.search');
-        Route::get('paperless/documents/{document}', [PaperlessController::class, 'find'])->name('paperless.documents.show')->whereNumber('document');
+        // Paperless thumbnail — proxied (token stays server-side). Readable, but scoped in
+        // the controller to documents actually linked to a booking (so a read-only user
+        // can see receipts on the ledger without being able to enumerate the whole archive).
         Route::get('paperless/documents/{document}/thumb', [PaperlessController::class, 'thumbnail'])->name('paperless.documents.thumb')->whereNumber('document');
-        Route::get('paperless/documents/{document}/download', [PaperlessController::class, 'download'])->name('paperless.documents.download')->whereNumber('document');
 
         // --- Write (editors only) ---
         Route::middleware('accounting:write')->group(function () {
@@ -178,6 +177,11 @@ Route::middleware('auth')->group(function () {
             Route::post('bookings/reanalyse', [BookingController::class, 'reanalyse'])->name('bookings.reanalyse');
             // Re-run the deterministic Paperless receipt link over unconfirmed bookings.
             Route::post('bookings/relink-receipts', [BookingController::class, 'relinkReceipts'])->name('bookings.relink-receipts');
+
+            // Paperless search / resolve / download — editors only (archive-wide reads).
+            Route::get('paperless/search', [PaperlessController::class, 'search'])->name('paperless.search');
+            Route::get('paperless/documents/{document}', [PaperlessController::class, 'find'])->name('paperless.documents.show')->whereNumber('document');
+            Route::get('paperless/documents/{document}/download', [PaperlessController::class, 'download'])->name('paperless.documents.download')->whereNumber('document');
 
             // „Belege zuordnen" — walk unlinked Paperless receipts, attach or create bookings.
             Route::get('paperless/review', [PaperlessReviewController::class, 'index'])->name('paperless.review');

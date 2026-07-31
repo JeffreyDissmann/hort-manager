@@ -101,16 +101,49 @@ it('404s an unknown document', function () {
         ->assertNotFound();
 });
 
-it('streams the thumbnail with the upstream content type and no token', function () {
+it('streams the thumbnail as image/webp with nosniff and no token', function () {
     Http::fake([
-        'paperless.test/api/documents/12/thumb/' => Http::response('BINARYIMAGE', 200, ['Content-Type' => 'image/webp']),
+        'paperless.test/api/documents/12/thumb/' => Http::response('BINARYIMAGE', 200, ['Content-Type' => 'text/html']),
     ]);
 
     $response = $this->actingAs($this->admin)->get('/accounting/paperless/documents/12/thumb');
 
-    $response->assertOk()->assertHeader('Content-Type', 'image/webp');
-    expect($response->content())->toBe('BINARYIMAGE')
-        ->not->toContain('secret-token');
+    // Forced to image/webp (never the upstream text/html) + nosniff → no inline HTML/SVG XSS.
+    $response->assertOk()
+        ->assertHeader('Content-Type', 'image/webp')
+        ->assertHeader('X-Content-Type-Options', 'nosniff');
+    expect($response->content())->toBe('BINARYIMAGE')->not->toContain('secret-token');
+});
+
+it('forces a download as an attachment', function () {
+    Http::fake(['paperless.test/api/documents/12/download/' => Http::response('FILE', 200, ['Content-Type' => 'text/html'])]);
+
+    $this->actingAs($this->admin)
+        ->get('/accounting/paperless/documents/12/download')
+        ->assertOk()
+        ->assertHeader('Content-Type', 'application/octet-stream')
+        ->assertHeader('Content-Disposition', 'attachment; filename="beleg-12"')
+        ->assertHeader('X-Content-Type-Options', 'nosniff');
+});
+
+it('lets a read-only user see a linked thumbnail but not an arbitrary one', function () {
+    $reader = User::factory()->accountingReader()->create();
+    Booking::factory()->create(['paperless_document_id' => 12]);
+    Http::fake(['paperless.test/api/documents/*/thumb/' => Http::response('IMG', 200)]);
+
+    // #12 is linked → allowed.
+    $this->actingAs($reader)->get('/accounting/paperless/documents/12/thumb')->assertOk();
+    // #99 is not linked to any booking → forbidden (no archive-wide enumeration).
+    $this->actingAs($reader)->get('/accounting/paperless/documents/99/thumb')->assertForbidden();
+});
+
+it('keeps archive-wide reads (search / find / download) editor-only', function () {
+    $reader = User::factory()->accountingReader()->create();
+    Http::preventStrayRequests();
+
+    $this->actingAs($reader)->getJson('/accounting/paperless/search?q=x')->assertForbidden();
+    $this->actingAs($reader)->getJson('/accounting/paperless/documents/12')->assertForbidden();
+    $this->actingAs($reader)->get('/accounting/paperless/documents/12/download')->assertForbidden();
 });
 
 it('returns empty search results when paperless is not configured', function () {
