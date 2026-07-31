@@ -129,18 +129,18 @@ async function run(raw) {
 
 async function fetchResults(q, { limit, suggestions }) {
     status.value = 'searching';
-    const query = { q, limit };
+    const params = { q, limit };
     // Suggestions add the booking's amount + valuta date as strong ranking signals.
     if (suggestions) {
         if (props.amount) {
-            query.amount = props.amount;
+            params.amount = props.amount;
         }
         if (props.nearDate) {
-            query.near = props.nearDate;
+            params.near = props.nearDate;
         }
     }
     try {
-        const { data } = await window.axios.get(paperlessSearch({ query }).url);
+        const { data } = await window.axios.get(paperlessSearch({ query: params }).url);
         results.value = data.results ?? [];
         showingSuggestions.value = suggestions && results.value.length > 0;
         status.value = results.value.length ? '' : (suggestions ? '' : 'no_results');

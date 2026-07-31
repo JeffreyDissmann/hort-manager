@@ -34,6 +34,8 @@ class ImportController extends Controller
     /** How many data rows to preview on the mapping screen. */
     private const PREVIEW_ROWS = 6;
 
+    public function __construct(private readonly PaperlessService $paperless) {}
+
     public function create(): Response
     {
         return Inertia::render('Accounting/Import/Create', [
@@ -200,7 +202,7 @@ class ImportController extends Controller
      */
     private function enrichDrafts(Collection $drafts): void
     {
-        if (app(PaperlessService::class)->enabled()) {
+        if ($this->paperless->enabled()) {
             $drafts->each(fn (Booking $b) => LinkBookingReceipt::dispatch($b->id));
         }
 

@@ -93,8 +93,11 @@ class Booking extends Model
         $query->where('status', BookingStatus::Suggested);
     }
 
-    /** Everything still awaiting human confirmation (raw draft or AI-suggested). */
-    /** @param Builder<Booking> $query */
+    /**
+     * Everything still awaiting human confirmation (raw draft or AI-suggested).
+     *
+     * @param  Builder<Booking>  $query
+     */
     public function scopeNeedsReview(Builder $query): void
     {
         $query->whereIn('status', [BookingStatus::Draft, BookingStatus::Suggested]);
