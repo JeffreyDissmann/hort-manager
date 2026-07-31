@@ -9,11 +9,9 @@ use App\Enums\BookingStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Accounting\BookingRequest;
 use App\Jobs\SyncPaperlessBookingLink;
-use App\Models\Accounting\Account;
 use App\Models\Accounting\Booking;
-use App\Models\Child;
-use App\Models\User;
 use App\Services\Accounting\PaperlessService;
+use App\Support\Accounting\BookingFormOptions;
 use App\Support\Accounting\CategoryOptions;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -60,7 +58,7 @@ class PaperlessReviewController extends Controller
             'paymentOptions' => $this->paperless->paymentOptions(),
             'paperlessEnabled' => $this->paperless->enabled(),
             'paperlessUrl' => $this->paperless->baseUrl(),
-            ...$this->bookingFormProps(),
+            ...BookingFormOptions::all(),
         ]);
     }
 
@@ -74,7 +72,14 @@ class PaperlessReviewController extends Controller
         ]);
 
         $booking = Booking::findOrFail($data['booking_id']);
-        abort_if($booking->kind === BookingKind::Transfer || $booking->paperless_document_id !== null, HttpResponse::HTTP_UNPROCESSABLE_ENTITY);
+        // The booking must be unlinked + not a transfer, and the document must not already
+        // be attached to another booking (one document per booking).
+        abort_if(
+            $booking->kind === BookingKind::Transfer
+            || $booking->paperless_document_id !== null
+            || Booking::where('paperless_document_id', $data['document_id'])->exists(),
+            HttpResponse::HTTP_UNPROCESSABLE_ENTITY,
+        );
 
         $booking->update([
             'paperless_document_id' => $data['document_id'],
@@ -119,12 +124,24 @@ class PaperlessReviewController extends Controller
     {
         $paths = collect(CategoryOptions::flat(onlyActive: false))->keyBy('id');
 
-        $byAmount = Booking::query()
-            ->whereNull('paperless_document_id')
-            ->where('kind', '!=', BookingKind::Transfer)
-            ->with(['account:id,name', 'counterparty:id,name', 'counterpartyChild:id,name'])
-            ->get()
-            ->groupBy(fn (Booking $b): int => abs($b->amount_cents));
+        // Only load bookings whose amount can actually match a document (both signs), so
+        // this stays bounded (≤ 2× the page) instead of loading the whole ledger.
+        $amounts = collect($documents)
+            ->pluck('amount_cents')
+            ->filter()
+            ->flatMap(fn ($c): array => [abs((int) $c), -abs((int) $c)])
+            ->unique()
+            ->values();
+
+        $byAmount = $amounts->isEmpty()
+            ? collect()
+            : Booking::query()
+                ->whereNull('paperless_document_id')
+                ->where('kind', '!=', BookingKind::Transfer)
+                ->whereIn('amount_cents', $amounts)
+                ->with(['account:id,name', 'counterparty:id,name', 'counterpartyChild:id,name'])
+                ->get()
+                ->groupBy(fn (Booking $b): int => abs($b->amount_cents));
 
         return array_map(function (array $document) use ($byAmount, $paths): array {
             $amount = (int) ($document['amount_cents'] ?? 0);
@@ -148,26 +165,5 @@ class PaperlessReviewController extends Controller
 
             return [...$document, 'candidates' => $candidates];
         }, $documents);
-    }
-
-    /**
-     * Options for the „create booking" modal (mirrors BookingController::formProps).
-     *
-     * @return array<string, mixed>
-     */
-    private function bookingFormProps(): array
-    {
-        return [
-            'accounts' => Account::where('active', true)->orderBy('name')->get(['id', 'name']),
-            'categories' => CategoryOptions::flat(),
-            'children' => Child::orderBy('name')->get(['id', 'name', 'active_from', 'active_until'])
-                ->map(fn (Child $c): array => [
-                    'id' => $c->id,
-                    'name' => $c->name,
-                    'active_from' => $c->active_from?->format('Y-m-d'),
-                    'active_until' => $c->active_until?->format('Y-m-d'),
-                ]),
-            'users' => User::orderBy('name')->get(['id', 'name']),
-        ];
     }
 }
