@@ -23,6 +23,8 @@ const props = defineProps({
     excursions: { type: Array, default: () => [] },
     program: { type: Object, default: null },
     canMark: { type: Boolean, default: false },
+    // Set when the Hort is closed on the selected day — then nothing else is rendered.
+    closure: { type: Object, default: null },
     children: { type: Array, default: () => [] },
     methodOptions: { type: Array, default: () => [] },
     qualifierOptions: { type: Array, default: () => [] },
@@ -318,6 +320,19 @@ function editHortfrei(child) {
                 {{ flash }}
             </div>
 
+            <!-- Schließzeit: the Hort is shut, so there is no plan to show at all.
+                 Everything below is skipped — the server sends no rows either. -->
+            <div
+                v-if="closure"
+                data-testid="board-closed"
+                class="rounded-2xl bg-surface p-6 text-center shadow-sm"
+            >
+                <p class="text-lg font-semibold text-ink">{{ $t('board.closed_title') }}</p>
+                <p class="mt-1 text-sm text-ink/70">{{ closure.name }}</p>
+                <p v-if="closure.note" class="mt-2 text-sm text-ink/60">{{ closure.note }}</p>
+            </div>
+
+            <template v-else>
             <!-- „Geht mit … mit" overview for the parent (staff use the plan display). -->
             <CompanionNotes :notes="companionNotes" @confirm="answerCompanion" />
 
@@ -772,6 +787,7 @@ function editHortfrei(child) {
                     {{ $t('board.empty_all') }}
                 </template>
             </p>
+            </template>
         </div>
 
         <DayEditor

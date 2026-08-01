@@ -15,6 +15,7 @@ use App\Models\Child;
 use App\Models\DailyDeparture;
 use App\Models\DailyProgram;
 use App\Models\Excursion;
+use App\Models\HolidayPeriod;
 use App\Models\HomeworkDefault;
 use App\Support\CompanionNotes;
 use App\Support\CompanionReconciler;
@@ -36,6 +37,21 @@ class DailyBoardController extends Controller
         $isToday = $date->isToday();
         $weekday = $date->dayOfWeekIso;
         $user = $request->user();
+
+        // Schließzeit: the Hort doesn't exist on this day. Return before seeding any
+        // DailyDeparture rows — there is nothing to pick up and nobody to mark off.
+        // Every other prop has a default, so the page needs only the day + the closure.
+        if ($closure = HolidayPeriod::query()->closed()->covering($date)->first()) {
+            return Inertia::render('Board/Index', [
+                'date' => $day,
+                'closure' => [
+                    'name' => $closure->name,
+                    'note' => $closure->note,
+                    'starts_on' => $closure->starts_on->toDateString(),
+                    'ends_on' => $closure->ends_on->toDateString(),
+                ],
+            ]);
+        }
 
         // Children reported away today (krank/abwesend) — no pickup expected.
         $absences = Absence::with('child:id,name')
@@ -355,6 +371,9 @@ class DailyBoardController extends Controller
         $this->authorize('mark', $departure);
         // Marking is a live, same-day action — never rewrite a past/future date.
         abort_unless($departure->date->isToday(), 403);
+        // A closure added after the row was seeded leaves it orphaned on a day the
+        // Hort is shut; the board hides it, so nothing may be marked off either.
+        abort_if(HolidayPeriod::closesOn($departure->date), 403);
 
         $status = DepartureStatus::from($request->validated('status'));
 
@@ -378,6 +397,7 @@ class DailyBoardController extends Controller
         $this->authorize('update', $departure->child);
         // A board override is same-day only; future days edit via weekly-plan.adjust.
         abort_unless($departure->date->isToday(), 403);
+        abort_if(HolidayPeriod::closesOn($departure->date), 403);
 
         $validated = $request->validated();
 

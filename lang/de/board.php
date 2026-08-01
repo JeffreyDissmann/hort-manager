@@ -54,6 +54,7 @@ return [
 
     'empty_own' => 'Heute ist keins deiner Kinder im Hort.',
     'empty_all' => 'Für diesen Tag sind keine Kinder im Hort.',
+    'closed_title' => 'An diesem Tag ist der Hort geschlossen.',
 
     'show_all_children' => 'Alle Kinder anzeigen (:n)',
     'hide_children' => 'Kinder ausblenden',

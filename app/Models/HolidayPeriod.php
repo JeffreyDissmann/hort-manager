@@ -91,6 +91,12 @@ class HolidayPeriod extends Model
         $query->whereDate('starts_on', '<=', $end)->whereDate('ends_on', '>=', $start);
     }
 
+    /** Whether the Hort is shut on the given day. */
+    public static function closesOn(Carbon|string $date): bool
+    {
+        return static::query()->closed()->covering($date)->exists();
+    }
+
     /**
      * Every date of this period, inclusive, as `Y-m-d`.
      *
