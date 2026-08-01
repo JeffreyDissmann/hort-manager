@@ -6,6 +6,7 @@ namespace App\Http\Middleware;
 
 use App\Models\Child;
 use App\Models\DailyDeparture;
+use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -76,6 +77,9 @@ class HandleInertiaRequests extends Middleware
             'pendingCompanions' => fn () => $this->pendingCompanionCount($request->user()),
             // This parent's children whose Stammplan isn't set up yet (drives a banner).
             'childrenWithoutPlan' => fn () => $this->childrenWithoutPlan($request->user()),
+            // Hort-wide cutoff (H:i) after which same-day changes notify staff — the
+            // DayEditor warns parents about it before they save.
+            'lateChangeCutoff' => fn () => $request->user() ? Setting::lateChangeCutoff() : null,
         ];
     }
 

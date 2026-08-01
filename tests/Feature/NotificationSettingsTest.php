@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Enums\UserRole;
+use App\Models\Child;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -66,6 +67,88 @@ class NotificationSettingsTest extends TestCase
         $this->actingAs($user)
             ->patch(route('notifications.update'), ['preferences' => $preferences])
             ->assertSessionHasErrors();
+    }
+
+    public function test_staff_see_only_staff_categories(): void
+    {
+        $staff = User::factory()->create(['role' => UserRole::Staff]);
+
+        $this->actingAs($staff)
+            ->get(route('notifications.edit'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('categories', ['late_change', 'program_missing'])
+                ->where('sections', [['audience' => 'staff', 'categories' => ['late_change', 'program_missing']]])
+                ->has('preferences.late_change')
+                ->missing('preferences.departures')
+                // The timings the staff toggles link to.
+                ->where('lateChangeCutoff', '12:00')
+                ->where('programReminderTime', '11:30')
+            );
+    }
+
+    public function test_parents_see_only_guardian_categories(): void
+    {
+        $parent = User::factory()->create(['role' => UserRole::Parent]);
+
+        $this->actingAs($parent)
+            ->get(route('notifications.edit'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('preferences.departures')
+                ->missing('preferences.late_change')
+                ->count('sections', 1)
+                ->where('sections.0.audience', 'guardian')
+            );
+    }
+
+    public function test_staff_who_are_a_guardian_see_both_sections(): void
+    {
+        $staff = User::factory()->create(['role' => UserRole::Staff]);
+        $staff->children()->attach(Child::factory()->create());
+
+        $this->actingAs($staff)
+            ->get(route('notifications.edit'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->count('sections', 2)
+                ->where('sections.0.audience', 'guardian')
+                ->where('sections.1.audience', 'staff')
+                ->has('preferences.departures')
+                ->has('preferences.late_change')
+            );
+    }
+
+    public function test_update_rejects_a_category_the_user_is_no_audience_for(): void
+    {
+        $parent = User::factory()->create(['role' => UserRole::Parent]);
+
+        $this->actingAs($parent)
+            ->patch(route('notifications.update'), [
+                'preferences' => ['late_change' => ['slack' => false, 'push' => false]],
+            ])
+            ->assertSessionHasErrors('preferences.late_change');
+    }
+
+    public function test_update_keeps_preferences_of_the_other_audience(): void
+    {
+        // A staff-parent turns their guardian toggles off, then loses guardian status:
+        // saving the staff-only page must not wipe what they set as a guardian.
+        $staff = User::factory()->create([
+            'role' => UserRole::Staff,
+            'notification_preferences' => ['departures' => ['slack' => false, 'push' => false]],
+        ]);
+
+        $this->actingAs($staff)
+            ->patch(route('notifications.update'), [
+                'preferences' => [
+                    'late_change' => ['slack' => true, 'push' => false],
+                    'program_missing' => ['slack' => true, 'push' => true],
+                ],
+            ])
+            ->assertRedirect();
+
+        $staff->refresh();
+        $this->assertFalse($staff->wantsNotification('departures', 'slack'));
+        $this->assertFalse($staff->wantsNotification('late_change', 'push'));
+        $this->assertTrue($staff->wantsNotification('late_change', 'slack'));
     }
 
     public function test_update_rejects_a_non_boolean_value(): void

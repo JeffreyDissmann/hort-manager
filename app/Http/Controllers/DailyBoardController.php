@@ -19,6 +19,7 @@ use App\Models\HomeworkDefault;
 use App\Support\CompanionNotes;
 use App\Support\CompanionReconciler;
 use App\Support\EffectivePlan;
+use App\Support\LateChange;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -399,6 +400,15 @@ class DailyBoardController extends Controller
         // This child may be another child's companion — re-evaluate those arrangements
         // (e.g. the override just switched them to going home alone).
         CompanionReconciler::reconcile($departure->child_id, $departure->date->toDateString());
+
+        // Same-day by definition, so a parent editing here after the cutoff is exactly
+        // the „späte Änderung" case weekly-plan.adjust already reports.
+        LateChange::notify(
+            $request->user(),
+            $departure->child,
+            $departure->date->toDateString(),
+            LateChange::describePlan($departure),
+        );
 
         return back()->with('status', __('flash.plan_updated', ['name' => $departure->child->name]));
     }

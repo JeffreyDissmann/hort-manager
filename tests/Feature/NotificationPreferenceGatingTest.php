@@ -69,6 +69,19 @@ class NotificationPreferenceGatingTest extends TestCase
         $this->assertContains(WebPushChannel::class, $channels);
     }
 
+    public function test_a_user_without_a_slack_id_never_gets_the_slack_channel(): void
+    {
+        // A configured bot token used to be enough to queue a Slack job, which then
+        // threw „Slack notification channel is not set" for anyone not Slack-linked.
+        $user = User::factory()->create(['role' => UserRole::Parent, 'slack_id' => null]);
+        $user->updatePushSubscription('https://push.example/a', 'k', 'a');
+
+        $channels = (new ChildDeparted($this->departure()))->via($user);
+
+        $this->assertNotContains('slack', $channels);
+        $this->assertContains(WebPushChannel::class, $channels);
+    }
+
     public function test_push_off_drops_the_push_channel_on_a_push_only_notification(): void
     {
         $user = User::factory()->create(['role' => UserRole::Parent]);

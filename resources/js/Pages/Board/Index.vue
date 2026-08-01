@@ -675,6 +675,7 @@ function editHortfrei(child) {
                             <button
                                 v-if="row.can_override && row.excursion?.state !== 'away'"
                                 type="button"
+                                :data-testid="`edit-row-${row.child_id}`"
                                 class="inline-flex items-center gap-1.5 rounded-xl border-2 border-ink/10 px-3 py-2 text-sm font-semibold text-ink transition hover:border-hort-teal hover:bg-hort-teal/10 active:scale-[0.98]"
                                 @click="editRow(row)"
                             >

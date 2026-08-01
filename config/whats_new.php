@@ -16,6 +16,19 @@ declare(strict_types=1);
 
 return [
     [
+        'version' => '2026.08.01',
+        'date' => '2026-08-01',
+        'title' => 'Benachrichtigungen passend zur Rolle 🔔 & kurzfristige Änderungen ⏰',
+        'items' => [
+            '🔔 Unter „Benachrichtigungen" siehst du jetzt nur noch das, was dich wirklich betrifft: Eltern die Eltern-Themen, Erzieher:innen die Erzieher-Themen. Wer beides ist – also Erzieher:in mit eigenem Kind im Hort – sieht beide Bereiche getrennt untereinander.',
+            '⏰ Ändert sich für ein Kind noch kurzfristig etwas am heutigen Tag – eine andere Abholzeit, „geht mit … mit", eine Krankmeldung oder deren Rücknahme – bekommen die Erzieher:innen darüber jetzt eine Nachricht. Denn morgens abgesprochen ist nicht dasselbe wie nachmittags geändert.',
+            '👀 Als Elternteil siehst du das vorher: Ist es für heute schon spät, steht direkt im Fenster ein Hinweis, dass die Erzieher:innen informiert werden. Keine Überraschung im Nachhinein.',
+            '🕛 Ab wann eine Änderung als kurzfristig gilt, legen die Erzieher:innen unter „Programm" fest – standardmäßig ab 12:00 Uhr.',
+            '🍽️ Ebenfalls neu für Erzieher:innen: Fehlt montags kurz vor dem Wochenüberblick noch ein Mittagessen im Programm, gibt es eine Erinnerung – rechtzeitig, damit der Überblick vollständig bei den Eltern ankommt.',
+            '🗓️ Auch die Uhrzeit des Wochenüberblicks lässt sich jetzt unter „Programm" einstellen.',
+        ],
+    ],
+    [
         'version' => '2026.07.23',
         'date' => '2026-07-23',
         'title' => 'Mitgehen: „bis"/„ab" wird übernommen 🕒 – Danke, Julia!',

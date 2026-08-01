@@ -29,6 +29,7 @@ return [
 
     'program_saved' => 'Program saved.',
     'homework_defaults_saved' => 'Default homework times saved.',
+    'settings_saved' => 'Setting saved.',
 
     'account_created' => 'Account “:name” created.',
     'account_updated' => 'Account “:name” saved.',

@@ -20,4 +20,13 @@ return [
     'default_homework_heading' => 'Standard homework times',
     'default_homework_intro' => 'Applies every day unless something else is entered above for that day.',
     'save_default' => 'Save standard',
+    'late_change_heading' => 'Late changes',
+    'late_change_intro' => 'When parents change something for today after this time, staff get a notification.',
+    'late_change_label' => 'Time',
+    'save_late_change' => 'Save time',
+
+    'digest_heading' => 'Weekly overview for parents',
+    'digest_intro' => 'Mondays at this time parents get the week’s food and activities. If a lunch is still missing, staff are reminded :minutes minutes earlier – at :time.',
+    'digest_label' => 'Time',
+    'save_digest_time' => 'Save time',
 ];

@@ -21,6 +21,14 @@ return [
     'slack_disabled_hint' => 'Link your Slack account (via “Sign in with Slack”) to receive Slack notifications.',
     'push_hint' => 'Push only reaches you if you have enabled Push on this device above.',
 
+    'audiences' => [
+        'guardian' => 'As a parent',
+        'staff' => 'As staff',
+    ],
+
+    'late_change_cutoff_link' => 'Currently from :time – change it under Programm',
+    'program_missing_time_link' => 'Currently Mondays at :time – change it under Programm',
+
     'categories' => [
         'departures' => [
             'label' => 'Departures',
@@ -41,6 +49,14 @@ return [
         'weekly_digest' => [
             'label' => 'Weekly overview',
             'help' => "Mondays: the week's food and activities plus a short summary for your child.",
+        ],
+        'late_change' => [
+            'label' => 'Late changes',
+            'help' => 'When parents change something for today after the configured cutoff time.',
+        ],
+        'program_missing' => [
+            'label' => 'Week program missing',
+            'help' => 'Mondays, shortly before the weekly overview goes to parents: when a lunch is still missing.',
         ],
     ],
 ];
