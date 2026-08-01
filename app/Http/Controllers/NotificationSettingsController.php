@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Enums\NotificationCategory;
+use App\Models\Setting;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -43,6 +44,9 @@ class NotificationSettingsController extends Controller
             'categories' => collect($categories)->map(fn (NotificationCategory $c): string => $c->value)->all(),
             'sections' => $sections,
             'slackConnected' => filled($user->slack_id),
+            // Shown next to the staff toggles, linking to where the timing is set.
+            'lateChangeCutoff' => Setting::lateChangeCutoff(),
+            'programReminderTime' => Setting::programReminderTime(),
         ]);
     }
 

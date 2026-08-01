@@ -27,6 +27,7 @@ return [
     ],
 
     'late_change_cutoff_link' => 'Aktuell ab :time Uhr – im Programm ändern',
+    'program_missing_time_link' => 'Aktuell montags um :time Uhr – im Programm ändern',
 
     'categories' => [
         'departures' => [

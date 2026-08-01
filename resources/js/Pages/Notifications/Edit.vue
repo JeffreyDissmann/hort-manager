@@ -4,7 +4,8 @@ import NotificationToggle from '@/Components/NotificationToggle.vue';
 import { usePush } from '@/composables/usePush';
 import { update as notificationsUpdate } from '@/routes/notifications';
 import { program as programRoute } from '@/routes';
-import { Head, Link, router, usePage } from '@inertiajs/vue3';
+import { t } from '@/i18n';
+import { Head, Link, router } from '@inertiajs/vue3';
 import { computed, onMounted, reactive } from 'vue';
 
 const props = defineProps({
@@ -13,13 +14,28 @@ const props = defineProps({
     // [{ audience: 'guardian'|'staff', categories: [...] }] — only the ones this user can receive.
     sections: { type: Array, required: true },
     slackConnected: { type: Boolean, default: false },
+    // Timings set on /program, shown next to the staff toggles they drive.
+    lateChangeCutoff: { type: String, default: '12:00' },
+    programReminderTime: { type: String, default: '11:30' },
 });
 
 // Headings only earn their space when the user belongs to both audiences.
 const showSectionHeadings = computed(() => props.sections.length > 1);
 
-// Shown next to the „späte Änderungen" toggle, linking to where it is configured.
-const lateChangeCutoff = computed(() => usePage().props.lateChangeCutoff ?? '12:00');
+/**
+ * Categories whose timing is configured on /program get a link to that exact card,
+ * showing the time that currently applies. Anything not listed simply has no link.
+ */
+const settingsLinks = computed(() => ({
+    late_change: {
+        href: `${programRoute().url}#late-change`,
+        label: t('notifications.late_change_cutoff_link', { time: props.lateChangeCutoff }),
+    },
+    program_missing: {
+        href: `${programRoute().url}#weekly-digest`,
+        label: t('notifications.program_missing_time_link', { time: props.programReminderTime }),
+    },
+}));
 
 // Local, editable copy of the matrix — we PATCH the whole thing on every change.
 const prefs = reactive(JSON.parse(JSON.stringify(props.preferences)));
@@ -152,13 +168,13 @@ function save() {
                                         <p class="mt-0.5 text-xs text-ink/60">
                                             {{ $t(`notifications.categories.${category}.help`) }}
                                         </p>
-                                        <!-- The cutoff itself lives on /program — link staff straight at it. -->
+                                        <!-- The timing itself lives on /program — link staff straight at it. -->
                                         <Link
-                                            v-if="category === 'late_change'"
-                                            :href="`${programRoute().url}#late-change`"
+                                            v-if="settingsLinks[category]"
+                                            :href="settingsLinks[category].href"
                                             class="mt-1 inline-block text-xs font-medium text-hort-teal-dark underline-offset-2 hover:underline"
                                         >
-                                            {{ $t('notifications.late_change_cutoff_link', { time: lateChangeCutoff }) }}
+                                            {{ settingsLinks[category].label }}
                                         </Link>
                                     </td>
                                     <td class="px-3 py-4 text-center">

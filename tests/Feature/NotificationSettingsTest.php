@@ -80,6 +80,9 @@ class NotificationSettingsTest extends TestCase
                 ->where('sections', [['audience' => 'staff', 'categories' => ['late_change', 'program_missing']]])
                 ->has('preferences.late_change')
                 ->missing('preferences.departures')
+                // The timings the staff toggles link to.
+                ->where('lateChangeCutoff', '12:00')
+                ->where('programReminderTime', '11:30')
             );
     }
 

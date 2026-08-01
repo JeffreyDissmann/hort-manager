@@ -27,6 +27,7 @@ return [
     ],
 
     'late_change_cutoff_link' => 'Currently from :time – change it under Programm',
+    'program_missing_time_link' => 'Currently Mondays at :time – change it under Programm',
 
     'categories' => [
         'departures' => [
