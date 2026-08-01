@@ -61,7 +61,14 @@ class AbsenceController extends Controller
         Absence::where('child_id', $child->id)
             ->whereBetween('date', [$validated['from'], $validated['to']])
             ->get()
-            ->each->delete();
+            ->each(function (Absence $absence) use ($request, $child): void {
+                $date = $absence->date->toDateString();
+                $absence->delete();
+
+                // The child is coming after all — at least as urgent as reporting them
+                // away, so a late withdrawal notifies staff the same way.
+                LateChange::notify($request->user(), $child, $date, 'kommt doch');
+            });
 
         return back()->with('status', __('flash.absence_cleared', ['name' => $child->name]));
     }

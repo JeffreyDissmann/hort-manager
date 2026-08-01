@@ -4,8 +4,13 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Enums\AbsenceReason;
+use App\Enums\DepartureMethod;
+use App\Enums\DepartureStatus;
 use App\Enums\UserRole;
+use App\Models\Absence;
 use App\Models\Child;
+use App\Models\DailyDeparture;
 use App\Models\Setting;
 use App\Models\User;
 use App\Notifications\LateChange;
@@ -144,6 +149,63 @@ class LateChangeNotificationTest extends TestCase
         ])->assertRedirect();
 
         Notification::assertSentToTimes($this->staff, LateChange::class, 1);
+    }
+
+    public function test_clearing_todays_absence_after_the_cutoff_notifies_staff(): void
+    {
+        Absence::report($this->child, '2026-06-22', AbsenceReason::Sick, $this->parent->id);
+
+        $this->actingAs($this->parent)->delete(route('absences.destroy'), [
+            'child_id' => $this->child->id,
+            'from' => '2026-06-22',
+            'to' => '2026-06-22',
+        ])->assertRedirect();
+
+        Notification::assertSentTo($this->staff, LateChange::class, function (LateChange $notification) {
+            return $notification->summary === 'kommt doch';
+        });
+    }
+
+    public function test_a_same_day_board_override_notifies_staff(): void
+    {
+        $departure = DailyDeparture::create([
+            'child_id' => $this->child->id,
+            'date' => '2026-06-22',
+            'status' => DepartureStatus::Present,
+            'planned_time' => '15:00',
+            'planned_method' => DepartureMethod::PickedUp,
+        ]);
+
+        $this->actingAs($this->parent)->patch(route('board.override', $departure), [
+            'planned_time' => '16:15',
+            'planned_method' => 'picked_up',
+        ])->assertRedirect();
+
+        Notification::assertSentTo($this->staff, LateChange::class);
+    }
+
+    public function test_switching_to_a_companion_after_the_cutoff_notifies_staff(): void
+    {
+        // with_child takes a different path through update() (no time, confirmation
+        // handling), so it needs its own check that the DM still goes out.
+        $companion = Child::factory()->create(['name' => 'Ben']);
+        DailyDeparture::create([
+            'child_id' => $companion->id,
+            'date' => '2026-06-22',
+            'status' => DepartureStatus::Present,
+            'planned_time' => '15:00',
+            'planned_method' => DepartureMethod::PickedUp,
+        ]);
+
+        $this->adjust([
+            'planned_method' => 'with_child',
+            'planned_time' => null,
+            'companion_child_id' => $companion->id,
+        ])->assertRedirect();
+
+        Notification::assertSentTo($this->staff, LateChange::class, function (LateChange $notification) {
+            return $notification->summary === 'geht mit Ben mit';
+        });
     }
 
     public function test_the_late_change_toggle_gates_the_slack_channel(): void
