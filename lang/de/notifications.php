@@ -21,6 +21,11 @@ return [
     'slack_disabled_hint' => 'Verknüpfe dein Slack-Konto (über „Mit Slack anmelden“), um Slack-Benachrichtigungen zu erhalten.',
     'push_hint' => 'Push erreicht dich nur, wenn du oben auf diesem Gerät Push aktiviert hast.',
 
+    'audiences' => [
+        'guardian' => 'Als Elternteil',
+        'staff' => 'Als Erzieher:in',
+    ],
+
     'categories' => [
         'departures' => [
             'label' => 'Abholungen',
@@ -41,6 +46,10 @@ return [
         'weekly_digest' => [
             'label' => 'Wochenüberblick',
             'help' => 'Montags: Essen und Aktivitäten der Woche plus eine kurze Übersicht für dein Kind.',
+        ],
+        'late_change' => [
+            'label' => 'Späte Änderungen',
+            'help' => 'Wenn Eltern nach der eingestellten Uhrzeit noch etwas für den heutigen Tag ändern.',
         ],
     ],
 ];

@@ -4,13 +4,18 @@ import NotificationToggle from '@/Components/NotificationToggle.vue';
 import { usePush } from '@/composables/usePush';
 import { update as notificationsUpdate } from '@/routes/notifications';
 import { Head, router } from '@inertiajs/vue3';
-import { onMounted, reactive } from 'vue';
+import { computed, onMounted, reactive } from 'vue';
 
 const props = defineProps({
     preferences: { type: Object, required: true },
     categories: { type: Array, required: true },
+    // [{ audience: 'guardian'|'staff', categories: [...] }] — only the ones this user can receive.
+    sections: { type: Array, required: true },
     slackConnected: { type: Boolean, default: false },
 });
+
+// Headings only earn their space when the user belongs to both audiences.
+const showSectionHeadings = computed(() => props.sections.length > 1);
 
 // Local, editable copy of the matrix — we PATCH the whole thing on every change.
 const prefs = reactive(JSON.parse(JSON.stringify(props.preferences)));
@@ -105,7 +110,19 @@ function save() {
                         <p class="mt-1 text-sm text-ink/70">{{ $t('notifications.matrix_description') }}</p>
                     </header>
 
-                    <div class="mt-6 overflow-x-auto">
+                    <div
+                        v-for="section in sections"
+                        :key="section.audience"
+                        class="mt-6 overflow-x-auto"
+                    >
+                        <h3
+                            v-if="showSectionHeadings"
+                            class="mb-1 text-sm font-semibold text-ink"
+                            :data-testid="`notifications-section-${section.audience}`"
+                        >
+                            {{ $t(`notifications.audiences.${section.audience}`) }}
+                        </h3>
+
                         <table class="w-full min-w-md text-left">
                             <thead>
                                 <tr class="border-b border-ink/10 text-xs uppercase tracking-wide text-ink/50">
@@ -120,7 +137,7 @@ function save() {
                             </thead>
                             <tbody>
                                 <tr
-                                    v-for="category in categories"
+                                    v-for="category in section.categories"
                                     :key="category"
                                     class="border-b border-ink/5 align-top last:border-0"
                                 >
