@@ -53,5 +53,9 @@ return [
             'label' => 'Späte Änderungen',
             'help' => 'Wenn Eltern nach der eingestellten Uhrzeit noch etwas für den heutigen Tag ändern.',
         ],
+        'program_missing' => [
+            'label' => 'Wochenprogramm fehlt',
+            'help' => 'Montags, kurz bevor der Wochenüberblick an die Eltern geht: wenn noch ein Mittagessen fehlt.',
+        ],
     ],
 ];

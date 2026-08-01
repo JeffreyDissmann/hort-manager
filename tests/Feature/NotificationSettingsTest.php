@@ -76,8 +76,8 @@ class NotificationSettingsTest extends TestCase
         $this->actingAs($staff)
             ->get(route('notifications.edit'))
             ->assertInertia(fn (Assert $page) => $page
-                ->where('categories', ['late_change'])
-                ->where('sections', [['audience' => 'staff', 'categories' => ['late_change']]])
+                ->where('categories', ['late_change', 'program_missing'])
+                ->where('sections', [['audience' => 'staff', 'categories' => ['late_change', 'program_missing']]])
                 ->has('preferences.late_change')
                 ->missing('preferences.departures')
             );
@@ -135,7 +135,10 @@ class NotificationSettingsTest extends TestCase
 
         $this->actingAs($staff)
             ->patch(route('notifications.update'), [
-                'preferences' => ['late_change' => ['slack' => true, 'push' => false]],
+                'preferences' => [
+                    'late_change' => ['slack' => true, 'push' => false],
+                    'program_missing' => ['slack' => true, 'push' => true],
+                ],
             ])
             ->assertRedirect();
 

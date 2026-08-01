@@ -15,12 +15,13 @@ enum NotificationCategory: string
     case MissingPlan = 'missing_plan';
     case WeeklyDigest = 'weekly_digest';
     case LateChange = 'late_change';
+    case ProgramMissing = 'program_missing';
 
     /** Who this category is sent to. */
     public function audience(): NotificationAudience
     {
         return match ($this) {
-            self::LateChange => NotificationAudience::Staff,
+            self::LateChange, self::ProgramMissing => NotificationAudience::Staff,
             default => NotificationAudience::Guardian,
         };
     }

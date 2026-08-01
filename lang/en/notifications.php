@@ -53,5 +53,9 @@ return [
             'label' => 'Late changes',
             'help' => 'When parents change something for today after the configured cutoff time.',
         ],
+        'program_missing' => [
+            'label' => 'Week program missing',
+            'help' => 'Mondays, shortly before the weekly overview goes to parents: when a lunch is still missing.',
+        ],
     ],
 ];
