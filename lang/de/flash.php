@@ -30,6 +30,8 @@ return [
     'program_saved' => 'Programm gespeichert.',
     'homework_defaults_saved' => 'Standard-Hausaufgabenzeiten gespeichert.',
     'settings_saved' => 'Einstellung gespeichert.',
+    'closure_saved' => 'Schließzeit gespeichert.',
+    'closure_deleted' => 'Schließzeit gelöscht.',
 
     'account_created' => 'Konto „:name“ angelegt.',
     'account_updated' => 'Konto „:name“ gespeichert.',

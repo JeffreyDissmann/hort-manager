@@ -29,6 +29,10 @@ return [
         'sent_home' => 'Geht allein nach Hause',
         'with_child' => 'Geht mit einem anderen Kind mit',
     ],
+    'holiday_period_type' => [
+        'closed' => 'Geschlossen',
+        'care' => 'Ferienbetreuung',
+    ],
     'time_qualifier' => [
         'by' => 'Bis zu der Uhrzeit',
         'at' => 'Genau zur Uhrzeit',

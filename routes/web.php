@@ -21,6 +21,7 @@ use App\Http\Controllers\DailyBoardController;
 use App\Http\Controllers\DailyProgramController;
 use App\Http\Controllers\ExcursionController;
 use App\Http\Controllers\ExcursionRsvpController;
+use App\Http\Controllers\HolidayPeriodController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\NotificationSettingsController;
 use App\Http\Controllers\ProfileController;
@@ -139,6 +140,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/board', [DailyBoardController::class, 'index'])->name('board');
     Route::patch('/board/{departure}/status', [DailyBoardController::class, 'mark'])->name('board.mark');
     Route::patch('/board/{departure}/plan', [DailyBoardController::class, 'override'])->name('board.override');
+
+    // Schließzeiten — readable by everyone, managed by staff (the controller guards).
+    Route::get('/closures', [HolidayPeriodController::class, 'index'])->name('closures.index');
+    Route::post('/closures', [HolidayPeriodController::class, 'store'])->name('closures.store');
+    Route::patch('/closures/{closure}', [HolidayPeriodController::class, 'update'])->name('closures.update');
+    Route::delete('/closures/{closure}', [HolidayPeriodController::class, 'destroy'])->name('closures.destroy');
 
     Route::resource('excursions', ExcursionController::class)->except('show');
     Route::patch('excursions/{excursion}/live', [ExcursionController::class, 'live'])->name('excursions.live');

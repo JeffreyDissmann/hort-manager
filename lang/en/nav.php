@@ -7,6 +7,7 @@ return [
     'excursions' => 'Excursions',
     'pickup_plan' => 'Weekly plan',
     'standard_plan' => 'Standard plan',
+    'closures' => 'Closures',
     'program' => 'Program',
     'children' => 'Children',
     'users' => 'Users',

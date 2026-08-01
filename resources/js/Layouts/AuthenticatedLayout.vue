@@ -29,6 +29,7 @@ import { dashboard as accountingDashboard } from '@/routes/accounting';
 import { update as switchRoleRoute } from '@/routes/role';
 import { index as childrenIndex } from '@/routes/children';
 import { index as excursionsIndex } from '@/routes/excursions';
+import { index as closuresIndex } from '@/routes/closures';
 import { index as usersIndex } from '@/routes/users';
 import { index as bookingsIndex } from '@/routes/accounting/bookings';
 import { index as accountsIndex } from '@/routes/accounting/accounts';
@@ -264,6 +265,9 @@ function isActive(item) {
                             :href="childrenIndex().url"
                         >
                             {{ $t('nav.my_children') }}
+                        </DropdownLink>
+                        <DropdownLink :href="closuresIndex().url" data-testid="nav-closures">
+                            {{ $t('nav.closures') }}
                         </DropdownLink>
                         <DropdownLink :href="profileEdit().url">
                             {{ $t('nav.profile') }}

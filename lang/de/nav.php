@@ -7,6 +7,7 @@ return [
     'excursions' => 'Ausflüge',
     'pickup_plan' => 'Wochenplan',
     'standard_plan' => 'Stammplan',
+    'closures' => 'Schließzeiten',
     'program' => 'Programm',
     'children' => 'Kinder',
     'users' => 'Benutzer',
