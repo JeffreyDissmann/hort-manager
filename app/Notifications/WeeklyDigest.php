@@ -47,6 +47,8 @@ class WeeklyDigest extends SlackNotification
             }
 
             $parts = array_filter([
+                // Ferienbetreuung: the Betreuungszeit stands where homework would.
+                empty($day['care']) ? null : "🏖️ {$day['care']}",
                 $day['lunch'] ? "🍽️ {$day['lunch']}" : null,
                 $day['activity'] ? "✨ {$day['activity']}" : null,
                 $day['homework'] ? "📚 {$day['homework']}" : null,
