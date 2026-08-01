@@ -59,6 +59,12 @@ class UserFactory extends Factory
         return $this->state(['role' => UserRole::Parent]);
     }
 
+    /** Signed in via Slack — the only users who can receive a Slack DM. */
+    public function slackLinked(): static
+    {
+        return $this->state(fn (): array => ['slack_id' => 'U'.Str::upper(Str::random(9))]);
+    }
+
     /** Can manage users + switch their own role (independent of role). */
     public function admin(): static
     {
