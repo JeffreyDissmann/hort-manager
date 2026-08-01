@@ -133,6 +133,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/program', [DailyProgramController::class, 'index'])->name('program');
     Route::patch('/program', [DailyProgramController::class, 'update'])->name('program.update');
     Route::patch('/program/defaults', [DailyProgramController::class, 'updateDefaults'])->name('program.defaults');
+    Route::patch('/program/settings', [DailyProgramController::class, 'updateSettings'])->name('program.settings');
 
     Route::get('/board', [DailyBoardController::class, 'index'])->name('board');
     Route::patch('/board/{departure}/status', [DailyBoardController::class, 'mark'])->name('board.mark');

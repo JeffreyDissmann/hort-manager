@@ -8,6 +8,7 @@ use App\Http\Controllers\Concerns\ResolvesWeek;
 use App\Models\Child;
 use App\Models\DailyProgram;
 use App\Models\HomeworkDefault;
+use App\Models\Setting;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -75,6 +76,7 @@ class DailyProgramController extends Controller
             'week' => $week,
             'days' => $days,
             'homeworkDefaults' => $homeworkDefaults,
+            'lateChangeCutoff' => Setting::lateChangeCutoff(),
         ]);
     }
 
@@ -168,6 +170,20 @@ class DailyProgramController extends Controller
         }
 
         return back()->with('status', __('flash.homework_defaults_saved'));
+    }
+
+    /** Save the Hort-wide settings edited on this page (the late-change cutoff). */
+    public function updateSettings(Request $request): RedirectResponse
+    {
+        $this->authorize('update', DailyProgram::class);
+
+        $validated = $request->validate([
+            'late_change_cutoff' => ['required', 'date_format:H:i'],
+        ]);
+
+        Setting::set(Setting::LateChangeCutoff, $validated['late_change_cutoff']);
+
+        return back()->with('status', __('flash.settings_saved'));
     }
 
     private function short(?string $time): ?string

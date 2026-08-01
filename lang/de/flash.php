@@ -29,6 +29,7 @@ return [
 
     'program_saved' => 'Programm gespeichert.',
     'homework_defaults_saved' => 'Standard-Hausaufgabenzeiten gespeichert.',
+    'settings_saved' => 'Einstellung gespeichert.',
 
     'account_created' => 'Konto „:name“ angelegt.',
     'account_updated' => 'Konto „:name“ gespeichert.',

@@ -1,11 +1,16 @@
 <script setup>
 import { program as programRoute } from '@/routes';
-import { update as programUpdate, defaults as programDefaults } from '@/routes/program';
+import {
+    update as programUpdate,
+    defaults as programDefaults,
+    settings as programSettings,
+} from '@/routes/program';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import Checkbox from '@/Components/Checkbox.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import TextInput from '@/Components/TextInput.vue';
 import TimeRange from '@/Components/TimeRange.vue';
+import TimeSelect from '@/Components/TimeSelect.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import WeekNav from '@/Components/WeekNav.vue';
 import { Head, router, usePage } from '@inertiajs/vue3';
@@ -15,11 +20,13 @@ const props = defineProps({
     week: { type: Object, default: () => ({}) },
     days: { type: Array, default: () => [] },
     homeworkDefaults: { type: Array, default: () => [] },
+    lateChangeCutoff: { type: String, default: '12:00' },
 });
 
 const flash = computed(() => usePage().props.flash?.status);
 const saving = ref(false);
 const savingDefaults = ref(false);
+const savingSettings = ref(false);
 
 // `no_homework` drives the "Keine Hausaufgaben" checkbox — on when there's no
 // effective homework for the day (explicit none, or no default/override at all).
@@ -96,6 +103,27 @@ function saveDefaults() {
             preserveScroll: true,
             preserveState: true,
             onFinish: () => (savingDefaults.value = false),
+        },
+    );
+}
+
+const lateChangeCutoff = ref(props.lateChangeCutoff);
+watch(
+    () => props.lateChangeCutoff,
+    (value) => {
+        lateChangeCutoff.value = value;
+    },
+);
+
+function saveSettings() {
+    savingSettings.value = true;
+    router.patch(
+        programSettings().url,
+        { late_change_cutoff: lateChangeCutoff.value },
+        {
+            preserveScroll: true,
+            preserveState: true,
+            onFinish: () => (savingSettings.value = false),
         },
     );
 }
@@ -272,6 +300,35 @@ function onTouchEnd(e) {
                 <div class="mt-3 flex justify-end">
                     <PrimaryButton :disabled="savingDefaults" @click="saveDefaults">
                         {{ $t('program.save_default') }}
+                    </PrimaryButton>
+                </div>
+            </div>
+
+            <!-- Hort-wide cutoff for late same-day changes -->
+            <div class="rounded-2xl bg-surface p-4 shadow-sm">
+                <p class="font-semibold text-ink">
+                    {{ $t('program.late_change_heading') }}
+                </p>
+                <p class="mb-3 mt-1 text-sm text-ink/60">
+                    {{ $t('program.late_change_intro') }}
+                </p>
+                <div class="flex flex-wrap items-center gap-3">
+                    <InputLabel
+                        for="late-change-cutoff"
+                        :value="$t('program.late_change_label')"
+                        class="shrink-0"
+                    />
+                    <TimeSelect
+                        id="late-change-cutoff"
+                        v-model="lateChangeCutoff"
+                        from="08:00"
+                        test-id="late-change-cutoff"
+                        class="w-40"
+                    />
+                </div>
+                <div class="mt-3 flex justify-end">
+                    <PrimaryButton :disabled="savingSettings" @click="saveSettings">
+                        {{ $t('program.save_late_change') }}
                     </PrimaryButton>
                 </div>
             </div>

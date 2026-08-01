@@ -20,4 +20,8 @@ return [
     'default_homework_heading' => 'Standard-Hausaufgabenzeiten',
     'default_homework_intro' => 'Gilt an jedem Tag, sofern oben für den Tag nichts anderes eingetragen ist.',
     'save_default' => 'Standard speichern',
+    'late_change_heading' => 'Späte Änderungen',
+    'late_change_intro' => 'Ändern Eltern nach dieser Uhrzeit noch etwas für den heutigen Tag, bekommen die Erzieher:innen eine Benachrichtigung.',
+    'late_change_label' => 'Uhrzeit',
+    'save_late_change' => 'Uhrzeit speichern',
 ];
