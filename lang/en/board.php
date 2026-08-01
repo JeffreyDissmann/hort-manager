@@ -55,6 +55,7 @@ return [
     'empty_own' => 'None of your children are at the Hort today.',
     'empty_all' => 'No children at the Hort for this day.',
     'closed_title' => 'The Hort is closed on this day.',
+    'care_window' => 'Holiday care from :start to :end — these are the children signed up.',
 
     'show_all_children' => 'Show all children (:n)',
     'hide_children' => 'Hide children',

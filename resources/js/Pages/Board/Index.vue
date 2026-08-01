@@ -25,6 +25,8 @@ const props = defineProps({
     canMark: { type: Boolean, default: false },
     // Set when the Hort is closed on the selected day — then nothing else is rendered.
     closure: { type: Object, default: null },
+    // Set on a Ferienbetreuung day: the board lists who signed up, not the Stammplan.
+    care: { type: Object, default: null },
     children: { type: Array, default: () => [] },
     methodOptions: { type: Array, default: () => [] },
     qualifierOptions: { type: Array, default: () => [] },
@@ -333,6 +335,19 @@ function editHortfrei(child) {
             </div>
 
             <template v-else>
+            <!-- Ferienbetreuung: a different kind of day — only signed-up children are
+                 here, and the Betreuungszeit replaces the usual Stammplan rhythm. -->
+            <div
+                v-if="care"
+                data-testid="board-care"
+                class="rounded-2xl bg-hort-teal/10 px-4 py-3 text-sm ring-1 ring-hort-teal/40"
+            >
+                <p class="font-semibold text-ink">{{ care.name }}</p>
+                <p class="text-ink/70">
+                    {{ $t('board.care_window', { start: care.starts_at, end: care.ends_at }) }}
+                </p>
+            </div>
+
             <!-- „Geht mit … mit" overview for the parent (staff use the plan display). -->
             <CompanionNotes :notes="companionNotes" @confirm="answerCompanion" />
 

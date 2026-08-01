@@ -15,6 +15,7 @@ use App\Models\Child;
 use App\Models\DailyDeparture;
 use App\Models\DailyProgram;
 use App\Models\Excursion;
+use App\Models\HolidayCareDay;
 use App\Models\HolidayPeriod;
 use App\Models\HomeworkDefault;
 use App\Support\CompanionNotes;
@@ -59,9 +60,14 @@ class DailyBoardController extends Controller
             ->get();
         $absentChildIds = $absences->pluck('child_id')->all();
 
+        // Ferienbetreuung: no school, so the Stammplan says nothing about who is here.
+        // The roster is the sign-ups — i.e. the DailyDeparture rows that already exist
+        // — so nothing is seeded and „Hortfrei" is meaningless.
+        $careDay = HolidayCareDay::query()->onDate($date)->with('period:id,name')->first();
+
         // Seed a row per scheduled child from the Stammplan (idempotent). Only
         // children enrolled on this date are on the board.
-        $scheduled = Child::query()
+        $scheduled = $careDay ? collect() : Child::query()
             ->activeOn($date)
             ->whereHas('weeklySchedules', fn ($q) => $q->where('weekday', $weekday)->whereNotNull('planned_time'))
             ->with(['weeklySchedules' => fn ($q) => $q->where('weekday', $weekday)])
@@ -284,7 +290,11 @@ class DailyBoardController extends Controller
 
         $program = DailyProgram::where('date', $date->toDateString())->first();
         $homeworkDefault = HomeworkDefault::where('weekday', $weekday)->first();
-        [$homeworkStart, $homeworkEnd] = DailyProgram::effectiveHomework($program, $homeworkDefault);
+        // Ferienbetreuung: Essen and Aktivität still apply, homework doesn't — and the
+        // weekday default would otherwise claim a slot right through the holidays.
+        [$homeworkStart, $homeworkEnd] = $careDay
+            ? [null, null]
+            : DailyProgram::effectiveHomework($program, $homeworkDefault);
 
         $hasProgram = $program?->lunch || $program?->activity || $homeworkStart;
 
@@ -293,7 +303,9 @@ class DailyBoardController extends Controller
         // staff know the shorter list is intentional. Excluded: unplanned children (no
         // Stammplan at all), today's reported absences, and anyone with a same-day
         // override (a manual pickup for today means they ARE here — they're on the board).
-        $hortfrei = Child::query()
+        // On a care day nobody is „hortfrei" — the Stammplan doesn't apply, so not
+        // being signed up is „nicht angemeldet", which the closure card explains.
+        $hortfrei = $careDay ? collect() : Child::query()
             ->activeOn($date)
             ->whereHas('weeklySchedules', fn ($q) => $q->whereNotNull('planned_time'))
             ->whereDoesntHave('weeklySchedules', fn ($q) => $q->where('weekday', $weekday)->whereNotNull('planned_time'))
@@ -333,6 +345,12 @@ class DailyBoardController extends Controller
             // Selected day + navigation meta (iso, label, is_today, editable, prev/next, offset).
             'date' => $day,
             'rows' => $rows,
+            // Ferienbetreuung: the roster came from the sign-ups, not the Stammplan.
+            'care' => $careDay ? [
+                'name' => $careDay->period->name,
+                'starts_at' => HolidayCareDay::short($careDay->starts_at),
+                'ends_at' => HolidayCareDay::short($careDay->ends_at),
+            ] : null,
             // Regularly not at the Hort today (Stammplan „Hortfrei"), for context.
             'hortfrei' => $hortfrei,
             // Parent-facing „geht mit … mit" summary for today (staff use the plan display).
