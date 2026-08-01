@@ -65,6 +65,9 @@ HomeworkDefault per-weekday default homework slot; DailyProgram homework overrid
 Excursion       (Ausflug)  name, date, depart_at, return_at, rsvp_deadline,
                 departed_at/returned_at (live state) + child_excursion pivot
                 pivot carries the parent RSVP: response (null=offen|true|false) + answered_by/answered_at
+HolidayPeriod   (Schließzeit) Hort-wide named date range: name, starts_on…ends_on, note?
+                type = App\Enums\HolidayPeriodType: closed | care — only `closed` is built;
+                `care` (Ferienbetreuung) is a reserved value — see „Schließzeiten"
 ```
 
 ### Ausflug participation poll
@@ -105,9 +108,22 @@ requires `active_from` (defaults to today in the form); update only re-validates
 form always sends it). A child with bookings still can't be *deleted* (restrictOnDelete) — leaving
 (`active_until`) is the normal „gone" path.
 
-### Hortfrei vs. Absence — two different „not there"
+### Hortfrei vs. Absence — two different „not there" (and see Schließzeiten for the third)
 - **Hortfrei** = *structural* non-attendance: the child's Stammplan simply has no entry for that weekday (no `WeeklySchedule` row). No reason, no record. Surfaced explicitly as a muted „Heute hortfrei (Stammplan)" line on the board and per-weekday in the Wochenplan „Diese Woche nicht da" summary; names are **clickable pills** (own children for parents, all for staff) that open `DayEditor` to add a one-off pickup. A child with a same-day override is NOT listed as Hortfrei (they're on the board). Unplanned children (zero `WeeklySchedule` rows) are the „Wochenplan fehlt" case, not Hortfrei.
 - **„Kommt nicht" / „Krank"** = a *reported* `Absence` for a specific date, **with a required reason** — amber, undoable, and a separate flow. The Stammplan editor's non-attendance option is deliberately named **„Hortfrei"** (not „Kommt nicht") to keep the two apart.
+
+### Schließzeiten — the third „not there"
+A **`HolidayPeriod`** with `type = closed` means the **Hort doesn't exist** on those days — distinct from both entries above: nobody is *absent*, there is no day. Staff **and admins** manage them under „Schließzeiten" in the account menu (`/closures`, `HolidayPeriodPolicy`); reads are open to everyone, since parents plan their own holidays around them. A single day is `starts_on == ends_on` (Brückentag, Fortbildung).
+
+Everything date-anchored has to ask. The lookups are `HolidayPeriod::closesOn($date)` and `::closedDaysBetween($from, $to)` (date => name, **clamped** to the range — an overhanging period would otherwise leak days past the week):
+- **Board** — `DailyBoardController` returns *before* seeding, so no `DailyDeparture` rows are created for a closed day; the page renders a closure card only. `board.mark` / `board.override` 403 (a closure entered mid-morning orphans rows already seeded).
+- **Wochenplan** — cells are greyed, labelled and locked; the day drops out of the timetable (the Stammplan would refill it) and out of both „nicht da" summaries. `weekly-plan.adjust` / `.reset` 403. `absences.store` **skips** closed days inside a range rather than failing, so „krank Di–Do" across a shut Wednesday still records Tue + Thu.
+- **Tagesprogramm** — `/program` offers no fields; `program.update` skips those days and deletes any row entered before the closure. The Wochenplan's whole program entry is nulled, **including homework**: that comes from the per-weekday `HomeworkDefault`, which has no notion of dates, so filtering child lists never reaches it.
+- **Scheduled jobs** — `program:remind-missing` ignores closed days (filtered inside `DailyProgram::weekdaysWithoutLunch()`); `weekly:digest` skips a week closed Mo–Fr entirely and otherwise marks those days „🚫 <Name>", outranking a reported absence.
+- **Ausflüge** — `App\Rules\NotDuringClosure` rejects a trip date on a closed day (create + edit).
+- **TRMNL** — the feed's `today.closed` / `week[].closed` carry the name; the Liquid templates in `docs/trmnl/` branch on it.
+
+`/standard-plan` is keyed by weekday with no dates, so closures genuinely don't apply there.
 
 ### Tagesboard mechanics
 `DailyBoardController` targets **today, or the next weekday on weekends**. It lazily `firstOrCreate`s a `DailyDeparture` per scheduled child from the Stammplan (carrying `time_qualifier`). A row is "overridden" when its plan differs from the Stammplan (shown as „heute geändert"). Excursions are an **overlay** (`rows[].excursion`), not a status swap — a child on a trip still gets marked picked up after returning.
@@ -159,7 +175,7 @@ Links each **accounting booking** to one document in an external **Paperless-ngx
 
 App is German end-to-end (`APP_LOCALE=de`, `lang/de/*` validation/auth messages; `Europe/Berlin` timezone). Built & tested: Kinder+Stammplan (with **„Hortfrei"** per weekday + **bis/genau um/ab** time qualifier), parent↔child roles + **admin user management** + admin self role-switch, Wochenplan/Stammplan timetable, Tagesboard, the **shared `DayEditor` popup** (Wochenplan + board), **companion pickups** („geht mit einem anderen Kind mit" with confirmation + cross-guardian Slack sync), Ausflug poll, Tagesprogramm + Hausaufgaben, birthdays, dark mode + de/en language switch, **full Slack integration** (SSO, departure/RSVP/companion/missing-plan DMs, interactive answers, `/hort` + App Home + free-text assistant), **installable PWA + web push** plus **freshness** (silent post-deploy reload, 15-min idle refresh, drag-down pull-to-refresh in `freshness.js` / `PullToRefresh.vue`). Self-hosted via a multi-arch GHCR image on a CalVer tag (see [`docs/deployment.md`](docs/deployment.md)).
 
-**Planned (not built):** Richer admin control over which parents belong to which child (guardian management UI beyond the current per-child links).
+**Planned (not built):** **Ferienbetreuung** — the second `HolidayPeriodType` (`care`): holiday care with activities/excursions, often no lunch, and children **opted in** per week. The Stammplan deliberately does *not* apply (no school → different children, hours and content), so a care day's board comes from the registrations, not `WeeklySchedule`. Also: richer admin control over which parents belong to which child (guardian management UI beyond the current per-child links).
 
 ---
 

@@ -6,6 +6,30 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **Schließzeiten.** Named Hort-wide date ranges (Ferien, Brückentag, Fortbildung),
+  managed by staff and admins under „Schließzeiten" and readable by everyone. A closed
+  day has no board, no editable Wochenplan, no Tagesprogramm and no homework band; it
+  drops out of the „nicht da" summaries, the Monday reminders and the Wochenüberblick
+  (a week closed Mo–Fr sends no digest at all), and no Ausflug can be scheduled on it.
+  The TRMNL staff-room feed reports it too.
+- **Rollen-gerechte Benachrichtigungen.** The settings matrix now shows only the
+  categories a user can actually receive, split into a parent and a staff section for
+  anyone who is both.
+- **„Späte Änderungen".** Once the Hort-wide cutoff has passed (default 12:00,
+  settable under „Programm"), a parent changing *today* — plan, companion, Krankmeldung
+  or its withdrawal — notifies staff, from every edit path. Parents see beforehand that
+  it will.
+- **„Wochenprogramm fehlt".** Staff are reminded 30 minutes before the parents'
+  Wochenüberblick when a weekday still has no lunch entered. The digest time itself is
+  now settable under „Programm".
+
+### Fixed
+
+- Slack DMs were queued for users without a Slack id whenever a bot token was
+  configured, failing with „Slack notification channel is not set".
+
 ## [2026.07.26.1] — 2026-07-26
 
 ### Added
