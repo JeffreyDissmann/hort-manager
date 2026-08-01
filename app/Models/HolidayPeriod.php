@@ -10,6 +10,7 @@ use Database\Factories\HolidayPeriodFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
@@ -29,6 +30,7 @@ class HolidayPeriod extends Model
         'type',
         'starts_on',
         'ends_on',
+        'registration_deadline',
         'note',
     ];
 
@@ -42,13 +44,14 @@ class HolidayPeriod extends Model
             'type' => HolidayPeriodType::class,
             'starts_on' => 'date:Y-m-d',
             'ends_on' => 'date:Y-m-d',
+            'registration_deadline' => 'date:Y-m-d',
         ];
     }
 
     /** @return list<string> */
     protected function activityAttributes(): array
     {
-        return ['name', 'type', 'starts_on', 'ends_on', 'note'];
+        return ['name', 'type', 'starts_on', 'ends_on', 'registration_deadline', 'note'];
     }
 
     protected function activityLabel(): string
@@ -64,6 +67,54 @@ class HolidayPeriod extends Model
     public function scopeClosed(Builder $query): void
     {
         $query->where('type', HolidayPeriodType::Closed);
+    }
+
+    /**
+     * Ferienbetreuung periods (children opt in per day).
+     *
+     * @param  Builder<HolidayPeriod>  $query
+     */
+    public function scopeCare(Builder $query): void
+    {
+        $query->where('type', HolidayPeriodType::Care);
+    }
+
+    /** @return HasMany<HolidayCareDay, $this> */
+    public function careDays(): HasMany
+    {
+        return $this->hasMany(HolidayCareDay::class)->orderBy('date');
+    }
+
+    public function isCare(): bool
+    {
+        return $this->type === HolidayPeriodType::Care;
+    }
+
+    /** Whether parents may still opt in (no deadline = always open). */
+    public function registrationIsOpen(): bool
+    {
+        return $this->registration_deadline === null
+            || $this->registration_deadline->endOfDay()->isFuture();
+    }
+
+    /**
+     * Offer every weekday of the period, starting from the Hort-wide default times.
+     * Existing days are left alone, so re-running after a date change only fills gaps.
+     */
+    public function generateCareDays(): void
+    {
+        [$start, $end] = Setting::careDefaultWindow();
+        $existing = $this->careDays()->pluck('date')->map(
+            fn ($date): string => $date instanceof Carbon ? $date->toDateString() : (string) $date,
+        )->all();
+
+        foreach ($this->days() as $date) {
+            if (Carbon::parse($date)->isWeekend() || in_array($date, $existing, true)) {
+                continue;
+            }
+
+            $this->careDays()->create(['date' => $date, 'starts_at' => $start, 'ends_at' => $end]);
+        }
     }
 
     /**

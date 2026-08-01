@@ -28,6 +28,15 @@ class Setting extends Model
     /** How long before the digest staff are reminded about an unfilled week. */
     public const ProgramReminderLeadMinutes = 30;
 
+    /** Default Betreuungszeit for a new Ferienbetreuung day (staff override per day). */
+    public const CareDefaultStart = 'care_default_start';
+
+    public const CareDefaultEnd = 'care_default_end';
+
+    public const DefaultCareStart = '08:30';
+
+    public const DefaultCareEnd = '16:30';
+
     protected $primaryKey = 'key';
 
     protected $keyType = 'string';
@@ -91,6 +100,19 @@ class Setting extends Model
         return Carbon::createFromFormat('H:i', self::weeklyDigestTime())
             ->subMinutes(self::ProgramReminderLeadMinutes)
             ->format('H:i');
+    }
+
+    /**
+     * The Betreuungszeit a newly offered Ferienbetreuung day starts from, as `H:i`.
+     *
+     * @return array{0: string, 1: string} [start, end]
+     */
+    public static function careDefaultWindow(): array
+    {
+        return [
+            (string) self::get(self::CareDefaultStart, self::DefaultCareStart),
+            (string) self::get(self::CareDefaultEnd, self::DefaultCareEnd),
+        ];
     }
 
     private static function cacheKey(string $key): string

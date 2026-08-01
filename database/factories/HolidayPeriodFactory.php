@@ -30,6 +30,15 @@ class HolidayPeriodFactory extends Factory
         ];
     }
 
+    /** A Ferienbetreuung (children opt in per day) rather than a closure. */
+    public function care(): static
+    {
+        return $this->state([
+            'name' => 'Ferienbetreuung',
+            'type' => HolidayPeriodType::Care,
+        ]);
+    }
+
     /** A single closed day (Brückentag, Fortbildung). */
     public function onDay(Carbon|string $date): static
     {
