@@ -130,6 +130,17 @@ Three directions; **production setup is documented in [`docs/slack-setup.md`](do
 - **Inbound** (all `POST`, signature-verified): `/slack/interactions` (`SlackInteractionController` — RSVP buttons), `/slack/commands` (`SlackCommandController` — `/hort` quick links), `/slack/events` (`SlackEventController` — url_verification + `app_home_opened`).
 - Notifications extend `SlackNotification` (base gates `via()` on the token). `SlackNotification`/`SlackRsvp`/`SlackHome` share the same Block Kit style; links use `route('slack.enter', …)` so `forceRootUrl(APP_URL)` keeps them correct behind the tunnel/proxy.
 
+### Notification settings (audiences)
+Every notification belongs to a `App\Enums\NotificationCategory`, which the user toggles per channel (Slack/Push) on `/notifications` — an **opt-out** matrix (missing preference = on). Each category declares a `NotificationAudience`, and **users only see the categories they can actually receive**:
+- **`guardian`** (departures, excursions, companion, missing_plan, weekly_digest) — every non-staff user, plus staff who are a guardian themselves. Deliberately not „role = parent": an Erzieher:in with their own Hort child still gets those DMs, so they must keep the toggles.
+- **`staff`** (late_change) — `isStaff()`.
+A user in both audiences gets two labelled sections; with one audience the headings are hidden. `NotificationSettingsController::update()` **merges** into the stored preferences (the page renders only a subset, so replacing would wipe the other audience) and rejects categories the user is no audience for.
+
+### Späte Änderungen (late same-day changes)
+A Hort-wide cutoff time (default **12:00**, `Setting::LateChangeCutoff`, staff-editable on `/program`) splits the day: once it has passed, a **parent** changing **today** notifies every reachable staff member (`App\Support\LateChange` → `App\Notifications\LateChange`, category `late_change`). Staff's own changes never notify, and other days are never „late" whatever the clock says. Triggers: `WeeklyAdjustmentController::update` (only when the plan really moved) / `::reset`, and `AbsenceController::store` (per day of the range, only when the Absence was created/changed). `DayEditor` warns the parent **before** saving via the shared `lateChangeCutoff` prop, mirroring `LateChange::applies()`.
+
+Hort-wide settings live in a `settings` key/value table behind `App\Models\Setting` (`get`/`set`, cached forever, busted on write). Add a constant + a default there rather than a new column.
+
 ## Paperless integration (accounting receipts)
 Links each **accounting booking** to one document in an external **Paperless-ngx** archive. Admin-only (rides the accounting middleware). Config in `config/services.php` (`paperless.url` / `.token` / `.booking_field` / `.amount_field`); with no url+token the whole feature is inert (degrades silently, like Slack). **`docs/…` not written — this section is the spec.**
 

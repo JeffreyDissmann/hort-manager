@@ -8,6 +8,7 @@ use App\Enums\AbsenceReason;
 use App\Http\Requests\StoreAbsenceRequest;
 use App\Models\Absence;
 use App\Models\Child;
+use App\Support\LateChange;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -26,7 +27,18 @@ class AbsenceController extends Controller
         $to = Carbon::parse($validated['to']);
 
         for ($date = Carbon::parse($validated['from']); $date->lte($to); $date->addDay()) {
-            Absence::report($child, $date->toDateString(), $reason, $request->user()->id, $validated['comment'] ?? null);
+            $absence = Absence::report($child, $date->toDateString(), $reason, $request->user()->id, $validated['comment'] ?? null);
+
+            // Reporting today's absence after the cutoff is exactly what staff need
+            // to hear about; re-saving an unchanged one isn't (wasChanged() is false).
+            if ($absence->wasRecentlyCreated || $absence->wasChanged()) {
+                LateChange::notify(
+                    $request->user(),
+                    $child,
+                    $date->toDateString(),
+                    $reason->label(),
+                );
+            }
         }
 
         return back()->with('status', __('flash.absence_reported', ['name' => $child->name, 'reason' => $reason->label()]));

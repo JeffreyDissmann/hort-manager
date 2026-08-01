@@ -12,7 +12,7 @@ import TextInput from '@/Components/TextInput.vue';
 import TimeSelect from '@/Components/TimeSelect.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
-import { router } from '@inertiajs/vue3';
+import { router, usePage } from '@inertiajs/vue3';
 import { computed, reactive, ref } from 'vue';
 
 const props = defineProps({
@@ -74,6 +74,27 @@ const selectedCompanion = computed(() => companionChoices.value.find((c) => c.id
 const selectedCompanionName = computed(() => selectedCompanion.value?.name ?? '');
 const selectedCompanionTime = computed(() => selectedCompanion.value?.time ?? '');
 const selectedCompanionUnavailable = computed(() => !!selectedCompanion.value && !selectedCompanion.value.available);
+
+const page = usePage();
+const lateChangeCutoff = computed(() => page.props.lateChangeCutoff ?? '12:00');
+
+/**
+ * Whether saving this edit will DM the staff: a parent changing *today* after the
+ * Hort-wide cutoff. Mirrors App\Support\LateChange::applies() — the server decides,
+ * this only warns beforehand. Recomputed on open (`editing` is a dependency).
+ */
+const notifiesStaff = computed(() => {
+    if (!editing.value || page.props.auth?.user?.role === 'staff') {
+        return false;
+    }
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    if (editing.value.date !== today) {
+        return false;
+    }
+    const time = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    return time >= lateChangeCutoff.value;
+});
 
 const canSave = computed(() => {
     if (stagingAbsence.value) {
@@ -303,6 +324,14 @@ function cancelAbsence() {
                     {{ stagingAbsence ? $t('weekly.reason_hint') : $t('weekly.note_hint') }}
                 </p>
             </div>
+
+            <p
+                v-if="notifiesStaff"
+                data-testid="late-change-hint"
+                class="rounded-lg bg-hort-orange/10 px-3 py-2 text-sm text-hort-orange-dark"
+            >
+                {{ $t('weekly.late_change_hint', { time: lateChangeCutoff }) }}
+            </p>
 
             <p v-if="saveError" class="rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
                 {{ saveError }}

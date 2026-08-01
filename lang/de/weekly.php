@@ -38,6 +38,7 @@ return [
     'method_open' => '— bitte wählen —',
     'qualifier_label' => 'Die Uhrzeit ist …',
     'note_placeholder' => 'z. B. wegen Arzttermin',
+    'late_change_hint' => 'Nach :time Uhr: Die Erzieher:innen werden über diese Änderung für heute benachrichtigt.',
     'note_hint' => 'Bitte kurz & knapp.',
     'absence_needs_comment' => 'Bitte unten kurz einen Grund angeben und speichern.',
     'reason_label' => 'Grund (Pflicht)',

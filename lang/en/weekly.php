@@ -38,6 +38,7 @@ return [
     'method_open' => '— please choose —',
     'qualifier_label' => 'The time means …',
     'note_placeholder' => 'e.g. due to a doctor’s appointment',
+    'late_change_hint' => 'After :time: staff will be notified about this change for today.',
     'note_hint' => 'Please keep it short.',
     'absence_needs_comment' => 'Please add a short reason below and save.',
     'reason_label' => 'Reason (required)',

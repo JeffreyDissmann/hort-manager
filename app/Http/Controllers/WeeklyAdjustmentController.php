@@ -13,6 +13,7 @@ use App\Models\DailyDeparture;
 use App\Notifications\CompanionRequest;
 use App\Support\CompanionReconciler;
 use App\Support\EffectivePlan;
+use App\Support\LateChange;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -101,6 +102,17 @@ class WeeklyAdjustmentController extends Controller
         // arrangements against the plan we just saved (e.g. picked-up → goes alone).
         CompanionReconciler::reconcile($child->id, $validated['date']);
 
+        // A late same-day change staff need to know about (no-op otherwise). Only
+        // when the plan really moved — a re-saved identical plan isn't news.
+        if ($changes['attributes'] !== []) {
+            LateChange::notify(
+                $request->user(),
+                $child,
+                $validated['date'],
+                LateChange::describePlan($departure),
+            );
+        }
+
         return back()->with('status', __('flash.plan_updated', ['name' => $child->name]));
     }
 
@@ -124,6 +136,13 @@ class WeeklyAdjustmentController extends Controller
                 ->log($child->name.' · '.$validated['date']);
 
             $departure->delete();
+
+            LateChange::notify(
+                $request->user(),
+                $child,
+                $validated['date'],
+                'zurück auf den Stammplan gesetzt',
+            );
         }
 
         return back()->with('status', __('flash.day_reset', ['name' => $child->name]));
