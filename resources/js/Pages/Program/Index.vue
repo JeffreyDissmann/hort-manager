@@ -14,7 +14,7 @@ import TimeSelect from '@/Components/TimeSelect.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import WeekNav from '@/Components/WeekNav.vue';
 import { Head, router, usePage } from '@inertiajs/vue3';
-import { computed, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 
 const props = defineProps({
     week: { type: Object, default: () => ({}) },
@@ -114,6 +114,20 @@ watch(
         lateChangeCutoff.value = value;
     },
 );
+
+// Deep link from the notification settings (/program#late-change): scroll the card
+// into view and flash a ring so it's obvious which setting was meant.
+const lateChangeCard = ref(null);
+const highlightLateChange = ref(false);
+
+onMounted(() => {
+    if (window.location.hash !== '#late-change') {
+        return;
+    }
+    lateChangeCard.value?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    highlightLateChange.value = true;
+    setTimeout(() => (highlightLateChange.value = false), 2000);
+});
 
 function saveSettings() {
     savingSettings.value = true;
@@ -305,7 +319,12 @@ function onTouchEnd(e) {
             </div>
 
             <!-- Hort-wide cutoff for late same-day changes -->
-            <div class="rounded-2xl bg-surface p-4 shadow-sm">
+            <div
+                id="late-change"
+                ref="lateChangeCard"
+                class="rounded-2xl bg-surface p-4 shadow-sm transition"
+                :class="highlightLateChange ? 'ring-2 ring-hort-teal' : ''"
+            >
                 <p class="font-semibold text-ink">
                     {{ $t('program.late_change_heading') }}
                 </p>

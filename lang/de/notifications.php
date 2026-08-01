@@ -26,6 +26,8 @@ return [
         'staff' => 'Als Erzieher:in',
     ],
 
+    'late_change_cutoff_link' => 'Aktuell ab :time Uhr – im Programm ändern',
+
     'categories' => [
         'departures' => [
             'label' => 'Abholungen',

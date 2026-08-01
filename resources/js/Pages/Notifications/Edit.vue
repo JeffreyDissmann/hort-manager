@@ -3,7 +3,8 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import NotificationToggle from '@/Components/NotificationToggle.vue';
 import { usePush } from '@/composables/usePush';
 import { update as notificationsUpdate } from '@/routes/notifications';
-import { Head, router } from '@inertiajs/vue3';
+import { program as programRoute } from '@/routes';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { computed, onMounted, reactive } from 'vue';
 
 const props = defineProps({
@@ -16,6 +17,9 @@ const props = defineProps({
 
 // Headings only earn their space when the user belongs to both audiences.
 const showSectionHeadings = computed(() => props.sections.length > 1);
+
+// Shown next to the „späte Änderungen" toggle, linking to where it is configured.
+const lateChangeCutoff = computed(() => usePage().props.lateChangeCutoff ?? '12:00');
 
 // Local, editable copy of the matrix — we PATCH the whole thing on every change.
 const prefs = reactive(JSON.parse(JSON.stringify(props.preferences)));
@@ -148,6 +152,14 @@ function save() {
                                         <p class="mt-0.5 text-xs text-ink/60">
                                             {{ $t(`notifications.categories.${category}.help`) }}
                                         </p>
+                                        <!-- The cutoff itself lives on /program — link staff straight at it. -->
+                                        <Link
+                                            v-if="category === 'late_change'"
+                                            :href="`${programRoute().url}#late-change`"
+                                            class="mt-1 inline-block text-xs font-medium text-hort-teal-dark underline-offset-2 hover:underline"
+                                        >
+                                            {{ $t('notifications.late_change_cutoff_link', { time: lateChangeCutoff }) }}
+                                        </Link>
                                     </td>
                                     <td class="px-3 py-4 text-center">
                                         <div class="flex justify-center">

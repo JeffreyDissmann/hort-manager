@@ -26,6 +26,8 @@ return [
         'staff' => 'As staff',
     ],
 
+    'late_change_cutoff_link' => 'Currently from :time – change it under Programm',
+
     'categories' => [
         'departures' => [
             'label' => 'Departures',
