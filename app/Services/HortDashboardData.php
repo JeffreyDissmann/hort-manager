@@ -11,6 +11,7 @@ use App\Models\Child;
 use App\Models\DailyDeparture;
 use App\Models\DailyProgram;
 use App\Models\Excursion;
+use App\Models\HolidayPeriod;
 use App\Models\HomeworkDefault;
 use App\Models\WeeklySchedule;
 use Illuminate\Support\Arr;
@@ -49,6 +50,20 @@ class HortDashboardData
         $date = $this->targetDate();
         $weekday = $date->dayOfWeekIso;
         $dateString = $date->toDateString();
+
+        // Schließzeit: the staff-room display should say so, not show an empty board.
+        if ($closure = HolidayPeriod::query()->closed()->covering($date)->first()) {
+            return [
+                'weekday' => self::WEEKDAYS_LONG[$weekday],
+                'date' => $date->format('d.m.Y'),
+                'closed' => $closure->name,
+                'present_count' => 0,
+                'next_pickup' => null,
+                'departures' => [],
+                'absent' => [],
+                'program' => null,
+            ];
+        }
 
         $absences = Absence::with('child:id,name')->where('date', $dateString)->get();
 
@@ -129,8 +144,22 @@ class HortDashboardData
         $excursionsByDate = Excursion::whereIn('date', $dateStrings)->orderBy('depart_at')->get()
             ->groupBy(fn (Excursion $e) => $e->date->toDateString());
 
-        return $days->map(function (Carbon $day, int $i) use ($children, $overrides, $absentByDate, $excursionsByDate, $todayString) {
+        $closedDays = HolidayPeriod::closedDaysBetween($days->first(), $days->last());
+
+        return $days->map(function (Carbon $day, int $i) use ($children, $overrides, $absentByDate, $excursionsByDate, $todayString, $closedDays) {
             $dateString = $day->toDateString();
+
+            if (isset($closedDays[$dateString])) {
+                return [
+                    'weekday' => self::WEEKDAYS_SHORT[$i],
+                    'date' => $day->format('d.m.'),
+                    'is_today' => $dateString === $todayString,
+                    'closed' => $closedDays[$dateString],
+                    'excursion' => null,
+                    'departures' => [],
+                ];
+            }
+
             $absent = $absentByDate->get($dateString, collect());
 
             $rows = $children
@@ -148,6 +177,7 @@ class HortDashboardData
                 'weekday' => self::WEEKDAYS_SHORT[$i],
                 'date' => $day->format('d.m.'),
                 'is_today' => $dateString === $todayString,
+                'closed' => null,
                 'excursion' => $excursionsByDate->get($dateString)?->pluck('name')->implode(', '),
                 'departures' => $this->groupByTime($rows, 'names', fn (Collection $kids) => $kids
                     ->pluck('name')->sort()->values()->all()),

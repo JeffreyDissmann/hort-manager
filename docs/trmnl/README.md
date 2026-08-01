@@ -40,18 +40,24 @@ For each plugin (TRMNL → Plugins → Private Plugin → *Add New*):
 
 ## 3. Outside opening hours
 
-The Hort powers the device off after hours, so there's no "closed" screen — the
-feed always shows the plan for today (or the next weekday on weekends).
+The Hort powers the device off after hours, so there's no after-hours screen —
+the feed always shows the plan for today (or the next weekday on weekends).
 
 ## What the feed returns
 
 `GET /trmnl/dashboard` → JSON:
 
 - `generated_at` — "HH:MM" the snapshot was built.
-- `today`: `weekday`, `date`, `present_count`, `next_pickup`, `departures[]`
+- `today`: `weekday`, `date`, `closed`, `present_count`, `next_pickup`, `departures[]`
   (`{ time, children[]: { name, method, changed, left, excursion } }`),
   `absent[]` (`{ name, reason }`), `program` (`lunch`, `activity`, `homework`).
-- `week[]`: five days, each `{ weekday, date, is_today, excursion, departures[]: { time, names[] } }`.
+- `week[]`: five days, each `{ weekday, date, is_today, closed, excursion, departures[]: { time, names[] } }`.
+
+`closed` carries the name of the **Schließzeit** on days the Hort is shut
+(otherwise `null`). On such a day everything else is empty by design — no
+departures, no absences, no program — so both templates branch on it and show
+only the reason. Update the plugin markup when you change these, or a closure
+renders as an empty board with no explanation.
 
 Marks in the Heute template: `✓` already left · `(allein)` walks home alone ·
-`✱` changed from the Stammplan today · `🚌` on an excursion.
+`✱` changed from the Stammplan today · `🚌` on an excursion · `🚫` closed.

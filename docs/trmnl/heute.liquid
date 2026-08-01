@@ -9,6 +9,14 @@
     <div class="columns">
       <div class="column">
 
+        {%- comment -%} Schließzeit: no board at all, just why. {%- endcomment -%}
+        {% if today.closed %}
+          <div class="richtext richtext--center">
+            <span class="value value--large">🚫</span>
+            <span class="label">Hort geschlossen · {{ today.closed }}</span>
+          </div>
+        {% else %}
+
         <div class="richtext richtext--center">
           <span class="value value--large">{{ today.present_count }}</span>
           <span class="label">Kinder noch da{% if today.next_pickup %} · nächste Abholung {{ today.next_pickup }} Uhr{% endif %}</span>
@@ -51,6 +59,8 @@
             {% if today.program.activity %}<span class="label label--small">🎨 {{ today.program.activity }}</span>{% endif %}
             {% if today.program.homework %}<span class="label label--small">📚 {{ today.program.homework }}</span>{% endif %}
           </div>
+        {% endif %}
+
         {% endif %}
 
       </div>
