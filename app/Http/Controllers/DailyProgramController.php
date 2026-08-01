@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Concerns\ResolvesWeek;
 use App\Models\Child;
 use App\Models\DailyProgram;
+use App\Models\HolidayPeriod;
 use App\Models\HomeworkDefault;
 use App\Models\Setting;
 use Illuminate\Http\RedirectResponse;
@@ -36,7 +37,9 @@ class DailyProgramController extends Controller
         $children = Child::query()->activeBetween($weekRange->first(), $weekRange->last())
             ->whereNotNull('date_of_birth')->get(['id', 'name', 'date_of_birth']);
 
-        $days = $weekDays->map(function (array $day) use ($programs, $defaults, $children) {
+        $closedDays = HolidayPeriod::closedDaysBetween($weekRange->first(), $weekRange->last());
+
+        $days = $weekDays->map(function (array $day) use ($programs, $defaults, $children, $closedDays) {
             $weekday = Carbon::parse($day['date'])->dayOfWeekIso;
             $default = $defaults->get($weekday);
             $program = $programs->get($day['date']);
@@ -46,6 +49,8 @@ class DailyProgramController extends Controller
                 'date' => $day['date'],
                 'label' => $day['label'],
                 'date_label' => $day['date_label'],
+                // Schließzeit: no food, no activity, no homework to fill in.
+                'closed' => $closedDays[$day['date']] ?? null,
                 'lunch' => $program?->lunch,
                 'activity' => $program?->activity,
                 // Effective homework slot (override, else weekday default, else none).
@@ -101,6 +106,14 @@ class DailyProgramController extends Controller
         $defaults = HomeworkDefault::all()->keyBy('weekday');
 
         foreach ($validated['days'] ?? [] as $row) {
+            // A closed day has no program. Drop any row that exists (e.g. entered
+            // before the Schließzeit was) rather than silently keeping it around.
+            if (HolidayPeriod::closesOn($row['date'])) {
+                DailyProgram::where('date', $row['date'])->delete();
+
+                continue;
+            }
+
             $weekday = Carbon::parse($row['date'])->dayOfWeekIso;
             $default = $defaults->get($weekday);
 

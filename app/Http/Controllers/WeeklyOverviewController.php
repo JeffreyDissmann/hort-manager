@@ -99,8 +99,10 @@ class WeeklyOverviewController extends Controller
             ->orderBy('depart_at')
             ->get();
 
+        // An excursion on a closed day can't happen — don't advertise one.
         $activities = $weekDays->values()->map(fn (array $day) => $weekExcursions
-            ->filter(fn (Excursion $e) => $e->date->toDateString() === $day['date'])
+            ->filter(fn (Excursion $e) => $e->date->toDateString() === $day['date']
+                && ! isset($closedDays[$day['date']]))
             ->map(fn (Excursion $e) => [
                 'name' => $e->name,
                 'depart_at' => $shortTime($e->depart_at),
@@ -116,7 +118,14 @@ class WeeklyOverviewController extends Controller
             ->keyBy(fn (DailyProgram $p) => $p->date->toDateString());
         $homeworkDefaults = HomeworkDefault::all()->keyBy('weekday');
 
-        $program = $weekDays->values()->map(function (array $day, int $i) use ($programs, $homeworkDefaults) {
+        $program = $weekDays->values()->map(function (array $day, int $i) use ($programs, $homeworkDefaults, $closedDays) {
+            // Closed: no food, no activity — and no homework either. The homework slot
+            // comes from a per-weekday default, so without this it would keep drawing
+            // its band on days the Hort is shut.
+            if (isset($closedDays[$day['date']])) {
+                return ['lunch' => null, 'activity' => null, 'homework_start' => null, 'homework_end' => null];
+            }
+
             $p = $programs->get($day['date']);
             $default = $homeworkDefaults->get($i + 1);
             [$hwStart, $hwEnd] = DailyProgram::effectiveHomework($p, $default);

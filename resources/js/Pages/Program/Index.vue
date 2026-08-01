@@ -229,7 +229,7 @@ function onTouchEnd(e) {
             >
                 <div class="lg:grid lg:grid-cols-[7rem,minmax(0,18rem),minmax(0,18rem),auto] lg:items-start lg:gap-5">
                     <div>
-                        <p class="font-semibold text-ink">
+                        <p class="font-semibold" :class="day.closed ? 'text-ink/40' : 'text-ink'">
                             {{ day.label }}
                             <span class="font-normal text-ink/40">
                                 · {{ day.date_label }}
@@ -247,6 +247,17 @@ function onTouchEnd(e) {
                         </p>
                     </div>
 
+                    <!-- Schließzeit: nothing to plan, so the three fields make way for
+                         the closure's name. -->
+                    <p
+                        v-if="day.closed"
+                        :data-testid="`program-closed-${day.date}`"
+                        class="mt-3 text-sm text-ink/50 lg:col-span-3 lg:mt-0"
+                    >
+                        🚫 {{ day.closed }}
+                    </p>
+
+                    <template v-else>
                     <div class="mt-3 lg:mt-0">
                         <InputLabel :for="`lunch-${day.date}`" :value="$t('program.lunch')" />
                         <TextInput
@@ -292,6 +303,7 @@ function onTouchEnd(e) {
                             class="mt-2"
                         />
                     </div>
+                    </template>
                 </div>
             </div>
 
