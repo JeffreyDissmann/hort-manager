@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Concerns\ResolvesWeek;
 use App\Models\Child;
 use App\Models\DailyProgram;
+use App\Models\HolidayCareDay;
 use App\Models\HolidayPeriod;
 use App\Models\HomeworkDefault;
 use App\Models\Setting;
@@ -39,11 +40,22 @@ class DailyProgramController extends Controller
 
         $closedDays = HolidayPeriod::closedDaysBetween($weekRange->first(), $weekRange->last());
 
-        $days = $weekDays->map(function (array $day) use ($programs, $defaults, $children, $closedDays) {
+        // Ferienbetreuung days in this week, by date. Their Betreuungszeit is edited
+        // here alongside the day's content — the period itself lives on /closures.
+        $careDays = HolidayCareDay::query()
+            ->whereBetween('date', [$weekRange->first(), $weekRange->last()])
+            ->with('period:id,name')
+            ->get()
+            ->keyBy(fn (HolidayCareDay $day): string => $day->date->toDateString());
+
+        $days = $weekDays->map(function (array $day) use ($programs, $defaults, $children, $closedDays, $careDays) {
             $weekday = Carbon::parse($day['date'])->dayOfWeekIso;
             $default = $defaults->get($weekday);
             $program = $programs->get($day['date']);
-            [$homeworkStart, $homeworkEnd] = DailyProgram::effectiveHomework($program, $default);
+            $care = $careDays->get($day['date']);
+            [$homeworkStart, $homeworkEnd] = $care
+                ? [null, null] // Ferienbetreuung: no school, so no homework slot.
+                : DailyProgram::effectiveHomework($program, $default);
 
             return [
                 'date' => $day['date'],
@@ -51,6 +63,14 @@ class DailyProgramController extends Controller
                 'date_label' => $day['date_label'],
                 // Schließzeit: no food, no activity, no homework to fill in.
                 'closed' => $closedDays[$day['date']] ?? null,
+                // Ferienbetreuung: no school, so no homework — but there is a
+                // Betreuungszeit to set, and usually an Aktivität.
+                'care' => $care ? [
+                    'id' => $care->id,
+                    'name' => $care->period->name,
+                    'starts_at' => HolidayCareDay::short($care->starts_at),
+                    'ends_at' => HolidayCareDay::short($care->ends_at),
+                ] : null,
                 'lunch' => $program?->lunch,
                 'activity' => $program?->activity,
                 // Effective homework slot (override, else weekday default, else none).
@@ -101,9 +121,16 @@ class DailyProgramController extends Controller
             'days.*.homework_start' => ['nullable', 'date_format:H:i'],
             'days.*.homework_end' => ['nullable', 'date_format:H:i'],
             'days.*.homework_none' => ['boolean'],
+            // Ferienbetreuung days carry their Betreuungszeit alongside the content.
+            'days.*.care_starts_at' => ['nullable', 'date_format:H:i'],
+            'days.*.care_ends_at' => ['nullable', 'date_format:H:i', 'after:days.*.care_starts_at'],
         ]);
 
         $defaults = HomeworkDefault::all()->keyBy('weekday');
+        $careDays = HolidayCareDay::query()
+            ->whereIn('date', collect($validated['days'] ?? [])->pluck('date'))
+            ->get()
+            ->keyBy(fn (HolidayCareDay $day): string => $day->date->toDateString());
 
         foreach ($validated['days'] ?? [] as $row) {
             // A closed day has no program. Drop any row that exists (e.g. entered
@@ -116,8 +143,21 @@ class DailyProgramController extends Controller
 
             $weekday = Carbon::parse($row['date'])->dayOfWeekIso;
             $default = $defaults->get($weekday);
+            $care = $careDays->get($row['date']);
 
-            if ($row['homework_none'] ?? false) {
+            if ($care && ! empty($row['care_starts_at']) && ! empty($row['care_ends_at'])) {
+                $care->update([
+                    'starts_at' => $row['care_starts_at'],
+                    'ends_at' => $row['care_ends_at'],
+                ]);
+            }
+
+            if ($care) {
+                // Ferienbetreuung: no school, so no homework to store or suppress.
+                $homeworkNone = false;
+                $homeworkStart = null;
+                $homeworkEnd = null;
+            } elseif ($row['homework_none'] ?? false) {
                 // "Keine Hausaufgaben" — only needs storing when it suppresses a default.
                 $homeworkNone = $default !== null;
                 $homeworkStart = null;

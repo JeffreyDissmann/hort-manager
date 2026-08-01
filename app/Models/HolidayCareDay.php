@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 
 /**
  * One offered day of a Ferienbetreuung: that it runs, and between when. Created with
@@ -76,6 +77,24 @@ class HolidayCareDay extends Model
     public function scopeOnDate(Builder $query, Carbon|string $date): void
     {
         $query->whereDate('date', $date instanceof Carbon ? $date->toDateString() : $date);
+    }
+
+    /**
+     * The offered days in a range, keyed by `Y-m-d`. Every date-anchored view needs
+     * this to tell a Ferienbetreuung day from a normal one — most visibly to drop the
+     * homework band, which otherwise follows the per-weekday default into the holidays.
+     *
+     * @return Collection<string, HolidayCareDay>
+     */
+    public static function betweenKeyed(Carbon|string $from, Carbon|string $to): Collection
+    {
+        return static::query()
+            ->whereBetween('date', [
+                $from instanceof Carbon ? $from->toDateString() : $from,
+                $to instanceof Carbon ? $to->toDateString() : $to,
+            ])
+            ->get()
+            ->keyBy(fn (self $day): string => $day->date->toDateString());
     }
 
     /** The care window as „08:30–16:30". */

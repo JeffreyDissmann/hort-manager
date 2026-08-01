@@ -1,7 +1,9 @@
 <script setup>
-// Schließzeiten — Hort-wide days on which the Hort is closed. Staff manage them here;
-// parents read the same page to plan around them.
+// Ferien: the two Hort-wide period types. „Geschlossen" means no Hort at all;
+// „Ferienbetreuung" offers days children opt into. Staff manage both here; parents
+// read the same page to plan around them.
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import CareDayRow from '@/Components/CareDayRow.vue';
 import DatePicker from '@/Components/DatePicker.vue';
 import DangerButton from '@/Components/DangerButton.vue';
 import InputLabel from '@/Components/InputLabel.vue';
@@ -9,19 +11,32 @@ import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
 import { store as closuresStore, update as closuresUpdate, destroy as closuresDestroy } from '@/routes/closures';
-import { Head, router, useForm, usePage } from '@inertiajs/vue3';
+import { program as programRoute } from '@/routes';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 
 const props = defineProps({
     upcoming: { type: Array, default: () => [] },
     past: { type: Array, default: () => [] },
+    // Ferienbetreuung periods, each with its offered days.
+    care: { type: Array, default: () => [] },
+    careDefaults: { type: Object, default: () => ({ starts_at: '08:30', ends_at: '16:30' }) },
     canManage: { type: Boolean, default: false },
 });
 
 const flash = computed(() => usePage().props.flash?.status);
 const locale = computed(() => usePage().props.locale || 'de');
 
-const form = useForm({ name: '', starts_on: '', ends_on: '', note: '' });
+const form = useForm({
+    name: '',
+    type: 'closed',
+    starts_on: '',
+    ends_on: '',
+    registration_deadline: '',
+    note: '',
+});
+
+const isCare = computed(() => form.type === 'care');
 const editingId = ref(null);
 const showPast = ref(false);
 const confirmingDelete = ref(null);
@@ -35,12 +50,14 @@ function onStartPicked(value) {
     }
 }
 
-function edit(period) {
+function edit(period, type = 'closed') {
     editingId.value = period.id;
     form.clearErrors();
     form.name = period.name;
+    form.type = type;
     form.starts_on = period.starts_on;
     form.ends_on = period.ends_on;
+    form.registration_deadline = period.registration_deadline ?? '';
     form.note = period.note ?? '';
 }
 
@@ -51,12 +68,20 @@ function cancel() {
 }
 
 function submit() {
-    const options = { preserveScroll: true, onSuccess: cancel };
+    const options = {
+        preserveScroll: true,
+        onSuccess: cancel,
+        // A closure has nothing to register for.
+        transform: (data) => ({
+            ...data,
+            registration_deadline: data.type === 'care' ? data.registration_deadline || null : null,
+        }),
+    };
 
     if (editingId.value) {
-        form.patch(closuresUpdate(editingId.value).url, options);
+        form.transform(options.transform).patch(closuresUpdate(editingId.value).url, options);
     } else {
-        form.post(closuresStore().url, options);
+        form.transform(options.transform).post(closuresStore().url, options);
     }
 }
 
@@ -64,6 +89,15 @@ function remove(period) {
     router.delete(closuresDestroy(period.id).url, {
         preserveScroll: true,
         onFinish: () => (confirmingDelete.value = null),
+    });
+}
+
+/** „31. Juli 2026" — a single date, for the registration deadline. */
+function dateLabel(date) {
+    return new Date(`${date}T00:00:00`).toLocaleDateString(locale.value, {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
     });
 }
 
@@ -105,6 +139,28 @@ function rangeLabel(period) {
                     {{ editingId ? $t('closures.edit_heading') : $t('closures.add_heading') }}
                 </p>
 
+                <!-- Which kind: no Hort at all, or opt-in care. -->
+                <div class="mb-3 inline-flex rounded-lg bg-canvas p-0.5 text-sm font-semibold">
+                    <button
+                        type="button"
+                        data-testid="type-closed"
+                        class="rounded-md px-3 py-1 transition"
+                        :class="!isCare ? 'bg-surface text-ink shadow-sm' : 'text-ink/50 hover:text-ink'"
+                        @click="form.type = 'closed'"
+                    >
+                        {{ $t('enums.holiday_period_type.closed') }}
+                    </button>
+                    <button
+                        type="button"
+                        data-testid="type-care"
+                        class="rounded-md px-3 py-1 transition"
+                        :class="isCare ? 'bg-surface text-ink shadow-sm' : 'text-ink/50 hover:text-ink'"
+                        @click="form.type = 'care'"
+                    >
+                        {{ $t('enums.holiday_period_type.care') }}
+                    </button>
+                </div>
+
                 <div class="grid gap-3 lg:grid-cols-[minmax(0,16rem),minmax(0,12rem),minmax(0,12rem),minmax(0,1fr)]">
                     <div>
                         <InputLabel for="closure-name" :value="$t('closures.name')" />
@@ -142,6 +198,20 @@ function rangeLabel(period) {
                         <p v-if="form.errors.ends_on" class="mt-1 text-xs text-red-600">{{ form.errors.ends_on }}</p>
                     </div>
 
+                    <div v-if="isCare">
+                        <InputLabel for="care-deadline" :value="$t('care.deadline')" />
+                        <DatePicker
+                            id="care-deadline"
+                            v-model="form.registration_deadline"
+                            :max="form.starts_on"
+                            clearable
+                            class="mt-1"
+                        />
+                        <p v-if="form.errors.registration_deadline" class="mt-1 text-xs text-red-600">
+                            {{ form.errors.registration_deadline }}
+                        </p>
+                    </div>
+
                     <div>
                         <InputLabel for="closure-note" :value="$t('closures.note')" />
                         <TextInput
@@ -155,6 +225,10 @@ function rangeLabel(period) {
                     </div>
                 </div>
 
+                <p v-if="isCare" class="mt-2 text-xs text-ink/50">
+                    {{ $t('care.generates_days', { start: careDefaults.starts_at, end: careDefaults.ends_at }) }}
+                </p>
+
                 <div class="mt-3 flex justify-end gap-3">
                     <SecondaryButton v-if="editingId" @click="cancel">
                         {{ $t('common.cancel') }}
@@ -166,6 +240,86 @@ function rangeLabel(period) {
                     >
                         {{ editingId ? $t('common.save') : $t('closures.add') }}
                     </PrimaryButton>
+                </div>
+            </div>
+
+            <!-- Ferienbetreuung: each period with the days it offers -->
+            <div v-if="care.length" class="rounded-2xl bg-surface p-4 shadow-sm">
+                <p class="mb-3 font-semibold text-ink">{{ $t('care.heading') }}</p>
+
+                <div
+                    v-for="period in care"
+                    :key="period.id"
+                    :data-testid="`care-period-${period.id}`"
+                    class="border-b border-ink/5 py-3 first:pt-0 last:border-0 last:pb-0"
+                >
+                    <div class="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                            <p class="font-medium text-ink">{{ period.name }}</p>
+                            <p class="text-sm text-ink/60">
+                                {{ rangeLabel(period) }}
+                                <span class="text-ink/40">
+                                    ·
+                                    {{
+                                        period.day_count === 1
+                                            ? $t('closures.day_one')
+                                            : $t('closures.day_many', { count: period.day_count })
+                                    }}
+                                </span>
+                            </p>
+                            <p class="mt-0.5 text-xs" :class="period.registration_open ? 'text-ink/50' : 'text-hort-orange-dark'">
+                                <template v-if="period.registration_deadline">
+                                    {{
+                                        period.registration_open
+                                            ? $t('care.deadline_open', { date: dateLabel(period.registration_deadline) })
+                                            : $t('care.deadline_passed', { date: dateLabel(period.registration_deadline) })
+                                    }}
+                                </template>
+                                <template v-else>{{ $t('care.no_deadline') }}</template>
+                            </p>
+                            <p v-if="period.note" class="mt-0.5 text-xs text-ink/50">{{ period.note }}</p>
+                            <!-- Essen + Aktivität live on /program; jump straight to that
+                                 week rather than making staff click through to it. -->
+                            <Link
+                                v-if="canManage"
+                                :href="programRoute({ query: { week: period.starts_on } }).url"
+                                :data-testid="`care-program-${period.id}`"
+                                class="mt-1 inline-block text-xs font-medium text-hort-teal-dark underline-offset-2 hover:underline"
+                            >
+                                {{ $t('care.plan_program') }}
+                            </Link>
+                        </div>
+
+                        <div v-if="canManage" class="flex shrink-0 items-center gap-2">
+                            <template v-if="confirmingDelete === period.id">
+                                <span class="text-sm text-ink/60">{{ $t('closures.delete_confirm') }}</span>
+                                <DangerButton @click="remove(period)">{{ $t('common.delete') }}</DangerButton>
+                                <SecondaryButton @click="confirmingDelete = null">
+                                    {{ $t('common.cancel') }}
+                                </SecondaryButton>
+                            </template>
+                            <template v-else>
+                                <SecondaryButton
+                                    :data-testid="`care-edit-${period.id}`"
+                                    @click="edit(period, 'care')"
+                                >
+                                    {{ $t('common.edit') }}
+                                </SecondaryButton>
+                                <SecondaryButton @click="confirmingDelete = period.id">
+                                    {{ $t('common.delete') }}
+                                </SecondaryButton>
+                            </template>
+                        </div>
+                    </div>
+
+                    <ul class="mt-2 divide-y divide-ink/5">
+                        <CareDayRow
+                            v-for="day in period.days"
+                            :key="day.id"
+                            :day="day"
+                            :can-manage="canManage"
+                        />
+                    </ul>
                 </div>
             </div>
 

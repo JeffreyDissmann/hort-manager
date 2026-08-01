@@ -13,6 +13,7 @@ use App\Models\Child;
 use App\Models\DailyDeparture;
 use App\Models\DailyProgram;
 use App\Models\Excursion;
+use App\Models\HolidayCareDay;
 use App\Models\HolidayPeriod;
 use App\Models\HomeworkDefault;
 use App\Support\CompanionNotes;
@@ -118,7 +119,9 @@ class WeeklyOverviewController extends Controller
             ->keyBy(fn (DailyProgram $p) => $p->date->toDateString());
         $homeworkDefaults = HomeworkDefault::all()->keyBy('weekday');
 
-        $program = $weekDays->values()->map(function (array $day, int $i) use ($programs, $homeworkDefaults, $closedDays) {
+        $careDays = HolidayCareDay::betweenKeyed($weekStart, $weekEnd);
+
+        $program = $weekDays->values()->map(function (array $day, int $i) use ($programs, $homeworkDefaults, $closedDays, $careDays) {
             // Closed: no food, no activity — and no homework either. The homework slot
             // comes from a per-weekday default, so without this it would keep drawing
             // its band on days the Hort is shut.
@@ -129,6 +132,12 @@ class WeeklyOverviewController extends Controller
             $p = $programs->get($day['date']);
             $default = $homeworkDefaults->get($i + 1);
             [$hwStart, $hwEnd] = DailyProgram::effectiveHomework($p, $default);
+
+            // Ferienbetreuung: Essen and Aktivität still apply, homework doesn't —
+            // there is no school to bring any home from.
+            if ($careDays->has($day['date'])) {
+                $hwStart = $hwEnd = null;
+            }
 
             return [
                 'lunch' => $p?->lunch,

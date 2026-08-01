@@ -64,14 +64,18 @@ class DailyProgram extends Model
         $dates = collect(range(0, 4))->map(fn (int $i): string => $monday->copy()->addDays($i)->toDateString());
 
         // A Schließzeit needs no lunch — otherwise the reminder would nag every week
-        // the Hort is shut, which is exactly when nobody is there to enter one.
+        // the Hort is shut, which is exactly when nobody is there to enter one. A
+        // Ferienbetreuung day is skipped for the opposite reason: lunch there is
+        // optional, so a missing one isn't a mistake worth chasing.
         $closed = HolidayPeriod::query()
             ->closed()
             ->overlapping($dates->first(), $dates->last())
             ->get()
             ->flatMap(fn (HolidayPeriod $period): Collection => $period->days());
 
-        $dates = $dates->diff($closed);
+        $care = HolidayCareDay::betweenKeyed($dates->first(), $dates->last())->keys();
+
+        $dates = $dates->diff($closed)->diff($care);
 
         // A day without lunch usually has no row at all (empty days are deleted), so
         // the missing days are the generated week minus what the table does have.

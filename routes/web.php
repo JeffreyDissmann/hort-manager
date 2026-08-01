@@ -146,6 +146,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/closures', [HolidayPeriodController::class, 'store'])->name('closures.store');
     Route::patch('/closures/{closure}', [HolidayPeriodController::class, 'update'])->name('closures.update');
     Route::delete('/closures/{closure}', [HolidayPeriodController::class, 'destroy'])->name('closures.destroy');
+    // Ferienbetreuung: one offered day (Betreuungszeit + Aktivität).
+    Route::patch('/care-days/{careDay}', [HolidayPeriodController::class, 'updateCareDay'])->name('care-days.update');
+    Route::delete('/care-days/{careDay}', [HolidayPeriodController::class, 'destroyCareDay'])->name('care-days.destroy');
 
     Route::resource('excursions', ExcursionController::class)->except('show');
     Route::patch('excursions/{excursion}/live', [ExcursionController::class, 'live'])->name('excursions.live');

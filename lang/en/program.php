@@ -14,6 +14,7 @@ return [
     'activity' => 'Activity',
     'activity_placeholder' => 'e.g. crafts, trip to the park',
     'homework' => 'Homework',
+    'care_window' => 'Care hours',
     'no_homework' => 'No homework',
     'save_week' => 'Save week',
 
