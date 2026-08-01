@@ -21,6 +21,7 @@ use App\Http\Controllers\DailyBoardController;
 use App\Http\Controllers\DailyProgramController;
 use App\Http\Controllers\ExcursionController;
 use App\Http\Controllers\ExcursionRsvpController;
+use App\Http\Controllers\HolidayCareRegistrationController;
 use App\Http\Controllers\HolidayPeriodController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\NotificationSettingsController;
@@ -149,6 +150,10 @@ Route::middleware('auth')->group(function () {
     // Ferienbetreuung: one offered day (Betreuungszeit + Aktivität).
     Route::patch('/care-days/{careDay}', [HolidayPeriodController::class, 'updateCareDay'])->name('care-days.update');
     Route::delete('/care-days/{careDay}', [HolidayPeriodController::class, 'destroyCareDay'])->name('care-days.destroy');
+
+    // Ferienbetreuung sign-ups — parents for their own children, staff for anyone.
+    Route::get('/care', [HolidayCareRegistrationController::class, 'index'])->name('care.index');
+    Route::patch('/care/{period}', [HolidayCareRegistrationController::class, 'update'])->name('care.update');
 
     Route::resource('excursions', ExcursionController::class)->except('show');
     Route::patch('excursions/{excursion}/live', [ExcursionController::class, 'live'])->name('excursions.live');
