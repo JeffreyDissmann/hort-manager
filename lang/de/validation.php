@@ -12,6 +12,7 @@ return [
     'alpha_num' => ':attribute darf nur Buchstaben und Zahlen enthalten.',
     'array' => ':attribute muss eine Liste sein.',
     'before' => ':attribute muss ein Datum vor :date sein.',
+    'closed_day' => 'An diesem Tag ist der Hort geschlossen (:name).',
     'before_or_equal' => ':attribute muss ein Datum vor oder gleich :date sein.',
     'between' => [
         'array' => ':attribute muss zwischen :min und :max Elemente enthalten.',
