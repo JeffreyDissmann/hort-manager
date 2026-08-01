@@ -158,14 +158,19 @@ class WeeklyOverviewController extends Controller
             }
         }
 
-        $currentWeek = $weekChildren->map(function (Child $child) use ($weekDays, $departures, $absences, $todayString, $excursionByChildDate, $toMinutes, $childNames, $companionPlans, $closedDays) {
+        $currentWeek = $weekChildren->map(function (Child $child) use ($weekDays, $departures, $absences, $todayString, $excursionByChildDate, $toMinutes, $childNames, $companionPlans, $closedDays, $careDays) {
             $byWeekday = $child->weeklySchedules->keyBy('weekday');
             $canManage = true;
 
-            $days = $weekDays->values()->map(function (array $day, int $i) use ($child, $byWeekday, $departures, $absences, $todayString, $canManage, $excursionByChildDate, $toMinutes, $childNames, $companionPlans, $closedDays) {
+            $days = $weekDays->values()->map(function (array $day, int $i) use ($child, $byWeekday, $departures, $absences, $todayString, $canManage, $excursionByChildDate, $toMinutes, $childNames, $companionPlans, $closedDays, $careDays) {
                 $schedule = $byWeekday->get($i + 1);
-                $stdTime = $schedule && $schedule->planned_time ? substr((string) $schedule->planned_time, 0, 5) : null;
-                $stdMethod = $schedule?->method?->value;
+                // Ferienbetreuung: no school, so the Stammplan says nothing about this
+                // day. Only a sign-up (a DailyDeparture) puts the child here at all.
+                $isCareDay = $careDays->has($day['date']);
+                $stdTime = $isCareDay || ! $schedule || ! $schedule->planned_time
+                    ? null
+                    : substr((string) $schedule->planned_time, 0, 5);
+                $stdMethod = $isCareDay ? null : $schedule?->method?->value;
 
                 $departure = $departures->get($child->id.'|'.$day['date']);
                 $time = $departure
@@ -187,7 +192,9 @@ class WeeklyOverviewController extends Controller
 
                 $departed = $status !== null && $status !== DepartureStatus::Present;
 
-                $adjusted = $departure !== null && ($time !== $stdTime || $method !== $stdMethod);
+                // „heute geändert" means „differs from the Stammplan" — on a care day
+                // there is no Stammplan to differ from, so nothing is an adjustment.
+                $adjusted = ! $isCareDay && $departure !== null && ($time !== $stdTime || $method !== $stdMethod);
 
                 $absence = $absences->get($child->id.'|'.$day['date']);
 
@@ -230,8 +237,14 @@ class WeeklyOverviewController extends Controller
                     'past' => $day['date'] < $todayString,
                     // The Hort is shut: nothing to plan, nothing to edit.
                     'closed' => $closedDays[$day['date']] ?? null,
+                    // Ferienbetreuung: registered children are planned as usual; the
+                    // rest aren't „hortfrei", they simply haven't signed up.
+                    'care' => $isCareDay ? ['registered' => $departure !== null] : null,
+                    // Signing up happens on /care (it has a deadline), so an unregistered
+                    // care day can't be planned into existence from here.
                     'editable' => $canManage && $day['date'] >= $todayString && ! $departed
-                        && ! isset($closedDays[$day['date']]),
+                        && ! isset($closedDays[$day['date']])
+                        && (! $isCareDay || $departure !== null),
                     'excursion' => $excursion,
                     'conflict' => $conflict,
                     'birthday' => $birthday,
@@ -287,11 +300,12 @@ class WeeklyOverviewController extends Controller
         // „Hortfrei"): has a Stammplan, but no plan for that weekday, no same-day
         // override and no reported absence. On the slot-based timetable such children
         // simply don't appear, so this makes the „nicht da" summary complete.
-        $weekHortfrei = $weekDays->values()->map(function (array $day, int $i) use ($allChildren, $allOverrides, $absentKeys, $user, $myChildIds, $closedDays) {
+        $weekHortfrei = $weekDays->values()->map(function (array $day, int $i) use ($allChildren, $allOverrides, $absentKeys, $user, $myChildIds, $closedDays, $careDays) {
             $weekday = $i + 1;
 
-            // Nobody is „hortfrei" on a day the Hort is closed for everyone.
-            if (isset($closedDays[$day['date']])) {
+            // Nobody is „hortfrei" on a day the Hort is closed for everyone — nor on a
+            // Ferienbetreuung day, where the Stammplan doesn't apply in the first place.
+            if (isset($closedDays[$day['date']]) || $careDays->has($day['date'])) {
                 return [];
             }
 
@@ -341,7 +355,9 @@ class WeeklyOverviewController extends Controller
             'weekHortfrei' => $weekHortfrei,
             'activities' => $activities,
             'program' => $program,
-            'weekTimetable' => $this->weekTimetable($weekDays, $excursionByChildDate, $program, $activities, $closedDays),
+            'weekTimetable' => $this->weekTimetable($weekDays, $excursionByChildDate, $program, $activities, $closedDays, $careDays->keys()->all()),
+            // date => whether that day is a Ferienbetreuung day, for the column headers.
+            'careDays' => $careDays->map(fn (HolidayCareDay $day): string => $day->period->name)->all(),
             // date => Schließzeit name, for the day headers and the locked cells.
             'closedDays' => $closedDays,
             'children' => $allChildren->map(fn (Child $c) => [
@@ -367,9 +383,10 @@ class WeeklyOverviewController extends Controller
      * @param  array<int, array>  $program
      * @param  array<int, array>  $activities
      * @param  array<string, string>  $closedDays  date => Schließzeit name
+     * @param  list<string>  $careDates  dates on which only sign-ups count
      * @return array<int, array{time: string, days: array}>
      */
-    private function weekTimetable(Collection $weekDays, array $excursionByChildDate, array $program, array $activities, array $closedDays = []): array
+    private function weekTimetable(Collection $weekDays, array $excursionByChildDate, array $program, array $activities, array $closedDays = [], array $careDates = []): array
     {
         $weekDates = $weekDays->pluck('date');
         $children = Child::query()->activeBetween($weekDates->first(), $weekDates->last())
@@ -416,8 +433,18 @@ class WeeklyOverviewController extends Controller
                 }
 
                 $schedule = $byWeekday->get($i + 1);
-                $stdTime = $schedule?->planned_time;
                 $departure = $departures->get($child->id.'|'.$day['date']);
+
+                // Ferienbetreuung: only children who signed up are here, so there is no
+                // Stammplan to fall back on — no sign-up means no row on the timeline.
+                if (in_array($day['date'], $careDates, true)) {
+                    if ($departure === null) {
+                        continue;
+                    }
+                    $schedule = null;
+                }
+
+                $stdTime = $schedule?->planned_time;
                 $method = $departure ? $departure->planned_method : $schedule?->method;
                 $time = $departure && $departure->planned_time ? $departure->planned_time : $stdTime;
 

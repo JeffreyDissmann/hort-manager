@@ -15,6 +15,8 @@ const props = defineProps({
     weekDays: { type: Array, default: () => [] },
     // { 'YYYY-MM-DD': 'Sommerferien' } — days the Hort is shut.
     closedDays: { type: Object, default: () => ({}) },
+    // { 'YYYY-MM-DD': 'Ferienbetreuung' } — days only signed-up children attend.
+    careDays: { type: Object, default: () => ({}) },
     currentWeek: { type: Array, default: () => [] },
     activities: { type: Array, default: () => [] },
     program: { type: Array, default: () => [] },
@@ -64,12 +66,18 @@ const weekColumns = computed(() =>
         is_today: d.is_today,
         date: d.date,
         closed: props.closedDays[d.date] ?? null,
+        care: props.careDays[d.date] ?? null,
     })),
 );
 
 // The week's Schließzeiten, named once above the grid rather than in every cell.
 const weekClosures = computed(() => [
     ...new Set(props.weekDays.map((d) => props.closedDays[d.date]).filter(Boolean)),
+]);
+
+// The week's Ferienbetreuungen, named once above the grid.
+const weekCare = computed(() => [
+    ...new Set(props.weekDays.map((d) => props.careDays[d.date]).filter(Boolean)),
 ]);
 
 // Mo–Fr all shut → „geschlossen", otherwise „teilweise geschlossen".
@@ -136,6 +144,18 @@ function planClass(day) {
 function cellUi(day) {
     if (day.closed) {
         return { label: t('weekly.closed'), title: day.closed, class: 'bg-ink/10 text-ink/40', time: false, extras: false };
+    }
+
+    // Ferienbetreuung: not signed up is its own state — the child isn't „frei" that
+    // day, they simply aren't coming, and signing up happens on /care.
+    if (day.care && !day.care.registered) {
+        return {
+            label: t('weekly.care_not_registered'),
+            title: t('weekly.care_not_registered_title'),
+            class: 'bg-ink/5 text-ink/40 ring-1 ring-inset ring-ink/10',
+            time: false,
+            extras: false,
+        };
     }
 
     if (day.absent) {
@@ -220,6 +240,14 @@ function answerCompanion(id, confirmed) {
                             ? $t('weekly.closed_week_all', { names: weekClosures.join(', ') })
                             : $t('weekly.closed_week', { names: weekClosures.join(', ') })
                     }}
+                </p>
+
+                <p
+                    v-if="weekCare.length"
+                    data-testid="week-care"
+                    class="rounded-2xl bg-hort-teal/10 px-4 py-3 text-sm text-ink/70 ring-1 ring-hort-teal/40"
+                >
+                    {{ $t('weekly.care_week', { names: weekCare.join(', ') }) }}
                 </p>
 
                 <!-- Parents see + edit their own children; staff use the timeline below. -->
