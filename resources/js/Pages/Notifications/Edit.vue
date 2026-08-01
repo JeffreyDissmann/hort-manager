@@ -172,6 +172,7 @@ function save() {
                                         <Link
                                             v-if="settingsLinks[category]"
                                             :href="settingsLinks[category].href"
+                                            :data-testid="`settings-link-${category}`"
                                             class="mt-1 inline-block text-xs font-medium text-hort-teal-dark underline-offset-2 hover:underline"
                                         >
                                             {{ settingsLinks[category].label }}
