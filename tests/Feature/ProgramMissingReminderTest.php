@@ -113,6 +113,31 @@ class ProgramMissingReminderTest extends TestCase
         Notification::assertNothingSent();
     }
 
+    public function test_it_always_looks_at_the_week_of_the_given_day(): void
+    {
+        // Run mid-week: still the Monday–Friday of *this* week, not the next five days.
+        $this->travelTo(Carbon::parse('2026-06-24 11:30')); // Wednesday
+        $this->fillLunch(['2026-06-24', '2026-06-25', '2026-06-26']);
+
+        $missing = DailyProgram::weekdaysWithoutLunch(Carbon::today());
+
+        $this->assertSame(
+            ['2026-06-22', '2026-06-23'],
+            array_map(fn (Carbon $d): string => $d->toDateString(), $missing),
+        );
+    }
+
+    public function test_it_sends_nothing_when_no_staff_can_be_reached(): void
+    {
+        // Slack id removed and no push subscription → nobody to deliver to.
+        $this->staff->slack_id = null;
+        $this->staff->save();
+
+        $this->artisan('program:remind-missing')->assertSuccessful();
+
+        Notification::assertNothingSent();
+    }
+
     public function test_dry_run_lists_the_missing_days(): void
     {
         $this->fillLunch(['2026-06-22']);

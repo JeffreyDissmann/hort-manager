@@ -8,6 +8,7 @@ use App\Enums\UserRole;
 use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Schema;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -57,6 +58,16 @@ class SettingTest extends TestCase
             ->assertForbidden();
 
         $this->assertSame('12:00', Setting::lateChangeCutoff());
+    }
+
+    public function test_it_falls_back_to_the_default_when_the_table_does_not_exist_yet(): void
+    {
+        // The schedule reads settings on every console boot — including `migrate` on a
+        // fresh install, before this table is created. That must not throw.
+        Schema::drop('settings');
+
+        $this->assertSame('12:00', Setting::lateChangeCutoff());
+        $this->assertSame('fallback', Setting::get('anything', 'fallback'));
     }
 
     public function test_the_staff_reminder_runs_half_an_hour_before_the_digest(): void
