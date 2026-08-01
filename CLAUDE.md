@@ -133,13 +133,16 @@ Three directions; **production setup is documented in [`docs/slack-setup.md`](do
 ### Notification settings (audiences)
 Every notification belongs to a `App\Enums\NotificationCategory`, which the user toggles per channel (Slack/Push) on `/notifications` — an **opt-out** matrix (missing preference = on). Each category declares a `NotificationAudience`, and **users only see the categories they can actually receive**:
 - **`guardian`** (departures, excursions, companion, missing_plan, weekly_digest) — every non-staff user, plus staff who are a guardian themselves. Deliberately not „role = parent": an Erzieher:in with their own Hort child still gets those DMs, so they must keep the toggles.
-- **`staff`** (late_change) — `isStaff()`.
+- **`staff`** (late_change, program_missing) — `isStaff()`.
 A user in both audiences gets two labelled sections; with one audience the headings are hidden. `NotificationSettingsController::update()` **merges** into the stored preferences (the page renders only a subset, so replacing would wipe the other audience) and rejects categories the user is no audience for.
 
 ### Späte Änderungen (late same-day changes)
 A Hort-wide cutoff time (default **12:00**, `Setting::LateChangeCutoff`, staff-editable on `/program`) splits the day: once it has passed, a **parent** changing **today** notifies every reachable staff member (`App\Support\LateChange` → `App\Notifications\LateChange`, category `late_change`). Staff's own changes never notify, and other days are never „late" whatever the clock says. Triggers: `WeeklyAdjustmentController::update` (only when the plan really moved) / `::reset`, and `AbsenceController::store` (per day of the range, only when the Absence was created/changed). `DayEditor` warns the parent **before** saving via the shared `lateChangeCutoff` prop, mirroring `LateChange::applies()`.
 
-Hort-wide settings live in a `settings` key/value table behind `App\Models\Setting` (`get`/`set`, cached forever, busted on write). Add a constant + a default there rather than a new column.
+### Wochenüberblick + „Wochenprogramm fehlt"
+The Monday parent digest (`weekly:digest`) goes out at **`Setting::WeeklyDigestTime`** (default 12:00, staff-editable on `/program`). Exactly **30 minutes earlier** (`Setting::programReminderTime()`, fixed lead — not separately settable) `program:remind-missing` DMs staff if the week's Tagesprogramm still has a weekday **without lunch** (`DailyProgram::weekdaysWithoutLunch()`; an Aktivität is optional and deliberately doesn't count, or it would nag forever). Silent when the week is complete. Both are registered in `routes/console.php` reading the setting, which `schedule:run` re-evaluates every minute — **changing the time takes effect without a deploy**. The digest weekday is still hardcoded to Monday.
+
+Hort-wide settings live in a `settings` key/value table behind `App\Models\Setting` (`get`/`set`, cached forever, busted on write; a missing table falls back to the default, since the schedule reads settings on every console boot). Add a constant + a default there rather than a new column.
 
 ## Paperless integration (accounting receipts)
 Links each **accounting booking** to one document in an external **Paperless-ngx** archive. Admin-only (rides the accounting middleware). Config in `config/services.php` (`paperless.url` / `.token` / `.booking_field` / `.amount_field`); with no url+token the whole feature is inert (degrades silently, like Slack). **`docs/…` not written — this section is the spec.**

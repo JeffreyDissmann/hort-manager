@@ -77,6 +77,9 @@ class DailyProgramController extends Controller
             'days' => $days,
             'homeworkDefaults' => $homeworkDefaults,
             'lateChangeCutoff' => Setting::lateChangeCutoff(),
+            'weeklyDigestTime' => Setting::weeklyDigestTime(),
+            'programReminderTime' => Setting::programReminderTime(),
+            'programReminderLeadMinutes' => Setting::ProgramReminderLeadMinutes,
         ]);
     }
 
@@ -182,6 +185,22 @@ class DailyProgramController extends Controller
         ]);
 
         Setting::set(Setting::LateChangeCutoff, $validated['late_change_cutoff']);
+
+        return back()->with('status', __('flash.settings_saved'));
+    }
+
+    /** Save when the Monday Wochenüberblick goes out to parents. */
+    public function updateDigestTime(Request $request): RedirectResponse
+    {
+        $this->authorize('update', DailyProgram::class);
+
+        $validated = $request->validate([
+            // Staff are reminded ProgramReminderLeadMinutes earlier, so the digest
+            // can't run before that or the reminder falls into the previous day.
+            'weekly_digest_time' => ['required', 'date_format:H:i', 'after_or_equal:00:30'],
+        ]);
+
+        Setting::set(Setting::WeeklyDigestTime, $validated['weekly_digest_time']);
 
         return back()->with('status', __('flash.settings_saved'));
     }

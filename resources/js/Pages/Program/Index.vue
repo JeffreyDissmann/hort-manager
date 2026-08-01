@@ -4,6 +4,7 @@ import {
     update as programUpdate,
     defaults as programDefaults,
     settings as programSettings,
+    digestTime as programDigestTime,
 } from '@/routes/program';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import Checkbox from '@/Components/Checkbox.vue';
@@ -21,12 +22,17 @@ const props = defineProps({
     days: { type: Array, default: () => [] },
     homeworkDefaults: { type: Array, default: () => [] },
     lateChangeCutoff: { type: String, default: '12:00' },
+    weeklyDigestTime: { type: String, default: '12:00' },
+    // Always the digest time minus the fixed lead — displayed, not editable.
+    programReminderTime: { type: String, default: '11:30' },
+    programReminderLeadMinutes: { type: Number, default: 30 },
 });
 
 const flash = computed(() => usePage().props.flash?.status);
 const saving = ref(false);
 const savingDefaults = ref(false);
 const savingSettings = ref(false);
+const savingDigestTime = ref(false);
 
 // `no_homework` drives the "Keine Hausaufgaben" checkbox — on when there's no
 // effective homework for the day (explicit none, or no default/override at all).
@@ -138,6 +144,27 @@ function saveSettings() {
             preserveScroll: true,
             preserveState: true,
             onFinish: () => (savingSettings.value = false),
+        },
+    );
+}
+
+const weeklyDigestTime = ref(props.weeklyDigestTime);
+watch(
+    () => props.weeklyDigestTime,
+    (value) => {
+        weeklyDigestTime.value = value;
+    },
+);
+
+function saveDigestTime() {
+    savingDigestTime.value = true;
+    router.patch(
+        programDigestTime().url,
+        { weekly_digest_time: weeklyDigestTime.value },
+        {
+            preserveScroll: true,
+            preserveState: true,
+            onFinish: () => (savingDigestTime.value = false),
         },
     );
 }
@@ -348,6 +375,40 @@ function onTouchEnd(e) {
                 <div class="mt-3 flex justify-end">
                     <PrimaryButton :disabled="savingSettings" @click="saveSettings">
                         {{ $t('program.save_late_change') }}
+                    </PrimaryButton>
+                </div>
+            </div>
+
+            <!-- When the Monday digest goes to parents (staff are nudged an hour earlier) -->
+            <div id="weekly-digest" class="rounded-2xl bg-surface p-4 shadow-sm">
+                <p class="font-semibold text-ink">
+                    {{ $t('program.digest_heading') }}
+                </p>
+                <p class="mb-3 mt-1 text-sm text-ink/60">
+                    {{
+                        $t('program.digest_intro', {
+                            time: programReminderTime,
+                            minutes: programReminderLeadMinutes,
+                        })
+                    }}
+                </p>
+                <div class="flex flex-wrap items-center gap-3">
+                    <InputLabel
+                        for="weekly-digest-time"
+                        :value="$t('program.digest_label')"
+                        class="shrink-0"
+                    />
+                    <TimeSelect
+                        id="weekly-digest-time"
+                        v-model="weeklyDigestTime"
+                        from="08:00"
+                        test-id="weekly-digest-time"
+                        class="w-40"
+                    />
+                </div>
+                <div class="mt-3 flex justify-end">
+                    <PrimaryButton :disabled="savingDigestTime" @click="saveDigestTime">
+                        {{ $t('program.save_digest_time') }}
                     </PrimaryButton>
                 </div>
             </div>

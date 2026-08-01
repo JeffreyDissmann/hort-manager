@@ -59,6 +59,40 @@ class SettingTest extends TestCase
         $this->assertSame('12:00', Setting::lateChangeCutoff());
     }
 
+    public function test_the_staff_reminder_runs_half_an_hour_before_the_digest(): void
+    {
+        $this->assertSame('12:00', Setting::weeklyDigestTime());
+        $this->assertSame('11:30', Setting::programReminderTime());
+
+        Setting::set(Setting::WeeklyDigestTime, '15:30');
+
+        $this->assertSame('15:00', Setting::programReminderTime());
+    }
+
+    public function test_staff_can_change_the_digest_time(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => UserRole::Staff]))
+            ->patch(route('program.digest-time'), ['weekly_digest_time' => '16:00'])
+            ->assertRedirect();
+
+        $this->assertSame('16:00', Setting::weeklyDigestTime());
+        $this->assertSame('15:30', Setting::programReminderTime());
+    }
+
+    public function test_the_digest_time_cannot_push_the_staff_reminder_into_the_previous_day(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => UserRole::Staff]))
+            ->patch(route('program.digest-time'), ['weekly_digest_time' => '00:15'])
+            ->assertSessionHasErrors('weekly_digest_time');
+    }
+
+    public function test_parents_cannot_change_the_digest_time(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => UserRole::Parent]))
+            ->patch(route('program.digest-time'), ['weekly_digest_time' => '16:00'])
+            ->assertForbidden();
+    }
+
     public function test_the_program_page_exposes_the_cutoff(): void
     {
         Setting::set(Setting::LateChangeCutoff, '11:45');

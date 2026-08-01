@@ -24,4 +24,9 @@ return [
     'late_change_intro' => 'Ändern Eltern nach dieser Uhrzeit noch etwas für den heutigen Tag, bekommen die Erzieher:innen eine Benachrichtigung.',
     'late_change_label' => 'Uhrzeit',
     'save_late_change' => 'Uhrzeit speichern',
+
+    'digest_heading' => 'Wochenüberblick an die Eltern',
+    'digest_intro' => 'Montags zu dieser Uhrzeit bekommen die Eltern Essen und Aktivitäten der Woche. Fehlt dann noch ein Mittagessen, erinnern wir die Erzieher:innen :minutes Minuten vorher – um :time Uhr.',
+    'digest_label' => 'Uhrzeit',
+    'save_digest_time' => 'Uhrzeit speichern',
 ];

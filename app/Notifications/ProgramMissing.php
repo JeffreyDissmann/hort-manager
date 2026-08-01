@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Notifications;
 
 use App\Enums\NotificationCategory;
+use App\Models\Setting;
 use Illuminate\Notifications\Slack\BlockKit\Blocks\ActionsBlock;
 use Illuminate\Notifications\Slack\BlockKit\Blocks\SectionBlock;
 use Illuminate\Notifications\Slack\SlackMessage;
@@ -12,8 +13,9 @@ use Illuminate\Support\Carbon;
 use NotificationChannels\WebPush\WebPushMessage;
 
 /**
- * DMs staff that this week's Tagesprogramm still has days without lunch — sent an
- * hour before the parents' Wochenüberblick, so there is time to fill it in.
+ * DMs staff that this week's Tagesprogramm still has days without lunch — sent
+ * `Setting::ProgramReminderLeadMinutes` before the parents' Wochenüberblick, so there
+ * is still time to fill it in.
  */
 class ProgramMissing extends SlackNotification
 {
@@ -53,6 +55,8 @@ class ProgramMissing extends SlackNotification
             ->map(fn (Carbon $day): string => $day->locale('de')->isoFormat('dddd'))
             ->join(', ', ' und ');
 
-        return "Für {$days} ist noch kein Mittagessen eingetragen. Der Wochenüberblick geht in einer Stunde an die Eltern.";
+        $lead = Setting::ProgramReminderLeadMinutes;
+
+        return "Für {$days} ist noch kein Mittagessen eingetragen. Der Wochenüberblick geht in {$lead} Minuten an die Eltern.";
     }
 }
