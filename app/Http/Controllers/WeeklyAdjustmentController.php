@@ -10,6 +10,7 @@ use App\Http\Requests\AdjustDayRequest;
 use App\Jobs\AskCompanionConfirmation;
 use App\Models\Child;
 use App\Models\DailyDeparture;
+use App\Models\HolidayPeriod;
 use App\Notifications\CompanionRequest;
 use App\Support\CompanionReconciler;
 use App\Support\EffectivePlan;
@@ -164,6 +165,9 @@ class WeeklyAdjustmentController extends Controller
             $day->greaterThanOrEqualTo(Carbon::today()) && $day->isWeekday(),
             403,
         );
+
+        // Schließzeit: there is no day to plan for.
+        abort_if(HolidayPeriod::closesOn($day), 403);
 
         $departure = DailyDeparture::firstOrNew([
             'child_id' => $child->id,

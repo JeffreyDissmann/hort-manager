@@ -118,6 +118,10 @@ function chipClass(method) {
                     >
                         {{ col.sublabel }}
                     </div>
+                    <!-- Closed days carry no rows at all, so say why the column is empty. -->
+                    <div v-if="col.closed" class="text-[11px] font-medium text-ink/40">
+                        {{ $t('weekly.closed') }}
+                    </div>
                 </component>
                 <div
                     v-if="program[j] && program[j].lunch"
