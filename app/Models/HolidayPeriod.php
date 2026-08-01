@@ -98,6 +98,30 @@ class HolidayPeriod extends Model
     }
 
     /**
+     * The closed days in a range, as `Y-m-d` => Schließzeit name.
+     *
+     * @return array<string, string>
+     */
+    public static function closedDaysBetween(Carbon|string $from, Carbon|string $to): array
+    {
+        $start = $from instanceof Carbon ? $from->toDateString() : $from;
+        $end = $to instanceof Carbon ? $to->toDateString() : $to;
+
+        $days = [];
+
+        foreach (static::query()->closed()->overlapping($start, $end)->get() as $period) {
+            // A period may reach beyond the range it overlaps — keep only what's asked for.
+            foreach ($period->days() as $date) {
+                if ($date >= $start && $date <= $end) {
+                    $days[$date] = $period->name;
+                }
+            }
+        }
+
+        return $days;
+    }
+
+    /**
      * Every date of this period, inclusive, as `Y-m-d`.
      *
      * @return Collection<int, string>

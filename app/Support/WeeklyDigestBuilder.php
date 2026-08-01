@@ -10,6 +10,7 @@ use App\Models\Absence;
 use App\Models\Child;
 use App\Models\DailyProgram;
 use App\Models\Excursion;
+use App\Models\HolidayPeriod;
 use App\Models\HomeworkDefault;
 use App\Models\User;
 use Illuminate\Support\Carbon;
@@ -41,6 +42,9 @@ class WeeklyDigestBuilder
         $locale = $parent->preferredLocale() ?? app()->getLocale();
         $weekdayLabel = fn (Carbon $d): string => $d->copy()->locale($locale)->isoFormat('dddd');
 
+        // Schließzeiten replace a day's whole content: no food, no activity, no pickup.
+        $closedDays = HolidayPeriod::closedDaysBetween($monday, $friday);
+
         // Hort-wide program per weekday (lunch + activity + effective homework).
         $programs = DailyProgram::query()
             ->whereIn('date', $weekDates)
@@ -48,7 +52,17 @@ class WeeklyDigestBuilder
             ->keyBy(fn (DailyProgram $p) => $p->date->toDateString());
         $homeworkDefaults = HomeworkDefault::all()->keyBy('weekday');
 
-        $program = $weekDays->map(function (Carbon $day, int $i) use ($programs, $homeworkDefaults, $weekdayLabel) {
+        $program = $weekDays->map(function (Carbon $day, int $i) use ($programs, $homeworkDefaults, $weekdayLabel, $closedDays) {
+            if (isset($closedDays[$day->toDateString()])) {
+                return [
+                    'weekday' => $weekdayLabel($day),
+                    'lunch' => null,
+                    'activity' => null,
+                    'homework' => null,
+                    'closed' => $closedDays[$day->toDateString()],
+                ];
+            }
+
             $p = $programs->get($day->toDateString());
             [$hwStart, $hwEnd] = DailyProgram::effectiveHomework($p, $homeworkDefaults->get($i + 1));
 
@@ -62,6 +76,7 @@ class WeeklyDigestBuilder
                 'lunch' => $p?->lunch,
                 'activity' => $p?->activity,
                 'homework' => $homework,
+                'closed' => null,
             ];
         })->all();
 
@@ -109,9 +124,14 @@ class WeeklyDigestBuilder
             collect($plans)->pluck('companion_child_id')->filter()->all()
         )->pluck('name', 'id');
 
-        $childSummaries = $children->map(function (Child $child) use ($weekDays, $plans, $absences, $excursionByChildDate, $childNames, $weekdayLabel) {
-            $days = $weekDays->map(function (Carbon $day) use ($child, $plans, $absences, $excursionByChildDate, $childNames, $weekdayLabel) {
+        $childSummaries = $children->map(function (Child $child) use ($weekDays, $plans, $absences, $excursionByChildDate, $childNames, $weekdayLabel, $closedDays) {
+            $days = $weekDays->map(function (Carbon $day) use ($child, $plans, $absences, $excursionByChildDate, $childNames, $weekdayLabel, $closedDays) {
                 $date = $day->toDateString();
+
+                // Closed for everyone — the child's own plan doesn't apply.
+                if (isset($closedDays[$date])) {
+                    return ['weekday' => $weekdayLabel($day), 'summary' => "🚫 {$closedDays[$date]}"];
+                }
 
                 $absence = $absences->get($child->id.'|'.$date);
                 if ($absence) {

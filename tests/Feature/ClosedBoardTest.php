@@ -136,6 +136,55 @@ class ClosedBoardTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_the_first_day_of_a_closure_closes(): void
+    {
+        HolidayPeriod::factory()->between('2026-08-03', '2026-08-14')->create(['name' => 'Ab heute']);
+
+        $this->actingAs($this->staff())
+            ->get(route('board'))
+            ->assertInertia(fn (Assert $page) => $page->where('closure.name', 'Ab heute'));
+    }
+
+    public function test_the_day_after_a_closure_is_open_again(): void
+    {
+        HolidayPeriod::factory()->between('2026-07-27', '2026-08-02')->create();
+
+        $this->actingAs($this->staff())
+            ->get(route('board'))
+            ->assertInertia(fn (Assert $page) => $page->missing('closure')->has('rows', 1));
+    }
+
+    public function test_the_day_before_a_closure_is_still_open(): void
+    {
+        HolidayPeriod::factory()->between('2026-08-04', '2026-08-07')->create();
+
+        $this->actingAs($this->staff())
+            ->get(route('board'))
+            ->assertInertia(fn (Assert $page) => $page->missing('closure')->has('rows', 1));
+    }
+
+    public function test_browsing_to_a_closed_day_shows_the_closure(): void
+    {
+        HolidayPeriod::factory()->onDay('2026-08-06')->create(['name' => 'Fortbildung']);
+
+        $this->actingAs($this->staff())
+            ->get(route('board', ['date' => '2026-08-06']))
+            ->assertInertia(fn (Assert $page) => $page->where('closure.name', 'Fortbildung'));
+
+        // Browsing a future closed day must not seed rows either.
+        $this->assertDatabaseEmpty('daily_departures');
+    }
+
+    public function test_the_second_of_two_closures_also_closes(): void
+    {
+        HolidayPeriod::factory()->onDay('2026-08-03')->create(['name' => 'Brückentag']);
+        HolidayPeriod::factory()->onDay('2026-08-06')->create(['name' => 'Fortbildung']);
+
+        $this->actingAs($this->staff())
+            ->get(route('board', ['date' => '2026-08-06']))
+            ->assertInertia(fn (Assert $page) => $page->where('closure.name', 'Fortbildung'));
+    }
+
     public function test_parents_see_the_closure_too(): void
     {
         $this->closeToday();

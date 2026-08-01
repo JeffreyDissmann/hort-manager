@@ -49,12 +49,7 @@ class WeeklyOverviewController extends Controller
         // Schließzeiten touching this week, as date => name. A closed day has no plan
         // at all: its cells are locked, and it drops out of the timetable and the
         // „nicht da" summaries — nobody is missing on a day that doesn't exist.
-        $closedDays = [];
-        foreach (HolidayPeriod::query()->closed()->overlapping($weekStart, $weekEnd)->get() as $period) {
-            foreach ($period->days() as $date) {
-                $closedDays[$date] = $period->name;
-            }
-        }
+        $closedDays = HolidayPeriod::closedDaysBetween($weekStart, $weekEnd);
 
         // "Diese Woche" is the user's editable view: a parent sees only their own
         // children, staff see all. Only children enrolled during the week are shown.

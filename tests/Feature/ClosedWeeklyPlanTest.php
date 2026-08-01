@@ -153,6 +153,94 @@ class ClosedWeeklyPlanTest extends TestCase
         $this->assertDatabaseMissing('absences', ['date' => '2026-08-05']);
     }
 
+    public function test_a_fully_closed_week_locks_every_day(): void
+    {
+        HolidayPeriod::factory()->between('2026-08-03', '2026-08-07')->create(['name' => 'Sommerferien']);
+
+        $this->actingAs($this->staff)
+            ->get(route('weekly-plan'))
+            ->assertInertia(function (Assert $page) {
+                $props = $page->toArray()['props'];
+
+                $this->assertCount(5, $props['closedDays']);
+
+                foreach ($props['currentWeek'][0]['days'] as $day) {
+                    $this->assertSame('Sommerferien', $day['closed']);
+                    $this->assertFalse($day['editable']);
+                }
+
+                // Nothing left to place on the timeline.
+                foreach ($props['weekTimetable'] as $row) {
+                    foreach ($row['days'] as $entries) {
+                        $this->assertEmpty(collect($entries)->all());
+                    }
+                }
+            });
+    }
+
+    public function test_a_closure_from_the_previous_week_only_locks_the_days_it_covers(): void
+    {
+        // Runs Mon 27 Jul – Tue 4 Aug: only Mo+Tue of the shown week.
+        HolidayPeriod::factory()->between('2026-07-27', '2026-08-04')->create(['name' => 'Ferien']);
+
+        $this->actingAs($this->staff)
+            ->get(route('weekly-plan'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('closedDays', ['2026-08-03' => 'Ferien', '2026-08-04' => 'Ferien'])
+                ->where('currentWeek.0.days.0.closed', 'Ferien')
+                ->where('currentWeek.0.days.1.closed', 'Ferien')
+                ->where('currentWeek.0.days.2.closed', null)
+                ->where('currentWeek.0.days.2.editable', true)
+            );
+    }
+
+    public function test_a_closure_running_past_friday_only_locks_the_days_it_covers(): void
+    {
+        HolidayPeriod::factory()->between('2026-08-06', '2026-08-21')->create(['name' => 'Ferien']);
+
+        $this->actingAs($this->staff)
+            ->get(route('weekly-plan'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('closedDays', ['2026-08-06' => 'Ferien', '2026-08-07' => 'Ferien'])
+                ->where('currentWeek.0.days.4.closed', 'Ferien')
+                ->where('currentWeek.0.days.3.closed', 'Ferien')
+                ->where('currentWeek.0.days.2.closed', null)
+            );
+    }
+
+    public function test_two_separate_closures_in_one_week_are_both_shown(): void
+    {
+        HolidayPeriod::factory()->onDay('2026-08-03')->create(['name' => 'Brückentag']);
+        HolidayPeriod::factory()->onDay('2026-08-07')->create(['name' => 'Fortbildung']);
+
+        $this->actingAs($this->staff)
+            ->get(route('weekly-plan'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('closedDays', ['2026-08-03' => 'Brückentag', '2026-08-07' => 'Fortbildung'])
+                ->where('currentWeek.0.days.0.closed', 'Brückentag')
+                ->where('currentWeek.0.days.4.closed', 'Fortbildung')
+                ->where('currentWeek.0.days.2.closed', null)
+            );
+    }
+
+    public function test_a_weekend_only_closure_locks_nothing(): void
+    {
+        HolidayPeriod::factory()->between('2026-08-08', '2026-08-09')->create();
+
+        $this->actingAs($this->staff)
+            ->get(route('weekly-plan'))
+            ->assertInertia(fn (Assert $page) => $page->where('closedDays', []));
+    }
+
+    public function test_a_closure_ending_the_day_before_the_week_locks_nothing(): void
+    {
+        HolidayPeriod::factory()->between('2026-07-20', '2026-08-02')->create();
+
+        $this->actingAs($this->staff)
+            ->get(route('weekly-plan'))
+            ->assertInertia(fn (Assert $page) => $page->where('closedDays', []));
+    }
+
     public function test_an_open_week_is_unchanged(): void
     {
         $this->actingAs($this->staff)
