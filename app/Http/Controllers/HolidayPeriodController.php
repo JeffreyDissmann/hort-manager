@@ -58,6 +58,12 @@ class HolidayPeriodController extends Controller
                     'starts_at' => HolidayCareDay::short($day->starts_at),
                     'ends_at' => HolidayCareDay::short($day->ends_at),
                 ])->values(),
+                // Days staff stopped offering — shown so removing one isn't final.
+                'removed_days' => $period->careDays()->onlyTrashed()->orderBy('date')->get()
+                    ->map(fn (HolidayCareDay $day): array => [
+                        'id' => $day->id,
+                        'date' => $day->date->toDateString(),
+                    ])->values(),
             ]);
 
         [$careStart, $careEnd] = Setting::careDefaultWindow();
@@ -105,12 +111,15 @@ class HolidayPeriodController extends Controller
         // Extending the range offers the new weekdays; days already edited are left
         // alone, and days now outside the range are dropped. Deleted per model, not
         // by query: the observer withdrawing their sign-ups runs on the model event.
+        // Force-deleted, because a day is only outside the range until someone moves
+        // the range back — that's not the same as staff un-offering it.
         if ($closure->isCare()) {
             $closure->careDays()
+                ->withTrashed()
                 ->where(fn ($q) => $q->whereDate('date', '<', $closure->starts_on)
                     ->orWhereDate('date', '>', $closure->ends_on))
                 ->get()
-                ->each->delete();
+                ->each->forceDelete();
 
             $closure->refresh()->generateCareDays();
         }
@@ -153,11 +162,24 @@ class HolidayPeriodController extends Controller
     {
         $this->authorize('update', $careDay->period);
 
-        // Registrations for that day go with it (cascade) — nobody can attend a day
-        // that isn't offered any more.
+        // Registrations for that day go with it (see HolidayCareDayObserver) — nobody
+        // can attend a day that isn't offered any more. Soft-deleted: the tombstone is
+        // what stops the next save of the period from offering the day again.
         $careDay->delete();
 
         return back()->with('status', __('flash.care_day_removed'));
+    }
+
+    /** Offer a removed day again — the sign-ups it had are not restored with it. */
+    public function restoreCareDay(Request $request, HolidayCareDay $careDay): RedirectResponse
+    {
+        $this->authorize('update', $careDay->period);
+
+        abort_if(HolidayPeriod::closesOn($careDay->date), 403, 'An diesem Tag ist der Hort geschlossen.');
+
+        $careDay->restore();
+
+        return back()->with('status', __('flash.care_day_restored'));
     }
 
     public function destroy(Request $request, HolidayPeriod $closure): RedirectResponse

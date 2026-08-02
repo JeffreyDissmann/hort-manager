@@ -34,6 +34,7 @@ return [
     'closure_deleted' => 'Closure deleted.',
     'care_day_saved' => 'Day saved.',
     'care_day_removed' => 'Day removed.',
+    'care_day_restored' => 'Day is offered again.',
     'care_registered' => 'Registration saved for :name.',
 
     'account_created' => 'Account “:name” created.',

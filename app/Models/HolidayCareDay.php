@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
@@ -23,12 +24,16 @@ use Illuminate\Support\Collection;
  *
  * Deliberately holds no Aktivität or Essen — that is DailyProgram's job on every
  * other Hort day, and a care day is no different.
+ *
+ * Soft-deleted so „staff stopped offering this day" leaves a trace: re-saving the
+ * period fills gaps in its range, and without the tombstone it would put a
+ * deliberately removed day straight back on the sign-up sheet.
  */
 #[ObservedBy([HolidayCareDayObserver::class])]
 class HolidayCareDay extends Model
 {
     /** @use HasFactory<HolidayCareDayFactory> */
-    use HasFactory, LogsChanges;
+    use HasFactory, LogsChanges, SoftDeletes;
 
     protected $fillable = [
         'holiday_period_id',

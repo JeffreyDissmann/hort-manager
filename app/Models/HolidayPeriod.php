@@ -115,11 +115,15 @@ class HolidayPeriod extends Model
     /**
      * Offer every weekday of the period, starting from the Hort-wide default times.
      * Existing days are left alone, so re-running after a date change only fills gaps.
+     *
+     * A day staff removed on purpose stays removed: its tombstone (soft delete) counts
+     * as existing. A day merely hidden by a Schließzeit has no row at all and is
+     * offered again once the closure is gone.
      */
     public function generateCareDays(): void
     {
         [$start, $end] = Setting::careDefaultWindow();
-        $existing = $this->careDays()->pluck('date')->map(
+        $existing = $this->careDays()->withTrashed()->pluck('date')->map(
             fn ($date): string => $date instanceof Carbon ? $date->toDateString() : (string) $date,
         )->all();
 

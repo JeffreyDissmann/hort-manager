@@ -11,6 +11,7 @@ import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
 import { store as closuresStore, update as closuresUpdate, destroy as closuresDestroy } from '@/routes/closures';
+import { restore as careDayRestore } from '@/routes/care-days';
 import { program as programRoute } from '@/routes';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
@@ -99,6 +100,20 @@ function dateLabel(date) {
         month: 'long',
         year: 'numeric',
     });
+}
+
+/** „Mi, 9. Sep." — the same short form the offered-day rows use. */
+function dayLabel(date) {
+    return new Date(`${date}T00:00:00`).toLocaleDateString(locale.value, {
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short',
+    });
+}
+
+/** Put a removed day back on the sign-up sheet (its sign-ups are not restored). */
+function restoreDay(day) {
+    router.patch(careDayRestore(day.id).url, {}, { preserveScroll: true });
 }
 
 /** „12.–16. August 2026", or a single day when the period is one day long. */
@@ -326,6 +341,26 @@ function rangeLabel(period) {
                             :can-manage="canManage"
                         />
                     </ul>
+
+                    <!-- Days staff took out of the period: removing one is undoable,
+                         but re-saving the period deliberately won't bring it back. -->
+                    <div v-if="canManage && period.removed_days.length" class="mt-3 border-t border-ink/5 pt-2">
+                        <p class="text-xs font-medium text-ink/50">{{ $t('care.removed_heading') }}</p>
+                        <div
+                            v-for="day in period.removed_days"
+                            :key="day.id"
+                            :data-testid="`care-day-removed-${day.id}`"
+                            class="flex flex-wrap items-center gap-x-3 gap-y-1 py-1 text-sm"
+                        >
+                            <span class="w-24 shrink-0 text-ink/50">{{ dayLabel(day.date) }}</span>
+                            <SecondaryButton
+                                :data-testid="`care-day-restore-${day.id}`"
+                                @click="restoreDay(day)"
+                            >
+                                {{ $t('care.restore_day') }}
+                            </SecondaryButton>
+                        </div>
+                    </div>
                 </div>
             </div>
 

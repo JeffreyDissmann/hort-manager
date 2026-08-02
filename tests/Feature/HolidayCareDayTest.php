@@ -112,8 +112,51 @@ class HolidayCareDayTest extends TestCase
 
         $this->actingAs($this->staff)->delete(route('care-days.destroy', $day))->assertRedirect();
 
-        $this->assertDatabaseMissing('holiday_care_days', ['date' => '2026-08-05']);
+        // Soft-deleted: the tombstone is what keeps the next save of the period from
+        // putting a deliberately removed day back on the sign-up sheet.
         $this->assertSame(4, HolidayCareDay::count());
+        $this->assertSoftDeleted($day);
+    }
+
+    public function test_re_saving_the_period_does_not_bring_a_removed_day_back(): void
+    {
+        $day = HolidayCareDay::firstWhere('date', '2026-08-05');
+        $this->actingAs($this->staff)->delete(route('care-days.destroy', $day))->assertRedirect();
+
+        $this->actingAs($this->staff)
+            ->patch(route('closures.update', $this->period), [
+                'name' => 'Sommer',
+                'starts_on' => '2026-08-03',
+                'ends_on' => '2026-08-07',
+            ])
+            ->assertRedirect();
+
+        $this->assertSame(4, HolidayCareDay::count());
+    }
+
+    public function test_staff_can_offer_a_removed_day_again(): void
+    {
+        $day = HolidayCareDay::firstWhere('date', '2026-08-05');
+        $this->actingAs($this->staff)->delete(route('care-days.destroy', $day))->assertRedirect();
+
+        $this->actingAs($this->staff)
+            ->patch(route('care-days.restore', $day->id))
+            ->assertRedirect();
+
+        $this->assertSame(5, HolidayCareDay::count());
+        $this->assertNotSoftDeleted($day);
+    }
+
+    public function test_a_removed_day_cannot_be_offered_again_while_the_hort_is_shut(): void
+    {
+        $day = HolidayCareDay::firstWhere('date', '2026-08-05');
+        $this->actingAs($this->staff)->delete(route('care-days.destroy', $day))->assertRedirect();
+
+        HolidayPeriod::factory()->onDay('2026-08-05')->create(['name' => 'Fortbildung']);
+
+        $this->actingAs($this->staff)
+            ->patch(route('care-days.restore', $day->id))
+            ->assertForbidden();
     }
 
     public function test_parents_cannot_touch_the_offered_days(): void

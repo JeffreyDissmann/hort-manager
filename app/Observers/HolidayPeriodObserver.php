@@ -46,7 +46,8 @@ class HolidayPeriodObserver
      * refuses to show, which nobody would notice until they didn't turn up.
      *
      * Deleting the closure again doesn't restore them; re-saving the Ferienbetreuung
-     * does, since editing it re-offers any missing weekday.
+     * does, since editing it re-offers any missing weekday. That's why these are
+     * force-deleted: a tombstone would say „staff un-offered this day" and block it.
      */
     private function stopOfferingClosedDays(HolidayPeriod $closure): void
     {
@@ -59,7 +60,7 @@ class HolidayPeriodObserver
             ])
             ->get()
             ->each
-            ->delete();
+            ->forceDelete();
     }
 
     /**
@@ -69,6 +70,6 @@ class HolidayPeriodObserver
      */
     public function deleting(HolidayPeriod $period): void
     {
-        $period->careDays->each->delete();
+        $period->careDays()->withTrashed()->get()->each->forceDelete();
     }
 }

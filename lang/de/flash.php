@@ -34,6 +34,7 @@ return [
     'closure_deleted' => 'Schließzeit gelöscht.',
     'care_day_saved' => 'Tag gespeichert.',
     'care_day_removed' => 'Tag entfernt.',
+    'care_day_restored' => 'Tag wird wieder angeboten.',
     'care_registered' => 'Anmeldung für :name gespeichert.',
 
     'account_created' => 'Konto „:name“ angelegt.',

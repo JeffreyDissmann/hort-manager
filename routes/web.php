@@ -150,6 +150,9 @@ Route::middleware('auth')->group(function () {
     // Ferienbetreuung: one offered day (Betreuungszeit + Aktivität).
     Route::patch('/care-days/{careDay}', [HolidayPeriodController::class, 'updateCareDay'])->name('care-days.update');
     Route::delete('/care-days/{careDay}', [HolidayPeriodController::class, 'destroyCareDay'])->name('care-days.destroy');
+    // Re-offering a removed day needs the tombstone resolved, hence withTrashed().
+    Route::patch('/care-days/{careDay}/restore', [HolidayPeriodController::class, 'restoreCareDay'])
+        ->withTrashed()->name('care-days.restore');
 
     // Ferienbetreuung sign-ups — parents for their own children, staff for anyone.
     Route::get('/care', [HolidayCareRegistrationController::class, 'index'])->name('care.index');

@@ -19,5 +19,7 @@ return [
 
     'plan_program' => 'Essen & Aktivitäten im Programm planen',
     'remove_day' => 'Tag entfernen',
+    'removed_heading' => 'Nicht angeboten',
+    'restore_day' => 'Wieder anbieten',
     'remove_confirm' => 'Tag wirklich entfernen?',
 ];
