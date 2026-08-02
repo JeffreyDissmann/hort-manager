@@ -9,6 +9,7 @@ use App\Enums\DepartureMethod;
 use App\Enums\UserRole;
 use App\Models\Absence;
 use App\Models\Child;
+use App\Models\Excursion;
 use App\Models\HolidayPeriod;
 use App\Models\User;
 use App\Models\WeeklySchedule;
@@ -88,6 +89,57 @@ class ClosureIntegrityTest extends TestCase
             ->assertRedirect();
 
         $this->assertDatabaseHas('holiday_periods', ['name' => 'Osterferien']);
+    }
+
+    public function test_a_closure_over_an_existing_ausflug_is_refused(): void
+    {
+        // A trip can't be booked on a closed day; closing the day afterwards is the
+        // same conflict from the other side. Cancelling the trip would take its RSVPs
+        // with it, so staff are told to sort it out instead.
+        Excursion::factory()->create(['name' => 'Zoo', 'date' => '2026-08-12']);
+
+        $this->actingAs($this->staff)
+            ->post(route('closures.store'), [
+                'name' => 'Fortbildung',
+                'starts_on' => '2026-08-10',
+                'ends_on' => '2026-08-14',
+            ])
+            ->assertSessionHasErrors('ends_on');
+
+        $this->assertDatabaseMissing('holiday_periods', ['name' => 'Fortbildung']);
+    }
+
+    public function test_a_ferienbetreuung_may_span_an_ausflug(): void
+    {
+        // The Hort is open during a Ferienbetreuung, so an outing is perfectly normal.
+        Excursion::factory()->create(['name' => 'Zoo', 'date' => '2026-08-12']);
+
+        $this->actingAs($this->staff)
+            ->post(route('closures.store'), [
+                'name' => 'Sommer-Ferienbetreuung',
+                'type' => 'care',
+                'starts_on' => '2026-08-10',
+                'ends_on' => '2026-08-14',
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('holiday_periods', ['name' => 'Sommer-Ferienbetreuung']);
+    }
+
+    public function test_extending_a_closure_onto_an_ausflug_is_refused(): void
+    {
+        $closure = HolidayPeriod::factory()->onDay('2026-08-10')->create(['name' => 'Brückentag']);
+        Excursion::factory()->create(['name' => 'Zoo', 'date' => '2026-08-12']);
+
+        $this->actingAs($this->staff)
+            ->patch(route('closures.update', $closure), [
+                'name' => 'Brückentag',
+                'starts_on' => '2026-08-10',
+                'ends_on' => '2026-08-13',
+            ])
+            ->assertSessionHasErrors('ends_on');
+
+        $this->assertSame('2026-08-10', $closure->refresh()->ends_on->toDateString());
     }
 
     public function test_the_closure_rule_ignores_an_empty_date(): void

@@ -8,6 +8,7 @@ use App\Enums\HolidayPeriodType;
 use App\Models\HolidayCareDay;
 use App\Models\HolidayPeriod;
 use App\Models\Setting;
+use App\Rules\NoExcursionInRange;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -197,12 +198,24 @@ class HolidayPeriodController extends Controller
      */
     private function validated(Request $request, ?HolidayPeriod $period = null): array
     {
+        // The type the period will have (it can't be changed on edit) — a Schließzeit
+        // has to clear the day of Ausflüge, a Ferienbetreuung happily hosts them.
+        $type = $period?->type->value ?? $request->input('type') ?? HolidayPeriodType::Closed->value;
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'type' => ['nullable', Rule::enum(HolidayPeriodType::class)],
             'starts_on' => ['required', 'date'],
             // A single closed day is starts_on == ends_on, so equality is allowed.
-            'ends_on' => ['required', 'date', 'after_or_equal:starts_on'],
+            'ends_on' => [
+                'required',
+                'date',
+                'after_or_equal:starts_on',
+                Rule::when(
+                    $type === HolidayPeriodType::Closed->value,
+                    [new NoExcursionInRange($request->input('starts_on'))],
+                ),
+            ],
             // Opting in after the Ferienbetreuung has started makes no sense.
             'registration_deadline' => ['nullable', 'date', 'before_or_equal:starts_on'],
             'note' => ['nullable', 'string', 'max:255'],
@@ -210,7 +223,7 @@ class HolidayPeriodController extends Controller
 
         // On edit the stored type wins (it can't be changed); on create, default to a
         // Schließzeit, which is what the form opens on.
-        $validated['type'] = $period?->type->value ?? $validated['type'] ?? HolidayPeriodType::Closed->value;
+        $validated['type'] = $type;
 
         // Only a Ferienbetreuung has anything to register for.
         if ($validated['type'] !== HolidayPeriodType::Care->value) {
