@@ -128,7 +128,22 @@ class HolidayPeriodController extends Controller
             'ends_at' => ['required', 'date_format:H:i', 'after:starts_at'],
         ]);
 
+        $previousEnd = $careDay->ends_at;
+
         $careDay->update($validated);
+
+        // A sign-up is planned for the end of the Betreuungszeit, so moving the day's
+        // end has to move them with it — otherwise everyone who registered before the
+        // change keeps a pickup time the Hort no longer offers. Families who set their
+        // own time are left alone: that plan is deliberate. Saved per model so the
+        // change lands in the Protokoll like any other plan change.
+        if ($careDay->ends_at !== $previousEnd) {
+            $careDay->departures()
+                ->whereNull('left_at')
+                ->where('planned_time', $previousEnd)
+                ->get()
+                ->each->update(['planned_time' => $careDay->ends_at]);
+        }
 
         return back()->with('status', __('flash.care_day_saved'));
     }
