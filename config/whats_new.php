@@ -16,6 +16,18 @@ declare(strict_types=1);
 
 return [
     [
+        'version' => '2026.08.02',
+        'date' => '2026-08-02',
+        'title' => 'Ferien 🏖️: Schließzeiten & Ferienbetreuung',
+        'items' => [
+            '🚫 Neu im Menü unter „Schließzeiten": alle Tage, an denen der Hort zu ist – Ferien, Brückentage, Fortbildungen. An diesen Tagen gibt es keinen Abholplan und kein Programm, und im Wochenplan sind sie grau hinterlegt. So siehst du früh, wann du selbst etwas organisieren musst.',
+            '🏖️ Und neu: die Ferienbetreuung. Die Erzieher:innen legen den Zeitraum und die Betreuungszeiten fest – du meldest dein Kind tageweise an, ganz wie es in eure Ferien passt.',
+            '📅 Unter „Ferienbetreuung" kreuzt du einfach die Tage an, an denen dein Kind kommt. Die angemeldeten Tage stehen danach ganz normal im Wochenplan und auf „Heute" – mit Abholzeit, Krankmeldung und allem, was du kennst.',
+            '🔔 Sobald eine Ferienbetreuung offen ist, bekommst du Bescheid, und bis zum Anmeldeschluss erinnert dich ein Hinweis in der App. Am Stichtag selbst gibt es noch eine letzte Erinnerung – aber nur, wenn du noch nicht geantwortet hast.',
+            '🍽️ Essen und Aktivitäten der Ferientage stehen wie gewohnt im Wochenüberblick. Hausaufgaben gibt es in den Ferien natürlich keine.',
+        ],
+    ],
+    [
         'version' => '2026.08.01',
         'date' => '2026-08-01',
         'title' => 'Benachrichtigungen passend zur Rolle 🔔 & kurzfristige Änderungen ⏰',

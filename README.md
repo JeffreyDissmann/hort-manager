@@ -15,6 +15,8 @@ The UI is in German; code, identifiers and docs are in English.
 - **Tagesprogramm** — lunch, activity and homework times for the week.
 - **Schließzeiten** — Ferien, Brückentage and training days: the Hort is closed, so
   those days carry no plan, no program and no reminders.
+- **Ferienbetreuung** — holiday care with its own Betreuungszeit per day; parents sign
+  their children up day by day, and those sign-ups are the day's pickup plan.
 - **Sign in with Slack (OIDC)** — passwordless login, restricted to the Hort's workspace.
 - **Slack integration** — departure DMs, interactive excursion RSVP (answer in Slack),
   daily reminders, an App Home tab and a `/hort` command. See [`docs/slack-setup.md`](docs/slack-setup.md).

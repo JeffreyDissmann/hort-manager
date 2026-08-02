@@ -65,9 +65,15 @@ HomeworkDefault per-weekday default homework slot; DailyProgram homework overrid
 Excursion       (Ausflug)  name, date, depart_at, return_at, rsvp_deadline,
                 departed_at/returned_at (live state) + child_excursion pivot
                 pivot carries the parent RSVP: response (null=offen|true|false) + answered_by/answered_at
-HolidayPeriod   (Schließzeit) Hort-wide named date range: name, starts_on…ends_on, note?
-                type = App\Enums\HolidayPeriodType: closed | care — only `closed` is built;
-                `care` (Ferienbetreuung) is a reserved value — see „Schließzeiten"
+HolidayPeriod   (Schließzeit / Ferienbetreuung) Hort-wide named date range:
+                name, starts_on…ends_on, note?, registration_deadline? (care only)
+                type = App\Enums\HolidayPeriodType: closed | care — see the two
+                sections below („Schließzeiten" and „Ferienbetreuung")
+HolidayCareDay  one offered day of a `care` period: date + starts_at/ends_at
+                (Betreuungszeit). Holds no content — Essen/Aktivität stay in DailyProgram
+HolidayCareAnswer  „this family answered for this Ferienbetreuung" (period + child).
+                Needed because picking *no* days is a valid answer that leaves no
+                DailyDeparture behind — without it the reminder would chase forever
 ```
 
 ### Ausflug participation poll
@@ -125,11 +131,26 @@ Everything date-anchored has to ask. The lookups are `HolidayPeriod::closesOn($d
 
 `/standard-plan` is keyed by weekday with no dates, so closures genuinely don't apply there.
 
+### Ferienbetreuung — a normal day with a different roster
+A `HolidayPeriod` with `type = care` is **not** a „not there" at all: the Hort is open, staff mark children off, „geht allein" and „geht mit … mit" work. Only two things change — **who** is there comes from sign-ups instead of the Stammplan (no school, so the weekday schedule says nothing), and the day's default pickup time comes from the `HolidayCareDay` instead.
+
+**Registration *is* the plan.** Ticking a day on `/care` creates that child's `DailyDeparture` for the date (`planned_time` = the day's `ends_at`, method inherited from their Stammplan: that weekday → any weekday → `picked_up`; `with_child` is never inherited). Unticking deletes it, unless the child already left that day. There is deliberately **no separate registration table** — a care day is an ordinary Hort day, so the plan is the record and `DayEditor`, marking off, Absence and the „späte Änderung" rule all keep working untouched.
+
+- **Setup** (`/closures`, staff + admins): the period, its Anmeldeschluss, and which days it offers. Creating one generates a `HolidayCareDay` per **weekday** from `Setting::careDefaultWindow()` (08:30–16:30, settable); editing the range fills gaps and drops days outside it; removing a single day cascades its sign-ups away.
+- **Content** (`/program`): a care day swaps **Hausaufgaben for the Betreuungszeit** and keeps Essen + Aktivität — which is why the day holds no content of its own. The card is tinted and badged; `program:remind-missing` skips care days, since lunch there is optional.
+- **Sign-up** (`/care`): parents for their own children, staff for anyone and also after the deadline. Saving sends the full day set for one child and records a `HolidayCareAnswer`.
+- **Board / Wochenplan / Digest** — the roster is the sign-ups; an unregistered child reads „nicht angemeldet" (not „hortfrei", which needs a Stammplan); nobody is hortfrei on a care day; homework is dropped everywhere it is read.
+- **Telling parents** follows **Ausflüge exactly**: `HolidayPeriodObserver` announces a new period (`CareRegistrationOpened`), the shared `pendingCare` prop drives a banner while it's open, and `care:remind-open` DMs on the Anmeldeschluss via `HolidayPeriod::dueToday()` — the mirror of `excursions:remind-rsvps`. Both messages share the `care_registration` category. **The deadline lives on the period**, like an Ausflug's `rsvp_deadline`; there is no Hort-wide reminder setting, and a period without a deadline is never chased.
+
+A Schließzeit on the same date **wins** over a care day — the Hort being shut is the stronger statement.
+
 ### Tagesboard mechanics
 `DailyBoardController` targets **today, or the next weekday on weekends**. It lazily `firstOrCreate`s a `DailyDeparture` per scheduled child from the Stammplan (carrying `time_qualifier`). A row is "overridden" when its plan differs from the Stammplan (shown as „heute geändert"). Excursions are an **overlay** (`rows[].excursion`), not a status swap — a child on a trip still gets marked picked up after returning.
 
 ## Routes / nav (English URLs and route names)
-`board` (/board, "Heute") · `weekly-plan` (/weekly-plan) · `standard-plan` (/standard-plan, read-only) · `children` (/children) · `excursions` (/excursions, staff only) · `program` (/program, staff only). Also `role.update` (/role, admin self role-switch). URLs are English too — German lives only in the rendered UI, not the address bar. Nav lives in `AuthenticatedLayout.vue` (role-aware; bottom tab bar on mobile; the admin „Meine Rolle" toggle sits under Benutzer). Demo logins: `erzieher@hort.test` (staff+admin) / `eltern@hort.test`, both `password`. Extra demo data via `sail artisan db:seed --class=DemoExtrasSeeder` (Hortfrei days, bis/ab qualifiers, a no-plan child).
+`board` (/board, "Heute") · `weekly-plan` (/weekly-plan) · `standard-plan` (/standard-plan, read-only) · `children` (/children) · `excursions` (/excursions, staff only) · `program` (/program, staff only) · `closures.index` (/closures, „Schließzeiten" — reads open, writes staff+admin) · `care.index` (/care, „Ferienbetreuung" sign-up). Also `role.update` (/role, admin self role-switch). URLs are English too — German lives only in the rendered UI, not the address bar. Nav lives in `AuthenticatedLayout.vue` (role-aware; bottom tab bar on mobile). The **account menu is grouped** — Verwaltung · Buchhaltung · Hort (Meine Kinder, Ferienbetreuung, Schließzeiten) · Mein Konto · help/logout — and both Ferien pages live there rather than in the tab bars, which were getting crowded. Demo logins: `erzieher@hort.test` (staff+admin) / `eltern@hort.test`, both `password`. Extra demo data via `sail artisan db:seed --class=DemoExtrasSeeder` (Hortfrei days, bis/ab qualifiers, a no-plan child, one Schließzeit and two Ferienbetreuungen — one of them with today's Anmeldeschluss so `care:remind-open` has something to chase).
+
+**A Slack button's `?to=` target must be in `SlackController::TARGETS`** — it is a whitelist, and anything else silently lands on the dashboard (which is how „Programm ausfüllen" shipped broken). `SlackEntryTest` walks every target a notification uses.
 
 **Links use [Laravel Wayfinder](https://github.com/laravel/wayfinder), not Ziggy.** Import typed helpers and call `.url` — e.g. `import { index as childrenIndex } from '@/routes/children'` → `:href="childrenIndex().url"`; args `childrenEdit(child.id).url`; query `weeklyPlan({ query: { week: date } }).url`. Generated files under `resources/js/{routes,actions,wayfinder}` are gitignored (regenerated by the Vite plugin on build). Watch for clashes with local symbols — alias the import (e.g. `import { mark as boardMark }`). Active-nav state is plain URL-prefix matching in `AuthenticatedLayout.vue` (Ziggy is gone).
 
@@ -144,11 +165,12 @@ Three directions; **production setup is documented in [`docs/slack-setup.md`](do
   - Missing Stammplan: `wochenplan:remind-unset` (`ScheduleMissingReminder`) DMs the guardians of any child with no Stammplan yet; **`--dry-run`** lists who would be nudged without sending. Not scheduled (run manually after onboarding). A parent-facing „Wochenplan fehlt" banner (shared `childrenWithoutPlan` prop) nudges the same in-app.
   - App Home tab: `SlackHome` publishes a welcome + quick links on `app_home_opened`.
 - **Inbound** (all `POST`, signature-verified): `/slack/interactions` (`SlackInteractionController` — RSVP buttons), `/slack/commands` (`SlackCommandController` — `/hort` quick links), `/slack/events` (`SlackEventController` — url_verification + `app_home_opened`).
-- Notifications extend `SlackNotification` (base gates `via()` on the token). `SlackNotification`/`SlackRsvp`/`SlackHome` share the same Block Kit style; links use `route('slack.enter', …)` so `forceRootUrl(APP_URL)` keeps them correct behind the tunnel/proxy.
+- Notifications extend `SlackNotification` (base gates `via()` on the token **and** on the notifiable actually having a `slack_id` — without that check every Slack-less user queues a job that throws). `SlackNotification`/`SlackRsvp`/`SlackHome` share the same Block Kit style; links use `route('slack.enter', …)` so `forceRootUrl(APP_URL)` keeps them correct behind the tunnel/proxy.
+- The `slack` channel is decorated by `SelfHealingSlackChannel`: `channel_not_found` (deactivated account, left the workspace) **clears the user's `slack_id`** and logs it, so one stale id can't fail every future DM into `failed_jobs`; they fall back to web push and re-link on the next Slack sign-in. Every other Slack error still fails loudly.
 
 ### Notification settings (audiences)
 Every notification belongs to a `App\Enums\NotificationCategory`, which the user toggles per channel (Slack/Push) on `/notifications` — an **opt-out** matrix (missing preference = on). Each category declares a `NotificationAudience`, and **users only see the categories they can actually receive**:
-- **`guardian`** (departures, excursions, companion, missing_plan, weekly_digest) — every non-staff user, plus staff who are a guardian themselves. Deliberately not „role = parent": an Erzieher:in with their own Hort child still gets those DMs, so they must keep the toggles.
+- **`guardian`** (departures, excursions, companion, missing_plan, care_registration, weekly_digest) — every non-staff user, plus staff who are a guardian themselves. Deliberately not „role = parent": an Erzieher:in with their own Hort child still gets those DMs, so they must keep the toggles.
 - **`staff`** (late_change, program_missing) — `isStaff()`.
 A user in both audiences gets two labelled sections; with one audience the headings are hidden. `NotificationSettingsController::update()` **merges** into the stored preferences (the page renders only a subset, so replacing would wipe the other audience) and rejects categories the user is no audience for.
 
@@ -175,7 +197,7 @@ Links each **accounting booking** to one document in an external **Paperless-ngx
 
 App is German end-to-end (`APP_LOCALE=de`, `lang/de/*` validation/auth messages; `Europe/Berlin` timezone). Built & tested: Kinder+Stammplan (with **„Hortfrei"** per weekday + **bis/genau um/ab** time qualifier), parent↔child roles + **admin user management** + admin self role-switch, Wochenplan/Stammplan timetable, Tagesboard, the **shared `DayEditor` popup** (Wochenplan + board), **companion pickups** („geht mit einem anderen Kind mit" with confirmation + cross-guardian Slack sync), Ausflug poll, Tagesprogramm + Hausaufgaben, birthdays, dark mode + de/en language switch, **full Slack integration** (SSO, departure/RSVP/companion/missing-plan DMs, interactive answers, `/hort` + App Home + free-text assistant), **installable PWA + web push** plus **freshness** (silent post-deploy reload, 15-min idle refresh, drag-down pull-to-refresh in `freshness.js` / `PullToRefresh.vue`). Self-hosted via a multi-arch GHCR image on a CalVer tag (see [`docs/deployment.md`](docs/deployment.md)).
 
-**Planned (not built):** **Ferienbetreuung** — the second `HolidayPeriodType` (`care`): holiday care with activities/excursions, often no lunch, and children **opted in** per week. The Stammplan deliberately does *not* apply (no school → different children, hours and content), so a care day's board comes from the registrations, not `WeeklySchedule`. Also: richer admin control over which parents belong to which child (guardian management UI beyond the current per-child links).
+**Planned (not built):** A parent-facing heads-up for **upcoming Schließzeiten** (the Ferienbetreuung banner exists, the closure one doesn't). Richer admin control over which parents belong to which child (guardian management UI beyond the current per-child links). Turning a Ferienbetreuung outing into a real `Excursion` (with times + participants) instead of a free-text Aktivität, which also means scoping excursion invites to the registered children.
 
 ---
 
