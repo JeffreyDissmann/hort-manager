@@ -123,8 +123,12 @@ class HolidayPeriod extends Model
             fn ($date): string => $date instanceof Carbon ? $date->toDateString() : (string) $date,
         )->all();
 
+        // A Schließzeit inside the range wins: the Hort is shut that day, so it can't
+        // be offered — otherwise parents could sign up for a day nobody is there.
+        $closed = self::closedDaysBetween($this->starts_on, $this->ends_on);
+
         foreach ($this->days() as $date) {
-            if (Carbon::parse($date)->isWeekend() || in_array($date, $existing, true)) {
+            if (Carbon::parse($date)->isWeekend() || in_array($date, $existing, true) || isset($closed[$date])) {
                 continue;
             }
 

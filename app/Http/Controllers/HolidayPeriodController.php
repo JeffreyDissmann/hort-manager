@@ -94,12 +94,14 @@ class HolidayPeriodController extends Controller
         $closure->update($this->validated($request));
 
         // Extending the range offers the new weekdays; days already edited are left
-        // alone, and days now outside the range are dropped.
+        // alone, and days now outside the range are dropped. Deleted per model, not
+        // by query: the observer withdrawing their sign-ups runs on the model event.
         if ($closure->isCare()) {
             $closure->careDays()
                 ->where(fn ($q) => $q->whereDate('date', '<', $closure->starts_on)
                     ->orWhereDate('date', '>', $closure->ends_on))
-                ->delete();
+                ->get()
+                ->each->delete();
 
             $closure->refresh()->generateCareDays();
         }

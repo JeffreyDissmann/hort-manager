@@ -124,6 +124,12 @@ class HolidayCareRegistrationController extends Controller
      */
     private function attend(HolidayCareDay $day, Child $child, User $user): void
     {
+        // A Schließzeit entered since the page loaded un-offers the day; signing up
+        // then would plan a child for a day the board refuses to show.
+        if (HolidayPeriod::closesOn($day->date)) {
+            return;
+        }
+
         $departure = DailyDeparture::firstOrNew([
             'child_id' => $child->id,
             'date' => $day->date->toDateString(),

@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Models\Concerns\LogsChanges;
+use App\Observers\HolidayCareDayObserver;
 use Database\Factories\HolidayCareDayFactory;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -22,6 +24,7 @@ use Illuminate\Support\Collection;
  * Deliberately holds no Aktivität or Essen — that is DailyProgram's job on every
  * other Hort day, and a care day is no different.
  */
+#[ObservedBy([HolidayCareDayObserver::class])]
 class HolidayCareDay extends Model
 {
     /** @use HasFactory<HolidayCareDayFactory> */

@@ -10,6 +10,7 @@ use App\Http\Requests\AdjustDayRequest;
 use App\Jobs\AskCompanionConfirmation;
 use App\Models\Child;
 use App\Models\DailyDeparture;
+use App\Models\HolidayCareDay;
 use App\Models\HolidayPeriod;
 use App\Notifications\CompanionRequest;
 use App\Support\CompanionReconciler;
@@ -173,6 +174,18 @@ class WeeklyAdjustmentController extends Controller
             'child_id' => $child->id,
             'date' => $day->toDateString(),
         ]);
+
+        // Ferienbetreuung: a plan only exists for a child who signed up, and signing up
+        // runs through /care because that is where the Anmeldeschluss is enforced.
+        // Without this, editing an unregistered care day would register them through
+        // the back door, deadline and all. Staff may do either, as they may there too.
+        abort_if(
+            ! $departure->exists
+                && ! request()->user()->isStaff()
+                && HolidayCareDay::query()->onDate($day)->exists(),
+            403,
+            'Für diesen Ferienbetreuungstag ist das Kind nicht angemeldet.',
+        );
 
         abort_if(
             $departure->exists && $departure->status !== DepartureStatus::Present,
