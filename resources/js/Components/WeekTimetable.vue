@@ -118,6 +118,14 @@ function chipClass(method) {
                     >
                         {{ col.sublabel }}
                     </div>
+                    <!-- Closed days carry no rows at all, so say why the column is empty.
+                         A care day carries only the children who signed up. -->
+                    <div v-if="col.closed" class="text-[11px] font-medium text-ink/40">
+                        {{ $t('weekly.closed') }}
+                    </div>
+                    <div v-else-if="col.care" class="text-[11px] font-medium text-hort-teal-dark">
+                        {{ $t('weekly.care_short') }}
+                    </div>
                 </component>
                 <div
                     v-if="program[j] && program[j].lunch"

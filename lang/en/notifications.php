@@ -46,6 +46,10 @@ return [
             'label' => 'Missing weekly plan',
             'help' => 'A reminder when your child still has no weekly plan set up.',
         ],
+        'care_registration' => [
+            'label' => 'Holiday care',
+            'help' => 'A reminder while the holiday-care registration is still open.',
+        ],
         'weekly_digest' => [
             'label' => 'Weekly overview',
             'help' => "Mondays: the week's food and activities plus a short summary for your child.",

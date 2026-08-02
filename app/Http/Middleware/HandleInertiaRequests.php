@@ -6,9 +6,12 @@ namespace App\Http\Middleware;
 
 use App\Models\Child;
 use App\Models\DailyDeparture;
+use App\Models\HolidayCareAnswer;
+use App\Models\HolidayPeriod;
 use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Inertia\Middleware;
 
@@ -77,10 +80,62 @@ class HandleInertiaRequests extends Middleware
             'pendingCompanions' => fn () => $this->pendingCompanionCount($request->user()),
             // This parent's children whose Stammplan isn't set up yet (drives a banner).
             'childrenWithoutPlan' => fn () => $this->childrenWithoutPlan($request->user()),
+            // Ferienbetreuungen still open whose sign-up this parent hasn't answered.
+            'pendingCare' => fn () => $this->pendingCare($request->user()),
             // Hort-wide cutoff (H:i) after which same-day changes notify staff — the
             // DayEditor warns parents about it before they save.
             'lateChangeCutoff' => fn () => $request->user() ? Setting::lateChangeCutoff() : null,
         ];
+    }
+
+    /**
+     * Ferienbetreuungen whose registration is still open and for which at least one of
+     * this parent's children hasn't answered — „keine Tage" counts as an answer, so a
+     * family that consciously opted out is left alone. Staff sign anyone up any time,
+     * so they get no nudge.
+     *
+     * @return list<array{id: int, name: string, deadline: ?string, children: list<string>}>
+     */
+    private function pendingCare(?User $user): array
+    {
+        if (! $user || $user->isStaff()) {
+            return [];
+        }
+
+        $childIds = $user->children()->pluck('children.id');
+
+        if ($childIds->isEmpty()) {
+            return [];
+        }
+
+        return HolidayPeriod::query()
+            ->care()
+            ->whereDate('ends_on', '>=', Carbon::today())
+            ->orderBy('starts_on')
+            ->get()
+            ->filter(fn (HolidayPeriod $period): bool => $period->registrationIsOpen())
+            ->map(function (HolidayPeriod $period) use ($childIds): ?array {
+                $answered = HolidayCareAnswer::query()
+                    ->where('holiday_period_id', $period->id)
+                    ->whereIn('child_id', $childIds)
+                    ->pluck('child_id');
+
+                $missing = Child::query()
+                    ->whereIn('id', $childIds->diff($answered))
+                    ->activeBetween($period->starts_on, $period->ends_on)
+                    ->orderBy('name')
+                    ->pluck('name');
+
+                return $missing->isEmpty() ? null : [
+                    'id' => $period->id,
+                    'name' => $period->name,
+                    'deadline' => $period->registration_deadline?->toDateString(),
+                    'children' => $missing->all(),
+                ];
+            })
+            ->filter()
+            ->values()
+            ->all();
     }
 
     /**

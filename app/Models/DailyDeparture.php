@@ -25,6 +25,8 @@ class DailyDeparture extends Model
     protected $fillable = [
         'child_id',
         'date',
+        // Set when this row is a Ferienbetreuung sign-up rather than a plan override.
+        'holiday_care_day_id',
         'status',
         'planned_time',
         'time_qualifier',
@@ -79,6 +81,22 @@ class DailyDeparture extends Model
     public function child(): BelongsTo
     {
         return $this->belongsTo(Child::class);
+    }
+
+    /**
+     * The offered Ferienbetreuung day this row signs the child up for, if any.
+     *
+     * @return BelongsTo<HolidayCareDay, $this>
+     */
+    public function careDay(): BelongsTo
+    {
+        return $this->belongsTo(HolidayCareDay::class, 'holiday_care_day_id');
+    }
+
+    /** Whether this row is a Ferienbetreuung sign-up rather than a plan override. */
+    public function isCareRegistration(): bool
+    {
+        return $this->holiday_care_day_id !== null;
     }
 
     /**

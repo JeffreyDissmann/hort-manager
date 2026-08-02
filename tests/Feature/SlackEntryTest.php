@@ -43,6 +43,28 @@ class SlackEntryTest extends TestCase
             ->assertRedirect(route('dashboard'));
     }
 
+    /**
+     * Every target a notification button links to must be in the whitelist, or it
+     * silently lands on the dashboard instead — which „Wochenprogramm fehlt" did.
+     */
+    public function test_every_deep_link_target_used_by_a_notification_resolves(): void
+    {
+        $user = User::factory()->staff()->create();
+
+        foreach ([
+            'board' => 'board',
+            'polls' => 'polls.index',
+            'children' => 'children.index',
+            'weekly-plan' => 'weekly-plan',
+            'program' => 'program',
+            'care' => 'care.index',
+        ] as $target => $routeName) {
+            $this->actingAs($user)
+                ->get(route('slack.enter', ['to' => $target]))
+                ->assertRedirect(route($routeName), "target „{$target}” did not resolve");
+        }
+    }
+
     public function test_the_hort_command_replies_with_app_links(): void
     {
         config(['services.slack.signing_secret' => 'shh']);

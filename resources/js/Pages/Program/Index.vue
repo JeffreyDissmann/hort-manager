@@ -84,6 +84,9 @@ function save() {
                 homework_start: d.no_homework ? null : d.homework_start || null,
                 homework_end: d.no_homework ? null : d.homework_end || null,
                 homework_none: d.no_homework,
+                // Ferienbetreuung days save their Betreuungszeit with the week.
+                care_starts_at: d.care?.starts_at ?? null,
+                care_ends_at: d.care?.ends_at ?? null,
             })),
         },
         {
@@ -225,16 +228,28 @@ function onTouchEnd(e) {
             <div
                 v-for="day in days"
                 :key="day.date"
-                class="rounded-2xl bg-surface p-4 shadow-sm"
+                :data-testid="`program-day-${day.date}`"
+                class="rounded-2xl p-4 shadow-sm"
+                :class="day.care ? 'bg-hort-teal/10 ring-1 ring-hort-teal/40' : 'bg-surface'"
             >
                 <div class="lg:grid lg:grid-cols-[7rem,minmax(0,18rem),minmax(0,18rem),auto] lg:items-start lg:gap-5">
                     <div>
-                        <p class="font-semibold text-ink">
+                        <p class="font-semibold" :class="day.closed ? 'text-ink/40' : 'text-ink'">
                             {{ day.label }}
                             <span class="font-normal text-ink/40">
                                 · {{ day.date_label }}
                             </span>
                         </p>
+                        <!-- A care day looks different on purpose: it isn't a normal
+                             Hort day, and the Betreuungszeit below isn't a normal field. -->
+                        <p
+                            v-if="day.care"
+                            :data-testid="`program-care-${day.date}`"
+                            class="mt-1 inline-block rounded-lg bg-hort-teal/25 px-2 py-0.5 text-xs font-semibold text-hort-teal-dark"
+                        >
+                            {{ $t('enums.holiday_period_type.care') }}
+                        </p>
+                        <p v-if="day.care" class="mt-0.5 text-xs text-ink/50">{{ day.care.name }}</p>
                         <p
                             v-if="day.birthdays && day.birthdays.length"
                             class="mt-1 rounded-lg bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700"
@@ -247,6 +262,17 @@ function onTouchEnd(e) {
                         </p>
                     </div>
 
+                    <!-- Schließzeit: nothing to plan, so the three fields make way for
+                         the closure's name. -->
+                    <p
+                        v-if="day.closed"
+                        :data-testid="`program-closed-${day.date}`"
+                        class="mt-3 text-sm text-ink/50 lg:col-span-3 lg:mt-0"
+                    >
+                        🚫 {{ day.closed }}
+                    </p>
+
+                    <template v-else>
                     <div class="mt-3 lg:mt-0">
                         <InputLabel :for="`lunch-${day.date}`" :value="$t('program.lunch')" />
                         <TextInput
@@ -271,7 +297,32 @@ function onTouchEnd(e) {
                         />
                     </div>
 
-                    <div class="mt-3 lg:mt-0">
+                    <!-- Ferienbetreuung takes the homework slot: there is no school to
+                         bring any home from, but there is a Betreuungszeit to set. -->
+                    <div v-if="day.care" class="mt-3 lg:mt-0">
+                        <InputLabel :value="$t('program.care_window')" />
+                        <!-- Same layout as the homework TimeRange (each half flexes, so
+                             the hour/minute dropdowns never get clipped) — but without
+                             its „end = start + 1h" nudge, which would wreck a
+                             Betreuungszeit every time the start is adjusted. -->
+                        <div class="mt-1 flex items-center gap-2">
+                            <TimeSelect
+                                v-model="day.care.starts_at"
+                                from="06:00"
+                                :test-id="`care-start-${day.date}`"
+                                class="min-w-0 flex-1"
+                            />
+                            <span class="shrink-0 text-ink/40">–</span>
+                            <TimeSelect
+                                v-model="day.care.ends_at"
+                                from="06:00"
+                                :test-id="`care-end-${day.date}`"
+                                class="min-w-0 flex-1"
+                            />
+                        </div>
+                    </div>
+
+                    <div v-else class="mt-3 lg:mt-0">
                         <InputLabel :value="$t('program.homework')" />
                         <label class="mt-1 flex items-center gap-2 text-sm text-ink/70">
                             <Checkbox
@@ -292,6 +343,7 @@ function onTouchEnd(e) {
                             class="mt-2"
                         />
                     </div>
+                    </template>
                 </div>
             </div>
 

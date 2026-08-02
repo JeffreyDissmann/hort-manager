@@ -7,6 +7,7 @@ import Dropdown from '@/Components/Dropdown.vue';
 import DropdownLink from '@/Components/DropdownLink.vue';
 import InstallBanner from '@/Components/InstallBanner.vue';
 import NotifyPrompt from '@/Components/NotifyPrompt.vue';
+import CareReminderBanner from '@/Components/CareReminderBanner.vue';
 import PlanReminderBanner from '@/Components/PlanReminderBanner.vue';
 import PullToRefresh from '@/Components/PullToRefresh.vue';
 import WhatsNewModal from '@/Components/WhatsNewModal.vue';
@@ -29,6 +30,8 @@ import { dashboard as accountingDashboard } from '@/routes/accounting';
 import { update as switchRoleRoute } from '@/routes/role';
 import { index as childrenIndex } from '@/routes/children';
 import { index as excursionsIndex } from '@/routes/excursions';
+import { index as closuresIndex } from '@/routes/closures';
+import { index as careIndex } from '@/routes/care';
 import { index as usersIndex } from '@/routes/users';
 import { index as bookingsIndex } from '@/routes/accounting/bookings';
 import { index as accountsIndex } from '@/routes/accounting/accounts';
@@ -68,6 +71,8 @@ function switchRole(role) {
     router.post(switchRoleRoute().url, { role }, { preserveScroll: true });
 }
 const pendingPolls = computed(() => usePage().props.pendingPolls ?? 0);
+// Open Ferienbetreuungen this family still has to answer (drives the menu badge).
+const pendingCare = computed(() => usePage().props.pendingCare ?? []);
 const pendingCompanions = computed(() => usePage().props.pendingCompanions ?? 0);
 
 // Which "world" we're in is decided purely by the URL: /accounting/* = accounting.
@@ -107,6 +112,10 @@ const navItems = computed(() => {
 });
 
 // Heroicon components keyed by the nav item's icon name.
+// Section labels in the account menu — quiet, so they group without competing
+// with the links themselves.
+const menuHeadingClass = 'px-4 pb-0.5 pt-2 text-[11px] font-semibold uppercase tracking-wide text-ink/40';
+
 const icons = {
     sun: SunIcon,
     calendar: CalendarDaysIcon,
@@ -241,6 +250,7 @@ function isActive(item) {
                                 </div>
                             </div>
                             <hr class="my-1 border-ink/10" />
+                            <p :class="menuHeadingClass">{{ $t('nav.group_admin') }}</p>
                             <DropdownLink :href="usersIndex().url">
                                 {{ $t('nav.users') }}
                             </DropdownLink>
@@ -251,6 +261,7 @@ function isActive(item) {
                         </template>
                         <!-- Accounting config — shown to accounting users, only in that world. -->
                         <template v-if="inAccounting">
+                            <p :class="menuHeadingClass">{{ $t('nav.group_accounting') }}</p>
                             <DropdownLink :href="accountsIndex().url" data-testid="nav-accounts">
                                 {{ $t('nav.accounts') }}
                             </DropdownLink>
@@ -259,18 +270,38 @@ function isActive(item) {
                             </DropdownLink>
                             <hr class="my-1 border-ink/10" />
                         </template>
+
+                        <!-- Hort matters: who comes, and when the Hort is open. -->
+                        <p :class="menuHeadingClass">{{ $t('nav.group_hort') }}</p>
                         <DropdownLink
                             v-if="!isStaff"
                             :href="childrenIndex().url"
                         >
                             {{ $t('nav.my_children') }}
                         </DropdownLink>
+                        <DropdownLink :href="careIndex().url" data-testid="nav-care">
+                            {{ $t('nav.care') }}
+                            <span
+                                v-if="pendingCare.length"
+                                class="ml-1 rounded-full bg-hort-teal-dark px-1.5 py-0.5 text-[10px] font-bold text-white"
+                            >
+                                {{ pendingCare.length }}
+                            </span>
+                        </DropdownLink>
+                        <DropdownLink :href="closuresIndex().url" data-testid="nav-closures">
+                            {{ $t('nav.closures') }}
+                        </DropdownLink>
+
+                        <hr class="my-1 border-ink/10" />
+                        <p :class="menuHeadingClass">{{ $t('nav.group_account') }}</p>
                         <DropdownLink :href="profileEdit().url">
                             {{ $t('nav.profile') }}
                         </DropdownLink>
                         <DropdownLink :href="notificationsEdit().url">
                             {{ $t('nav.notifications') }}
                         </DropdownLink>
+
+                        <hr class="my-1 border-ink/10" />
                         <DropdownLink :href="help().url">
                             {{ $t('nav.help') }}
                         </DropdownLink>
@@ -351,6 +382,7 @@ function isActive(item) {
         >
             <PullToRefresh>
                 <PlanReminderBanner class="mb-4" />
+                <CareReminderBanner class="mb-4" />
                 <slot />
             </PullToRefresh>
         </main>

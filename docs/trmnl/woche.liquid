@@ -11,6 +11,19 @@
         <div class="column">
           <span class="title title--small{% if day.is_today %} label--underline{% endif %}">{{ day.weekday }} {{ day.date }}</span>
 
+          {%- comment -%} Schließzeit replaces the day's whole column. {%- endcomment -%}
+          {% if day.closed %}
+            <div class="item">
+              <div class="content"><span class="label label--small">🚫 {{ day.closed }}</span></div>
+            </div>
+          {% else %}
+
+          {% if day.care %}
+            <div class="item">
+              <div class="content"><span class="label label--small">🏖 {{ day.care }}</span></div>
+            </div>
+          {% endif %}
+
           {% if day.excursion %}
             <div class="item">
               <div class="content"><span class="label label--small">🚌 {{ day.excursion }}</span></div>
@@ -28,9 +41,11 @@
             </div>
           {% endfor %}
 
-          {% unless day.departures.size > 0 or day.excursion %}
+          {% unless day.departures.size > 0 or day.excursion or day.care %}
             <div class="item"><div class="content"><span class="label label--small">–</span></div></div>
           {% endunless %}
+
+          {% endif %}
         </div>
       {% endfor %}
     </div>

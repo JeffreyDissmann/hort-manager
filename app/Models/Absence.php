@@ -51,6 +51,11 @@ class Absence extends Model
         DailyDeparture::where('child_id', $child->id)
             ->where('date', $date)
             ->whereNull('left_at')
+            // A Ferienbetreuung sign-up is kept: that row isn't a plan override, it *is*
+            // the child's place, and deleting it would un-register them — past the
+            // Anmeldeschluss with no way back, over one day of Schnupfen. Being absent
+            // already takes them off the board and out of every list; the place stays.
+            ->whereNull('holiday_care_day_id')
             ->delete();
 
         return $absence;

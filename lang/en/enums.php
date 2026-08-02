@@ -29,6 +29,10 @@ return [
         'sent_home' => 'Walks home alone',
         'with_child' => 'Goes with another child',
     ],
+    'holiday_period_type' => [
+        'closed' => 'Closed',
+        'care' => 'Holiday care',
+    ],
     'time_qualifier' => [
         'by' => 'By this time',
         'at' => 'Exactly at this time',

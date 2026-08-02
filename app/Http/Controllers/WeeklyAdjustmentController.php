@@ -10,6 +10,8 @@ use App\Http\Requests\AdjustDayRequest;
 use App\Jobs\AskCompanionConfirmation;
 use App\Models\Child;
 use App\Models\DailyDeparture;
+use App\Models\HolidayCareDay;
+use App\Models\HolidayPeriod;
 use App\Notifications\CompanionRequest;
 use App\Support\CompanionReconciler;
 use App\Support\EffectivePlan;
@@ -127,6 +129,17 @@ class WeeklyAdjustmentController extends Controller
         $child = Child::findOrFail($validated['child_id']);
         $departure = $this->authorizedDeparture($child, $validated['date']);
 
+        // On a Ferienbetreuung day there is no Stammplan to fall back to, so „reset"
+        // would simply cancel the child's place — past the Anmeldeschluss, where /care
+        // refuses exactly that, and with nothing to sign them back up with. Giving up
+        // a place is a decision for the sign-up screen, not a side effect of an
+        // „Auf Standard" button.
+        abort_if(
+            $departure->isCareRegistration(),
+            403,
+            'Ein Ferienbetreuungstag wird über die Anmeldung abgemeldet, nicht zurückgesetzt.',
+        );
+
         // Deleting the override row makes the board fall back to the Stammplan.
         if ($departure->exists) {
             activity()
@@ -165,10 +178,31 @@ class WeeklyAdjustmentController extends Controller
             403,
         );
 
+        // Schließzeit: there is no day to plan for.
+        abort_if(HolidayPeriod::closesOn($day), 403);
+
         $departure = DailyDeparture::firstOrNew([
             'child_id' => $child->id,
             'date' => $day->toDateString(),
         ]);
+
+        $careDay = HolidayCareDay::query()->onDate($day)->first();
+
+        // Ferienbetreuung: a plan only exists for a child who signed up, and signing up
+        // runs through /care because that is where the Anmeldeschluss is enforced.
+        // Without this, editing an unregistered care day would register them through
+        // the back door, deadline and all. Staff may do either, as they may there too.
+        abort_if(
+            ! $departure->exists && ! request()->user()->isStaff() && $careDay !== null,
+            403,
+            'Für diesen Ferienbetreuungstag ist das Kind nicht angemeldet.',
+        );
+
+        // Staff planning an unregistered care day *is* signing the child up, so the row
+        // has to say so — otherwise it would be a plan override the board ignores.
+        if ($careDay && ! $departure->exists) {
+            $departure->holiday_care_day_id = $careDay->id;
+        }
 
         abort_if(
             $departure->exists && $departure->status !== DepartureStatus::Present,

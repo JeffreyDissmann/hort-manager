@@ -14,6 +14,7 @@ enum NotificationCategory: string
     case Companion = 'companion';
     case MissingPlan = 'missing_plan';
     case WeeklyDigest = 'weekly_digest';
+    case CareRegistration = 'care_registration';
     case LateChange = 'late_change';
     case ProgramMissing = 'program_missing';
 

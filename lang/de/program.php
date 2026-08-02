@@ -14,6 +14,7 @@ return [
     'activity' => 'Aktivität',
     'activity_placeholder' => 'z. B. Basteln, Ausflug in den Park',
     'homework' => 'Hausaufgaben',
+    'care_window' => 'Betreuungszeit',
     'no_homework' => 'Keine Hausaufgaben',
     'save_week' => 'Woche speichern',
 

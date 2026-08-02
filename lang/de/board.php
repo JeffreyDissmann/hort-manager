@@ -54,6 +54,8 @@ return [
 
     'empty_own' => 'Heute ist keins deiner Kinder im Hort.',
     'empty_all' => 'Für diesen Tag sind keine Kinder im Hort.',
+    'closed_title' => 'An diesem Tag ist der Hort geschlossen.',
+    'care_window' => 'Ferienbetreuung von :start bis :end Uhr – hier stehen die angemeldeten Kinder.',
 
     'show_all_children' => 'Alle Kinder anzeigen (:n)',
     'hide_children' => 'Kinder ausblenden',

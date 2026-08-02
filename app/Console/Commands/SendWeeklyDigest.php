@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Console\Commands;
 
 use App\Enums\NotificationCategory;
+use App\Models\HolidayPeriod;
 use App\Models\User;
 use App\Notifications\WeeklyDigest;
 use Illuminate\Console\Command;
@@ -21,6 +22,15 @@ class SendWeeklyDigest extends Command
     {
         $dryRun = (bool) $this->option('dry-run');
         $weekStart = Carbon::today()->startOfWeek(Carbon::MONDAY);
+        $weekEnd = $weekStart->copy()->addDays(4);
+
+        // A week the Hort is shut Mo–Fr has nothing to overview; a partly closed one
+        // still does, with the closed days marked (see WeeklyDigestBuilder).
+        if (count(HolidayPeriod::closedDaysBetween($weekStart, $weekEnd)) === 5) {
+            $this->info('The Hort is closed all week — no digest sent.');
+
+            return self::SUCCESS;
+        }
 
         // Reachable guardians who still want the digest on at least one channel.
         $recipients = User::query()

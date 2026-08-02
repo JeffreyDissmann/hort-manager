@@ -8,6 +8,7 @@ use App\Enums\AbsenceReason;
 use App\Http\Requests\StoreAbsenceRequest;
 use App\Models\Absence;
 use App\Models\Child;
+use App\Models\HolidayPeriod;
 use App\Support\LateChange;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -27,6 +28,12 @@ class AbsenceController extends Controller
         $to = Carbon::parse($validated['to']);
 
         for ($date = Carbon::parse($validated['from']); $date->lte($to); $date->addDay()) {
+            // Nobody can be reported away from a Hort that's shut. A range spanning a
+            // Schließzeit still reports the days around it.
+            if (HolidayPeriod::closesOn($date)) {
+                continue;
+            }
+
             $absence = Absence::report($child, $date->toDateString(), $reason, $request->user()->id, $validated['comment'] ?? null);
 
             // Reporting today's absence after the cutoff is exactly what staff need

@@ -39,7 +39,16 @@ class WeeklyDigest extends SlackNotification
         // Hort-wide program: one line per weekday (food · activity · homework).
         $programLines = [];
         foreach ($digest['program'] as $day) {
+            // A Schließzeit replaces the day's content rather than leaving it blank.
+            if (! empty($day['closed'])) {
+                $programLines[] = "*{$day['weekday']}:* 🚫 {$day['closed']}";
+
+                continue;
+            }
+
             $parts = array_filter([
+                // Ferienbetreuung: the Betreuungszeit stands where homework would.
+                empty($day['care']) ? null : "🏖️ {$day['care']}",
                 $day['lunch'] ? "🍽️ {$day['lunch']}" : null,
                 $day['activity'] ? "✨ {$day['activity']}" : null,
                 $day['homework'] ? "📚 {$day['homework']}" : null,

@@ -8,8 +8,11 @@ use App\Enums\DepartureMethod;
 use App\Enums\TimeQualifier;
 use App\Models\Absence;
 use App\Models\Child;
+use App\Models\DailyDeparture;
 use App\Models\DailyProgram;
 use App\Models\Excursion;
+use App\Models\HolidayCareDay;
+use App\Models\HolidayPeriod;
 use App\Models\HomeworkDefault;
 use App\Models\User;
 use Illuminate\Support\Carbon;
@@ -41,6 +44,12 @@ class WeeklyDigestBuilder
         $locale = $parent->preferredLocale() ?? app()->getLocale();
         $weekdayLabel = fn (Carbon $d): string => $d->copy()->locale($locale)->isoFormat('dddd');
 
+        // Schließzeiten replace a day's whole content: no food, no activity, no pickup.
+        $closedDays = HolidayPeriod::closedDaysBetween($monday, $friday);
+        // Ferienbetreuung days keep food and activity but swap the Stammplan for the
+        // sign-ups — a child without one simply isn't there that day.
+        $careDays = HolidayCareDay::betweenKeyed($monday, $friday);
+
         // Hort-wide program per weekday (lunch + activity + effective homework).
         $programs = DailyProgram::query()
             ->whereIn('date', $weekDates)
@@ -48,9 +57,26 @@ class WeeklyDigestBuilder
             ->keyBy(fn (DailyProgram $p) => $p->date->toDateString());
         $homeworkDefaults = HomeworkDefault::all()->keyBy('weekday');
 
-        $program = $weekDays->map(function (Carbon $day, int $i) use ($programs, $homeworkDefaults, $weekdayLabel) {
+        $program = $weekDays->map(function (Carbon $day, int $i) use ($programs, $homeworkDefaults, $weekdayLabel, $closedDays, $careDays) {
+            if (isset($closedDays[$day->toDateString()])) {
+                return [
+                    'weekday' => $weekdayLabel($day),
+                    'lunch' => null,
+                    'activity' => null,
+                    'homework' => null,
+                    'care' => null,
+                    'closed' => $closedDays[$day->toDateString()],
+                ];
+            }
+
             $p = $programs->get($day->toDateString());
-            [$hwStart, $hwEnd] = DailyProgram::effectiveHomework($p, $homeworkDefaults->get($i + 1));
+            $care = $careDays->get($day->toDateString());
+
+            // No school on a care day, so the per-weekday homework default doesn't
+            // apply — but the Betreuungszeit does, and parents need to see it.
+            [$hwStart, $hwEnd] = $care
+                ? [null, null]
+                : DailyProgram::effectiveHomework($p, $homeworkDefaults->get($i + 1));
 
             $homework = null;
             if ($hwStart) {
@@ -62,6 +88,8 @@ class WeeklyDigestBuilder
                 'lunch' => $p?->lunch,
                 'activity' => $p?->activity,
                 'homework' => $homework,
+                'care' => $care ? $care->window() : null,
+                'closed' => null,
             ];
         })->all();
 
@@ -109,9 +137,33 @@ class WeeklyDigestBuilder
             collect($plans)->pluck('companion_child_id')->filter()->all()
         )->pluck('name', 'id');
 
-        $childSummaries = $children->map(function (Child $child) use ($weekDays, $plans, $absences, $excursionByChildDate, $childNames, $weekdayLabel) {
-            $days = $weekDays->map(function (Carbon $day) use ($child, $plans, $absences, $excursionByChildDate, $childNames, $weekdayLabel) {
+        // Sign-ups for the week's Ferienbetreuung days: on those dates a DailyDeparture
+        // *is* the registration, so its absence means the child isn't coming.
+        $signedUp = $careDays->isEmpty()
+            ? collect()
+            : DailyDeparture::query()
+                // Keyed off the care day: an override that happens to fall on an
+                // offered date is not a sign-up.
+                ->whereIn('holiday_care_day_id', $careDays->pluck('id'))
+                ->whereIn('child_id', $childIds)
+                ->get()
+                ->map(fn (DailyDeparture $d): string => $d->child_id.'|'.$d->date->toDateString())
+                ->flip();
+
+        $childSummaries = $children->map(function (Child $child) use ($weekDays, $plans, $absences, $excursionByChildDate, $childNames, $weekdayLabel, $closedDays, $careDays, $signedUp) {
+            $days = $weekDays->map(function (Carbon $day) use ($child, $plans, $absences, $excursionByChildDate, $childNames, $weekdayLabel, $closedDays, $careDays, $signedUp) {
                 $date = $day->toDateString();
+
+                // Closed for everyone — the child's own plan doesn't apply.
+                if (isset($closedDays[$date])) {
+                    return ['weekday' => $weekdayLabel($day), 'summary' => "🚫 {$closedDays[$date]}"];
+                }
+
+                // Ferienbetreuung: without a sign-up the child isn't there, and their
+                // Stammplan must not be reported as if they were.
+                if ($careDays->has($date) && ! $signedUp->has($child->id.'|'.$date)) {
+                    return ['weekday' => $weekdayLabel($day), 'summary' => 'nicht angemeldet'];
+                }
 
                 $absence = $absences->get($child->id.'|'.$date);
                 if ($absence) {

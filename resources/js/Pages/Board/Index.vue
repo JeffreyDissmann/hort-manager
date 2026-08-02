@@ -23,6 +23,10 @@ const props = defineProps({
     excursions: { type: Array, default: () => [] },
     program: { type: Object, default: null },
     canMark: { type: Boolean, default: false },
+    // Set when the Hort is closed on the selected day — then nothing else is rendered.
+    closure: { type: Object, default: null },
+    // Set on a Ferienbetreuung day: the board lists who signed up, not the Stammplan.
+    care: { type: Object, default: null },
     children: { type: Array, default: () => [] },
     methodOptions: { type: Array, default: () => [] },
     qualifierOptions: { type: Array, default: () => [] },
@@ -282,6 +286,8 @@ function editRow(row) {
         {
             date: props.date.iso,
             editable: props.date.editable,
+            // On a care day the editor hides „Auf Standard" — nothing to fall back to.
+            care: props.care,
             time: row.planned_time,
             method: row.planned_method,
             qualifier: row.qualifier,
@@ -316,6 +322,32 @@ function editHortfrei(child) {
                 class="rounded-2xl bg-hort-teal/20 px-4 py-3 text-sm font-medium text-ink"
             >
                 {{ flash }}
+            </div>
+
+            <!-- Schließzeit: the Hort is shut, so there is no plan to show at all.
+                 Everything below is skipped — the server sends no rows either. -->
+            <div
+                v-if="closure"
+                data-testid="board-closed"
+                class="rounded-2xl bg-surface p-6 text-center shadow-sm"
+            >
+                <p class="text-lg font-semibold text-ink">{{ $t('board.closed_title') }}</p>
+                <p class="mt-1 text-sm text-ink/70">{{ closure.name }}</p>
+                <p v-if="closure.note" class="mt-2 text-sm text-ink/60">{{ closure.note }}</p>
+            </div>
+
+            <template v-else>
+            <!-- Ferienbetreuung: a different kind of day — only signed-up children are
+                 here, and the Betreuungszeit replaces the usual Stammplan rhythm. -->
+            <div
+                v-if="care"
+                data-testid="board-care"
+                class="rounded-2xl bg-hort-teal/10 px-4 py-3 text-sm ring-1 ring-hort-teal/40"
+            >
+                <p class="font-semibold text-ink">{{ care.name }}</p>
+                <p class="text-ink/70">
+                    {{ $t('board.care_window', { start: care.starts_at, end: care.ends_at }) }}
+                </p>
             </div>
 
             <!-- „Geht mit … mit" overview for the parent (staff use the plan display). -->
@@ -772,6 +804,7 @@ function editHortfrei(child) {
                     {{ $t('board.empty_all') }}
                 </template>
             </p>
+            </template>
         </div>
 
         <DayEditor

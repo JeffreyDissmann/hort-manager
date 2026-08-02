@@ -21,6 +21,8 @@ use App\Http\Controllers\DailyBoardController;
 use App\Http\Controllers\DailyProgramController;
 use App\Http\Controllers\ExcursionController;
 use App\Http\Controllers\ExcursionRsvpController;
+use App\Http\Controllers\HolidayCareRegistrationController;
+use App\Http\Controllers\HolidayPeriodController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\NotificationSettingsController;
 use App\Http\Controllers\ProfileController;
@@ -69,8 +71,15 @@ Route::get('/dashboard', function () {
 Route::get('/auth/slack/redirect', [SlackController::class, 'redirect'])->name('slack.redirect');
 Route::get('/auth/slack/callback', [SlackController::class, 'callback'])->name('slack.callback');
 
-// User-facing help/manual — reachable before login and from inside the app.
-Route::get('/help', fn () => Inertia::render('Help'))->name('help');
+// User-facing help/manual — reachable before login and from inside the app. One
+// page per chapter (/help/holidays), with /help as the overview; the whitelist
+// keeps the slug honest, since it picks a component on the client.
+Route::get('/help/{topic?}', fn (?string $topic = null) => Inertia::render('Help', ['topic' => $topic]))
+    ->whereIn('topic', [
+        'getting-started', 'pickups', 'absences', 'holidays',
+        'excursions', 'slack', 'staff', 'glossary',
+    ])
+    ->name('help');
 
 // Deep-link from a Slack message into the app, signing in via Slack if needed.
 Route::get('/slack/enter', [SlackController::class, 'enter'])->name('slack.enter');
@@ -139,6 +148,22 @@ Route::middleware('auth')->group(function () {
     Route::get('/board', [DailyBoardController::class, 'index'])->name('board');
     Route::patch('/board/{departure}/status', [DailyBoardController::class, 'mark'])->name('board.mark');
     Route::patch('/board/{departure}/plan', [DailyBoardController::class, 'override'])->name('board.override');
+
+    // Schließzeiten — readable by everyone, managed by staff (the controller guards).
+    Route::get('/closures', [HolidayPeriodController::class, 'index'])->name('closures.index');
+    Route::post('/closures', [HolidayPeriodController::class, 'store'])->name('closures.store');
+    Route::patch('/closures/{closure}', [HolidayPeriodController::class, 'update'])->name('closures.update');
+    Route::delete('/closures/{closure}', [HolidayPeriodController::class, 'destroy'])->name('closures.destroy');
+    // Ferienbetreuung: one offered day (Betreuungszeit + Aktivität).
+    Route::patch('/care-days/{careDay}', [HolidayPeriodController::class, 'updateCareDay'])->name('care-days.update');
+    Route::delete('/care-days/{careDay}', [HolidayPeriodController::class, 'destroyCareDay'])->name('care-days.destroy');
+    // Re-offering a removed day needs the tombstone resolved, hence withTrashed().
+    Route::patch('/care-days/{careDay}/restore', [HolidayPeriodController::class, 'restoreCareDay'])
+        ->withTrashed()->name('care-days.restore');
+
+    // Ferienbetreuung sign-ups — parents for their own children, staff for anyone.
+    Route::get('/care', [HolidayCareRegistrationController::class, 'index'])->name('care.index');
+    Route::patch('/care/{period}', [HolidayCareRegistrationController::class, 'update'])->name('care.update');
 
     Route::resource('excursions', ExcursionController::class)->except('show');
     Route::patch('excursions/{excursion}/live', [ExcursionController::class, 'live'])->name('excursions.live');

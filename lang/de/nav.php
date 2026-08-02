@@ -7,6 +7,14 @@ return [
     'excursions' => 'Ausflüge',
     'pickup_plan' => 'Wochenplan',
     'standard_plan' => 'Stammplan',
+    // Section labels in the account menu.
+    'group_hort' => 'Hort',
+    'group_account' => 'Mein Konto',
+    'group_admin' => 'Verwaltung',
+    'group_accounting' => 'Buchhaltung',
+
+    'care' => 'Ferienbetreuung',
+    'closures' => 'Schließzeiten',
     'program' => 'Programm',
     'children' => 'Kinder',
     'users' => 'Benutzer',
