@@ -239,7 +239,8 @@ class WeeklyOverviewController extends Controller
                     'closed' => $closedDays[$day['date']] ?? null,
                     // Ferienbetreuung: registered children are planned as usual; the
                     // rest aren't „hortfrei", they simply haven't signed up.
-                    'care' => $isCareDay ? ['registered' => $departure !== null] : null,
+                    // A plan override predating the Ferienbetreuung is not a sign-up.
+                    'care' => $isCareDay ? ['registered' => $departure?->isCareRegistration() ?? false] : null,
                     // Signing up happens on /care (it has a deadline), so an unregistered
                     // care day can't be planned into existence from here.
                     'editable' => $canManage && $day['date'] >= $todayString && ! $departed

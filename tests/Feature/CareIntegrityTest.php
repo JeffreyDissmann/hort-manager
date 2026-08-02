@@ -76,6 +76,7 @@ class CareIntegrityTest extends TestCase
         return DailyDeparture::create([
             'child_id' => $this->child->id,
             'date' => $date,
+            'holiday_care_day_id' => $day->id,
             'planned_time' => $day->ends_at,
             'planned_method' => DepartureMethod::PickedUp,
             'status' => DepartureStatus::Present,
@@ -190,6 +191,102 @@ class CareIntegrityTest extends TestCase
             ->assertRedirect();
 
         $this->assertDatabaseHas('daily_departures', ['date' => '2026-08-05']);
+    }
+
+    // --- a sign-up is not just „a row on that date" -------------------------------
+
+    public function test_removing_a_day_spares_a_plan_override_from_before_the_period(): void
+    {
+        // The parent moved that day's pickup back when it was an ordinary Hort day;
+        // publishing a Ferienbetreuung later doesn't make it a sign-up.
+        $override = DailyDeparture::create([
+            'child_id' => $this->child->id,
+            'date' => '2026-08-06',
+            'planned_time' => '14:00',
+            'planned_method' => DepartureMethod::PickedUp,
+            'status' => DepartureStatus::Present,
+        ]);
+
+        $this->actingAs($this->staff)
+            ->delete(route('care-days.destroy', HolidayCareDay::firstWhere('date', '2026-08-06')))
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('daily_departures', ['id' => $override->id]);
+    }
+
+    public function test_removing_a_day_spares_a_sign_up_from_another_period(): void
+    {
+        // Two Ferienbetreuungen may offer the same date — the unique index is per
+        // period — so one un-offering its day must not cancel the other's places.
+        $other = HolidayPeriod::factory()->care()->create([
+            'starts_on' => '2026-08-05',
+            'ends_on' => '2026-08-05',
+            'registration_deadline' => '2026-08-01',
+        ]);
+        $other->generateCareDays();
+
+        $second = Child::factory()->create(['name' => 'Ben']);
+        $otherSignUp = DailyDeparture::create([
+            'child_id' => $second->id,
+            'date' => '2026-08-05',
+            'holiday_care_day_id' => $other->careDays()->first()->id,
+            'planned_time' => '16:30',
+            'planned_method' => DepartureMethod::PickedUp,
+            'status' => DepartureStatus::Present,
+        ]);
+        $mine = $this->signUp('2026-08-05');
+
+        $this->actingAs($this->staff)
+            ->delete(route('care-days.destroy', HolidayCareDay::firstWhere('holiday_period_id', $this->period->id)))
+            ->assertRedirect();
+
+        $this->assertDatabaseMissing('daily_departures', ['id' => $mine->id]);
+        $this->assertDatabaseHas('daily_departures', ['id' => $otherSignUp->id]);
+    }
+
+    public function test_an_old_override_is_not_shown_as_a_sign_up(): void
+    {
+        DailyDeparture::create([
+            'child_id' => $this->child->id,
+            'date' => '2026-08-06',
+            'planned_time' => '14:00',
+            'planned_method' => DepartureMethod::PickedUp,
+            'status' => DepartureStatus::Present,
+        ]);
+
+        // /care must not show the day pre-ticked …
+        $this->actingAs($this->parent)
+            ->get(route('care.index'))
+            ->assertInertia(fn ($page) => $page->where('periods.0.days.1.children', []));
+
+        // … the Wochenplan must call the child „nicht angemeldet" …
+        $this->actingAs($this->parent)
+            ->get(route('weekly-plan', ['week' => '2026-08-03']))
+            ->assertInertia(fn ($page) => $page->where('currentWeek.0.days.3.care.registered', false));
+
+        // … and the board must not list them as attending.
+        $this->travelTo(Carbon::parse('2026-08-06 09:00'));
+        $this->actingAs($this->staff)
+            ->get(route('board'))
+            ->assertInertia(fn ($page) => $page->has('rows', 0));
+    }
+
+    public function test_withdrawing_leaves_an_unrelated_override_alone(): void
+    {
+        $override = DailyDeparture::create([
+            'child_id' => $this->child->id,
+            'date' => '2026-08-06',
+            'planned_time' => '14:00',
+            'planned_method' => DepartureMethod::PickedUp,
+            'status' => DepartureStatus::Present,
+        ]);
+
+        // Staff save „no days" for this child (the deadline has passed, so only they can).
+        $this->actingAs($this->staff)
+            ->patch(route('care.update', $this->period), ['child_id' => $this->child->id, 'day_ids' => []])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('daily_departures', ['id' => $override->id]);
     }
 
     // --- a care day is still a normal Hort day ------------------------------------

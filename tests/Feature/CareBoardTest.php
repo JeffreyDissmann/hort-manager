@@ -74,6 +74,8 @@ class CareBoardTest extends TestCase
         return DailyDeparture::create([
             'child_id' => $child->id,
             'date' => $day->date->toDateString(),
+            // What makes the row a sign-up rather than a plan override.
+            'holiday_care_day_id' => $day->id,
             'planned_time' => $day->ends_at,
             'planned_method' => DepartureMethod::PickedUp,
             'status' => DepartureStatus::Present,

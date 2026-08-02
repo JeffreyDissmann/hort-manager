@@ -19,8 +19,11 @@ class HolidayCareDayObserver
      */
     public function deleting(HolidayCareDay $careDay): void
     {
+        // Only the sign-ups made *for this day*: a plan override entered before the
+        // Ferienbetreuung existed, or a sign-up through another period offering the
+        // same date, belongs to somebody else and must survive.
         DailyDeparture::query()
-            ->whereDate('date', $careDay->date)
+            ->where('holiday_care_day_id', $careDay->id)
             ->whereNull('left_at')
             ->delete();
     }

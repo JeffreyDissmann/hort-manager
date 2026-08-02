@@ -149,6 +149,9 @@ class DailyBoardController extends Controller
             ->with(['child:id,name,date_of_birth', 'markedBy:id,name'])
             ->where('date', $date->toDateString())
             ->whereNotIn('child_id', $absentChildIds)
+            // On a Ferienbetreuung day the roster is who signed up — a plan override
+            // left over from before the period was published is not an attendance.
+            ->when($careDay, fn ($q) => $q->where('holiday_care_day_id', $careDay->id))
             ->get();
 
         // Each row's effective time — mirrored from the companion for „geht mit … mit".

@@ -175,17 +175,23 @@ class WeeklyAdjustmentController extends Controller
             'date' => $day->toDateString(),
         ]);
 
+        $careDay = HolidayCareDay::query()->onDate($day)->first();
+
         // Ferienbetreuung: a plan only exists for a child who signed up, and signing up
         // runs through /care because that is where the Anmeldeschluss is enforced.
         // Without this, editing an unregistered care day would register them through
         // the back door, deadline and all. Staff may do either, as they may there too.
         abort_if(
-            ! $departure->exists
-                && ! request()->user()->isStaff()
-                && HolidayCareDay::query()->onDate($day)->exists(),
+            ! $departure->exists && ! request()->user()->isStaff() && $careDay !== null,
             403,
             'Für diesen Ferienbetreuungstag ist das Kind nicht angemeldet.',
         );
+
+        // Staff planning an unregistered care day *is* signing the child up, so the row
+        // has to say so — otherwise it would be a plan override the board ignores.
+        if ($careDay && ! $departure->exists) {
+            $departure->holiday_care_day_id = $careDay->id;
+        }
 
         abort_if(
             $departure->exists && $departure->status !== DepartureStatus::Present,

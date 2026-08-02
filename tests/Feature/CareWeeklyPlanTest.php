@@ -65,6 +65,7 @@ class CareWeeklyPlanTest extends TestCase
         return DailyDeparture::create([
             'child_id' => $this->child->id,
             'date' => $date,
+            'holiday_care_day_id' => $day->id,
             'planned_time' => $day->ends_at,
             'planned_method' => DepartureMethod::PickedUp,
             'status' => DepartureStatus::Present,

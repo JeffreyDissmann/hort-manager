@@ -140,17 +140,22 @@ class HolidayCareRegistrationController extends Controller
         }
 
         $departure->fill([
+            'holiday_care_day_id' => $day->id,
             'planned_time' => $day->ends_at,
             'planned_method' => $this->defaultMethod($child, $day),
             'status' => DepartureStatus::Present,
         ])->save();
     }
 
-    /** Withdraw, unless the day already happened — history stays as it was. */
+    /**
+     * Withdraw — but only a row that is this day's sign-up, and only while the day is
+     * still ahead. An override the family entered before the Ferienbetreuung existed
+     * isn't ours to delete, and a day already under way belongs to the board.
+     */
     private function withdraw(HolidayCareDay $day, Child $child): void
     {
         DailyDeparture::where('child_id', $child->id)
-            ->whereDate('date', $day->date)
+            ->where('holiday_care_day_id', $day->id)
             ->whereNull('left_at')
             ->delete();
     }
@@ -182,12 +187,11 @@ class HolidayCareRegistrationController extends Controller
      */
     private function attendanceKeys(Collection $periods, array $childIds): Collection
     {
-        $dates = $periods->flatMap->careDays->map(
-            fn (HolidayCareDay $day): string => $day->date->toDateString(),
-        );
-
+        // Keyed off the care day, not the date: a plan override that happens to fall on
+        // an offered day is not a sign-up, and showing it as one would tick a box the
+        // family never ticked (and count them into the catering).
         return DailyDeparture::query()
-            ->whereIn('date', $dates)
+            ->whereIn('holiday_care_day_id', $periods->flatMap->careDays->pluck('id'))
             ->whereIn('child_id', $childIds)
             ->get()
             ->map(fn (DailyDeparture $d): string => $d->date->toDateString().'|'.$d->child_id)
