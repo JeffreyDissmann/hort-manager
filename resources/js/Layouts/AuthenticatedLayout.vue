@@ -7,6 +7,7 @@ import Dropdown from '@/Components/Dropdown.vue';
 import DropdownLink from '@/Components/DropdownLink.vue';
 import InstallBanner from '@/Components/InstallBanner.vue';
 import NotifyPrompt from '@/Components/NotifyPrompt.vue';
+import CareReminderBanner from '@/Components/CareReminderBanner.vue';
 import PlanReminderBanner from '@/Components/PlanReminderBanner.vue';
 import PullToRefresh from '@/Components/PullToRefresh.vue';
 import WhatsNewModal from '@/Components/WhatsNewModal.vue';
@@ -70,6 +71,8 @@ function switchRole(role) {
     router.post(switchRoleRoute().url, { role }, { preserveScroll: true });
 }
 const pendingPolls = computed(() => usePage().props.pendingPolls ?? 0);
+// Open Ferienbetreuungen this family still has to answer (drives the menu badge).
+const pendingCare = computed(() => usePage().props.pendingCare ?? []);
 const pendingCompanions = computed(() => usePage().props.pendingCompanions ?? 0);
 
 // Which "world" we're in is decided purely by the URL: /accounting/* = accounting.
@@ -278,6 +281,12 @@ function isActive(item) {
                         </DropdownLink>
                         <DropdownLink :href="careIndex().url" data-testid="nav-care">
                             {{ $t('nav.care') }}
+                            <span
+                                v-if="pendingCare.length"
+                                class="ml-1 rounded-full bg-hort-teal-dark px-1.5 py-0.5 text-[10px] font-bold text-white"
+                            >
+                                {{ pendingCare.length }}
+                            </span>
                         </DropdownLink>
                         <DropdownLink :href="closuresIndex().url" data-testid="nav-closures">
                             {{ $t('nav.closures') }}
@@ -373,6 +382,7 @@ function isActive(item) {
         >
             <PullToRefresh>
                 <PlanReminderBanner class="mb-4" />
+                <CareReminderBanner class="mb-4" />
                 <slot />
             </PullToRefresh>
         </main>
