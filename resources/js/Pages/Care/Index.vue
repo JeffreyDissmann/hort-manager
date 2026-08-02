@@ -46,7 +46,13 @@ function toggle(period, child, day, checked) {
 }
 
 function pickAll(period, child, all) {
-    picks[key(period.id, child.id)] = all ? period.days.map((d) => d.id) : [];
+    // Days already under way aren't ours to change — keep whatever is saved for them.
+    const fixed = selection(period, child).filter(
+        (id) => !period.days.find((d) => d.id === id && dayEditable(period, d)),
+    );
+    const open = period.days.filter((d) => dayEditable(period, d)).map((d) => d.id);
+
+    picks[key(period.id, child.id)] = all ? [...fixed, ...open] : fixed;
 }
 
 /** The children enrolled while this period runs — enrolment differs per period. */
@@ -59,13 +65,32 @@ function editable(period) {
     return period.open || props.canOverrideDeadline;
 }
 
+const today = new Date().toLocaleDateString('sv'); // ISO-ish: YYYY-MM-DD
+
+/**
+ * A day that has started belongs to the Tagesboard — staff mark children off there,
+ * and the server refuses to withdraw someone who may already be in the Hort. Showing
+ * the box as editable would promise something saving doesn't do.
+ */
+function dayEditable(period, day) {
+    return editable(period) && day.date > today;
+}
+
 function save(period, child) {
     const k = key(period.id, child.id);
     saving.value = k;
     router.patch(
         careUpdate(period.id).url,
         { child_id: child.id, day_ids: selection(period, child) },
-        { preserveScroll: true, onFinish: () => (saving.value = null) },
+        {
+            preserveScroll: true,
+            // Drop the local ticks so this child's boxes re-seed from what the server
+            // actually stored: a day it refused (already over, or closed since the page
+            // loaded) would otherwise stay ticked and look registered. Only this child's
+            // entry, so a sibling's unsaved ticks survive.
+            onSuccess: () => delete picks[k],
+            onFinish: () => (saving.value = null),
+        },
     );
 }
 
@@ -168,15 +193,25 @@ function dateLabel(date) {
                             :key="day.id"
                             class="flex flex-wrap items-center gap-2 text-sm"
                         >
-                            <label class="flex flex-1 items-center gap-2" :class="editable(period) ? 'cursor-pointer' : ''">
+                            <label
+                                class="flex flex-1 items-center gap-2"
+                                :class="dayEditable(period, day) ? 'cursor-pointer' : ''"
+                            >
                                 <Checkbox
                                     :checked="isPicked(period, child, day)"
-                                    :disabled="!editable(period)"
+                                    :disabled="!dayEditable(period, day)"
                                     :data-testid="`care-pick-${child.id}-${day.id}`"
                                     @update:checked="(v) => toggle(period, child, day, v)"
                                 />
-                                <span class="w-24 shrink-0 font-medium text-ink">{{ dayLabel(day.date) }}</span>
-                                <span class="text-ink/70">{{ day.starts_at }}–{{ day.ends_at }}</span>
+                                <span
+                                    class="w-24 shrink-0 font-medium"
+                                    :class="day.date > today ? 'text-ink' : 'text-ink/40'"
+                                >
+                                    {{ dayLabel(day.date) }}
+                                </span>
+                                <span :class="day.date > today ? 'text-ink/70' : 'text-ink/40'">
+                                    {{ day.starts_at }}–{{ day.ends_at }}
+                                </span>
                             </label>
                         </li>
                     </ul>
