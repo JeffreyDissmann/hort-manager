@@ -329,17 +329,22 @@ class WeeklyOverviewController extends Controller
                 ->all();
         })->all();
 
-        $childTimes = $allChildren->mapWithKeys(function (Child $c) use ($weekDays, $allOverrides, $absentKeys) {
+        $childTimes = $allChildren->mapWithKeys(function (Child $c) use ($weekDays, $allOverrides, $absentKeys, $closedDays, $careDays) {
             $byWeekday = $c->weeklySchedules->keyBy('weekday');
             $times = [];
             foreach ($weekDays->values() as $i => $day) {
-                if ($absentKeys->has($c->id.'|'.$day['date'])) {
+                // No day, nobody to go home with.
+                if ($absentKeys->has($c->id.'|'.$day['date']) || isset($closedDays[$day['date']])) {
                     continue;
                 }
                 $override = $allOverrides->get($c->id.'|'.$day['date']);
-                $raw = $override
-                    ? $override->planned_time
-                    : $byWeekday->get($i + 1)?->planned_time;
+                $careDay = $careDays->get($day['date']);
+
+                // Ferienbetreuung: only the children who signed up are there, so the
+                // Stammplan must not offer one of the others as a companion.
+                $raw = $careDay
+                    ? ($override?->holiday_care_day_id === $careDay->id ? $override->planned_time : null)
+                    : ($override ? $override->planned_time : $byWeekday->get($i + 1)?->planned_time);
                 if ($raw) {
                     $times[$day['date']] = substr((string) $raw, 0, 5);
                 }

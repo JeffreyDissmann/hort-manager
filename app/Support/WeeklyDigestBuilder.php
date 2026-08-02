@@ -142,7 +142,9 @@ class WeeklyDigestBuilder
         $signedUp = $careDays->isEmpty()
             ? collect()
             : DailyDeparture::query()
-                ->whereIn('date', $careDays->keys())
+                // Keyed off the care day: an override that happens to fall on an
+                // offered date is not a sign-up.
+                ->whereIn('holiday_care_day_id', $careDays->pluck('id'))
                 ->whereIn('child_id', $childIds)
                 ->get()
                 ->map(fn (DailyDeparture $d): string => $d->child_id.'|'.$d->date->toDateString())

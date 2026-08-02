@@ -174,6 +174,34 @@ class CareWeeklyPlanTest extends TestCase
         $this->assertSame('Mia', $thursday->first()['name']);
     }
 
+    public function test_the_companion_picker_only_offers_children_who_are_there(): void
+    {
+        // Ben has the same full Stammplan but didn't sign up for the Ferienbetreuung.
+        $ben = Child::factory()->create(['name' => 'Ben']);
+        foreach ([1, 2, 3, 4, 5] as $weekday) {
+            WeeklySchedule::create([
+                'child_id' => $ben->id,
+                'weekday' => $weekday,
+                'planned_time' => '15:00',
+                'method' => DepartureMethod::PickedUp,
+            ]);
+        }
+
+        $this->careDays();
+        $this->signUp('2026-08-03');
+
+        $children = collect($this->actingAs($this->staff)
+            ->get(route('weekly-plan'))
+            ->viewData('page')['props']['children'])->keyBy('name');
+
+        // Monday is a care day: only Mia can be a companion, and at her sign-up time.
+        $this->assertSame('16:30', $children['Mia']['times']['2026-08-03']);
+        $this->assertArrayNotHasKey('2026-08-03', $children['Ben']['times']);
+
+        // Thursday is an ordinary day again — the Stammplan applies to both.
+        $this->assertSame('15:00', $children['Ben']['times']['2026-08-06']);
+    }
+
     public function test_a_week_without_care_is_unchanged(): void
     {
         $this->actingAs($this->staff)
