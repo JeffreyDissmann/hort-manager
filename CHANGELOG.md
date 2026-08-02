@@ -6,6 +6,8 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [2026.08.02] — 2026-08-02
+
 ### Added
 
 - **Ferienbetreuung.** The second kind of Ferien-Zeitraum: the Hort is open, but only
@@ -32,6 +34,9 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **„Wochenprogramm fehlt".** Staff are reminded 30 minutes before the parents'
   Wochenüberblick when a weekday still has no lunch entered. The digest time itself is
   now settable under „Programm".
+- **Eine neue Hilfe.** The manual is an overview plus eight chapters, each on its own
+  URL — including „Wenn ein Kind nicht da ist", which puts Krank, hortfrei and
+  Schließzeit side by side, and „Ferien & Schließzeiten".
 
 ### Fixed
 
@@ -42,6 +47,22 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   on `channel_not_found`, falling back to web push and re-linking on the next Slack login.
 - The „Programm ausfüllen" button in the „Wochenprogramm fehlt" DM landed on the
   dashboard: `/program` was missing from the Slack deep-link whitelist.
+
+Fixed before release, from a review of the Ferien work — each one a way a
+Ferienbetreuung place could be lost or misreported:
+
+- A Krankmeldung deleted the sign-up, and clearing it never brought the place back;
+  „Auf Stammplan zurücksetzen" cancelled one just as quietly. Re-saving `/care` could
+  drop a child already in the Hort that morning.
+- The TRMNL staff-room feed built a care day's roster from the Stammplan, showing
+  children on holiday and hiding the ones who signed up. The companion picker had the
+  same fault: `EffectivePlan` no longer falls back to the Stammplan on a care day or a
+  closed day.
+- Shortening a Betreuungszeit left every existing sign-up on the old pickup time;
+  editing a period re-offered days staff had deliberately removed (they now leave a
+  tombstone, and can be offered again); `/care` listed children regardless of enrolment.
+- Every row on a care-day board read „heute geändert" (there is no Stammplan to deviate
+  from), and a Schließzeit could be entered over a live Ausflug.
 
 ## [2026.07.26.1] — 2026-07-26
 
