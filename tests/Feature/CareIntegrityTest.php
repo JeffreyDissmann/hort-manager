@@ -133,6 +133,59 @@ class CareIntegrityTest extends TestCase
         $this->assertDatabaseCount('daily_departures', 1);
     }
 
+    public function test_a_sign_up_cannot_be_cancelled_by_resetting_the_day(): void
+    {
+        // „Auf Standard zurücksetzen" deletes the row — which on a care day is the
+        // child's place, past a deadline that /care would have refused.
+        $this->signUp('2026-08-05');
+
+        $this->actingAs($this->parent)
+            ->patch(route('weekly-plan.reset'), [
+                'child_id' => $this->child->id,
+                'date' => '2026-08-05',
+            ])
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('daily_departures', ['date' => '2026-08-05']);
+    }
+
+    public function test_staff_cannot_reset_a_sign_up_either(): void
+    {
+        // Giving up a place is a sign-up decision, not a plan one — /care is where it
+        // belongs, and staff may withdraw there at any time.
+        $this->signUp('2026-08-05');
+
+        $this->actingAs($this->staff)
+            ->patch(route('weekly-plan.reset'), [
+                'child_id' => $this->child->id,
+                'date' => '2026-08-05',
+            ])
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('daily_departures', ['date' => '2026-08-05']);
+    }
+
+    public function test_resetting_an_ordinary_override_still_works(): void
+    {
+        // The guard must not spill over to normal days.
+        DailyDeparture::create([
+            'child_id' => $this->child->id,
+            'date' => '2026-08-12',
+            'planned_time' => '14:00',
+            'planned_method' => DepartureMethod::PickedUp,
+            'status' => DepartureStatus::Present,
+        ]);
+
+        $this->actingAs($this->parent)
+            ->patch(route('weekly-plan.reset'), [
+                'child_id' => $this->child->id,
+                'date' => '2026-08-12',
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseMissing('daily_departures', ['date' => '2026-08-12']);
+    }
+
     // --- un-offering a day ---------------------------------------------------------
 
     public function test_removing_an_offered_day_withdraws_its_sign_ups(): void

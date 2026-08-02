@@ -286,6 +286,8 @@ function editRow(row) {
         {
             date: props.date.iso,
             editable: props.date.editable,
+            // On a care day the editor hides „Auf Standard" — nothing to fall back to.
+            care: props.care,
             time: row.planned_time,
             method: row.planned_method,
             qualifier: row.qualifier,

@@ -37,6 +37,8 @@ function open(child, day, dayMeta) {
         date: day.date,
         label: `${dayMeta.label} ${dayMeta.date_label}`.trim(),
         absent: day.absent ?? null,
+        // Ferienbetreuung day: there is no Stammplan behind it (see the reset button).
+        care: day.care ?? null,
     };
     form.planned_time = day.time ?? '';
     form.planned_method = day.method ?? '';
@@ -338,7 +340,11 @@ function cancelAbsence() {
             </p>
 
             <div class="flex items-center justify-between gap-3 pt-2">
+                <!-- A Ferienbetreuung day has no Stammplan to return to: „zurücksetzen"
+                     would cancel the child's place, which belongs on /care where the
+                     Anmeldeschluss applies. -->
                 <button
+                    v-if="!editing.care"
                     type="button"
                     data-testid="reset"
                     class="text-sm font-medium text-ink/50 underline-offset-2 hover:underline"

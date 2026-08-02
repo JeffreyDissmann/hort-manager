@@ -129,6 +129,17 @@ class WeeklyAdjustmentController extends Controller
         $child = Child::findOrFail($validated['child_id']);
         $departure = $this->authorizedDeparture($child, $validated['date']);
 
+        // On a Ferienbetreuung day there is no Stammplan to fall back to, so „reset"
+        // would simply cancel the child's place — past the Anmeldeschluss, where /care
+        // refuses exactly that, and with nothing to sign them back up with. Giving up
+        // a place is a decision for the sign-up screen, not a side effect of an
+        // „Auf Standard" button.
+        abort_if(
+            $departure->isCareRegistration(),
+            403,
+            'Ein Ferienbetreuungstag wird über die Anmeldung abgemeldet, nicht zurückgesetzt.',
+        );
+
         // Deleting the override row makes the board fall back to the Stammplan.
         if ($departure->exists) {
             activity()
