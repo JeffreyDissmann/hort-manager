@@ -344,7 +344,7 @@ class CareIntegrityTest extends TestCase
 
     // --- a care day is still a normal Hort day ------------------------------------
 
-    public function test_a_child_can_be_reported_sick_on_a_care_day(): void
+    public function test_a_child_reported_sick_on_a_care_day_keeps_their_place(): void
     {
         $this->signUp('2026-08-05');
 
@@ -358,8 +358,62 @@ class CareIntegrityTest extends TestCase
             ->assertRedirect();
 
         $this->assertDatabaseHas('absences', ['date' => '2026-08-05']);
-        // Reporting a child away clears their pickup, care day or not.
-        $this->assertDatabaseMissing('daily_departures', ['date' => '2026-08-05']);
+        // The row is the registration, not an override — one sick day must not cost
+        // the child their place (the deadline has passed; there'd be no way back).
+        $this->assertDatabaseHas('daily_departures', ['date' => '2026-08-05']);
+
+        // …and they are still off the board that day, place or not.
+        $this->travelTo(Carbon::parse('2026-08-05 09:00'));
+        $this->actingAs($this->staff)
+            ->get(route('board'))
+            ->assertInertia(fn ($page) => $page->has('rows', 0)->has('absent', 1));
+    }
+
+    public function test_clearing_the_krankmeldung_puts_them_back_on_the_care_day(): void
+    {
+        $this->signUp('2026-08-05');
+
+        $this->actingAs($this->parent)->post(route('absences.store'), [
+            'child_id' => $this->child->id,
+            'from' => '2026-08-05',
+            'to' => '2026-08-05',
+            'reason' => AbsenceReason::Sick->value,
+        ]);
+
+        $this->actingAs($this->parent)
+            ->delete(route('absences.destroy'), [
+                'child_id' => $this->child->id,
+                'from' => '2026-08-05',
+                'to' => '2026-08-05',
+            ])
+            ->assertRedirect();
+
+        $this->travelTo(Carbon::parse('2026-08-05 09:00'));
+        $this->actingAs($this->staff)
+            ->get(route('board'))
+            ->assertInertia(fn ($page) => $page->has('rows', 1)->has('absent', 0));
+    }
+
+    public function test_reporting_sick_on_a_normal_day_still_clears_the_override(): void
+    {
+        // The exemption is for sign-ups only — an ordinary override still goes, so the
+        // child falls back to the Stammplan when the Krankmeldung is cleared.
+        DailyDeparture::create([
+            'child_id' => $this->child->id,
+            'date' => '2026-08-12',
+            'planned_time' => '13:00',
+            'planned_method' => DepartureMethod::PickedUp,
+            'status' => DepartureStatus::Present,
+        ]);
+
+        $this->actingAs($this->parent)->post(route('absences.store'), [
+            'child_id' => $this->child->id,
+            'from' => '2026-08-12',
+            'to' => '2026-08-12',
+            'reason' => AbsenceReason::Sick->value,
+        ])->assertRedirect();
+
+        $this->assertDatabaseMissing('daily_departures', ['date' => '2026-08-12']);
     }
 
     public function test_a_late_change_on_a_care_day_notifies_staff(): void
