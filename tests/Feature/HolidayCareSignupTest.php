@@ -183,6 +183,36 @@ class HolidayCareSignupTest extends TestCase
         $this->assertDatabaseCount('daily_departures', 1);
     }
 
+    public function test_a_day_under_way_is_never_withdrawn(): void
+    {
+        $days = $this->dayIds();
+        $this->signUp($days)->assertRedirect();
+
+        // It's Monday morning of the Ferienbetreuung and Mia is in the Hort.
+        $this->travelTo(Carbon::parse('2026-08-03 09:00'));
+
+        // Staff re-save Tuesday only — Monday must not disappear from under the board.
+        $this->signUp([$days[1]], $this->staff)->assertRedirect();
+
+        $this->assertDatabaseHas('daily_departures', ['date' => '2026-08-03']);
+        $this->assertDatabaseHas('daily_departures', ['date' => '2026-08-04']);
+        $this->assertDatabaseCount('daily_departures', 2);
+    }
+
+    public function test_a_day_that_is_over_cannot_be_signed_up_for(): void
+    {
+        $days = $this->dayIds();
+
+        // Wednesday of the running Ferienbetreuung: Monday is history.
+        $this->travelTo(Carbon::parse('2026-08-05 09:00'));
+
+        $this->signUp($days, $this->staff)->assertRedirect();
+
+        $this->assertDatabaseMissing('daily_departures', ['date' => '2026-08-03']);
+        $this->assertDatabaseHas('daily_departures', ['date' => '2026-08-05']);
+        $this->assertDatabaseCount('daily_departures', 3); // Wed, Thu, Fri
+    }
+
     public function test_days_from_another_period_are_ignored(): void
     {
         $other = HolidayPeriod::factory()->care()->create([

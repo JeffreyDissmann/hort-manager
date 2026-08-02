@@ -130,6 +130,12 @@ class HolidayCareRegistrationController extends Controller
             return;
         }
 
+        // Days that are over can't be registered for any more — saving an earlier day
+        // of a running Ferienbetreuung must not write a plan into the past.
+        if ($day->date->lt(Carbon::today())) {
+            return;
+        }
+
         $departure = DailyDeparture::firstOrNew([
             'child_id' => $child->id,
             'date' => $day->date->toDateString(),
@@ -154,6 +160,14 @@ class HolidayCareRegistrationController extends Controller
      */
     private function withdraw(HolidayCareDay $day, Child $child): void
     {
+        // A day already under way belongs to the board: staff mark children off there,
+        // and deleting the row mid-morning would take a child who is standing in the
+        // Hort off the roster with nobody the wiser. „Kommt heute nicht" is a
+        // Krankmeldung, not a withdrawal.
+        if ($day->date->lte(Carbon::today())) {
+            return;
+        }
+
         DailyDeparture::where('child_id', $child->id)
             ->where('holiday_care_day_id', $day->id)
             ->whereNull('left_at')
