@@ -10,6 +10,7 @@ use App\Enums\DepartureStatus;
 use App\Enums\UserRole;
 use App\Models\Child;
 use App\Models\DailyDeparture;
+use App\Models\DailyProgram;
 use App\Models\Excursion;
 use App\Models\HolidayCareDay;
 use App\Models\HolidayPeriod;
@@ -17,6 +18,8 @@ use App\Models\Setting;
 use App\Models\User;
 use App\Models\WeeklySchedule;
 use App\Notifications\LateChange;
+use App\Notifications\ProgramMissing;
+use App\Notifications\WeeklyDigest;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Notification;
@@ -380,6 +383,52 @@ class CareIntegrityTest extends TestCase
             ->assertRedirect();
 
         $this->assertDatabaseMissing('daily_departures', ['date' => '2026-09-09']);
+    }
+
+    // --- a week that is part closed, part Ferienbetreuung -------------------------
+
+    public function test_a_week_of_closures_and_care_days_wants_no_lunch(): void
+    {
+        Notification::fake();
+        $this->travelTo(Carbon::parse('2026-08-03 11:30')); // Monday
+
+        // Mon–Wed shut, Thu–Fri Ferienbetreuung: nobody is there to cook on the closed
+        // days, and lunch is optional on the care days. Nothing left to chase.
+        HolidayPeriod::factory()->between('2026-08-03', '2026-08-05')->create(['name' => 'Sommerferien']);
+        $care = HolidayPeriod::factory()->care()->create([
+            'starts_on' => '2026-08-06',
+            'ends_on' => '2026-08-07',
+            'registration_deadline' => '2026-08-01',
+        ]);
+        $care->generateCareDays();
+
+        $this->staff->forceFill(['slack_id' => 'U-STAFF'])->save();
+
+        $this->assertSame([], DailyProgram::weekdaysWithoutLunch(Carbon::today()));
+
+        $this->artisan('program:remind-missing')->assertSuccessful();
+        Notification::assertNotSentTo($this->staff, ProgramMissing::class);
+    }
+
+    public function test_such_a_week_still_gets_its_wochenüberblick(): void
+    {
+        Notification::fake();
+        $this->travelTo(Carbon::parse('2026-08-03 11:30'));
+
+        HolidayPeriod::factory()->between('2026-08-03', '2026-08-05')->create(['name' => 'Sommerferien']);
+        $care = HolidayPeriod::factory()->care()->create([
+            'starts_on' => '2026-08-06',
+            'ends_on' => '2026-08-07',
+            'registration_deadline' => '2026-08-01',
+        ]);
+        $care->generateCareDays();
+
+        $this->parent->forceFill(['slack_id' => 'U-PARENT'])->save();
+
+        // Only an entirely closed week is silent — here there are Betreuungszeiten to
+        // report, so saying nothing would be worse than the message.
+        $this->artisan('weekly:digest')->assertSuccessful();
+        Notification::assertSentTo($this->parent, WeeklyDigest::class);
     }
 
     public function test_excursion_trumping_is_not_symmetric(): void
