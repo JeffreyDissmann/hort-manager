@@ -139,8 +139,10 @@ function rangeLabel(period) {
                     {{ editingId ? $t('closures.edit_heading') : $t('closures.add_heading') }}
                 </p>
 
-                <!-- Which kind: no Hort at all, or opt-in care. -->
-                <div class="mb-3 inline-flex rounded-lg bg-canvas p-0.5 text-sm font-semibold">
+                <!-- Which kind: no Hort at all, or opt-in care. Only when creating —
+                     converting an existing Ferienbetreuung would throw away every
+                     sign-up, so the type is fixed once it exists. -->
+                <div v-if="!editingId" class="mb-3 inline-flex rounded-lg bg-canvas p-0.5 text-sm font-semibold">
                     <button
                         type="button"
                         data-testid="type-closed"
@@ -160,6 +162,10 @@ function rangeLabel(period) {
                         {{ $t('enums.holiday_period_type.care') }}
                     </button>
                 </div>
+
+                <p v-else class="mb-3 text-sm font-medium text-ink/60">
+                    {{ $t(`enums.holiday_period_type.${form.type}`) }}
+                </p>
 
                 <div class="grid gap-3 lg:grid-cols-[minmax(0,16rem),minmax(0,12rem),minmax(0,12rem),minmax(0,1fr)]">
                     <div>

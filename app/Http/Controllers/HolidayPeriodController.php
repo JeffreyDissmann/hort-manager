@@ -91,7 +91,16 @@ class HolidayPeriodController extends Controller
     {
         $this->authorize('update', $closure);
 
-        $closure->update($this->validated($request));
+        $validated = $this->validated($request, $closure);
+
+        // The type is fixed once created. Flipping a Ferienbetreuung to „geschlossen"
+        // would un-offer every day and delete every family's sign-up with it — from a
+        // segmented toggle at the top of an edit form, with no confirmation, and with
+        // nothing to restore afterwards. Converting is also meaningless: the two kinds
+        // share nothing but a date range. Delete and re-create instead.
+        unset($validated['type']);
+
+        $closure->update($validated);
 
         // Extending the range offers the new weekdays; days already edited are left
         // alone, and days now outside the range are dropped. Deleted per model, not
@@ -146,9 +155,10 @@ class HolidayPeriodController extends Controller
     }
 
     /**
+     * @param  HolidayPeriod|null  $period  the period being edited, whose type is fixed
      * @return array<string, mixed>
      */
-    private function validated(Request $request): array
+    private function validated(Request $request, ?HolidayPeriod $period = null): array
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -161,7 +171,9 @@ class HolidayPeriodController extends Controller
             'note' => ['nullable', 'string', 'max:255'],
         ]);
 
-        $validated['type'] ??= HolidayPeriodType::Closed->value;
+        // On edit the stored type wins (it can't be changed); on create, default to a
+        // Schließzeit, which is what the form opens on.
+        $validated['type'] = $period?->type->value ?? $validated['type'] ?? HolidayPeriodType::Closed->value;
 
         // Only a Ferienbetreuung has anything to register for.
         if ($validated['type'] !== HolidayPeriodType::Care->value) {
