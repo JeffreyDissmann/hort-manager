@@ -7,7 +7,8 @@ import Checkbox from '@/Components/Checkbox.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import { update as careUpdate } from '@/routes/care';
-import { Head, router, usePage } from '@inertiajs/vue3';
+import { help } from '@/routes';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { computed, reactive, ref } from 'vue';
 
 const props = defineProps({
@@ -120,7 +121,16 @@ function dateLabel(date) {
 
     <AuthenticatedLayout>
         <template #header>
-            <h2 class="text-xl font-semibold text-ink">{{ $t('care.heading') }}</h2>
+            <div class="flex flex-wrap items-baseline justify-between gap-2">
+                <h2 class="text-xl font-semibold text-ink">{{ $t('care.heading') }}</h2>
+                <!-- Signing up per day is the one thing parents have to learn here. -->
+                <Link
+                    :href="help({ topic: 'holidays' }).url"
+                    class="text-sm font-medium text-hort-teal-dark underline-offset-2 hover:underline"
+                >
+                    {{ $t('care.how_it_works') }}
+                </Link>
+            </div>
         </template>
 
         <div class="space-y-4">

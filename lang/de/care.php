@@ -13,6 +13,7 @@ return [
 
     'none' => 'Aktuell ist keine Ferienbetreuung geplant.',
     'not_answered' => 'noch nicht beantwortet',
+    'how_it_works' => 'Wie funktioniert das?',
     'all_days' => 'Alle Tage',
     'no_days' => 'Keine Tage',
     'staff_may_still_edit' => 'Erzieher:innen können weiterhin eintragen',

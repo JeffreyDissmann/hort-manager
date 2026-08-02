@@ -13,6 +13,7 @@ return [
 
     'none' => 'No holiday care is planned at the moment.',
     'not_answered' => 'not answered yet',
+    'how_it_works' => 'How does this work?',
     'all_days' => 'All days',
     'no_days' => 'No days',
     'staff_may_still_edit' => 'staff can still register children',

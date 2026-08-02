@@ -71,8 +71,15 @@ Route::get('/dashboard', function () {
 Route::get('/auth/slack/redirect', [SlackController::class, 'redirect'])->name('slack.redirect');
 Route::get('/auth/slack/callback', [SlackController::class, 'callback'])->name('slack.callback');
 
-// User-facing help/manual — reachable before login and from inside the app.
-Route::get('/help', fn () => Inertia::render('Help'))->name('help');
+// User-facing help/manual — reachable before login and from inside the app. One
+// page per chapter (/help/holidays), with /help as the overview; the whitelist
+// keeps the slug honest, since it picks a component on the client.
+Route::get('/help/{topic?}', fn (?string $topic = null) => Inertia::render('Help', ['topic' => $topic]))
+    ->whereIn('topic', [
+        'getting-started', 'pickups', 'absences', 'holidays',
+        'excursions', 'slack', 'staff', 'glossary',
+    ])
+    ->name('help');
 
 // Deep-link from a Slack message into the app, signing in via Slack if needed.
 Route::get('/slack/enter', [SlackController::class, 'enter'])->name('slack.enter');
