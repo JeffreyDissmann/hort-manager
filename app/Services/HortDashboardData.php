@@ -11,6 +11,7 @@ use App\Models\Child;
 use App\Models\DailyDeparture;
 use App\Models\DailyProgram;
 use App\Models\Excursion;
+use App\Models\HolidayCareDay;
 use App\Models\HolidayPeriod;
 use App\Models\HomeworkDefault;
 use App\Models\WeeklySchedule;
@@ -66,23 +67,58 @@ class HortDashboardData
         }
 
         $absences = Absence::with('child:id,name')->where('date', $dateString)->get();
+        $onExcursion = $this->excursionParticipantIds($dateString);
 
+        // Ferienbetreuung: no school, so the Stammplan says nothing about who is here.
+        // The roster is the sign-ups — exactly as on the board.
+        $careDay = HolidayCareDay::query()->onDate($date)->with('period:id,name')->first();
+
+        $rows = $careDay
+            ? $this->careRows($careDay, $absences->pluck('child_id'), $onExcursion)
+            : $this->standardRows($date, $weekday, $absences->pluck('child_id'), $onExcursion);
+
+        $present = $rows->reject(fn (array $row) => $row['left']);
+
+        return [
+            'weekday' => self::WEEKDAYS_LONG[$weekday],
+            'date' => $date->format('d.m.Y'),
+            'care' => $careDay?->period->name,
+            'present_count' => $present->count(),
+            'next_pickup' => $present->min('time'),
+            'departures' => $this->groupByTime($rows, 'children', fn (Collection $kids) => $kids
+                ->map(fn (array $row) => Arr::except($row, 'time'))->values()->all()),
+            'absent' => $absences->map(fn (Absence $a) => [
+                'name' => $a->child->name,
+                'reason' => $a->reason->label(),
+            ])->values()->all(),
+            'program' => $this->program($date, $careDay),
+        ];
+    }
+
+    /**
+     * An ordinary Hort day: everyone scheduled for this weekday, with the same-day
+     * override applied on top of their Stammplan.
+     *
+     * @param  Collection<int, int>  $absentIds
+     * @param  Collection<int, int>  $onExcursion
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function standardRows(Carbon $date, int $weekday, Collection $absentIds, Collection $onExcursion): Collection
+    {
         $children = Child::query()
             ->activeOn($date)
             ->whereHas('weeklySchedules', fn ($q) => $q->where('weekday', $weekday)->whereNotNull('planned_time'))
             ->with(['weeklySchedules' => fn ($q) => $q->where('weekday', $weekday)])
-            ->whereNotIn('id', $absences->pluck('child_id'))
+            ->whereNotIn('id', $absentIds)
             ->orderBy('name')
             ->get(['id', 'name']);
 
-        $overrides = DailyDeparture::where('date', $dateString)
+        $overrides = DailyDeparture::where('date', $date->toDateString())
             ->whereIn('child_id', $children->pluck('id'))
             ->get()
             ->keyBy('child_id');
 
-        $onExcursion = $this->excursionParticipantIds($dateString);
-
-        $rows = $children->map(function (Child $child) use ($overrides, $onExcursion) {
+        return $children->map(function (Child $child) use ($overrides, $onExcursion) {
             $schedule = $child->weeklySchedules->first();
             $override = $overrides->get($child->id);
             $time = $this->short($override?->planned_time ?? $schedule?->planned_time);
@@ -103,22 +139,37 @@ class HortDashboardData
                 'deviation' => $this->deviation($schedule, $override, $time, $method),
             ];
         })->filter();
+    }
 
-        $present = $rows->reject(fn (array $row) => $row['left']);
+    /**
+     * A Ferienbetreuung day: the registered children, each planned by their sign-up.
+     * There is no Stammplan behind the day, so nothing can deviate from one.
+     *
+     * @param  Collection<int, int>  $absentIds
+     * @param  Collection<int, int>  $onExcursion
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function careRows(HolidayCareDay $careDay, Collection $absentIds, Collection $onExcursion): Collection
+    {
+        return $careDay->departures()
+            ->with('child:id,name')
+            ->whereNotIn('child_id', $absentIds)
+            ->get()
+            ->map(function (DailyDeparture $departure) use ($onExcursion) {
+                $time = $this->short($departure->planned_time);
 
-        return [
-            'weekday' => self::WEEKDAYS_LONG[$weekday],
-            'date' => $date->format('d.m.Y'),
-            'present_count' => $present->count(),
-            'next_pickup' => $present->min('time'),
-            'departures' => $this->groupByTime($rows, 'children', fn (Collection $kids) => $kids
-                ->map(fn (array $row) => Arr::except($row, 'time'))->values()->all()),
-            'absent' => $absences->map(fn (Absence $a) => [
-                'name' => $a->child->name,
-                'reason' => $a->reason->label(),
-            ])->values()->all(),
-            'program' => $this->program($date),
-        ];
+                return $time === null ? null : [
+                    'time' => $time,
+                    'name' => $departure->child->name,
+                    'alone' => $departure->planned_method === DepartureMethod::SentHome,
+                    'left' => $departure->status->hasLeft(),
+                    'excursion' => $onExcursion->contains($departure->child_id),
+                    'deviation' => null,
+                ];
+            })
+            ->filter()
+            ->sortBy('name')
+            ->values();
     }
 
     /** @return array<int, array<string, mixed>> */
@@ -145,8 +196,9 @@ class HortDashboardData
             ->groupBy(fn (Excursion $e) => $e->date->toDateString());
 
         $closedDays = HolidayPeriod::closedDaysBetween($days->first(), $days->last());
+        $careDays = HolidayCareDay::betweenKeyed($days->first(), $days->last());
 
-        return $days->map(function (Carbon $day, int $i) use ($children, $overrides, $absentByDate, $excursionsByDate, $todayString, $closedDays) {
+        return $days->map(function (Carbon $day, int $i) use ($children, $overrides, $absentByDate, $excursionsByDate, $todayString, $closedDays, $careDays) {
             $dateString = $day->toDateString();
 
             if (isset($closedDays[$dateString])) {
@@ -155,18 +207,29 @@ class HortDashboardData
                     'date' => $day->format('d.m.'),
                     'is_today' => $dateString === $todayString,
                     'closed' => $closedDays[$dateString],
+                    'care' => null,
                     'excursion' => null,
                     'departures' => [],
                 ];
             }
 
             $absent = $absentByDate->get($dateString, collect());
+            $careDay = $careDays->get($dateString);
 
             $rows = $children
                 ->reject(fn (Child $child) => $absent->contains($child->id))
-                ->map(function (Child $child) use ($overrides, $dateString, $i) {
-                    $schedule = $child->weeklySchedules->firstWhere('weekday', $i + 1);
+                ->map(function (Child $child) use ($overrides, $dateString, $i, $careDay) {
                     $override = $overrides->get($child->id.'|'.$dateString);
+
+                    // Ferienbetreuung: only the sign-ups are there, and the sign-up is
+                    // the plan — the Stammplan must not fill the day back up.
+                    if ($careDay) {
+                        return $override?->holiday_care_day_id === $careDay->id && $override->planned_time
+                            ? ['time' => $this->short($override->planned_time), 'name' => $child->name]
+                            : null;
+                    }
+
+                    $schedule = $child->weeklySchedules->firstWhere('weekday', $i + 1);
                     $time = $this->short($override?->planned_time ?? $schedule?->planned_time);
 
                     return $time === null ? null : ['time' => $time, 'name' => $child->name];
@@ -178,6 +241,7 @@ class HortDashboardData
                 'date' => $day->format('d.m.'),
                 'is_today' => $dateString === $todayString,
                 'closed' => null,
+                'care' => $careDay?->period->name,
                 'excursion' => $excursionsByDate->get($dateString)?->pluck('name')->implode(', '),
                 'departures' => $this->groupByTime($rows, 'names', fn (Collection $kids) => $kids
                     ->pluck('name')->sort()->values()->all()),
@@ -227,7 +291,7 @@ class HortDashboardData
     }
 
     /** @return array<string, mixed> */
-    private function program(Carbon $date): array
+    private function program(Carbon $date, ?HolidayCareDay $careDay = null): array
     {
         $program = DailyProgram::where('date', $date->toDateString())->first();
         $default = HomeworkDefault::where('weekday', $date->dayOfWeekIso)->first();
@@ -236,7 +300,11 @@ class HortDashboardData
         return [
             'lunch' => $program?->lunch,
             'activity' => $program?->activity,
-            'homework' => $hwStart ? $this->short($hwStart).'–'.$this->short($hwEnd) : null,
+            // No school, no homework: the weekday default knows nothing about dates,
+            // so a Ferienbetreuung day would otherwise show a band nobody keeps. The
+            // Betreuungszeit takes its place, as it does on /program.
+            'homework' => $careDay || ! $hwStart ? null : $this->short($hwStart).'–'.$this->short($hwEnd),
+            'care_time' => $careDay?->window(),
         ];
     }
 

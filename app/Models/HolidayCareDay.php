@@ -63,13 +63,15 @@ class HolidayCareDay extends Model
 
     /**
      * The sign-ups for this day — a child's DailyDeparture *is* the registration, so
-     * attending is planned exactly like any other Hort day.
+     * attending is planned exactly like any other Hort day. Keyed off the care day and
+     * not the date: a plan override that happens to fall on an offered date is not a
+     * sign-up, and counting it as one would put an unregistered child on the roster.
      *
      * @return HasMany<DailyDeparture, $this>
      */
     public function departures(): HasMany
     {
-        return $this->hasMany(DailyDeparture::class, 'date', 'date');
+        return $this->hasMany(DailyDeparture::class, 'holiday_care_day_id');
     }
 
     /**
@@ -92,6 +94,7 @@ class HolidayCareDay extends Model
     public static function betweenKeyed(Carbon|string $from, Carbon|string $to): Collection
     {
         return static::query()
+            ->with('period:id,name')
             ->whereBetween('date', [
                 $from instanceof Carbon ? $from->toDateString() : $from,
                 $to instanceof Carbon ? $to->toDateString() : $to,
