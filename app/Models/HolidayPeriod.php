@@ -6,7 +6,9 @@ namespace App\Models;
 
 use App\Enums\HolidayPeriodType;
 use App\Models\Concerns\LogsChanges;
+use App\Observers\HolidayPeriodObserver;
 use Database\Factories\HolidayPeriodFactory;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -20,6 +22,7 @@ use Illuminate\Support\Collection;
  * which is different from „Hortfrei" (per child, structural) and from an Absence
  * (per child, reported with a reason). Nobody is absent; there is no day.
  */
+#[ObservedBy([HolidayPeriodObserver::class])]
 class HolidayPeriod extends Model
 {
     /** @use HasFactory<HolidayPeriodFactory> */
@@ -77,6 +80,18 @@ class HolidayPeriod extends Model
     public function scopeCare(Builder $query): void
     {
         $query->where('type', HolidayPeriodType::Care);
+    }
+
+    /**
+     * Ferienbetreuungen whose Anmeldeschluss falls today — the same shape as
+     * Excursion::dueToday(), so both reminders behave alike: the deadline lives on
+     * the record, and a period without one is never chased.
+     *
+     * @param  Builder<HolidayPeriod>  $query
+     */
+    public function scopeDueToday(Builder $query): void
+    {
+        $query->care()->whereDate('registration_deadline', today());
     }
 
     /** @return HasMany<HolidayCareDay, $this> */

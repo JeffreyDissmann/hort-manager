@@ -46,6 +46,10 @@ return [
             'label' => 'Fehlender Wochenplan',
             'help' => 'Erinnerung, wenn für dein Kind noch kein Wochenplan hinterlegt ist.',
         ],
+        'care_registration' => [
+            'label' => 'Ferienbetreuung',
+            'help' => 'Erinnerung, wenn die Anmeldung zur Ferienbetreuung noch offen ist.',
+        ],
         'weekly_digest' => [
             'label' => 'Wochenüberblick',
             'help' => 'Montags: Essen und Aktivitäten der Woche plus eine kurze Übersicht für dein Kind.',

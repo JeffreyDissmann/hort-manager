@@ -109,5 +109,22 @@ class DemoExtrasSeeder extends Seeder
             'starts_at' => '09:00',
             'ends_at' => '15:00',
         ]);
+
+        // A second one whose Anmeldeschluss is *today*, so `care:remind-open` has
+        // something to chase — the reminder fires on the deadline day, like an Ausflug.
+        $due = HolidayPeriod::updateOrCreate(
+            ['name' => 'Herbst-Ferienbetreuung (Demo)'],
+            [
+                'type' => HolidayPeriodType::Care,
+                'starts_on' => $monday->copy()->addWeeks(4)->toDateString(),
+                'ends_on' => $monday->copy()->addWeeks(4)->addDays(4)->toDateString(),
+                'registration_deadline' => Carbon::today()->toDateString(),
+            ],
+        );
+
+        // Note: demo parents deliberately get no slack_id. „Reachable" means Slack or
+        // push, and a made-up id fails the real Slack API with channel_not_found — to
+        // try the reminders, enable push on a device or use a real Slack account.
+        $due->generateCareDays();
     }
 }
