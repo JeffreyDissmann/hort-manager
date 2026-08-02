@@ -213,6 +213,50 @@ class HolidayCareSignupTest extends TestCase
         $this->assertDatabaseCount('daily_departures', 3); // Wed, Thu, Fri
     }
 
+    public function test_a_child_who_has_left_is_not_on_the_sign_up_sheet(): void
+    {
+        $former = Child::factory()->former('2026-06-30')->create(['name' => 'Alt']);
+        $this->parent->children()->attach($former);
+
+        $this->actingAs($this->parent)
+            ->get(route('care.index'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->count('children', 1)
+                ->where('children.0.name', 'Mia')
+                ->where('periods.0.child_ids', [$this->child->id])
+            );
+
+        // …and the endpoint says so too, not just the page.
+        $this->actingAs($this->staff)
+            ->patch(route('care.update', $this->period), [
+                'child_id' => $former->id,
+                'day_ids' => $this->dayIds(),
+            ])
+            ->assertForbidden();
+    }
+
+    public function test_a_child_starting_after_the_ferienbetreuung_is_not_listed_for_it(): void
+    {
+        $later = Child::factory()->create(['name' => 'Neu', 'active_from' => '2026-09-01']);
+        $this->parent->children()->attach($later);
+
+        // A second period they *are* enrolled for, to prove the filter is per period.
+        $autumn = HolidayPeriod::factory()->care()->create([
+            'name' => 'Herbst',
+            'starts_on' => '2026-10-05',
+            'ends_on' => '2026-10-06',
+        ]);
+        $autumn->generateCareDays();
+
+        $this->actingAs($this->parent)
+            ->get(route('care.index'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->count('children', 2)
+                ->where('periods.0.child_ids', [$this->child->id])
+                ->where('periods.1.child_ids', [$this->child->id, $later->id])
+            );
+    }
+
     public function test_days_from_another_period_are_ignored(): void
     {
         $other = HolidayPeriod::factory()->care()->create([

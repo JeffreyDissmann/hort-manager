@@ -49,6 +49,11 @@ function pickAll(period, child, all) {
     picks[key(period.id, child.id)] = all ? period.days.map((d) => d.id) : [];
 }
 
+/** The children enrolled while this period runs — enrolment differs per period. */
+function childrenFor(period) {
+    return props.children.filter((child) => period.child_ids.includes(child.id));
+}
+
 /** Whether this user may still change this period's sign-ups. */
 function editable(period) {
     return period.open || props.canOverrideDeadline;
@@ -132,7 +137,7 @@ function dateLabel(date) {
                 <p v-if="period.note" class="mt-1 text-sm text-ink/60">{{ period.note }}</p>
 
                 <div
-                    v-for="child in children"
+                    v-for="child in childrenFor(period)"
                     :key="child.id"
                     class="mt-4 border-t border-ink/5 pt-3 first:border-0"
                 >

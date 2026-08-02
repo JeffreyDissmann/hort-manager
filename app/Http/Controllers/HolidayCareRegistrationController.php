@@ -30,16 +30,23 @@ class HolidayCareRegistrationController extends Controller
     {
         $user = $request->user();
 
-        $children = $user->isStaff()
-            ? Child::query()->orderBy('name')->get(['id', 'name'])
-            : $user->children()->orderBy('name')->get(['children.id', 'children.name']);
-
         $periods = HolidayPeriod::query()
             ->care()
             ->with('careDays')
             ->whereDate('ends_on', '>=', Carbon::today())
             ->orderBy('starts_on')
             ->get();
+
+        // Only children enrolled somewhere in the offered range: one who left in the
+        // summer has no business on the autumn sign-up sheet. Which of them belongs to
+        // which period is decided per period below — the page shows several at once.
+        $children = ($user->isStaff() ? Child::query() : $user->children())
+            ->when($periods->isNotEmpty(), fn ($q) => $q->activeBetween(
+                $periods->min('starts_on'),
+                $periods->max('ends_on'),
+            ))
+            ->orderBy('name')
+            ->get(['children.id', 'children.name', 'children.active_from', 'children.active_until']);
 
         // Only the children shown need their sign-ups resolved.
         $registered = $this->attendanceKeys($periods, $children->pluck('id')->all());
@@ -74,10 +81,22 @@ class HolidayCareRegistrationController extends Controller
                 'answered' => $children->pluck('id')
                     ->filter(fn (int $id): bool => $answered->has($period->id.'|'.$id))
                     ->values(),
+                // Enrolment is per period, not per page: a child who leaves in between
+                // belongs on the earlier sign-up sheet but not the later one.
+                'child_ids' => $children
+                    ->filter(fn (Child $c): bool => $this->enrolledDuring($c, $period))
+                    ->pluck('id')->values(),
             ])->values(),
             // Staff may still register someone once the deadline has passed.
             'canOverrideDeadline' => $user->isStaff(),
         ]);
+    }
+
+    /** Whether the child is enrolled on at least one day of the period. */
+    private function enrolledDuring(Child $child, HolidayPeriod $period): bool
+    {
+        return ($child->active_from === null || $child->active_from->lte($period->ends_on))
+            && ($child->active_until === null || $child->active_until->gte($period->starts_on));
     }
 
     /** Save one child's days for one Ferienbetreuung — the full set, not a diff. */
@@ -97,6 +116,9 @@ class HolidayCareRegistrationController extends Controller
 
         $user = $request->user();
         abort_unless($period->registrationIsOpen() || $user->isStaff(), 403);
+
+        // A child who isn't enrolled over these dates can't attend them.
+        abort_unless($this->enrolledDuring($child, $period), 403);
 
         // Ignore ids from another period — the days a period offers are the only
         // ones it can register anyone for.
