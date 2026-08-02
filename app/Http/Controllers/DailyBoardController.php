@@ -177,7 +177,7 @@ class DailyBoardController extends Controller
 
         $editable = $day['editable'];
 
-        $rows = $departures->map(function (DailyDeparture $d) use ($standard, $user, $myChildIds, $excursionByChild, $date, $childNames, $effectiveTime, $effectiveQualifier, $editable) {
+        $rows = $departures->map(function (DailyDeparture $d) use ($standard, $user, $myChildIds, $excursionByChild, $date, $childNames, $effectiveTime, $effectiveQualifier, $editable, $careDay) {
             $dob = $d->child->date_of_birth;
             $birthday = $dob && $dob->format('m-d') === $date->format('m-d')
                 ? $date->year - $dob->year
@@ -208,10 +208,15 @@ class DailyBoardController extends Controller
             };
 
             $std = $standard[$d->child_id] ?? null;
-            $overridden = $std === null
+
+            // „heute geändert" means „deviates from the Stammplan" — on a Ferienbetreuung
+            // day there is none, the sign-up *is* the plan, so no row is a change.
+            $overridden = $careDay === null && (
+                $std === null
                 || $std['time'] !== $plannedTime
                 || $std['method'] !== $plannedMethod
-                || ($std['qualifier'] ?? null) !== ($qualifier?->value);
+                || ($std['qualifier'] ?? null) !== ($qualifier?->value)
+            );
 
             return [
                 'id' => $d->id,
@@ -229,8 +234,9 @@ class DailyBoardController extends Controller
                 'status_label' => $d->status->label(),
                 'left_at' => $d->left_at?->format('H:i'),
                 'marked_by' => $d->markedBy?->name,
-                // Shown on the plan line: the override's own note, or the Stammplan comment.
-                'comment' => $overridden ? $d->note : ($std['comment'] ?? null),
+                // Shown on the plan line: the row's own note, or the Stammplan comment
+                // when the plan still is the Stammplan (a care day has none).
+                'comment' => $overridden || $std === null ? $d->note : ($std['comment'] ?? null),
                 // Pre-fills the override editor; defaults to the standard comment.
                 'note' => $d->note ?? ($std['comment'] ?? null),
                 'is_overridden' => $overridden,

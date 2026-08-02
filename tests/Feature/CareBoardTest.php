@@ -98,6 +98,20 @@ class CareBoardTest extends TestCase
             );
     }
 
+    public function test_a_sign_up_is_not_flagged_as_changed_today(): void
+    {
+        $day = $this->careToday();
+        $this->signUp($this->signedUp, $day);
+
+        $this->actingAs($this->staff)
+            ->get(route('board'))
+            ->assertInertia(fn (Assert $page) => $page
+                // „heute geändert" means „deviates from the Stammplan" — a care day has
+                // none, so every row would otherwise carry the badge.
+                ->where('rows.0.is_overridden', false)
+            );
+    }
+
     public function test_it_seeds_nobody_from_the_stammplan(): void
     {
         $this->careToday();
