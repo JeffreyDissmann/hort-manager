@@ -35,7 +35,7 @@ class Setting extends Model
 
     public const DefaultCareStart = '08:30';
 
-    public const DefaultCareEnd = '16:30';
+    public const DefaultCareEnd = '16:00';
 
     protected $primaryKey = 'key';
 

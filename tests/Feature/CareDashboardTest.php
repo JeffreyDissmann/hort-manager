@@ -82,8 +82,8 @@ class CareDashboardTest extends TestCase
 
         $this->assertSame('Sommer-Ferienbetreuung', $today['care']);
         $this->assertSame(1, $today['present_count']);
-        $this->assertSame('16:30', $today['next_pickup']);
-        $this->assertSame('16:30', $today['departures'][0]['time']);
+        $this->assertSame('16:00', $today['next_pickup']);
+        $this->assertSame('16:00', $today['departures'][0]['time']);
         $this->assertSame([['name' => 'Mia', 'alone' => false, 'left' => false, 'excursion' => false, 'deviation' => null]], $today['departures'][0]['children']);
     }
 
@@ -125,7 +125,7 @@ class CareDashboardTest extends TestCase
 
         // Tuesday: care day — only the sign-up, at the Betreuungszeit.
         $this->assertSame('Sommer-Ferienbetreuung', $week[1]['care']);
-        $this->assertSame('16:30', $week[1]['departures'][0]['time']);
+        $this->assertSame('16:00', $week[1]['departures'][0]['time']);
         $this->assertSame(['Mia'], $week[1]['departures'][0]['names']);
 
         // Wednesday: an ordinary day again — both children on their Stammplan.
@@ -142,6 +142,6 @@ class CareDashboardTest extends TestCase
         // No school, so the per-weekday default must not leak in — the Betreuungszeit
         // takes its place, exactly as on /program.
         $this->assertNull($program['homework']);
-        $this->assertSame('08:30–16:30', $program['care_time']);
+        $this->assertSame('08:30–16:00', $program['care_time']);
     }
 }

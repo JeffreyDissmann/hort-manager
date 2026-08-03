@@ -77,7 +77,7 @@ class HolidayCareSignupTest extends TestCase
 
         $this->assertDatabaseCount('daily_departures', 2);
         $departure = DailyDeparture::where('date', '2026-08-03')->first();
-        $this->assertSame('16:30', substr((string) $departure->planned_time, 0, 5));
+        $this->assertSame('16:00', substr((string) $departure->planned_time, 0, 5));
         $this->assertSame(DepartureStatus::Present, $departure->status);
     }
 

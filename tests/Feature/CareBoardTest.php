@@ -92,7 +92,7 @@ class CareBoardTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->where('care.name', 'Sommer-Ferienbetreuung')
                 ->where('care.starts_at', '08:30')
-                ->where('care.ends_at', '16:30')
+                ->where('care.ends_at', '16:00')
                 ->has('rows', 1)
                 ->where('rows.0.name', 'Mia')
             );
