@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Enums\UserRole;
+use App\Models\HolidayPeriod;
 use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -102,6 +103,64 @@ class SettingTest extends TestCase
         $this->actingAs(User::factory()->create(['role' => UserRole::Parent]))
             ->patch(route('program.digest-time'), ['weekly_digest_time' => '16:00'])
             ->assertForbidden();
+    }
+
+    public function test_staff_can_change_the_default_care_window(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => UserRole::Staff]))
+            ->patch(route('program.care-window'), [
+                'care_default_start' => '07:30',
+                'care_default_end' => '15:30',
+            ])
+            ->assertRedirect();
+
+        $this->assertSame(['07:30', '15:30'], Setting::careDefaultWindow());
+    }
+
+    public function test_the_default_care_window_cannot_end_before_it_starts(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => UserRole::Staff]))
+            ->patch(route('program.care-window'), [
+                'care_default_start' => '16:00',
+                'care_default_end' => '08:00',
+            ])
+            ->assertSessionHasErrors('care_default_end');
+    }
+
+    public function test_parents_cannot_change_the_default_care_window(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => UserRole::Parent]))
+            ->patch(route('program.care-window'), [
+                'care_default_start' => '07:30',
+                'care_default_end' => '15:30',
+            ])
+            ->assertForbidden();
+    }
+
+    public function test_a_new_ferienbetreuung_uses_the_configured_window(): void
+    {
+        // The setting is a starting point for newly offered days, nothing more.
+        Setting::set(Setting::CareDefaultStart, '07:30');
+        Setting::set(Setting::CareDefaultEnd, '15:30');
+
+        $period = HolidayPeriod::factory()->care()->create([
+            'starts_on' => '2026-10-05',
+            'ends_on' => '2026-10-05',
+        ]);
+        $period->generateCareDays();
+
+        $day = $period->careDays()->first();
+        $this->assertSame('07:30–15:30', $day->window());
+    }
+
+    public function test_the_program_page_exposes_the_care_window(): void
+    {
+        Setting::set(Setting::CareDefaultStart, '07:30');
+        Setting::set(Setting::CareDefaultEnd, '15:30');
+
+        $this->actingAs(User::factory()->create(['role' => UserRole::Staff]))
+            ->get(route('program'))
+            ->assertInertia(fn ($page) => $page->where('careDefaultWindow', ['start' => '07:30', 'end' => '15:30']));
     }
 
     public function test_the_program_page_exposes_the_cutoff(): void

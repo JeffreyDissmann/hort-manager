@@ -15,6 +15,13 @@ return [
     'activity_placeholder' => 'e.g. crafts, trip to the park',
     'homework' => 'Homework',
     'care_window' => 'Care hours',
+    'settings_heading' => 'General settings',
+    'settings_intro' => 'These apply to every week, not just the one above. Each card is saved on its own.',
+    'care_window_heading' => 'Default care hours (holiday care)',
+    'care_window_intro' => 'Every newly offered holiday care day starts out with these times. Days already offered keep theirs — adjust those under „Closures“.',
+    'care_window_label' => 'From – to',
+    'care_window_order' => 'The end has to be after the start.',
+    'save_care_window' => 'Save times',
     'no_homework' => 'No homework',
     'save_week' => 'Save week',
 
