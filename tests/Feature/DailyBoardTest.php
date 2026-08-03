@@ -398,4 +398,168 @@ class DailyBoardTest extends TestCase
                 ->etc()
             );
     }
+
+    public function test_a_future_day_shows_a_planned_row_without_persisting_it(): void
+    {
+        $this->travelTo(Carbon::parse('2026-06-22')); // Monday
+        $child = $this->scheduledChild(weekday: 3, time: '15:00'); // Wednesday
+        $future = '2026-06-24'; // Wednesday
+
+        $this->actingAs($this->staff())
+            ->get(route('board', ['date' => $future]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Board/Index')
+                ->where('date.iso', $future)
+                ->where('date.is_today', false)
+                ->where('date.editable', true)
+                ->where('canMark', false) // no live marking off today
+                ->has('rows', 1)
+                ->where('rows.0.name', $child->name)
+                ->where('rows.0.planned_time', '15:00')
+                ->where('rows.0.is_overridden', false)
+                ->where('rows.0.can_override', true) // staff may still adjust a future day
+                ->etc()
+            );
+
+        // Merely viewing a future day must not seed a DailyDeparture row.
+        $this->assertDatabaseMissing('daily_departures', [
+            'child_id' => $child->id,
+            'date' => $future,
+        ]);
+    }
+
+    public function test_a_future_override_shows_as_overridden(): void
+    {
+        $this->travelTo(Carbon::parse('2026-06-22')); // Monday
+        $child = $this->scheduledChild(weekday: 3, time: '15:00'); // Wednesday
+        $future = '2026-06-24';
+
+        DailyDeparture::create([
+            'child_id' => $child->id,
+            'date' => $future,
+            'planned_time' => '17:00',
+            'planned_method' => DepartureMethod::PickedUp,
+            'status' => DepartureStatus::Present,
+        ]);
+
+        $this->actingAs($this->staff())
+            ->get(route('board', ['date' => $future]))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('rows.0.planned_time', '17:00')
+                ->where('rows.0.is_overridden', true)
+                ->etc()
+            );
+    }
+
+    public function test_a_past_day_is_read_only_history(): void
+    {
+        $this->travelTo(Carbon::parse('2026-06-24')); // Wednesday
+        $child = $this->scheduledChild(weekday: 1, time: '16:00'); // Monday
+        $past = '2026-06-22'; // Monday, two days ago
+
+        DailyDeparture::create([
+            'child_id' => $child->id,
+            'date' => $past,
+            'planned_time' => '16:00',
+            'planned_method' => DepartureMethod::PickedUp,
+            'status' => DepartureStatus::PickedUp,
+            'left_at' => Carbon::parse($past.' 16:05'),
+        ]);
+
+        $this->actingAs($this->staff())
+            ->get(route('board', ['date' => $past]))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('date.iso', $past)
+                ->where('date.editable', false)
+                ->where('canMark', false)
+                ->has('rows', 1)
+                ->where('rows.0.status', DepartureStatus::PickedUp->value)
+                ->where('rows.0.left_at', '16:05')
+                ->where('rows.0.can_override', false) // past is read-only
+                ->etc()
+            );
+    }
+
+    public function test_navigating_before_the_retention_floor_is_clamped(): void
+    {
+        $this->travelTo(Carbon::parse('2026-06-22')); // Monday
+        $floor = Carbon::today()->subWeeks((int) config('hort.retention_weeks'))->startOfDay();
+        while ($floor->isWeekend()) {
+            $floor->addDay();
+        }
+
+        $this->actingAs($this->staff())
+            ->get(route('board', ['date' => '2020-01-01'])) // long before the floor
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('date.iso', $floor->toDateString())
+                ->where('date.prev', null) // back chevron disabled at the boundary
+                ->etc()
+            );
+    }
+
+    public function test_a_weekend_date_advances_to_the_next_weekday(): void
+    {
+        $this->travelTo(Carbon::parse('2026-06-22')); // Monday
+
+        $this->actingAs($this->staff())
+            ->get(route('board', ['date' => '2026-06-27'])) // Saturday
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('date.iso', '2026-06-29') // next Monday
+                ->etc()
+            );
+    }
+
+    public function test_parents_never_mark_and_staff_only_mark_today(): void
+    {
+        $this->travelTo(Carbon::parse('2026-06-22'));
+        $this->scheduledChild(weekday: 3);
+
+        $this->actingAs($this->staff())
+            ->get(route('board', ['date' => '2026-06-24'])) // future
+            ->assertInertia(fn (Assert $page) => $page->where('canMark', false)->etc());
+
+        $this->actingAs($this->parent())
+            ->get(route('board')) // today
+            ->assertInertia(fn (Assert $page) => $page->where('canMark', false)->etc());
+    }
+
+    public function test_marking_a_past_departure_is_rejected(): void
+    {
+        $this->travelTo(Carbon::parse('2026-06-24')); // Wednesday
+        $child = $this->scheduledChild(weekday: 1, time: '16:00');
+        $past = DailyDeparture::create([
+            'child_id' => $child->id,
+            'date' => '2026-06-22', // Monday, in the past
+            'planned_time' => '16:00',
+            'planned_method' => DepartureMethod::PickedUp,
+            'status' => DepartureStatus::Present,
+        ]);
+
+        $this->actingAs($this->staff())
+            ->patch(route('board.mark', $past), ['status' => DepartureStatus::PickedUp->value])
+            ->assertForbidden(); // history can't be rewritten via the board
+    }
+
+    public function test_overriding_a_past_departure_is_rejected(): void
+    {
+        $this->travelTo(Carbon::parse('2026-06-24'));
+        $child = $this->scheduledChild(weekday: 1, time: '16:00');
+        $parent = $this->parent();
+        $child->guardians()->attach($parent);
+        $past = DailyDeparture::create([
+            'child_id' => $child->id,
+            'date' => '2026-06-22',
+            'planned_time' => '16:00',
+            'planned_method' => DepartureMethod::PickedUp,
+            'status' => DepartureStatus::Present,
+        ]);
+
+        $this->actingAs($parent)
+            ->patch(route('board.override', $past), [
+                'planned_time' => '17:00',
+                'planned_method' => DepartureMethod::PickedUp->value,
+            ])
+            ->assertForbidden();
+    }
 }

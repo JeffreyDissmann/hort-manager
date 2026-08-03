@@ -1,0 +1,381 @@
+<script setup>
+import { computed, ref, watch } from 'vue';
+import { Head, Link, router } from '@inertiajs/vue3';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import Dropdown from '@/Components/Dropdown.vue';
+import DonutChart from '@/Components/Accounting/DonutChart.vue';
+import { ChevronRightIcon, ChevronDownIcon, DocumentTextIcon, TableCellsIcon } from '@heroicons/vue/24/outline';
+import { formatEuro } from '@/money';
+import { t } from '@/i18n';
+import { index as reportsIndex, download as reportsExport } from '@/routes/accounting/reports';
+import { index as bookingsIndex } from '@/routes/accounting/bookings';
+
+const props = defineProps({
+    year: { type: Number, required: true },
+    years: { type: Array, required: true },
+    monthLabels: { type: Array, required: true },
+    incomeRows: { type: Array, required: true },
+    expenseRows: { type: Array, required: true },
+    incomeMonths: { type: Array, required: true },
+    expenseMonths: { type: Array, required: true },
+    netMonths: { type: Array, required: true },
+    incomeTotal: { type: Number, required: true },
+    expenseTotal: { type: Number, required: true },
+    netTotal: { type: Number, required: true },
+    transferRows: { type: Array, default: () => [] },
+    transferMonths: { type: Array, default: () => [] },
+    transferTotal: { type: Number, default: 0 },
+    accounts: { type: Array, default: () => [] },
+    selectedAccounts: { type: Array, default: () => [] },
+});
+
+// Donut slices = the top-level (root) category totals for each direction.
+const rootSegments = (rows) =>
+    rows.filter((r) => r.depth === 0).map((r) => ({ id: r.id, label: r.name, value: r.total }));
+const incomeSegments = computed(() => rootSegments(props.incomeRows));
+const expenseSegments = computed(() => rootSegments(props.expenseRows));
+
+const hasData = computed(
+    () => props.incomeRows.length > 0 || props.expenseRows.length > 0 || props.transferRows.length > 0,
+);
+
+// --- Account filter (which accounts feed the summary; all by default) -------
+const selectedIds = ref(new Set(props.selectedAccounts));
+// Keep in sync when the server resolves the effective set (e.g. empty → all).
+watch(() => props.selectedAccounts, (ids) => (selectedIds.value = new Set(ids)));
+
+const allSelected = computed(() => props.accounts.length > 0 && selectedIds.value.size === props.accounts.length);
+const accountsLabel = computed(() => {
+    if (allSelected.value || selectedIds.value.size === 0) {
+        return t('accounting.reports.all_accounts');
+    }
+    if (selectedIds.value.size === 1) {
+        return props.accounts.find((a) => a.id === [...selectedIds.value][0])?.name ?? '';
+    }
+    return t('accounting.reports.n_accounts', { count: selectedIds.value.size });
+});
+
+// Only carry `accounts` when it's a real subset — absent means „all" (the default).
+function queryWith(extra = {}) {
+    const query = { year: props.year, ...extra };
+    if (!allSelected.value && selectedIds.value.size > 0) {
+        query.accounts = [...selectedIds.value];
+    }
+    return query;
+}
+
+function reload() {
+    router.get(reportsIndex({ query: queryWith() }).url, {}, { preserveScroll: true, preserveState: true });
+}
+
+function toggleAccount(id) {
+    const next = new Set(selectedIds.value);
+    next.has(id) ? next.delete(id) : next.add(id);
+    selectedIds.value = next;
+    reload();
+}
+function selectAllAccounts() {
+    selectedIds.value = new Set(props.accounts.map((a) => a.id));
+    reload();
+}
+
+const exportUrl = (format) => reportsExport({ query: queryWith({ format }) }).url;
+
+function changeYear(event) {
+    router.get(reportsIndex({ query: queryWith({ year: event.target.value }) }).url, {}, { preserveScroll: true, preserveState: true });
+}
+
+// --- Collapsible parent categories ----------------------------------------
+// A top-level category is collapsible when it has (non-zero) child rows.
+const hasChildren = (rows, row) => row.depth === 0 && rows.some((r) => r.parent_id === row.id);
+
+// Every collapsible parent across both blocks — the report starts fully collapsed
+// (subtotals only), and resets to that whenever the year's rows change.
+function collapsibleParents() {
+    const all = [...props.incomeRows, ...props.expenseRows];
+    return all.filter((r) => hasChildren(all, r)).map((r) => r.id);
+}
+const collapsed = ref(new Set(collapsibleParents()));
+watch(() => [props.incomeRows, props.expenseRows], () => (collapsed.value = new Set(collapsibleParents())));
+
+function toggle(id) {
+    const next = new Set(collapsed.value);
+    next.has(id) ? next.delete(id) : next.add(id);
+    collapsed.value = next;
+}
+// Hide a child row while its parent is collapsed.
+const visible = (rows) => rows.filter((r) => r.depth === 0 || !collapsed.value.has(r.parent_id));
+const visibleIncome = computed(() => visible(props.incomeRows));
+const visibleExpense = computed(() => visible(props.expenseRows));
+
+// Zero cells read as noise in a wide grid — show a muted dash instead.
+const cell = (cents) => (cents === 0 ? '—' : formatEuro(cents));
+const cellClass = (cents) =>
+    cents === 0 ? 'text-ink/25' : cents < 0 ? 'text-red-600' : 'text-hort-teal-dark';
+
+// Drill down to the bookings that make up a cell's total: same category subtree, or
+// income/expense/transfer kind (optionally scoped to one account), confirmed, within
+// that month or the whole year. Matches how the report rolls up.
+const pad = (n) => String(n).padStart(2, '0');
+function drilldown({ category, kind, account, month }) {
+    const range = month
+        ? { from: `${props.year}-${pad(month)}-01`, to: `${props.year}-${pad(month)}-${pad(new Date(props.year, month, 0).getDate())}` }
+        : { from: `${props.year}-01-01`, to: `${props.year}-12-31` };
+    const query = { status: 'confirmed', ...range };
+    if (category) query.category = category;
+    if (kind) query.kind = kind;
+    if (account) {
+        // A per-account (transfer) cell → that specific account.
+        query.account = account;
+    } else if (!allSelected.value && selectedIds.value.size > 0) {
+        // Otherwise carry the report's selected-accounts scope.
+        const ids = [...selectedIds.value];
+        query.account = ids.length === 1 ? ids[0] : ids;
+    }
+    return bookingsIndex({ query }).url;
+}
+
+// Donut slice → the ledger for that category (whole year).
+const openCategory = (id) => router.visit(drilldown({ category: id }));
+</script>
+
+<template>
+    <Head :title="$t('accounting.reports.title')" />
+
+    <AuthenticatedLayout>
+        <template #header>
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-wide text-ink/40">{{ $t('accounting.title') }}</p>
+                    <h2 class="text-xl font-semibold text-ink">{{ $t('accounting.reports.title') }}</h2>
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                    <label class="flex items-center gap-2 text-sm text-ink/60">
+                        {{ $t('accounting.reports.year') }}
+                        <select
+                            :value="year"
+                            data-testid="report-year"
+                            class="rounded-md border-ink/20 text-sm focus:border-hort-teal focus:ring-hort-teal"
+                            @change="changeYear"
+                        >
+                            <option v-for="y in years" :key="y" :value="y">{{ y }}</option>
+                        </select>
+                    </label>
+
+                    <!-- Which accounts feed the summary (all by default) -->
+                    <Dropdown v-if="accounts.length > 1" align="right" width="48">
+                        <template #trigger>
+                            <button
+                                type="button"
+                                class="flex items-center gap-1.5 rounded-md border border-ink/20 px-3 py-2 text-sm text-ink transition hover:bg-ink/5"
+                                data-testid="report-accounts"
+                            >
+                                {{ $t('accounting.reports.accounts') }}: {{ accountsLabel }}
+                                <ChevronDownIcon class="h-4 w-4 text-ink/40" />
+                            </button>
+                        </template>
+                        <template #content>
+                            <button
+                                type="button"
+                                class="flex w-full items-center px-4 py-2 text-left text-sm text-ink/70 transition hover:bg-ink/5"
+                                :class="{ 'font-semibold text-ink': allSelected }"
+                                @click="selectAllAccounts"
+                            >
+                                {{ $t('accounting.reports.all_accounts') }}
+                            </button>
+                            <hr class="my-1 border-ink/10" />
+                            <label
+                                v-for="a in accounts"
+                                :key="a.id"
+                                class="flex cursor-pointer items-center gap-2 px-4 py-2 text-sm text-ink transition hover:bg-ink/5"
+                            >
+                                <input
+                                    type="checkbox"
+                                    :checked="selectedIds.has(a.id)"
+                                    class="rounded border-ink/20 text-hort-teal-dark focus:ring-hort-teal"
+                                    @change="toggleAccount(a.id)"
+                                />
+                                {{ a.name }}
+                            </label>
+                        </template>
+                    </Dropdown>
+
+                    <!-- Export: Excel standard, CSV under „more" (same as the bookings page) -->
+                    <div v-if="hasData" class="inline-flex items-center">
+                        <a
+                            :href="exportUrl('xlsx')"
+                            class="flex items-center gap-1 rounded-l-lg bg-ink/5 px-3 py-2 text-sm font-medium text-ink transition hover:bg-ink/10"
+                        >
+                            <TableCellsIcon class="h-4 w-4" /> {{ $t('accounting.bookings.export_excel') }}
+                        </a>
+                        <Dropdown align="right" width="48">
+                            <template #trigger>
+                                <button
+                                    type="button"
+                                    class="flex items-center rounded-r-lg border-l border-ink/10 bg-ink/5 px-2 py-2.5 text-ink transition hover:bg-ink/10"
+                                >
+                                    <ChevronDownIcon class="h-4 w-4" />
+                                </button>
+                            </template>
+                            <template #content>
+                                <a
+                                    :href="exportUrl('csv')"
+                                    class="flex items-center gap-2 px-4 py-2 text-sm text-ink/80 transition hover:bg-ink/5"
+                                >
+                                    <DocumentTextIcon class="h-4 w-4" /> {{ $t('accounting.bookings.export_csv') }}
+                                </a>
+                            </template>
+                        </Dropdown>
+                    </div>
+                </div>
+            </div>
+        </template>
+
+        <div class="space-y-4">
+            <p class="text-sm text-ink/50">{{ $t('accounting.reports.intro') }}</p>
+
+            <!-- Income / expense breakdown by top-level category -->
+            <div v-if="hasData" class="grid gap-4 sm:grid-cols-2">
+                <DonutChart
+                    :title="$t('accounting.reports.income')"
+                    :segments="incomeSegments"
+                    :empty-label="$t('accounting.reports.no_data')"
+                    @select="openCategory"
+                />
+                <DonutChart
+                    :title="$t('accounting.reports.expense')"
+                    :segments="expenseSegments"
+                    :empty-label="$t('accounting.reports.no_data')"
+                    @select="openCategory"
+                />
+            </div>
+
+            <div class="overflow-hidden rounded-2xl bg-surface shadow-sm">
+                <p v-if="!hasData" class="p-6 text-center text-ink/50">{{ $t('accounting.reports.empty') }}</p>
+
+                <div v-else class="overflow-x-auto">
+                    <table class="w-full text-sm tabular-nums">
+                        <thead class="border-b border-ink/10 text-xs uppercase tracking-wide text-ink/40">
+                            <tr>
+                                <th class="sticky left-0 z-10 bg-surface px-3 py-2 text-left font-medium">
+                                    {{ $t('accounting.reports.category') }}
+                                </th>
+                                <th v-for="(label, i) in monthLabels" :key="i" class="px-3 py-2 text-right font-medium">
+                                    {{ label }}
+                                </th>
+                                <th class="px-3 py-2 text-right font-semibold">{{ $t('accounting.reports.total') }}</th>
+                            </tr>
+                        </thead>
+
+                        <tbody class="divide-y divide-ink/5">
+                            <!-- Income — total first, then the category breakdown -->
+                            <tr class="border-t-2 border-ink/20 bg-canvas font-semibold">
+                                <td class="sticky left-0 z-10 bg-canvas px-3 py-2 text-ink">{{ $t('accounting.reports.income') }}</td>
+                                <td v-for="(c, i) in incomeMonths" :key="i" class="px-3 py-2 text-right" :class="cellClass(c)">
+                                    <Link v-if="c !== 0" :href="drilldown({ kind: 'income', month: i + 1 })" class="hover:underline">{{ cell(c) }}</Link>
+                                    <template v-else>{{ cell(c) }}</template>
+                                </td>
+                                <td class="px-3 py-2 text-right" :class="cellClass(incomeTotal)">
+                                    <Link v-if="incomeTotal !== 0" :href="drilldown({ kind: 'income' })" class="hover:underline">{{ cell(incomeTotal) }}</Link>
+                                    <template v-else>{{ cell(incomeTotal) }}</template>
+                                </td>
+                            </tr>
+                            <tr v-for="row in visibleIncome" :key="'i' + row.id" class="hover:bg-ink/5">
+                                <td class="sticky left-0 z-10 bg-surface px-3 py-1.5 text-ink">
+                                    <div class="flex items-center gap-1" :style="{ paddingLeft: row.depth * 16 + 'px' }">
+                                        <button
+                                            v-if="hasChildren(incomeRows, row)"
+                                            type="button"
+                                            class="text-ink/40 transition hover:text-ink"
+                                            :aria-expanded="!collapsed.has(row.id)"
+                                            @click="toggle(row.id)"
+                                        >
+                                            <ChevronRightIcon class="h-3.5 w-3.5 transition-transform" :class="{ 'rotate-90': !collapsed.has(row.id) }" />
+                                        </button>
+                                        <span v-else class="inline-block w-3.5" />
+                                        <span :class="{ 'font-medium': row.depth === 0 }">{{ row.name }}</span>
+                                    </div>
+                                </td>
+                                <td v-for="(c, i) in row.months" :key="i" class="px-3 py-1.5 text-right" :class="cellClass(c)">
+                                    <Link v-if="c !== 0" :href="drilldown({ category: row.id, month: i + 1 })" class="hover:underline">{{ cell(c) }}</Link>
+                                    <template v-else>{{ cell(c) }}</template>
+                                </td>
+                                <td class="px-3 py-1.5 text-right font-semibold" :class="cellClass(row.total)">
+                                    <Link v-if="row.total !== 0" :href="drilldown({ category: row.id })" class="hover:underline">{{ cell(row.total) }}</Link>
+                                    <template v-else>{{ cell(row.total) }}</template>
+                                </td>
+                            </tr>
+
+                            <!-- Expense — total first, then the category breakdown -->
+                            <tr class="border-t-2 border-ink/20 bg-canvas font-semibold">
+                                <td class="sticky left-0 z-10 bg-canvas px-3 py-2 text-ink">{{ $t('accounting.reports.expense') }}</td>
+                                <td v-for="(c, i) in expenseMonths" :key="i" class="px-3 py-2 text-right" :class="cellClass(c)">
+                                    <Link v-if="c !== 0" :href="drilldown({ kind: 'expense', month: i + 1 })" class="hover:underline">{{ cell(c) }}</Link>
+                                    <template v-else>{{ cell(c) }}</template>
+                                </td>
+                                <td class="px-3 py-2 text-right" :class="cellClass(expenseTotal)">
+                                    <Link v-if="expenseTotal !== 0" :href="drilldown({ kind: 'expense' })" class="hover:underline">{{ cell(expenseTotal) }}</Link>
+                                    <template v-else>{{ cell(expenseTotal) }}</template>
+                                </td>
+                            </tr>
+                            <tr v-for="row in visibleExpense" :key="'e' + row.id" class="hover:bg-ink/5">
+                                <td class="sticky left-0 z-10 bg-surface px-3 py-1.5 text-ink">
+                                    <div class="flex items-center gap-1" :style="{ paddingLeft: row.depth * 16 + 'px' }">
+                                        <button
+                                            v-if="hasChildren(expenseRows, row)"
+                                            type="button"
+                                            class="text-ink/40 transition hover:text-ink"
+                                            :aria-expanded="!collapsed.has(row.id)"
+                                            @click="toggle(row.id)"
+                                        >
+                                            <ChevronRightIcon class="h-3.5 w-3.5 transition-transform" :class="{ 'rotate-90': !collapsed.has(row.id) }" />
+                                        </button>
+                                        <span v-else class="inline-block w-3.5" />
+                                        <span :class="{ 'font-medium': row.depth === 0 }">{{ row.name }}</span>
+                                    </div>
+                                </td>
+                                <td v-for="(c, i) in row.months" :key="i" class="px-3 py-1.5 text-right" :class="cellClass(c)">
+                                    <Link v-if="c !== 0" :href="drilldown({ category: row.id, month: i + 1 })" class="hover:underline">{{ cell(c) }}</Link>
+                                    <template v-else>{{ cell(c) }}</template>
+                                </td>
+                                <td class="px-3 py-1.5 text-right font-semibold" :class="cellClass(row.total)">
+                                    <Link v-if="row.total !== 0" :href="drilldown({ category: row.id })" class="hover:underline">{{ cell(row.total) }}</Link>
+                                    <template v-else>{{ cell(row.total) }}</template>
+                                </td>
+                            </tr>
+
+                            <!-- Umbuchungen — internal moves per account; nets to zero -->
+                            <template v-if="transferRows.length">
+                                <tr class="border-t-2 border-ink/20 bg-canvas font-semibold">
+                                    <td class="sticky left-0 z-10 bg-canvas px-3 py-2 text-ink">{{ $t('accounting.reports.transfers') }}</td>
+                                    <td v-for="(c, i) in transferMonths" :key="i" class="px-3 py-2 text-right" :class="cellClass(c)">{{ cell(c) }}</td>
+                                    <td class="px-3 py-2 text-right" :class="cellClass(transferTotal)">{{ cell(transferTotal) }}</td>
+                                </tr>
+                                <tr v-for="row in transferRows" :key="'t' + row.id" class="hover:bg-ink/5">
+                                    <td class="sticky left-0 z-10 bg-surface px-3 py-1.5 text-ink">
+                                        <span class="block pl-[18px]">{{ row.name }}</span>
+                                    </td>
+                                    <td v-for="(c, i) in row.months" :key="i" class="px-3 py-1.5 text-right" :class="cellClass(c)">
+                                        <Link v-if="c !== 0" :href="drilldown({ account: row.id, kind: 'transfer', month: i + 1 })" class="hover:underline">{{ cell(c) }}</Link>
+                                        <template v-else>{{ cell(c) }}</template>
+                                    </td>
+                                    <td class="px-3 py-1.5 text-right font-semibold" :class="cellClass(row.total)">
+                                        <Link v-if="row.total !== 0" :href="drilldown({ account: row.id, kind: 'transfer' })" class="hover:underline">{{ cell(row.total) }}</Link>
+                                        <template v-else>{{ cell(row.total) }}</template>
+                                    </td>
+                                </tr>
+                            </template>
+
+                            <!-- Net -->
+                            <tr class="border-t-2 border-ink/20 bg-canvas font-semibold">
+                                <td class="sticky left-0 z-10 bg-canvas px-3 py-2 text-ink">{{ $t('accounting.reports.net') }}</td>
+                                <td v-for="(c, i) in netMonths" :key="i" class="px-3 py-2 text-right" :class="cellClass(c)">{{ cell(c) }}</td>
+                                <td class="px-3 py-2 text-right" :class="cellClass(netTotal)">{{ cell(netTotal) }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </AuthenticatedLayout>
+</template>

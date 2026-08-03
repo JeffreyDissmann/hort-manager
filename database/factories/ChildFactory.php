@@ -25,7 +25,16 @@ class ChildFactory extends Factory
             'name' => fake()->firstName(),
             'date_of_birth' => fake()->dateTimeBetween('-8 years', '-5 years')->format('Y-m-d'),
             'note' => null,
+            // Enrolled long ago, open-ended → active on any test date.
+            'active_from' => '2020-01-01',
+            'active_until' => null,
         ];
+    }
+
+    /** A child who has already left the Hort (active_until in the past). */
+    public function former(string $leftOn = '2024-12-31'): static
+    {
+        return $this->state(['active_from' => '2020-01-01', 'active_until' => $leftOn]);
     }
 
     /** Give the child a Stammplan entry for a weekday (1–5); other days stay „Hortfrei". */

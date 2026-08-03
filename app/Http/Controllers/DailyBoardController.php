@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\Enums\DepartureMethod;
 use App\Enums\DepartureStatus;
 use App\Enums\TimeQualifier;
+use App\Http\Controllers\Concerns\ResolvesDay;
 use App\Http\Requests\MarkDepartureRequest;
 use App\Http\Requests\OverrideDepartureRequest;
 use App\Models\Absence;
@@ -14,29 +15,44 @@ use App\Models\Child;
 use App\Models\DailyDeparture;
 use App\Models\DailyProgram;
 use App\Models\Excursion;
+use App\Models\HolidayCareDay;
+use App\Models\HolidayPeriod;
 use App\Models\HomeworkDefault;
 use App\Support\CompanionNotes;
 use App\Support\CompanionReconciler;
 use App\Support\EffectivePlan;
+use App\Support\LateChange;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class DailyBoardController extends Controller
 {
-    private const WEEKDAYS_DE = [
-        1 => 'Montag', 2 => 'Dienstag', 3 => 'Mittwoch',
-        4 => 'Donnerstag', 5 => 'Freitag',
-    ];
+    use ResolvesDay;
 
-    /** The live daily board for today (or the next weekday on weekends). */
+    /** The daily board for a selected day (defaults to today / next weekday). */
     public function index(Request $request): Response
     {
-        $date = $this->targetDate();
+        [$date, $day] = $this->resolveDay($request);
+        $isToday = $date->isToday();
         $weekday = $date->dayOfWeekIso;
         $user = $request->user();
+
+        // Schließzeit: the Hort doesn't exist on this day. Return before seeding any
+        // DailyDeparture rows — there is nothing to pick up and nobody to mark off.
+        // Every other prop has a default, so the page needs only the day + the closure.
+        if ($closure = HolidayPeriod::query()->closed()->covering($date)->first()) {
+            return Inertia::render('Board/Index', [
+                'date' => $day,
+                'closure' => [
+                    'name' => $closure->name,
+                    'note' => $closure->note,
+                    'starts_on' => $closure->starts_on->toDateString(),
+                    'ends_on' => $closure->ends_on->toDateString(),
+                ],
+            ]);
+        }
 
         // Children reported away today (krank/abwesend) — no pickup expected.
         $absences = Absence::with('child:id,name')
@@ -44,8 +60,15 @@ class DailyBoardController extends Controller
             ->get();
         $absentChildIds = $absences->pluck('child_id')->all();
 
-        // Seed a row per scheduled child from the Stammplan (idempotent).
-        $scheduled = Child::query()
+        // Ferienbetreuung: no school, so the Stammplan says nothing about who is here.
+        // The roster is the sign-ups — i.e. the DailyDeparture rows that already exist
+        // — so nothing is seeded and „Hortfrei" is meaningless.
+        $careDay = HolidayCareDay::query()->onDate($date)->with('period:id,name')->first();
+
+        // Seed a row per scheduled child from the Stammplan (idempotent). Only
+        // children enrolled on this date are on the board.
+        $scheduled = $careDay ? collect() : Child::query()
+            ->activeOn($date)
             ->whereHas('weeklySchedules', fn ($q) => $q->where('weekday', $weekday)->whereNotNull('planned_time'))
             ->with(['weeklySchedules' => fn ($q) => $q->where('weekday', $weekday)])
             ->get();
@@ -64,15 +87,19 @@ class DailyBoardController extends Controller
                 'comment' => $schedule->comment,
             ];
 
-            DailyDeparture::firstOrCreate(
-                ['child_id' => $child->id, 'date' => $date->toDateString()],
-                [
-                    'planned_time' => $schedule->planned_time,
-                    'planned_method' => $schedule->method,
-                    'time_qualifier' => $schedule->time_qualifier,
-                    'status' => DepartureStatus::Present,
-                ],
-            );
+            // Only today persists a row (so marking has a real id). Other days are
+            // rendered read-only/preview from the Stammplan (see synthesized rows below).
+            if ($isToday) {
+                DailyDeparture::firstOrCreate(
+                    ['child_id' => $child->id, 'date' => $date->toDateString()],
+                    [
+                        'planned_time' => $schedule->planned_time,
+                        'planned_method' => $schedule->method,
+                        'time_qualifier' => $schedule->time_qualifier,
+                        'status' => DepartureStatus::Present,
+                    ],
+                );
+            }
         }
 
         // Excursions today: a group list (with live state) plus a per-child overlay.
@@ -122,6 +149,9 @@ class DailyBoardController extends Controller
             ->with(['child:id,name,date_of_birth', 'markedBy:id,name'])
             ->where('date', $date->toDateString())
             ->whereNotIn('child_id', $absentChildIds)
+            // On a Ferienbetreuung day the roster is who signed up — a plan override
+            // left over from before the period was published is not an attendance.
+            ->when($careDay, fn ($q) => $q->where('holiday_care_day_id', $careDay->id))
             ->get();
 
         // Each row's effective time — mirrored from the companion for „geht mit … mit".
@@ -132,17 +162,22 @@ class DailyBoardController extends Controller
             [$date->toDateString()],
         );
         $effectiveTime = [];
+        $effectiveQualifier = [];
         foreach ($departures as $d) {
-            $effectiveTime[$d->id] = $d->planned_method === DepartureMethod::WithChild && $d->companion_child_id
-                ? ($companionPlans[$d->companion_child_id.'|'.$date->toDateString()]['time'] ?? null)
+            $isCompanion = $d->planned_method === DepartureMethod::WithChild && $d->companion_child_id;
+            $companionKey = $d->companion_child_id.'|'.$date->toDateString();
+            $effectiveTime[$d->id] = $isCompanion
+                ? ($companionPlans[$companionKey]['time'] ?? null)
                 : ($d->planned_time ? substr((string) $d->planned_time, 0, 5) : null);
+            // „geht mit … mit" also inherits the companion's bis/genau um/ab qualifier.
+            $effectiveQualifier[$d->id] = $isCompanion
+                ? ($companionPlans[$companionKey]['qualifier'] ?? null)
+                : $d->time_qualifier?->value;
         }
 
-        $departures = $departures
-            ->sortBy(fn (DailyDeparture $d) => [$effectiveTime[$d->id] ?? '99:99', $d->child->name])
-            ->values();
+        $editable = $day['editable'];
 
-        $rows = $departures->map(function (DailyDeparture $d) use ($standard, $user, $myChildIds, $excursionByChild, $date, $childNames, $effectiveTime) {
+        $rows = $departures->map(function (DailyDeparture $d) use ($standard, $user, $myChildIds, $excursionByChild, $date, $childNames, $effectiveTime, $effectiveQualifier, $editable, $careDay) {
             $dob = $d->child->date_of_birth;
             $birthday = $dob && $dob->format('m-d') === $date->format('m-d')
                 ? $date->year - $dob->year
@@ -162,14 +197,26 @@ class DailyBoardController extends Controller
                 }
             }
 
-            // „geht allein" prefix (bis/ab); the default „genau um" stays implicit.
-            $qualifier = $plannedMethod === DepartureMethod::SentHome->value ? $d->time_qualifier : null;
+            // „geht allein" prefix (bis/ab); the default „genau um" stays implicit. For
+            // „geht mit … mit" it's mirrored from the companion (see $effectiveQualifier).
+            $qualifier = match ($plannedMethod) {
+                DepartureMethod::SentHome->value => $d->time_qualifier,
+                DepartureMethod::WithChild->value => ($effectiveQualifier[$d->id] ?? null)
+                    ? TimeQualifier::from($effectiveQualifier[$d->id])
+                    : null,
+                default => null,
+            };
 
             $std = $standard[$d->child_id] ?? null;
-            $overridden = $std === null
+
+            // „heute geändert" means „deviates from the Stammplan" — on a Ferienbetreuung
+            // day there is none, the sign-up *is* the plan, so no row is a change.
+            $overridden = $careDay === null && (
+                $std === null
                 || $std['time'] !== $plannedTime
                 || $std['method'] !== $plannedMethod
-                || ($std['qualifier'] ?? null) !== ($qualifier?->value);
+                || ($std['qualifier'] ?? null) !== ($qualifier?->value)
+            );
 
             return [
                 'id' => $d->id,
@@ -187,12 +234,13 @@ class DailyBoardController extends Controller
                 'status_label' => $d->status->label(),
                 'left_at' => $d->left_at?->format('H:i'),
                 'marked_by' => $d->markedBy?->name,
-                // Shown on the plan line: the override's own note, or the Stammplan comment.
-                'comment' => $overridden ? $d->note : ($std['comment'] ?? null),
+                // Shown on the plan line: the row's own note, or the Stammplan comment
+                // when the plan still is the Stammplan (a care day has none).
+                'comment' => $overridden || $std === null ? $d->note : ($std['comment'] ?? null),
                 // Pre-fills the override editor; defaults to the standard comment.
                 'note' => $d->note ?? ($std['comment'] ?? null),
                 'is_overridden' => $overridden,
-                'can_override' => $user->isStaff() || ($myChildIds?->contains($d->child_id) ?? false),
+                'can_override' => $editable && ($user->isStaff() || ($myChildIds?->contains($d->child_id) ?? false)),
                 'is_own' => $myChildIds?->contains($d->child_id) ?? false,
                 'excursion' => $excursionByChild[$d->child_id] ?? null,
                 // Age the child turns today, or null if it's not their birthday.
@@ -200,9 +248,62 @@ class DailyBoardController extends Controller
             ];
         });
 
+        // Non-today days don't persist rows: synthesize a read-only/preview row from the
+        // Stammplan for each scheduled child that has no DailyDeparture for the date.
+        if (! $isToday) {
+            $withRow = $departures->pluck('child_id')->all();
+            foreach ($scheduled as $child) {
+                if (in_array($child->id, $absentChildIds, true) || in_array($child->id, $withRow, true)) {
+                    continue;
+                }
+                $std = $standard[$child->id] ?? null;
+                if ($std === null) {
+                    continue;
+                }
+
+                $own = $myChildIds?->contains($child->id) ?? false;
+                $dob = $child->date_of_birth;
+
+                $rows->push([
+                    'id' => null,
+                    'child_id' => $child->id,
+                    'name' => $child->name,
+                    'planned_time' => $std['time'],
+                    'planned_method' => $std['method'],
+                    'qualifier_prefix' => $std['method'] === DepartureMethod::SentHome->value
+                        && $std['qualifier'] && $std['qualifier'] !== TimeQualifier::At->value
+                        ? TimeQualifier::from($std['qualifier'])->prefix()
+                        : null,
+                    'qualifier' => $std['qualifier'] ?? TimeQualifier::At->value,
+                    'companion' => null, // the Stammplan carries no companion
+                    'status' => DepartureStatus::Present->value,
+                    'status_label' => DepartureStatus::Present->label(),
+                    'left_at' => null,
+                    'marked_by' => null,
+                    'comment' => $std['comment'],
+                    'note' => $std['comment'],
+                    'is_overridden' => false,
+                    'can_override' => $editable && ($user->isStaff() || $own),
+                    'is_own' => $own,
+                    'excursion' => $excursionByChild[$child->id] ?? null,
+                    'birthday' => $dob && $dob->format('m-d') === $date->format('m-d')
+                        ? $date->year - $dob->year
+                        : null,
+                ]);
+            }
+        }
+
+        $rows = $rows
+            ->sortBy(fn (array $r) => [$r['planned_time'] ?? '99:99', $r['name']])
+            ->values();
+
         $program = DailyProgram::where('date', $date->toDateString())->first();
         $homeworkDefault = HomeworkDefault::where('weekday', $weekday)->first();
-        [$homeworkStart, $homeworkEnd] = DailyProgram::effectiveHomework($program, $homeworkDefault);
+        // Ferienbetreuung: Essen and Aktivität still apply, homework doesn't — and the
+        // weekday default would otherwise claim a slot right through the holidays.
+        [$homeworkStart, $homeworkEnd] = $careDay
+            ? [null, null]
+            : DailyProgram::effectiveHomework($program, $homeworkDefault);
 
         $hasProgram = $program?->lunch || $program?->activity || $homeworkStart;
 
@@ -211,7 +312,10 @@ class DailyBoardController extends Controller
         // staff know the shorter list is intentional. Excluded: unplanned children (no
         // Stammplan at all), today's reported absences, and anyone with a same-day
         // override (a manual pickup for today means they ARE here — they're on the board).
-        $hortfrei = Child::query()
+        // On a care day nobody is „hortfrei" — the Stammplan doesn't apply, so not
+        // being signed up is „nicht angemeldet", which the closure card explains.
+        $hortfrei = $careDay ? collect() : Child::query()
+            ->activeOn($date)
             ->whereHas('weeklySchedules', fn ($q) => $q->whereNotNull('planned_time'))
             ->whereDoesntHave('weeklySchedules', fn ($q) => $q->where('weekday', $weekday)->whereNotNull('planned_time'))
             ->whereNotIn('id', $absentChildIds)
@@ -229,7 +333,7 @@ class DailyBoardController extends Controller
         // Companion-picker source for the day editor: each child's effective time today,
         // only for those who can actually be a companion (have a pickup, aren't away and
         // aren't themselves tagging along) — mirroring the Wochenplan.
-        $pickerChildren = Child::query()->orderBy('name')->get(['id', 'name']);
+        $pickerChildren = Child::query()->activeOn($date)->orderBy('name')->get(['id', 'name']);
         $pickerPlans = EffectivePlan::forMany($pickerChildren->pluck('id')->all(), [$date->toDateString()]);
         $companionChildren = $pickerChildren->map(function (Child $c) use ($pickerPlans, $date, $absentChildIds) {
             $plan = $pickerPlans[$c->id.'|'.$date->toDateString()] ?? null;
@@ -247,12 +351,15 @@ class DailyBoardController extends Controller
         })->values();
 
         return Inertia::render('Board/Index', [
-            'date' => [
-                'iso' => $date->toDateString(),
-                'label' => self::WEEKDAYS_DE[$weekday].', '.$date->format('d.m.Y'),
-                'is_today' => $date->isToday(),
-            ],
+            // Selected day + navigation meta (iso, label, is_today, editable, prev/next, offset).
+            'date' => $day,
             'rows' => $rows,
+            // Ferienbetreuung: the roster came from the sign-ups, not the Stammplan.
+            'care' => $careDay ? [
+                'name' => $careDay->period->name,
+                'starts_at' => HolidayCareDay::short($careDay->starts_at),
+                'ends_at' => HolidayCareDay::short($careDay->ends_at),
+            ] : null,
             // Regularly not at the Hort today (Stammplan „Hortfrei"), for context.
             'hortfrei' => $hortfrei,
             // Parent-facing „geht mit … mit" summary for today (staff use the plan display).
@@ -272,7 +379,7 @@ class DailyBoardController extends Controller
                 'homework_start' => $homeworkStart ? substr((string) $homeworkStart, 0, 5) : null,
                 'homework_end' => $homeworkEnd ? substr((string) $homeworkEnd, 0, 5) : null,
             ] : null,
-            'canMark' => $user->isStaff(),
+            'canMark' => $user->isStaff() && $isToday,
             // The board uses the shared day editor (same as the Wochenplan), so it offers
             // the full method set incl. „geht mit … mit"; $children feeds its companion picker.
             'children' => $companionChildren,
@@ -289,6 +396,11 @@ class DailyBoardController extends Controller
     public function mark(MarkDepartureRequest $request, DailyDeparture $departure): RedirectResponse
     {
         $this->authorize('mark', $departure);
+        // Marking is a live, same-day action — never rewrite a past/future date.
+        abort_unless($departure->date->isToday(), 403);
+        // A closure added after the row was seeded leaves it orphaned on a day the
+        // Hort is shut; the board hides it, so nothing may be marked off either.
+        abort_if(HolidayPeriod::closesOn($departure->date), 403);
 
         $status = DepartureStatus::from($request->validated('status'));
 
@@ -297,6 +409,12 @@ class DailyBoardController extends Controller
             ? ['status' => $status, 'left_at' => now(), 'marked_by' => $request->user()->id]
             : ['status' => $status, 'left_at' => null, 'marked_by' => null]);
 
+        activity()
+            ->causedBy($request->user())
+            ->performedOn($departure)
+            ->event($status->value)
+            ->log($departure->child->name);
+
         return back();
     }
 
@@ -304,6 +422,9 @@ class DailyBoardController extends Controller
     public function override(OverrideDepartureRequest $request, DailyDeparture $departure): RedirectResponse
     {
         $this->authorize('update', $departure->child);
+        // A board override is same-day only; future days edit via weekly-plan.adjust.
+        abort_unless($departure->date->isToday(), 403);
+        abort_if(HolidayPeriod::closesOn($departure->date), 403);
 
         $validated = $request->validated();
 
@@ -327,18 +448,15 @@ class DailyBoardController extends Controller
         // (e.g. the override just switched them to going home alone).
         CompanionReconciler::reconcile($departure->child_id, $departure->date->toDateString());
 
+        // Same-day by definition, so a parent editing here after the cutoff is exactly
+        // the „späte Änderung" case weekly-plan.adjust already reports.
+        LateChange::notify(
+            $request->user(),
+            $departure->child,
+            $departure->date->toDateString(),
+            LateChange::describePlan($departure),
+        );
+
         return back()->with('status', __('flash.plan_updated', ['name' => $departure->child->name]));
-    }
-
-    /** Today, advancing across the weekend to the next weekday. */
-    private function targetDate(): Carbon
-    {
-        $date = Carbon::today();
-
-        while ($date->isWeekend()) {
-            $date->addDay();
-        }
-
-        return $date;
     }
 }

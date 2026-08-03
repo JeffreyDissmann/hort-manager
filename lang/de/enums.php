@@ -9,6 +9,11 @@ return [
         'staff' => 'Erzieher:in',
         'parent' => 'Elternteil',
     ],
+    'accounting_access' => [
+        'none' => 'Kein Zugriff',
+        'read' => 'Nur lesen',
+        'write' => 'Lesen & schreiben',
+    ],
     'absence_reason' => [
         'sick' => 'Krank',
         'away' => 'Kommt nicht',
@@ -24,6 +29,10 @@ return [
         'sent_home' => 'Geht allein nach Hause',
         'with_child' => 'Geht mit einem anderen Kind mit',
     ],
+    'holiday_period_type' => [
+        'closed' => 'Geschlossen',
+        'care' => 'Ferienbetreuung',
+    ],
     'time_qualifier' => [
         'by' => 'Bis zu der Uhrzeit',
         'at' => 'Genau zur Uhrzeit',
@@ -33,5 +42,24 @@ return [
         'by' => 'bis',
         'at' => 'um',
         'from' => 'ab',
+    ],
+    'category_direction' => [
+        'income' => 'Einnahme',
+        'expense' => 'Ausgabe',
+    ],
+    'booking_kind' => [
+        'income' => 'Einnahme',
+        'expense' => 'Ausgabe',
+        'transfer' => 'Umbuchung',
+    ],
+    'booking_status' => [
+        'draft' => 'Entwurf',
+        'suggested' => 'KI-Vorschlag',
+        'confirmed' => 'Bestätigt',
+    ],
+    'suggestion_confidence' => [
+        0 => 'Unsicher',
+        1 => 'Mittel',
+        2 => 'Sicher',
     ],
 ];

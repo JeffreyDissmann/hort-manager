@@ -24,8 +24,11 @@ class SwitchRoleController extends Controller
             'role' => ['required', Rule::enum(UserRole::class)],
         ]);
 
+        // A self role-switch is a transient convenience toggle, not an audit-worthy
+        // change — logging it would just crowd the Protokoll. (An admin changing
+        // *another* user's role via user management is still logged.)
         $user->role = UserRole::from($validated['role']);
-        $user->save();
+        $user->disableLogging()->save();
 
         // Stay on the page the switch was made from (most pages work for both roles).
         return back();

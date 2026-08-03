@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Notifications;
 
+use App\Enums\NotificationCategory;
 use App\Models\DailyDeparture;
 use Illuminate\Notifications\Slack\BlockKit\Blocks\ActionsBlock;
 use Illuminate\Notifications\Slack\BlockKit\Blocks\SectionBlock;
@@ -18,6 +19,11 @@ use NotificationChannels\WebPush\WebPushMessage;
 class CompanionAnswered extends SlackNotification
 {
     public function __construct(public DailyDeparture $departure, public bool $confirmed) {}
+
+    public function category(): string
+    {
+        return NotificationCategory::Companion->value;
+    }
 
     public function toSlack(object $notifiable): SlackMessage
     {

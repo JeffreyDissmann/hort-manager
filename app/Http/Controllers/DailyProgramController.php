@@ -7,7 +7,10 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Concerns\ResolvesWeek;
 use App\Models\Child;
 use App\Models\DailyProgram;
+use App\Models\HolidayCareDay;
+use App\Models\HolidayPeriod;
 use App\Models\HomeworkDefault;
+use App\Models\Setting;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -31,18 +34,43 @@ class DailyProgramController extends Controller
             ->keyBy(fn (DailyProgram $p) => $p->date->toDateString());
 
         $defaults = HomeworkDefault::all()->keyBy('weekday');
-        $children = Child::query()->whereNotNull('date_of_birth')->get(['id', 'name', 'date_of_birth']);
+        $weekRange = $weekDays->pluck('date');
+        $children = Child::query()->activeBetween($weekRange->first(), $weekRange->last())
+            ->whereNotNull('date_of_birth')->get(['id', 'name', 'date_of_birth']);
 
-        $days = $weekDays->map(function (array $day) use ($programs, $defaults, $children) {
+        $closedDays = HolidayPeriod::closedDaysBetween($weekRange->first(), $weekRange->last());
+
+        // Ferienbetreuung days in this week, by date. Their Betreuungszeit is edited
+        // here alongside the day's content — the period itself lives on /closures.
+        $careDays = HolidayCareDay::query()
+            ->whereBetween('date', [$weekRange->first(), $weekRange->last()])
+            ->with('period:id,name')
+            ->get()
+            ->keyBy(fn (HolidayCareDay $day): string => $day->date->toDateString());
+
+        $days = $weekDays->map(function (array $day) use ($programs, $defaults, $children, $closedDays, $careDays) {
             $weekday = Carbon::parse($day['date'])->dayOfWeekIso;
             $default = $defaults->get($weekday);
             $program = $programs->get($day['date']);
-            [$homeworkStart, $homeworkEnd] = DailyProgram::effectiveHomework($program, $default);
+            $care = $careDays->get($day['date']);
+            [$homeworkStart, $homeworkEnd] = $care
+                ? [null, null] // Ferienbetreuung: no school, so no homework slot.
+                : DailyProgram::effectiveHomework($program, $default);
 
             return [
                 'date' => $day['date'],
                 'label' => $day['label'],
                 'date_label' => $day['date_label'],
+                // Schließzeit: no food, no activity, no homework to fill in.
+                'closed' => $closedDays[$day['date']] ?? null,
+                // Ferienbetreuung: no school, so no homework — but there is a
+                // Betreuungszeit to set, and usually an Aktivität.
+                'care' => $care ? [
+                    'id' => $care->id,
+                    'name' => $care->period->name,
+                    'starts_at' => HolidayCareDay::short($care->starts_at),
+                    'ends_at' => HolidayCareDay::short($care->ends_at),
+                ] : null,
                 'lunch' => $program?->lunch,
                 'activity' => $program?->activity,
                 // Effective homework slot (override, else weekday default, else none).
@@ -73,6 +101,12 @@ class DailyProgramController extends Controller
             'week' => $week,
             'days' => $days,
             'homeworkDefaults' => $homeworkDefaults,
+            'lateChangeCutoff' => Setting::lateChangeCutoff(),
+            'weeklyDigestTime' => Setting::weeklyDigestTime(),
+            'programReminderTime' => Setting::programReminderTime(),
+            'programReminderLeadMinutes' => Setting::ProgramReminderLeadMinutes,
+            // The times a newly offered Ferienbetreuung day starts out with.
+            'careDefaultWindow' => array_combine(['start', 'end'], Setting::careDefaultWindow()),
         ]);
     }
 
@@ -89,15 +123,43 @@ class DailyProgramController extends Controller
             'days.*.homework_start' => ['nullable', 'date_format:H:i'],
             'days.*.homework_end' => ['nullable', 'date_format:H:i'],
             'days.*.homework_none' => ['boolean'],
+            // Ferienbetreuung days carry their Betreuungszeit alongside the content.
+            'days.*.care_starts_at' => ['nullable', 'date_format:H:i'],
+            'days.*.care_ends_at' => ['nullable', 'date_format:H:i', 'after:days.*.care_starts_at'],
         ]);
 
         $defaults = HomeworkDefault::all()->keyBy('weekday');
+        $careDays = HolidayCareDay::query()
+            ->whereIn('date', collect($validated['days'] ?? [])->pluck('date'))
+            ->get()
+            ->keyBy(fn (HolidayCareDay $day): string => $day->date->toDateString());
 
         foreach ($validated['days'] ?? [] as $row) {
+            // A closed day has no program. Drop any row that exists (e.g. entered
+            // before the Schließzeit was) rather than silently keeping it around.
+            if (HolidayPeriod::closesOn($row['date'])) {
+                DailyProgram::where('date', $row['date'])->delete();
+
+                continue;
+            }
+
             $weekday = Carbon::parse($row['date'])->dayOfWeekIso;
             $default = $defaults->get($weekday);
+            $care = $careDays->get($row['date']);
 
-            if ($row['homework_none'] ?? false) {
+            if ($care && ! empty($row['care_starts_at']) && ! empty($row['care_ends_at'])) {
+                $care->update([
+                    'starts_at' => $row['care_starts_at'],
+                    'ends_at' => $row['care_ends_at'],
+                ]);
+            }
+
+            if ($care) {
+                // Ferienbetreuung: no school, so no homework to store or suppress.
+                $homeworkNone = false;
+                $homeworkStart = null;
+                $homeworkEnd = null;
+            } elseif ($row['homework_none'] ?? false) {
                 // "Keine Hausaufgaben" — only needs storing when it suppresses a default.
                 $homeworkNone = $default !== null;
                 $homeworkStart = null;
@@ -153,7 +215,8 @@ class DailyProgramController extends Controller
 
         foreach ($validated['defaults'] ?? [] as $row) {
             if (empty($row['start']) && empty($row['end'])) {
-                HomeworkDefault::where('weekday', $row['weekday'])->delete();
+                // Model delete (not a bulk query) so the removal is logged.
+                HomeworkDefault::where('weekday', $row['weekday'])->first()?->delete();
 
                 continue;
             }
@@ -165,6 +228,55 @@ class DailyProgramController extends Controller
         }
 
         return back()->with('status', __('flash.homework_defaults_saved'));
+    }
+
+    /** Save the Hort-wide settings edited on this page (the late-change cutoff). */
+    public function updateSettings(Request $request): RedirectResponse
+    {
+        $this->authorize('update', DailyProgram::class);
+
+        $validated = $request->validate([
+            'late_change_cutoff' => ['required', 'date_format:H:i'],
+        ]);
+
+        Setting::set(Setting::LateChangeCutoff, $validated['late_change_cutoff']);
+
+        return back()->with('status', __('flash.settings_saved'));
+    }
+
+    /** Save when the Monday Wochenüberblick goes out to parents. */
+    public function updateDigestTime(Request $request): RedirectResponse
+    {
+        $this->authorize('update', DailyProgram::class);
+
+        $validated = $request->validate([
+            // Staff are reminded ProgramReminderLeadMinutes earlier, so the digest
+            // can't run before that or the reminder falls into the previous day.
+            'weekly_digest_time' => ['required', 'date_format:H:i', 'after_or_equal:00:30'],
+        ]);
+
+        Setting::set(Setting::WeeklyDigestTime, $validated['weekly_digest_time']);
+
+        return back()->with('status', __('flash.settings_saved'));
+    }
+
+    /**
+     * Save the default Betreuungszeit a new Ferienbetreuung day starts out with.
+     * Days already offered keep their times — this is a starting point, not a rule.
+     */
+    public function updateCareWindow(Request $request): RedirectResponse
+    {
+        $this->authorize('update', DailyProgram::class);
+
+        $validated = $request->validate([
+            'care_default_start' => ['required', 'date_format:H:i'],
+            'care_default_end' => ['required', 'date_format:H:i', 'after:care_default_start'],
+        ]);
+
+        Setting::set(Setting::CareDefaultStart, $validated['care_default_start']);
+        Setting::set(Setting::CareDefaultEnd, $validated['care_default_end']);
+
+        return back()->with('status', __('flash.settings_saved'));
     }
 
     private function short(?string $time): ?string

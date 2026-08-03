@@ -1,25 +1,41 @@
 <script setup>
 import { program as programRoute } from '@/routes';
-import { update as programUpdate, defaults as programDefaults } from '@/routes/program';
+import {
+    update as programUpdate,
+    defaults as programDefaults,
+    settings as programSettings,
+    digestTime as programDigestTime,
+    careWindow as programCareWindow,
+} from '@/routes/program';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import Checkbox from '@/Components/Checkbox.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import TextInput from '@/Components/TextInput.vue';
 import TimeRange from '@/Components/TimeRange.vue';
+import TimeSelect from '@/Components/TimeSelect.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import WeekNav from '@/Components/WeekNav.vue';
 import { Head, router, usePage } from '@inertiajs/vue3';
-import { computed, ref, watch } from 'vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
 
 const props = defineProps({
     week: { type: Object, default: () => ({}) },
     days: { type: Array, default: () => [] },
     homeworkDefaults: { type: Array, default: () => [] },
+    lateChangeCutoff: { type: String, default: '12:00' },
+    weeklyDigestTime: { type: String, default: '12:00' },
+    // Always the digest time minus the fixed lead — displayed, not editable.
+    programReminderTime: { type: String, default: '11:30' },
+    programReminderLeadMinutes: { type: Number, default: 30 },
+    careDefaultWindow: { type: Object, default: () => ({ start: '08:30', end: '16:00' }) },
 });
 
 const flash = computed(() => usePage().props.flash?.status);
 const saving = ref(false);
 const savingDefaults = ref(false);
+const savingSettings = ref(false);
+const savingDigestTime = ref(false);
+const savingCareWindow = ref(false);
 
 // `no_homework` drives the "Keine Hausaufgaben" checkbox — on when there's no
 // effective homework for the day (explicit none, or no default/override at all).
@@ -71,6 +87,9 @@ function save() {
                 homework_start: d.no_homework ? null : d.homework_start || null,
                 homework_end: d.no_homework ? null : d.homework_end || null,
                 homework_none: d.no_homework,
+                // Ferienbetreuung days save their Betreuungszeit with the week.
+                care_starts_at: d.care?.starts_at ?? null,
+                care_ends_at: d.care?.ends_at ?? null,
             })),
         },
         {
@@ -96,6 +115,84 @@ function saveDefaults() {
             preserveScroll: true,
             preserveState: true,
             onFinish: () => (savingDefaults.value = false),
+        },
+    );
+}
+
+const lateChangeCutoff = ref(props.lateChangeCutoff);
+watch(
+    () => props.lateChangeCutoff,
+    (value) => {
+        lateChangeCutoff.value = value;
+    },
+);
+
+// Deep link from the notification settings (/program#late-change): scroll the card
+// into view and flash a ring so it's obvious which setting was meant.
+const lateChangeCard = ref(null);
+const highlightLateChange = ref(false);
+
+onMounted(() => {
+    if (window.location.hash !== '#late-change') {
+        return;
+    }
+    lateChangeCard.value?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    highlightLateChange.value = true;
+    setTimeout(() => (highlightLateChange.value = false), 2000);
+});
+
+function saveSettings() {
+    savingSettings.value = true;
+    router.patch(
+        programSettings().url,
+        { late_change_cutoff: lateChangeCutoff.value },
+        {
+            preserveScroll: true,
+            preserveState: true,
+            onFinish: () => (savingSettings.value = false),
+        },
+    );
+}
+
+const weeklyDigestTime = ref(props.weeklyDigestTime);
+watch(
+    () => props.weeklyDigestTime,
+    (value) => {
+        weeklyDigestTime.value = value;
+    },
+);
+
+function saveDigestTime() {
+    savingDigestTime.value = true;
+    router.patch(
+        programDigestTime().url,
+        { weekly_digest_time: weeklyDigestTime.value },
+        {
+            preserveScroll: true,
+            preserveState: true,
+            onFinish: () => (savingDigestTime.value = false),
+        },
+    );
+}
+
+// Default Betreuungszeit for newly offered Ferienbetreuung days.
+const careWindow = reactive({ ...props.careDefaultWindow });
+watch(
+    () => props.careDefaultWindow,
+    (value) => Object.assign(careWindow, value),
+);
+
+const careWindowInvalid = computed(() => careWindow.end <= careWindow.start);
+
+function saveCareWindow() {
+    savingCareWindow.value = true;
+    router.patch(
+        programCareWindow().url,
+        { care_default_start: careWindow.start, care_default_end: careWindow.end },
+        {
+            preserveScroll: true,
+            preserveState: true,
+            onFinish: () => (savingCareWindow.value = false),
         },
     );
 }
@@ -156,16 +253,28 @@ function onTouchEnd(e) {
             <div
                 v-for="day in days"
                 :key="day.date"
-                class="rounded-2xl bg-surface p-4 shadow-sm"
+                :data-testid="`program-day-${day.date}`"
+                class="rounded-2xl p-4 shadow-sm"
+                :class="day.care ? 'bg-hort-teal/10 ring-1 ring-hort-teal/40' : 'bg-surface'"
             >
                 <div class="lg:grid lg:grid-cols-[7rem,minmax(0,18rem),minmax(0,18rem),auto] lg:items-start lg:gap-5">
                     <div>
-                        <p class="font-semibold text-ink">
+                        <p class="font-semibold" :class="day.closed ? 'text-ink/40' : 'text-ink'">
                             {{ day.label }}
                             <span class="font-normal text-ink/40">
                                 · {{ day.date_label }}
                             </span>
                         </p>
+                        <!-- A care day looks different on purpose: it isn't a normal
+                             Hort day, and the Betreuungszeit below isn't a normal field. -->
+                        <p
+                            v-if="day.care"
+                            :data-testid="`program-care-${day.date}`"
+                            class="mt-1 inline-block rounded-lg bg-hort-teal/25 px-2 py-0.5 text-xs font-semibold text-hort-teal-dark"
+                        >
+                            {{ $t('enums.holiday_period_type.care') }}
+                        </p>
+                        <p v-if="day.care" class="mt-0.5 text-xs text-ink/50">{{ day.care.name }}</p>
                         <p
                             v-if="day.birthdays && day.birthdays.length"
                             class="mt-1 rounded-lg bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700"
@@ -178,6 +287,17 @@ function onTouchEnd(e) {
                         </p>
                     </div>
 
+                    <!-- Schließzeit: nothing to plan, so the three fields make way for
+                         the closure's name. -->
+                    <p
+                        v-if="day.closed"
+                        :data-testid="`program-closed-${day.date}`"
+                        class="mt-3 text-sm text-ink/50 lg:col-span-3 lg:mt-0"
+                    >
+                        🚫 {{ day.closed }}
+                    </p>
+
+                    <template v-else>
                     <div class="mt-3 lg:mt-0">
                         <InputLabel :for="`lunch-${day.date}`" :value="$t('program.lunch')" />
                         <TextInput
@@ -202,7 +322,32 @@ function onTouchEnd(e) {
                         />
                     </div>
 
-                    <div class="mt-3 lg:mt-0">
+                    <!-- Ferienbetreuung takes the homework slot: there is no school to
+                         bring any home from, but there is a Betreuungszeit to set. -->
+                    <div v-if="day.care" class="mt-3 lg:mt-0">
+                        <InputLabel :value="$t('program.care_window')" />
+                        <!-- Same layout as the homework TimeRange (each half flexes, so
+                             the hour/minute dropdowns never get clipped) — but without
+                             its „end = start + 1h" nudge, which would wreck a
+                             Betreuungszeit every time the start is adjusted. -->
+                        <div class="mt-1 flex items-center gap-2">
+                            <TimeSelect
+                                v-model="day.care.starts_at"
+                                from="06:00"
+                                :test-id="`care-start-${day.date}`"
+                                class="min-w-0 flex-1"
+                            />
+                            <span class="shrink-0 text-ink/40">–</span>
+                            <TimeSelect
+                                v-model="day.care.ends_at"
+                                from="06:00"
+                                :test-id="`care-end-${day.date}`"
+                                class="min-w-0 flex-1"
+                            />
+                        </div>
+                    </div>
+
+                    <div v-else class="mt-3 lg:mt-0">
                         <InputLabel :value="$t('program.homework')" />
                         <label class="mt-1 flex items-center gap-2 text-sm text-ink/70">
                             <Checkbox
@@ -223,6 +368,7 @@ function onTouchEnd(e) {
                             class="mt-2"
                         />
                     </div>
+                    </template>
                 </div>
             </div>
 
@@ -231,6 +377,17 @@ function onTouchEnd(e) {
                     {{ $t('program.save_week') }}
                 </PrimaryButton>
             </div>
+
+            <!-- Everything below applies to *every* week, not the one shown above.
+                 Tinted and set apart, because saving here and saving the week are two
+                 different things and the page reads as one long form otherwise. -->
+            <section class="!mt-10 space-y-4 rounded-3xl bg-ink/[0.04] p-3 sm:p-4">
+                <div class="px-1 pt-1">
+                    <h3 class="text-lg font-semibold text-ink">
+                        {{ $t('program.settings_heading') }}
+                    </h3>
+                    <p class="mt-1 text-sm text-ink/60">{{ $t('program.settings_intro') }}</p>
+                </div>
 
             <!-- Default homework schedule (Mo–Fr) -->
             <div class="rounded-2xl bg-surface p-4 shadow-sm">
@@ -275,6 +432,118 @@ function onTouchEnd(e) {
                     </PrimaryButton>
                 </div>
             </div>
+
+            <!-- Hort-wide cutoff for late same-day changes -->
+            <div
+                id="late-change"
+                ref="lateChangeCard"
+                class="rounded-2xl bg-surface p-4 shadow-sm transition"
+                :class="highlightLateChange ? 'ring-2 ring-hort-teal' : ''"
+            >
+                <p class="font-semibold text-ink">
+                    {{ $t('program.late_change_heading') }}
+                </p>
+                <p class="mb-3 mt-1 text-sm text-ink/60">
+                    {{ $t('program.late_change_intro') }}
+                </p>
+                <div class="flex flex-wrap items-center gap-3">
+                    <InputLabel
+                        for="late-change-cutoff"
+                        :value="$t('program.late_change_label')"
+                        class="shrink-0"
+                    />
+                    <TimeSelect
+                        id="late-change-cutoff"
+                        v-model="lateChangeCutoff"
+                        from="08:00"
+                        test-id="late-change-cutoff"
+                        class="w-40"
+                    />
+                </div>
+                <div class="mt-3 flex justify-end">
+                    <PrimaryButton :disabled="savingSettings" @click="saveSettings">
+                        {{ $t('program.save_late_change') }}
+                    </PrimaryButton>
+                </div>
+            </div>
+
+            <!-- When the Monday digest goes to parents (staff are nudged an hour earlier) -->
+            <div id="weekly-digest" class="rounded-2xl bg-surface p-4 shadow-sm">
+                <p class="font-semibold text-ink">
+                    {{ $t('program.digest_heading') }}
+                </p>
+                <p class="mb-3 mt-1 text-sm text-ink/60">
+                    {{
+                        $t('program.digest_intro', {
+                            time: programReminderTime,
+                            minutes: programReminderLeadMinutes,
+                        })
+                    }}
+                </p>
+                <div class="flex flex-wrap items-center gap-3">
+                    <InputLabel
+                        for="weekly-digest-time"
+                        :value="$t('program.digest_label')"
+                        class="shrink-0"
+                    />
+                    <TimeSelect
+                        id="weekly-digest-time"
+                        v-model="weeklyDigestTime"
+                        from="08:00"
+                        test-id="weekly-digest-time"
+                        class="w-40"
+                    />
+                </div>
+                <div class="mt-3 flex justify-end">
+                    <PrimaryButton :disabled="savingDigestTime" @click="saveDigestTime">
+                        {{ $t('program.save_digest_time') }}
+                    </PrimaryButton>
+                </div>
+            </div>
+
+            <!-- The times a newly offered Ferienbetreuung day starts out with. Days
+                 already offered keep theirs — this is a starting point, not a rule. -->
+            <div id="care-window" class="rounded-2xl bg-surface p-4 shadow-sm">
+                <p class="font-semibold text-ink">{{ $t('program.care_window_heading') }}</p>
+                <p class="mb-3 mt-1 text-sm text-ink/60">{{ $t('program.care_window_intro') }}</p>
+                <div class="flex flex-wrap items-center gap-3">
+                    <InputLabel
+                        for="care-default-start"
+                        :value="$t('program.care_window_label')"
+                        class="shrink-0"
+                    />
+                    <!-- Ferienbetreuung starts in the morning, so the list has to reach
+                         further back than the 11:00 a pickup time starts at. -->
+                    <TimeSelect
+                        id="care-default-start"
+                        v-model="careWindow.start"
+                        from="06:00"
+                        test-id="care-default-start"
+                        class="w-40"
+                    />
+                    <span class="text-ink/40">–</span>
+                    <TimeSelect
+                        id="care-default-end"
+                        v-model="careWindow.end"
+                        from="06:00"
+                        test-id="care-default-end"
+                        class="w-40"
+                    />
+                </div>
+                <p v-if="careWindowInvalid" class="mt-2 text-sm text-hort-orange-dark">
+                    {{ $t('program.care_window_order') }}
+                </p>
+                <div class="mt-3 flex justify-end">
+                    <PrimaryButton
+                        :disabled="savingCareWindow || careWindowInvalid"
+                        data-testid="save-care-window"
+                        @click="saveCareWindow"
+                    >
+                        {{ $t('program.save_care_window') }}
+                    </PrimaryButton>
+                </div>
+            </div>
+            </section>
         </div>
     </AuthenticatedLayout>
 </template>

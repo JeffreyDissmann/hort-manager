@@ -14,6 +14,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Testing\TestResponse;
+use Spatie\Activitylog\Models\Activity;
 use Tests\TestCase;
 
 class SlackInteractionTest extends TestCase
@@ -68,6 +69,13 @@ class SlackInteractionTest extends TestCase
 
         $this->assertTrue((bool) $excursion->children()->find($child->id)->pivot->response);
         $this->assertSame($guardian->id, $excursion->children()->find($child->id)->pivot->answered_by);
+
+        // A Slack answer is logged in the Protokoll, just like an in-app one.
+        $this->assertSame(1, Activity::where('subject_type', Excursion::class)
+            ->where('subject_id', $excursion->id)
+            ->where('event', 'rsvp_yes')
+            ->where('causer_id', $guardian->id)
+            ->count());
     }
 
     public function test_a_signed_no_click_records_a_decline(): void

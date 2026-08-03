@@ -1,11 +1,13 @@
 <script setup>
 import { mark as boardMark } from '@/routes/board';
+import { board } from '@/routes';
 import { store as absenceStore, destroy as absenceDestroy } from '@/routes/absences';
 import { live as excursionLive } from '@/routes/excursions';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import CollapsibleChips from '@/Components/CollapsibleChips.vue';
 import CompanionNotes from '@/Components/CompanionNotes.vue';
 import DayEditor from '@/Components/DayEditor.vue';
+import DayNav from '@/Components/DayNav.vue';
 import { PencilSquareIcon } from '@heroicons/vue/24/outline';
 import { confirm as companionConfirm } from '@/routes/companion';
 import { Head, router, usePage } from '@inertiajs/vue3';
@@ -21,6 +23,10 @@ const props = defineProps({
     excursions: { type: Array, default: () => [] },
     program: { type: Object, default: null },
     canMark: { type: Boolean, default: false },
+    // Set when the Hort is closed on the selected day — then nothing else is rendered.
+    closure: { type: Object, default: null },
+    // Set on a Ferienbetreuung day: the board lists who signed up, not the Stammplan.
+    care: { type: Object, default: null },
     children: { type: Array, default: () => [] },
     methodOptions: { type: Array, default: () => [] },
     qualifierOptions: { type: Array, default: () => [] },
@@ -29,6 +35,11 @@ const props = defineProps({
 // Confirm/decline another child going home with one of ours (from the notes panel).
 function answerCompanion(id, confirmed) {
     router.patch(companionConfirm(id).url, { confirmed }, { preserveScroll: true });
+}
+
+// Day navigation: null → back to today (no ?date), else ?date=YYYY-MM-DD.
+function goDay(iso) {
+    router.get(board(iso ? { query: { date: iso } } : {}).url, {}, { preserveScroll: true });
 }
 
 const flash = computed(() => usePage().props.flash?.status);
@@ -75,9 +86,11 @@ function methodIcon(method) {
 
 function planLabel(row) {
     // „geht mit … mit": show the mirrored time + „mit B" rather than the long label.
+    // The time carries the companion's bis/ab prefix (default „um" stays implicit).
     if (row.planned_method === 'with_child' && row.companion) {
         const withText = t('weekly.companion_with', { name: row.companion.name });
-        return row.planned_time ? `${row.planned_time} · ${withText}` : withText;
+        const time = row.qualifier_prefix ? `${row.qualifier_prefix} ${row.planned_time}` : row.planned_time;
+        return row.planned_time ? `${time} · ${withText}` : withText;
     }
     const method = methodLabels.value[row.planned_method];
     if (!method) {
@@ -216,7 +229,9 @@ const absenceComment = ref('');
 const absenceSaving = ref(false);
 
 function stageAbsence(row, reason) {
-    absenceRow.value = row.id;
+    // Track by child_id: synthesized (non-today) rows have a null id that would
+    // collide with the default and wrongly expand the form on every such row.
+    absenceRow.value = row.child_id;
     absenceReason.value = reason;
     absenceComment.value = '';
 }
@@ -270,7 +285,9 @@ function editRow(row) {
         { id: row.child_id, name: row.name },
         {
             date: props.date.iso,
-            editable: true,
+            editable: props.date.editable,
+            // On a care day the editor hides „Auf Standard" — nothing to fall back to.
+            care: props.care,
             time: row.planned_time,
             method: row.planned_method,
             qualifier: row.qualifier,
@@ -281,11 +298,11 @@ function editRow(row) {
     );
 }
 
-// Add a „Hortfrei" child to today straight from the summary pill (empty plan).
+// Add a „Hortfrei" child to the selected day straight from the summary pill (empty plan).
 function editHortfrei(child) {
     dayEditor.value?.open(
         { id: child.id, name: child.name },
-        { date: props.date.iso, editable: true, time: null, method: null, qualifier: 'at', companion: null, note: null },
+        { date: props.date.iso, editable: props.date.editable, time: null, method: null, qualifier: 'at', companion: null, note: null },
         todayMeta(),
     );
 }
@@ -296,12 +313,7 @@ function editHortfrei(child) {
 
     <AuthenticatedLayout>
         <template #header>
-            <div>
-                <h2 class="text-xl font-semibold text-ink">
-                    {{ date.is_today ? $t('common.today') : $t('board.next_hort_day') }}
-                </h2>
-                <p class="text-sm text-ink/50">{{ date.label }}</p>
-            </div>
+            <DayNav :day="date" class="mx-auto w-full max-w-sm" @navigate="goDay" />
         </template>
 
         <div class="space-y-4">
@@ -310,6 +322,32 @@ function editHortfrei(child) {
                 class="rounded-2xl bg-hort-teal/20 px-4 py-3 text-sm font-medium text-ink"
             >
                 {{ flash }}
+            </div>
+
+            <!-- Schließzeit: the Hort is shut, so there is no plan to show at all.
+                 Everything below is skipped — the server sends no rows either. -->
+            <div
+                v-if="closure"
+                data-testid="board-closed"
+                class="rounded-2xl bg-surface p-6 text-center shadow-sm"
+            >
+                <p class="text-lg font-semibold text-ink">{{ $t('board.closed_title') }}</p>
+                <p class="mt-1 text-sm text-ink/70">{{ closure.name }}</p>
+                <p v-if="closure.note" class="mt-2 text-sm text-ink/60">{{ closure.note }}</p>
+            </div>
+
+            <template v-else>
+            <!-- Ferienbetreuung: a different kind of day — only signed-up children are
+                 here, and the Betreuungszeit replaces the usual Stammplan rhythm. -->
+            <div
+                v-if="care"
+                data-testid="board-care"
+                class="rounded-2xl bg-hort-teal/10 px-4 py-3 text-sm ring-1 ring-hort-teal/40"
+            >
+                <p class="font-semibold text-ink">{{ care.name }}</p>
+                <p class="text-ink/70">
+                    {{ $t('board.care_window', { start: care.starts_at, end: care.ends_at }) }}
+                </p>
             </div>
 
             <!-- „Geht mit … mit" overview for the parent (staff use the plan display). -->
@@ -547,7 +585,7 @@ function editHortfrei(child) {
                         <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
                             <div
                                 v-for="row in block.rows"
-                                :key="row.id"
+                                :key="row.child_id"
                                 class="rounded-2xl bg-surface p-4 shadow-sm transition"
                                 :class="[
                                     { 'opacity-60': row.status === 'picked_up' || row.status === 'sent_home' },
@@ -669,6 +707,7 @@ function editHortfrei(child) {
                             <button
                                 v-if="row.can_override && row.excursion?.state !== 'away'"
                                 type="button"
+                                :data-testid="`edit-row-${row.child_id}`"
                                 class="inline-flex items-center gap-1.5 rounded-xl border-2 border-ink/10 px-3 py-2 text-sm font-semibold text-ink transition hover:border-hort-teal hover:bg-hort-teal/10 active:scale-[0.98]"
                                 @click="editRow(row)"
                             >
@@ -680,7 +719,7 @@ function editHortfrei(child) {
                                 v-if="row.can_override && row.excursion?.state !== 'away'"
                                 class="text-sm"
                             >
-                                <div v-if="absenceRow !== row.id" class="flex items-center gap-2">
+                                <div v-if="absenceRow !== row.child_id" class="flex items-center gap-2">
                                     <span class="text-ink/40">{{ $t('board.not_here') }}</span>
                                     <button
                                         type="button"
@@ -765,6 +804,7 @@ function editHortfrei(child) {
                     {{ $t('board.empty_all') }}
                 </template>
             </p>
+            </template>
         </div>
 
         <DayEditor

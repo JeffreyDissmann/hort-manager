@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Enums\AccountingAccess;
 use App\Enums\UserRole;
+use App\Models\Concerns\LogsChanges;
 use Database\Factories\UserFactory;
 use Illuminate\Contracts\Translation\HasLocalePreference;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -25,7 +27,18 @@ use NotificationChannels\WebPush\HasPushSubscriptions;
 class User extends Authenticatable implements HasLocalePreference
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, HasPushSubscriptions, Notifiable;
+    use HasFactory, HasPushSubscriptions, LogsChanges, Notifiable;
+
+    /** @return list<string> */
+    protected function activityAttributes(): array
+    {
+        return ['name', 'email', 'role', 'is_admin'];
+    }
+
+    protected function activityLabel(): string
+    {
+        return $this->name;
+    }
 
     /**
      * Default attribute values (mirroring the migration column defaults).
@@ -35,6 +48,7 @@ class User extends Authenticatable implements HasLocalePreference
     protected $attributes = [
         'role' => UserRole::Parent->value,
         'is_admin' => false,
+        'accounting_access' => AccountingAccess::None->value,
     ];
 
     /**
@@ -49,6 +63,8 @@ class User extends Authenticatable implements HasLocalePreference
             'password' => 'hashed',
             'role' => UserRole::class,
             'is_admin' => 'boolean',
+            'accounting_access' => AccountingAccess::class,
+            'notification_preferences' => 'array',
         ];
     }
 
@@ -56,6 +72,15 @@ class User extends Authenticatable implements HasLocalePreference
     public function preferredLocale(): ?string
     {
         return $this->locale;
+    }
+
+    /**
+     * Whether this user wants a notification category on a channel ('slack' | 'push').
+     * Opt-out model: a missing preference means the channel is ON.
+     */
+    public function wantsNotification(string $category, string $channel): bool
+    {
+        return (bool) ($this->notification_preferences[$category][$channel] ?? true);
     }
 
     /** Staff member (Erzieher:in) — may manage children, schedules and the board. */
@@ -68,6 +93,18 @@ class User extends Authenticatable implements HasLocalePreference
     public function isAdmin(): bool
     {
         return (bool) $this->is_admin;
+    }
+
+    /** May view the Buchhaltung (accounting) module — independent of role/admin. */
+    public function canReadAccounting(): bool
+    {
+        return $this->accounting_access->canRead();
+    }
+
+    /** May create/edit/delete in the Buchhaltung module. */
+    public function canWriteAccounting(): bool
+    {
+        return $this->accounting_access->canWrite();
     }
 
     /**

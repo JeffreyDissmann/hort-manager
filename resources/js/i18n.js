@@ -24,6 +24,21 @@ export function t(key, replacements = {}) {
     return value;
 }
 
+/**
+ * Translate a key that holds a *list* of strings (help bullets, examples …).
+ * Returns an empty array for a missing key, so a template can render nothing
+ * rather than the key itself — and callers don't hardcode how many items there are.
+ */
+export function tList(key) {
+    const messages = usePage().props.translations ?? {};
+
+    const value = key
+        .split('.')
+        .reduce((carry, part) => (carry == null ? undefined : carry[part]), messages);
+
+    return Array.isArray(value) ? value : [];
+}
+
 /** Vue plugin: exposes `$t` in every template. */
 export const i18n = {
     install(app) {

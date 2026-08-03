@@ -3,6 +3,17 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\AbsenceController;
+use App\Http\Controllers\Accounting\AccountController;
+use App\Http\Controllers\Accounting\BookingController;
+use App\Http\Controllers\Accounting\CategoryController;
+use App\Http\Controllers\Accounting\ContributionController;
+use App\Http\Controllers\Accounting\DashboardController;
+use App\Http\Controllers\Accounting\ImportController;
+use App\Http\Controllers\Accounting\PaperlessController;
+use App\Http\Controllers\Accounting\PaperlessReviewController;
+use App\Http\Controllers\Accounting\ReportController;
+use App\Http\Controllers\Accounting\TransferController;
+use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\Auth\SlackController;
 use App\Http\Controllers\ChildController;
 use App\Http\Controllers\CompanionConfirmationController;
@@ -10,7 +21,10 @@ use App\Http\Controllers\DailyBoardController;
 use App\Http\Controllers\DailyProgramController;
 use App\Http\Controllers\ExcursionController;
 use App\Http\Controllers\ExcursionRsvpController;
+use App\Http\Controllers\HolidayCareRegistrationController;
+use App\Http\Controllers\HolidayPeriodController;
 use App\Http\Controllers\LocaleController;
+use App\Http\Controllers\NotificationSettingsController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\SlackCommandController;
@@ -57,8 +71,15 @@ Route::get('/dashboard', function () {
 Route::get('/auth/slack/redirect', [SlackController::class, 'redirect'])->name('slack.redirect');
 Route::get('/auth/slack/callback', [SlackController::class, 'callback'])->name('slack.callback');
 
-// User-facing help/manual — reachable before login and from inside the app.
-Route::get('/hilfe', fn () => Inertia::render('Help'))->name('help');
+// User-facing help/manual — reachable before login and from inside the app. One
+// page per chapter (/help/holidays), with /help as the overview; the whitelist
+// keeps the slug honest, since it picks a component on the client.
+Route::get('/help/{topic?}', fn (?string $topic = null) => Inertia::render('Help', ['topic' => $topic]))
+    ->whereIn('topic', [
+        'getting-started', 'pickups', 'absences', 'holidays',
+        'excursions', 'slack', 'staff', 'glossary',
+    ])
+    ->name('help');
 
 // Deep-link from a Slack message into the app, signing in via Slack if needed.
 Route::get('/slack/enter', [SlackController::class, 'enter'])->name('slack.enter');
@@ -90,45 +111,132 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     Route::patch('/profile/language', [LocaleController::class, 'update'])->name('locale.update');
 
+    Route::get('/notifications', [NotificationSettingsController::class, 'edit'])->name('notifications.edit');
+    Route::patch('/notifications', [NotificationSettingsController::class, 'update'])->name('notifications.update');
+
     // Admin-only: switch your own role between staff / parent.
-    Route::post('/rolle', [SwitchRoleController::class, 'update'])->name('role.update');
+    Route::post('/role', [SwitchRoleController::class, 'update'])->name('role.update');
 
     Route::resource('children', ChildController::class)->except('show');
 
     // User management (admin only — the controller guards every action).
-    Route::get('/benutzer', [UserController::class, 'index'])->name('users.index');
-    Route::post('/benutzer/sync', [UserController::class, 'sync'])->name('users.sync');
-    Route::patch('/benutzer/{user}', [UserController::class, 'update'])->name('users.update');
-    Route::delete('/benutzer/{user}', [UserController::class, 'destroy'])->name('users.destroy');
+    Route::get('/users', [UserController::class, 'index'])->name('users.index');
+    Route::post('/users/sync', [UserController::class, 'sync'])->name('users.sync');
+    Route::patch('/users/{user}', [UserController::class, 'update'])->name('users.update');
+    Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
 
-    Route::get('/wochenplan', WeeklyOverviewController::class)->name('weekly-plan');
-    Route::patch('/wochenplan/anpassung', [WeeklyAdjustmentController::class, 'update'])->name('weekly-plan.adjust');
-    Route::patch('/wochenplan/zuruecksetzen', [WeeklyAdjustmentController::class, 'reset'])->name('weekly-plan.reset');
+    // Admin-only: the activity log / audit trail (the controller guards it).
+    Route::get('/activity-log', [ActivityLogController::class, 'index'])->name('activity-log');
+
+    Route::get('/weekly-plan', WeeklyOverviewController::class)->name('weekly-plan');
+    Route::patch('/weekly-plan/adjust', [WeeklyAdjustmentController::class, 'update'])->name('weekly-plan.adjust');
+    Route::patch('/weekly-plan/reset', [WeeklyAdjustmentController::class, 'reset'])->name('weekly-plan.reset');
     // The companion's parent (or staff) confirms another child going home with theirs.
-    Route::patch('/begleitung/{departure}/bestaetigen', [CompanionConfirmationController::class, 'update'])->name('companion.confirm');
-    Route::get('/stammplan', StandardPlanController::class)->name('standard-plan');
+    Route::patch('/companion/{departure}/confirm', [CompanionConfirmationController::class, 'update'])->name('companion.confirm');
+    Route::get('/standard-plan', StandardPlanController::class)->name('standard-plan');
 
     // Krankmeldung / Abwesenheit — staff or the child's parent.
-    Route::post('/abwesenheiten', [AbsenceController::class, 'store'])->name('absences.store');
-    Route::delete('/abwesenheiten', [AbsenceController::class, 'destroy'])->name('absences.destroy');
+    Route::post('/absences', [AbsenceController::class, 'store'])->name('absences.store');
+    Route::delete('/absences', [AbsenceController::class, 'destroy'])->name('absences.destroy');
 
-    Route::get('/programm', [DailyProgramController::class, 'index'])->name('program');
-    Route::patch('/programm', [DailyProgramController::class, 'update'])->name('program.update');
-    Route::patch('/programm/standard', [DailyProgramController::class, 'updateDefaults'])->name('program.defaults');
+    Route::get('/program', [DailyProgramController::class, 'index'])->name('program');
+    Route::patch('/program', [DailyProgramController::class, 'update'])->name('program.update');
+    Route::patch('/program/defaults', [DailyProgramController::class, 'updateDefaults'])->name('program.defaults');
+    Route::patch('/program/settings', [DailyProgramController::class, 'updateSettings'])->name('program.settings');
+    Route::patch('/program/digest-time', [DailyProgramController::class, 'updateDigestTime'])->name('program.digest-time');
+    Route::patch('/program/care-window', [DailyProgramController::class, 'updateCareWindow'])->name('program.care-window');
 
-    Route::get('/tagesboard', [DailyBoardController::class, 'index'])->name('board');
-    Route::patch('/tagesboard/{departure}/status', [DailyBoardController::class, 'mark'])->name('board.mark');
-    Route::patch('/tagesboard/{departure}/plan', [DailyBoardController::class, 'override'])->name('board.override');
+    Route::get('/board', [DailyBoardController::class, 'index'])->name('board');
+    Route::patch('/board/{departure}/status', [DailyBoardController::class, 'mark'])->name('board.mark');
+    Route::patch('/board/{departure}/plan', [DailyBoardController::class, 'override'])->name('board.override');
 
-    Route::resource('ausfluege', ExcursionController::class)
-        ->parameters(['ausfluege' => 'excursion'])
-        ->names('excursions')
-        ->except('show');
-    Route::patch('ausfluege/{excursion}/live', [ExcursionController::class, 'live'])->name('excursions.live');
+    // Schließzeiten — readable by everyone, managed by staff (the controller guards).
+    Route::get('/closures', [HolidayPeriodController::class, 'index'])->name('closures.index');
+    Route::post('/closures', [HolidayPeriodController::class, 'store'])->name('closures.store');
+    // One period on its own page: its days and its roster, like an Ausflug's.
+    Route::get('/closures/{closure}/edit', [HolidayPeriodController::class, 'edit'])->name('closures.edit');
+    Route::patch('/closures/{closure}', [HolidayPeriodController::class, 'update'])->name('closures.update');
+    Route::delete('/closures/{closure}', [HolidayPeriodController::class, 'destroy'])->name('closures.destroy');
+    // Ferienbetreuung: one offered day (Betreuungszeit + Aktivität).
+    Route::patch('/care-days/{careDay}', [HolidayPeriodController::class, 'updateCareDay'])->name('care-days.update');
+    Route::delete('/care-days/{careDay}', [HolidayPeriodController::class, 'destroyCareDay'])->name('care-days.destroy');
+    // Re-offering a removed day needs the tombstone resolved, hence withTrashed().
+    Route::patch('/care-days/{careDay}/restore', [HolidayPeriodController::class, 'restoreCareDay'])
+        ->withTrashed()->name('care-days.restore');
+
+    // Ferienbetreuung sign-ups — parents for their own children, staff for anyone.
+    Route::get('/care', [HolidayCareRegistrationController::class, 'index'])->name('care.index');
+    Route::patch('/care/{period}', [HolidayCareRegistrationController::class, 'update'])->name('care.update');
+
+    Route::resource('excursions', ExcursionController::class)->except('show');
+    Route::patch('excursions/{excursion}/live', [ExcursionController::class, 'live'])->name('excursions.live');
 
     // Parent participation poll.
-    Route::get('umfragen', [ExcursionRsvpController::class, 'index'])->name('polls.index');
-    Route::patch('ausfluege/{excursion}/rsvp', [ExcursionRsvpController::class, 'update'])->name('polls.update');
+    Route::get('polls', [ExcursionRsvpController::class, 'index'])->name('polls.index');
+    Route::patch('excursions/{excursion}/rsvp', [ExcursionRsvpController::class, 'update'])->name('polls.update');
+
+    // Buchhaltung — gated by the accounting access axis (read for viewing, write for
+    // mutations), independent of admin. See EnsureAccountingAccess.
+    Route::middleware('accounting')->prefix('accounting')->name('accounting.')->group(function () {
+        // --- Read (viewers + editors) ---
+        Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+        Route::get('accounts', [AccountController::class, 'index'])->name('accounts.index');
+        Route::get('categories', [CategoryController::class, 'index'])->name('categories.index');
+        // Export every booking matching the current filter (CSV/XLSX).
+        Route::get('bookings/export', [BookingController::class, 'export'])->name('bookings.download');
+        Route::get('bookings', [BookingController::class, 'index'])->name('bookings.index');
+        // Auswertung — month × category pivot of the confirmed ledger.
+        Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
+        Route::get('reports/export', [ReportController::class, 'export'])->name('reports.download');
+        // Einnahmen je Kind — child × month matrix of contributions.
+        Route::get('contributions', [ContributionController::class, 'index'])->name('contributions.index');
+
+        // Paperless thumbnail — proxied (token stays server-side). Readable, but scoped in
+        // the controller to documents actually linked to a booking (so a read-only user
+        // can see receipts on the ledger without being able to enumerate the whole archive).
+        Route::get('paperless/documents/{document}/thumb', [PaperlessController::class, 'thumbnail'])->name('paperless.documents.thumb')->whereNumber('document');
+
+        // --- Write (editors only) ---
+        Route::middleware('accounting:write')->group(function () {
+            Route::resource('accounts', AccountController::class)->except(['show', 'index']);
+            Route::resource('categories', CategoryController::class)->only(['store', 'update', 'destroy']);
+            // Step-through review of draft bookings (before the resource's {booking} routes).
+            Route::get('bookings/review', [BookingController::class, 'review'])->name('bookings.review');
+            Route::patch('bookings/{booking}/review', [BookingController::class, 'reviewSave'])->name('bookings.review-save');
+            // Re-run the AI over all unconfirmed bookings.
+            Route::post('bookings/reanalyse', [BookingController::class, 'reanalyse'])->name('bookings.reanalyse');
+            // Re-run the deterministic Paperless receipt link over unconfirmed bookings.
+            Route::post('bookings/relink-receipts', [BookingController::class, 'relinkReceipts'])->name('bookings.relink-receipts');
+
+            // Paperless search / resolve / download — editors only (archive-wide reads).
+            Route::get('paperless/search', [PaperlessController::class, 'search'])->name('paperless.search');
+            Route::get('paperless/documents/{document}', [PaperlessController::class, 'find'])->name('paperless.documents.show')->whereNumber('document');
+            Route::get('paperless/documents/{document}/download', [PaperlessController::class, 'download'])->name('paperless.documents.download')->whereNumber('document');
+
+            // „Belege zuordnen" — walk unlinked Paperless receipts, attach or create bookings.
+            Route::get('paperless/review', [PaperlessReviewController::class, 'index'])->name('paperless.review');
+            Route::post('paperless/attach', [PaperlessReviewController::class, 'attach'])->name('paperless.attach');
+            Route::post('paperless/bookings', [PaperlessReviewController::class, 'createBooking'])->name('paperless.bookings.store');
+            Route::post('paperless/ignore', [PaperlessReviewController::class, 'ignore'])->name('paperless.ignore');
+            // Bulk-confirm bookings from the overview.
+            Route::post('bookings/confirm', [BookingController::class, 'bulkConfirm'])->name('bookings.bulk-confirm');
+            // Reclassify an existing booking as an internal transfer to another account.
+            Route::post('bookings/{booking}/convert-transfer', [BookingController::class, 'convertToTransfer'])->name('bookings.convert-transfer');
+            Route::resource('bookings', BookingController::class)->except(['show', 'index']);
+
+            Route::get('transfers/create', [TransferController::class, 'create'])->name('transfers.create');
+            Route::post('transfers', [TransferController::class, 'store'])->name('transfers.store');
+
+            Route::get('import', [ImportController::class, 'create'])->name('import.create');
+            Route::post('import', [ImportController::class, 'store'])->name('import.store');
+            // Confirm/adjust the auto-guessed column mapping before drafts are created.
+            Route::get('import/{import}/configure', [ImportController::class, 'configure'])->name('import.configure');
+            Route::post('import/{import}/configure', [ImportController::class, 'storeMapping'])->name('import.store-mapping');
+            Route::get('import/{import}', [ImportController::class, 'show'])->name('import.show');
+            // Import genuine duplicates the user confirmed from the summary's skipped list.
+            Route::post('import/{import}/confirm-skipped', [ImportController::class, 'confirmSkipped'])->name('import.confirm-skipped');
+        });
+    });
 });
 
 require __DIR__.'/auth.php';

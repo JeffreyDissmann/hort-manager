@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Enums\NotificationCategory;
 use App\Jobs\CancelCompanionSlack;
 use App\Models\CompanionSlackMessage;
 use App\Models\DailyDeparture;
+use App\Models\User;
 use Illuminate\Support\Facades\Http;
 
 /**
@@ -27,7 +29,10 @@ class SlackCompanion
         $departure->loadMissing('child', 'companion');
         $existing = $departure->companionSlackMessages()->get()->keyBy('user_id');
 
-        foreach ($departure->companion->guardians()->onSlack()->get() as $guardian) {
+        $guardians = $departure->companion->guardians()->onSlack()->get()
+            ->filter(fn (User $guardian) => $guardian->wantsNotification(NotificationCategory::Companion->value, 'slack'));
+
+        foreach ($guardians as $guardian) {
             // Re-asking (e.g. after a reopen) updates the same DM back to buttons rather
             // than posting a duplicate.
             $message = $existing->get($guardian->id);

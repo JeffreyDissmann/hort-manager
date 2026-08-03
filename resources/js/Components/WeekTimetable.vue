@@ -1,5 +1,7 @@
 <script setup>
 import { computed } from 'vue';
+import { Link } from '@inertiajs/vue3';
+import { board } from '@/routes';
 
 const props = defineProps({
     // Rows: [{ time, days: [ [ {id,name,method,comment,adjusted?,excursion?} ] × 5 ] }]
@@ -62,8 +64,10 @@ function chipClass(method) {
 
 <template>
     <div class="overflow-x-auto rounded-2xl bg-surface p-2 shadow-sm">
+        <!-- 20rem, not 24: on a phone the whole Mo–Fr week has to be visible without a
+             sideways swipe, and child names wrap now instead of truncating. -->
         <div
-            class="grid min-w-[24rem] gap-x-1"
+            class="grid min-w-[20rem] gap-x-1"
             :style="{
                 gridTemplateColumns: '3rem repeat(5, auto minmax(0, 1fr))',
                 gridAutoRows: 'minmax(1.9rem, auto)',
@@ -95,19 +99,42 @@ function chipClass(method) {
                 :class="col.is_today ? 'border-b-2 border-hort-teal' : 'border-b border-ink/10'"
                 :style="{ gridRow: 1, gridColumn: `${bandCol(j)} / ${bandCol(j) + 2}` }"
             >
-                <div
-                    class="text-xs font-semibold"
-                    :class="col.is_today ? 'text-hort-teal-dark' : 'text-ink/50'"
+                <!-- The header links to that day's board (Heute). -->
+                <component
+                    :is="col.date ? Link : 'div'"
+                    :href="col.date ? board({ query: { date: col.date } }).url : undefined"
+                    :data-testid="col.date ? `wp-day-link-${col.date}` : undefined"
+                    class="block rounded transition"
+                    :class="col.date ? 'hover:bg-hort-teal/10' : ''"
                 >
-                    {{ col.label }}<span v-if="col.is_today"> · {{ $t('common.today') }}</span>
-                </div>
-                <div
-                    v-if="col.sublabel"
-                    class="text-[11px]"
-                    :class="col.is_today ? 'font-semibold text-hort-teal-dark' : 'text-ink/30'"
-                >
-                    {{ col.sublabel }}
-                </div>
+                    <div
+                        class="text-xs font-semibold"
+                        :class="col.is_today ? 'text-hort-teal-dark' : 'text-ink/50'"
+                    >
+                        {{ col.label }}<span v-if="col.is_today"> · {{ $t('common.today') }}</span>
+                    </div>
+                    <div
+                        v-if="col.sublabel"
+                        class="text-[11px]"
+                        :class="col.is_today ? 'font-semibold text-hort-teal-dark' : 'text-ink/30'"
+                    >
+                        {{ col.sublabel }}
+                    </div>
+                    <!-- Closed days carry no rows at all, so say why the column is empty.
+                         A care day carries only the children who signed up. -->
+                    <!-- Truncated: a column is a fifth of a phone screen wide, and
+                         „Ferienbetreuung" would otherwise run into the next day. -->
+                    <div v-if="col.closed" class="truncate text-[11px] font-medium text-ink/40" :title="col.closed">
+                        {{ $t('weekly.closed_short') }}
+                    </div>
+                    <div
+                        v-else-if="col.care"
+                        class="truncate text-[11px] font-medium text-hort-teal-dark"
+                        :title="col.care"
+                    >
+                        {{ $t('weekly.care_short') }}
+                    </div>
+                </component>
                 <div
                     v-if="program[j] && program[j].lunch"
                     class="mt-0.5 truncate text-[11px] text-ink/70"
@@ -193,7 +220,9 @@ function chipClass(method) {
                             :title="kid.comment || undefined"
                             @click="editable && kid.editable ? emit('edit', kid, columns[j]) : null"
                         >
-                            <span class="block truncate">
+                            <!-- Wraps rather than truncates: „Ch…" tells nobody which
+                                 child that is, and a two-line chip costs one row. -->
+                            <span class="block hyphens-auto break-words">
                                 <span v-if="kid.excursion">🚌&nbsp;</span><span v-if="kid.method === 'sent_home'">🚶&nbsp;</span>{{ kid.name }}<span v-if="kid.qualifier_prefix" class="font-normal opacity-70">&nbsp;· {{ kid.qualifier_prefix }} {{ kid.time }}</span><span v-if="kid.companion" class="font-normal opacity-70">&nbsp;· {{ $t('weekly.companion_with', { name: kid.companion.name }) }}</span>
                             </span>
                             <span

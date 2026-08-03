@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Enums\AccountingAccess;
 use App\Enums\UserRole;
 use App\Models\User;
 use App\Services\SlackUserImporter;
@@ -23,7 +24,7 @@ class UserController extends Controller
         return Inertia::render('Users/Index', [
             'users' => User::with('children:id,name')
                 ->orderBy('name')
-                ->get(['id', 'name', 'email', 'avatar', 'role', 'is_admin'])
+                ->get(['id', 'name', 'email', 'avatar', 'role', 'is_admin', 'accounting_access'])
                 ->map(fn (User $user) => [
                     'id' => $user->id,
                     'name' => $user->name,
@@ -31,12 +32,16 @@ class UserController extends Controller
                     'avatar' => $user->avatar,
                     'role' => $user->role->value,
                     'is_admin' => $user->is_admin,
+                    'accounting_access' => $user->accounting_access->value,
                     'is_self' => $user->is($request->user()),
                     // The children this user is a guardian of (shown on the card).
                     'children' => $user->children->sortBy('name')->pluck('name')->values(),
                 ]),
             'roleOptions' => collect(UserRole::cases())
                 ->map(fn (UserRole $role) => ['value' => $role->value, 'label' => $role->label()])
+                ->all(),
+            'accountingOptions' => collect(AccountingAccess::cases())
+                ->map(fn (AccountingAccess $a) => ['value' => $a->value, 'label' => $a->label()])
                 ->all(),
         ]);
     }
@@ -49,10 +54,12 @@ class UserController extends Controller
         $validated = $request->validate([
             'role' => ['required', Rule::enum(UserRole::class)],
             'is_admin' => ['required', 'boolean'],
+            'accounting_access' => ['required', Rule::enum(AccountingAccess::class)],
         ]);
 
         $role = UserRole::from($validated['role']);
-        // Role (teacher access) and admin (user management) are independent.
+        // Role (teacher access), admin (user management) and accounting access are all
+        // independent axes.
         $isAdmin = $validated['is_admin'];
 
         // Never leave the Hort without an admin.
@@ -60,7 +67,11 @@ class UserController extends Controller
             return back()->with('status', __('flash.min_one_admin'));
         }
 
-        $user->forceFill(['role' => $role, 'is_admin' => $isAdmin])->save();
+        $user->forceFill([
+            'role' => $role,
+            'is_admin' => $isAdmin,
+            'accounting_access' => AccountingAccess::from($validated['accounting_access']),
+        ])->save();
 
         return back()->with('status', __('flash.user_updated', ['name' => $user->name]));
     }

@@ -16,6 +16,57 @@ declare(strict_types=1);
 
 return [
     [
+        'version' => '2026.08.02',
+        'date' => '2026-08-02',
+        'title' => 'Ferien 🏖️: Schließzeiten & Ferienbetreuung',
+        'items' => [
+            '🚫 Neu im Menü unter „Schließzeiten": alle Tage, an denen der Hort zu ist – Ferien, Brückentage, Fortbildungen. An diesen Tagen gibt es keinen Abholplan und kein Programm, und im Wochenplan sind sie grau hinterlegt. So siehst du früh, wann du selbst etwas organisieren musst.',
+            '🏖️ Und neu: die Ferienbetreuung. Die Erzieher:innen legen den Zeitraum und die Betreuungszeiten fest – du meldest dein Kind tageweise an, ganz wie es in eure Ferien passt.',
+            '📅 Unter „Ferienbetreuung" kreuzt du einfach die Tage an, an denen dein Kind kommt. Die angemeldeten Tage stehen danach ganz normal im Wochenplan und auf „Heute" – mit Abholzeit, Krankmeldung und allem, was du kennst.',
+            '🔔 Sobald eine Ferienbetreuung offen ist, bekommst du Bescheid, und bis zum Anmeldeschluss erinnert dich ein Hinweis in der App. Am Stichtag selbst gibt es noch eine letzte Erinnerung – aber nur, wenn du noch nicht geantwortet hast.',
+            '🍽️ Essen und Aktivitäten der Ferientage stehen wie gewohnt im Wochenüberblick. Hausaufgaben gibt es in den Ferien natürlich keine.',
+            '📖 Und die Hilfe ist neu sortiert: statt einer langen Seite gibt es jetzt Kapitel – darunter „Wenn ein Kind nicht da ist" (Krank, hortfrei und Schließzeit im Vergleich) und „Ferien & Schließzeiten".',
+        ],
+    ],
+    [
+        'version' => '2026.08.01',
+        'date' => '2026-08-01',
+        'title' => 'Benachrichtigungen passend zur Rolle 🔔 & kurzfristige Änderungen ⏰',
+        'items' => [
+            '🔔 Unter „Benachrichtigungen" siehst du jetzt nur noch das, was dich wirklich betrifft: Eltern die Eltern-Themen, Erzieher:innen die Erzieher-Themen. Wer beides ist – also Erzieher:in mit eigenem Kind im Hort – sieht beide Bereiche getrennt untereinander.',
+            '⏰ Ändert sich für ein Kind noch kurzfristig etwas am heutigen Tag – eine andere Abholzeit, „geht mit … mit", eine Krankmeldung oder deren Rücknahme – bekommen die Erzieher:innen darüber jetzt eine Nachricht. Denn morgens abgesprochen ist nicht dasselbe wie nachmittags geändert.',
+            '👀 Als Elternteil siehst du das vorher: Ist es für heute schon spät, steht direkt im Fenster ein Hinweis, dass die Erzieher:innen informiert werden. Keine Überraschung im Nachhinein.',
+            '🕛 Ab wann eine Änderung als kurzfristig gilt, legen die Erzieher:innen unter „Programm" fest – standardmäßig ab 12:00 Uhr.',
+            '🍽️ Ebenfalls neu für Erzieher:innen: Fehlt montags kurz vor dem Wochenüberblick noch ein Mittagessen im Programm, gibt es eine Erinnerung – rechtzeitig, damit der Überblick vollständig bei den Eltern ankommt.',
+            '🗓️ Auch die Uhrzeit des Wochenüberblicks lässt sich jetzt unter „Programm" einstellen.',
+        ],
+    ],
+    [
+        'version' => '2026.07.23',
+        'date' => '2026-07-23',
+        'title' => 'Mitgehen: „bis"/„ab" wird übernommen 🕒 – Danke, Julia!',
+        'items' => [
+            '🕒 Geht dein Kind mit einem anderen Kind mit, übernimmt es jetzt auch dessen Zeit-Angabe: Heißt es beim anderen Kind „ab 15:30" oder „bis 15:30", steht das nun genauso bei deinem Kind – auf „Heute", im Wochenplan und im Wochenüberblick.',
+            '💛 Danke fürs Melden, Julia!',
+        ],
+    ],
+    [
+        'version' => '2026.07.18',
+        'date' => '2026-07-18',
+        'title' => 'Jeden Tag ansehen 📅 & Benachrichtigungen 🔔 – Danke, Julia & Stepan!',
+        'items' => [
+            '📅 „Heute" zeigt jetzt jeden Tag: Blättere mit den Pfeilen oder tippe auf das Datum, um einen Tag auszuwählen – mit Essen, Aktivität, Ausflügen und dem Abholplan für genau diesen Tag.',
+            '✏️ Kommende Tage kannst du direkt anpassen, vergangene Tage siehst du zum Nachschauen.',
+            '↔️ Im Wochenplan bringt dich ein Tipp auf einen Wochentag direkt zur „Heute"-Ansicht dieses Tages.',
+            '🗓️ Ein Datum auswählen geht jetzt überall gleich – über einen übersichtlichen Kalender, z. B. fürs Geburtsdatum oder das Ausflugsdatum.',
+            '💛 Danke für die Idee, Julia!',
+            '🔔 Neu im Menü unter „Benachrichtigungen": Du entscheidest jetzt selbst, worüber du informiert wirst – und ob per Slack oder als Push auf dein Gerät. Für jede Art einzeln (Abholung, Ausflüge, Mitgehen, fehlender Wochenplan, Wochenüberblick).',
+            '📱 Push aktivierst du dabei pro Gerät – auf jedem Handy oder Rechner, auf dem du benachrichtigt werden möchtest.',
+            '🗓️ Jeden Montagmittag bekommst du außerdem einen Wochenüberblick: Essen, Aktivitäten und Hausaufgaben der Woche plus eine kurze Zusammenfassung für dein Kind – Abholzeiten, Krank-Tage und Ausflüge.',
+            '💙 Danke für die Idee, Stepan!',
+        ],
+    ],
+    [
         'version' => '2026.07.14',
         'date' => '2026-07-14',
         'title' => 'Überall gleich bearbeiten ✏️',

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Enums\AbsenceReason;
+use App\Models\Concerns\LogsChanges;
 use App\Observers\AbsenceObserver;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Model;
@@ -14,7 +15,20 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 #[ObservedBy([AbsenceObserver::class])]
 class Absence extends Model
 {
+    use LogsChanges;
+
     protected $fillable = ['child_id', 'date', 'reason', 'comment', 'reported_by'];
+
+    /** @return list<string> */
+    protected function activityAttributes(): array
+    {
+        return ['date', 'reason', 'comment'];
+    }
+
+    protected function activityLabel(): string
+    {
+        return $this->child?->name ?? '?';
+    }
 
     protected function casts(): array
     {
@@ -37,6 +51,11 @@ class Absence extends Model
         DailyDeparture::where('child_id', $child->id)
             ->where('date', $date)
             ->whereNull('left_at')
+            // A Ferienbetreuung sign-up is kept: that row isn't a plan override, it *is*
+            // the child's place, and deleting it would un-register them — past the
+            // Anmeldeschluss with no way back, over one day of Schnupfen. Being absent
+            // already takes them off the board and out of every list; the place stays.
+            ->whereNull('holiday_care_day_id')
             ->delete();
 
         return $absence;

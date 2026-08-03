@@ -2,6 +2,7 @@
 import { update as childrenUpdate, index as childrenIndex, destroy as childrenDestroy } from '@/routes/children';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import Avatar from '@/Components/Avatar.vue';
+import DatePicker from '@/Components/DatePicker.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import TextInput from '@/Components/TextInput.vue';
 import TimeSelect from '@/Components/TimeSelect.vue';
@@ -65,6 +66,8 @@ const form = useForm({
     name: props.child.name,
     date_of_birth: props.child.date_of_birth ?? '',
     note: props.child.note ?? '',
+    active_from: props.child.active_from ?? '',
+    active_until: props.child.active_until ?? '',
     schedule: props.schedule.map((day) => ({
         weekday: day.weekday,
         planned_time: day.planned_time ? day.planned_time.slice(0, 5) : '',
@@ -149,16 +152,30 @@ function destroy() {
 
                         <div>
                             <InputLabel for="date_of_birth" :value="$t('children.date_of_birth')" />
-                            <TextInput
+                            <DatePicker
                                 id="date_of_birth"
                                 v-model="form.date_of_birth"
-                                type="date"
-                                class="mt-1 block w-full"
+                                clearable
+                                class="mt-1"
                             />
                             <InputError
                                 :message="form.errors.date_of_birth"
                                 class="mt-2"
                             />
+                        </div>
+
+                        <div class="grid gap-4 sm:grid-cols-2">
+                            <div>
+                                <InputLabel for="active_from" :value="$t('children.active_from')" />
+                                <DatePicker id="active_from" v-model="form.active_from" class="mt-1" />
+                                <InputError :message="form.errors.active_from" class="mt-2" />
+                            </div>
+                            <div>
+                                <InputLabel for="active_until" :value="$t('children.active_until')" />
+                                <DatePicker id="active_until" v-model="form.active_until" clearable class="mt-1" />
+                                <p class="mt-1 text-xs text-ink/40">{{ $t('children.active_until_hint') }}</p>
+                                <InputError :message="form.errors.active_until" class="mt-2" />
+                            </div>
                         </div>
 
                         <div>

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Enums\NotificationCategory;
 use App\Models\Child;
 use App\Models\Excursion;
 use App\Models\ExcursionSlackMessage;
@@ -24,7 +25,10 @@ class SlackRsvp
             return;
         }
 
-        foreach (User::guardians()->onSlack()->get() as $guardian) {
+        $guardians = User::guardians()->onSlack()->get()
+            ->filter(fn (User $guardian) => $guardian->wantsNotification(NotificationCategory::Excursions->value, 'slack'));
+
+        foreach ($guardians as $guardian) {
             $response = $this->call('chat.postMessage', [
                 'channel' => $guardian->slack_id,
                 'text' => $this->fallback($excursion),

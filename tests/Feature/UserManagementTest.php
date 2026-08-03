@@ -59,7 +59,7 @@ class UserManagementTest extends TestCase
         $parent = User::factory()->create(['role' => UserRole::Parent]);
 
         $this->actingAs($this->admin())
-            ->patch(route('users.update', $parent), ['role' => 'staff', 'is_admin' => false]);
+            ->patch(route('users.update', $parent), ['role' => 'staff', 'is_admin' => false, 'accounting_access' => 'none']);
 
         $this->assertSame(UserRole::Staff, $parent->refresh()->role);
         $this->assertFalse($parent->is_admin);
@@ -70,7 +70,7 @@ class UserManagementTest extends TestCase
         $parent = User::factory()->create(['role' => UserRole::Parent]);
 
         $this->actingAs($this->admin())
-            ->patch(route('users.update', $parent), ['role' => 'parent', 'is_admin' => true]);
+            ->patch(route('users.update', $parent), ['role' => 'parent', 'is_admin' => true, 'accounting_access' => 'none']);
 
         $parent->refresh();
         $this->assertTrue($parent->is_admin);
@@ -83,7 +83,7 @@ class UserManagementTest extends TestCase
         $admin = $this->admin();
 
         $this->actingAs($admin)
-            ->patch(route('users.update', $admin), ['role' => 'staff', 'is_admin' => false]);
+            ->patch(route('users.update', $admin), ['role' => 'staff', 'is_admin' => false, 'accounting_access' => 'none']);
 
         $this->assertTrue($admin->refresh()->is_admin);
     }
@@ -94,7 +94,7 @@ class UserManagementTest extends TestCase
         $other = $this->admin();
 
         $this->actingAs($other)
-            ->patch(route('users.update', $admin), ['role' => 'staff', 'is_admin' => false]);
+            ->patch(route('users.update', $admin), ['role' => 'staff', 'is_admin' => false, 'accounting_access' => 'none']);
 
         $this->assertFalse($admin->refresh()->is_admin);
     }

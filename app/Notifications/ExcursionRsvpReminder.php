@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Notifications;
 
+use App\Enums\NotificationCategory;
 use App\Models\Excursion;
 use Illuminate\Notifications\Slack\BlockKit\Blocks\ActionsBlock;
 use Illuminate\Notifications\Slack\BlockKit\Blocks\SectionBlock;
@@ -14,6 +15,11 @@ use NotificationChannels\WebPush\WebPushMessage;
 class ExcursionRsvpReminder extends SlackNotification
 {
     public function __construct(public Excursion $excursion) {}
+
+    public function category(): string
+    {
+        return NotificationCategory::Excursions->value;
+    }
 
     public function toSlack(object $notifiable): SlackMessage
     {

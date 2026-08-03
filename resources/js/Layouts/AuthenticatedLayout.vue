@@ -7,6 +7,7 @@ import Dropdown from '@/Components/Dropdown.vue';
 import DropdownLink from '@/Components/DropdownLink.vue';
 import InstallBanner from '@/Components/InstallBanner.vue';
 import NotifyPrompt from '@/Components/NotifyPrompt.vue';
+import CareReminderBanner from '@/Components/CareReminderBanner.vue';
 import PlanReminderBanner from '@/Components/PlanReminderBanner.vue';
 import PullToRefresh from '@/Components/PullToRefresh.vue';
 import WhatsNewModal from '@/Components/WhatsNewModal.vue';
@@ -17,14 +18,28 @@ import {
     UserGroupIcon,
     MapIcon,
     ClipboardDocumentListIcon,
+    Squares2X2Icon,
+    BanknotesIcon,
+    ChartBarIcon,
+    UsersIcon,
+    ChevronDownIcon,
+    CheckIcon,
 } from '@heroicons/vue/24/outline';
-import { board, weeklyPlan, standardPlan, program, logout, dashboard, help } from '@/routes';
+import { board, weeklyPlan, standardPlan, program, logout, dashboard, help, activityLog } from '@/routes';
+import { dashboard as accountingDashboard } from '@/routes/accounting';
 import { update as switchRoleRoute } from '@/routes/role';
 import { index as childrenIndex } from '@/routes/children';
 import { index as excursionsIndex } from '@/routes/excursions';
+import { index as closuresIndex } from '@/routes/closures';
 import { index as usersIndex } from '@/routes/users';
+import { index as bookingsIndex } from '@/routes/accounting/bookings';
+import { index as accountsIndex } from '@/routes/accounting/accounts';
+import { index as categoriesIndex } from '@/routes/accounting/categories';
+import { index as reportsIndex } from '@/routes/accounting/reports';
+import { index as contributionsIndex } from '@/routes/accounting/contributions';
 import { index as pollsIndex } from '@/routes/polls';
 import { edit as profileEdit } from '@/routes/profile';
+import { edit as notificationsEdit } from '@/routes/notifications';
 import { Link, router, usePage } from '@inertiajs/vue3';
 import { t } from '@/i18n';
 
@@ -43,6 +58,9 @@ const userName = computed(() => user.value?.name ?? '');
 const userAvatar = computed(() => user.value?.avatar ?? null);
 const isStaff = computed(() => user.value?.role === 'staff');
 const isAdmin = computed(() => user.value?.is_admin ?? false);
+// Accounting access — an axis independent of role/admin (see EnsureAccountingAccess).
+const canReadAccounting = computed(() => user.value?.can_read_accounting ?? false);
+const canWriteAccounting = computed(() => user.value?.can_write_accounting ?? false);
 
 // Admins can switch their own role (staff ↔ parent) right from the menu.
 function switchRole(role) {
@@ -52,10 +70,26 @@ function switchRole(role) {
     router.post(switchRoleRoute().url, { role }, { preserveScroll: true });
 }
 const pendingPolls = computed(() => usePage().props.pendingPolls ?? 0);
+// Open Ferienbetreuungen this family still has to answer (drives the menu badge).
+const pendingCare = computed(() => usePage().props.pendingCare ?? []);
 const pendingCompanions = computed(() => usePage().props.pendingCompanions ?? 0);
+
+// Which "world" we're in is decided purely by the URL: /accounting/* = accounting.
+const inAccounting = computed(() => usePage().url.startsWith('/accounting'));
 
 // Primary navigation — shown as top links on desktop and as a bottom tab bar on mobile.
 const navItems = computed(() => {
+    // Accounting world has its own top-bar items.
+    if (inAccounting.value) {
+        return [
+            // Exact match — /accounting is a prefix of every other accounting page.
+            { label: t('nav.accounting_overview'), href: accountingDashboard().url, icon: 'overview', exact: true },
+            { label: t('nav.bookings'), href: bookingsIndex().url, icon: 'bookings' },
+            { label: t('nav.reports'), href: reportsIndex().url, icon: 'chart' },
+            { label: t('nav.contributions'), href: contributionsIndex().url, icon: 'users' },
+        ];
+    }
+
     // Staff: full nav (Kinder last — changes least). Parents: Heute, Ausflüge, Abholplan.
     const items = isStaff.value
         ? [
@@ -68,7 +102,14 @@ const navItems = computed(() => {
           ]
         : [
               { label: t('common.today'), href: board().url, icon: 'sun' },
-              { label: t('nav.excursions'), href: pollsIndex().url, icon: 'map', badge: pendingPolls.value },
+              // Trips and Ferienbetreuung answer to the same reflex („will mein Kind
+              // mit?"), so parents get one tab — and one badge — for both.
+              {
+                  label: t('nav.excursions_care'),
+                  href: pollsIndex().url,
+                  icon: 'map',
+                  badge: pendingPolls.value + pendingCare.value.length,
+              },
               { label: t('nav.pickup_plan'), href: weeklyPlan().url, icon: 'calendar' },
               { label: t('nav.standard_plan'), href: standardPlan().url, icon: 'table' },
           ];
@@ -77,6 +118,10 @@ const navItems = computed(() => {
 });
 
 // Heroicon components keyed by the nav item's icon name.
+// Section labels in the account menu — quiet, so they group without competing
+// with the links themselves.
+const menuHeadingClass = 'px-4 pb-0.5 pt-2 text-[11px] font-semibold uppercase tracking-wide text-ink/40';
+
 const icons = {
     sun: SunIcon,
     calendar: CalendarDaysIcon,
@@ -84,12 +129,22 @@ const icons = {
     children: UserGroupIcon,
     map: MapIcon,
     food: ClipboardDocumentListIcon,
+    overview: Squares2X2Icon,
+    bookings: BanknotesIcon,
+    chart: ChartBarIcon,
+    users: UsersIcon,
 };
 
 // Active tab = current path equals the item's href or is a sub-path of it.
+// `exact` items (e.g. the accounting overview at /accounting) match only exactly,
+// since their href is a prefix of every sibling page.
 const currentPath = computed(() => usePage().url.split('?')[0]);
-function isActive(href) {
-    return currentPath.value === href || currentPath.value.startsWith(href + '/');
+function isActive(item) {
+    if (currentPath.value === item.href) {
+        return true;
+    }
+
+    return item.exact ? false : currentPath.value.startsWith(item.href + '/');
 }
 </script>
 
@@ -108,15 +163,41 @@ function isActive(href) {
                 :class="contentMax"
                 class="mx-auto flex h-16 items-center justify-between px-4 sm:px-6"
             >
-                <Link
-                    :href="dashboard().url"
-                    class="flex items-center gap-2"
-                >
-                    <ApplicationLogo class="h-9 w-9" />
-                    <span class="font-display text-2xl text-ink">
-                        {{ appName }}
-                    </span>
-                </Link>
+                <div class="flex items-center gap-1.5">
+                    <!-- House icon always links home. Non-admins' wordmark links home too. -->
+                    <Link :href="dashboard().url" class="flex items-center gap-2">
+                        <ApplicationLogo class="h-9 w-9" />
+                        <span v-if="!canReadAccounting" class="font-display text-2xl text-ink">{{ appName }}</span>
+                    </Link>
+
+                    <!-- Accounting users: the wordmark is the world switcher (Hort ↔ Buchhaltung). -->
+                    <Dropdown v-if="canReadAccounting" align="left" width="48">
+                        <template #trigger>
+                            <button
+                                type="button"
+                                data-testid="world-switch"
+                                class="flex items-center gap-1 font-display text-2xl text-ink transition hover:opacity-80"
+                            >
+                                {{ inAccounting ? $t('nav.accounting') : appName }}
+                                <ChevronDownIcon class="h-4 w-4 text-ink/40" />
+                            </button>
+                        </template>
+                        <template #content>
+                            <DropdownLink :href="board().url" data-testid="world-hort">
+                                <span class="inline-flex items-center gap-2">
+                                    <CheckIcon class="h-4 w-4 text-hort-teal-dark" :class="{ invisible: inAccounting }" />
+                                    {{ $t('nav.hort_world') }}
+                                </span>
+                            </DropdownLink>
+                            <DropdownLink :href="accountingDashboard().url" data-testid="world-accounting">
+                                <span class="inline-flex items-center gap-2">
+                                    <CheckIcon class="h-4 w-4 text-hort-teal-dark" :class="{ invisible: !inAccounting }" />
+                                    {{ $t('nav.accounting') }}
+                                </span>
+                            </DropdownLink>
+                        </template>
+                    </Dropdown>
+                </div>
 
                 <!-- Desktop nav links -->
                 <nav class="hidden items-center gap-1 sm:flex">
@@ -126,7 +207,7 @@ function isActive(href) {
                         :href="item.href"
                         :class="[
                             'rounded-lg px-3 py-2 text-sm font-medium transition',
-                            isActive(item.href)
+                            isActive(item)
                                 ? 'bg-hort-teal/20 text-ink'
                                 : 'text-ink/60 hover:bg-ink/5 hover:text-ink',
                         ]"
@@ -151,9 +232,6 @@ function isActive(href) {
                     </template>
                     <template #content>
                         <template v-if="isAdmin">
-                            <DropdownLink :href="usersIndex().url">
-                                {{ $t('nav.users') }}
-                            </DropdownLink>
                             <div class="px-4 py-2">
                                 <p class="mb-1 text-xs font-medium text-ink/50">{{ $t('nav.my_role') }}</p>
                                 <div class="flex gap-0.5 rounded-lg bg-ink/5 p-0.5">
@@ -178,16 +256,58 @@ function isActive(href) {
                                 </div>
                             </div>
                             <hr class="my-1 border-ink/10" />
+                            <p :class="menuHeadingClass">{{ $t('nav.group_admin') }}</p>
+                            <DropdownLink :href="usersIndex().url">
+                                {{ $t('nav.users') }}
+                            </DropdownLink>
+                            <DropdownLink :href="activityLog().url" data-testid="nav-activity-log">
+                                {{ $t('nav.activity_log') }}
+                            </DropdownLink>
+                            <hr class="my-1 border-ink/10" />
                         </template>
+                        <!-- Accounting config — shown to accounting users, only in that world. -->
+                        <template v-if="inAccounting">
+                            <p :class="menuHeadingClass">{{ $t('nav.group_accounting') }}</p>
+                            <DropdownLink :href="accountsIndex().url" data-testid="nav-accounts">
+                                {{ $t('nav.accounts') }}
+                            </DropdownLink>
+                            <DropdownLink :href="categoriesIndex().url" data-testid="nav-categories">
+                                {{ $t('nav.categories') }}
+                            </DropdownLink>
+                            <hr class="my-1 border-ink/10" />
+                        </template>
+
+                        <!-- Hort matters: who comes, and when the Hort is open. -->
+                        <p :class="menuHeadingClass">{{ $t('nav.group_hort') }}</p>
                         <DropdownLink
                             v-if="!isStaff"
                             :href="childrenIndex().url"
                         >
                             {{ $t('nav.my_children') }}
                         </DropdownLink>
+                        <!-- One entry for both kinds of Ferien-Zeitraum: parents read
+                             them here, staff open one to set it up and see its roster.
+                             Signing up happens on „Ausflüge & Ferien". -->
+                        <DropdownLink :href="closuresIndex().url" data-testid="nav-closures">
+                            {{ $t('nav.closures') }}
+                            <span
+                                v-if="pendingCare.length"
+                                class="ml-1 rounded-full bg-hort-teal-dark px-1.5 py-0.5 text-[10px] font-bold text-white"
+                            >
+                                {{ pendingCare.length }}
+                            </span>
+                        </DropdownLink>
+
+                        <hr class="my-1 border-ink/10" />
+                        <p :class="menuHeadingClass">{{ $t('nav.group_account') }}</p>
                         <DropdownLink :href="profileEdit().url">
                             {{ $t('nav.profile') }}
                         </DropdownLink>
+                        <DropdownLink :href="notificationsEdit().url">
+                            {{ $t('nav.notifications') }}
+                        </DropdownLink>
+
+                        <hr class="my-1 border-ink/10" />
                         <DropdownLink :href="help().url">
                             {{ $t('nav.help') }}
                         </DropdownLink>
@@ -268,6 +388,7 @@ function isActive(href) {
         >
             <PullToRefresh>
                 <PlanReminderBanner class="mb-4" />
+                <CareReminderBanner class="mb-4" />
                 <slot />
             </PullToRefresh>
         </main>
@@ -282,7 +403,7 @@ function isActive(href) {
                     :key="item.label"
                     :href="item.href"
                     :class="[
-                        'flex flex-1 flex-col items-center gap-1 py-2.5 text-xs font-medium transition',
+                        'flex flex-1 flex-col items-center gap-1 px-1 py-2.5 text-center text-xs font-medium leading-tight transition',
                         isActive(item.href)
                             ? 'text-hort-teal-dark'
                             : 'text-ink/50',

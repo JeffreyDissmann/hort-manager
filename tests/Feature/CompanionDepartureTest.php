@@ -6,6 +6,7 @@ namespace Tests\Feature;
 
 use App\Enums\DepartureMethod;
 use App\Enums\DepartureStatus;
+use App\Enums\TimeQualifier;
 use App\Enums\UserRole;
 use App\Jobs\AskCompanionConfirmation;
 use App\Jobs\SyncCompanionConfirmation;
@@ -89,7 +90,7 @@ class CompanionDepartureTest extends TestCase
         $tom = Child::factory()->create(['name' => 'Tom']);
         $this->departsAt($tom, $date, DepartureMethod::SentHome);
 
-        $tomsParent = User::factory()->create(['role' => UserRole::Parent]);
+        $tomsParent = User::factory()->slackLinked()->create(['role' => UserRole::Parent]);
         $tomsParent->children()->attach($tom);
 
         $this->actingAs($this->staff())
@@ -107,6 +108,52 @@ class CompanionDepartureTest extends TestCase
             'companion_confirmed' => null,
         ]);
         Notification::assertSentTo($tomsParent, CompanionRequest::class);
+    }
+
+    public function test_a_companion_inherits_the_lone_childs_time_qualifier(): void
+    {
+        Notification::fake();
+        $date = $this->wednesday();
+        $anna = Child::factory()->create(['name' => 'Anna']);
+        $tom = Child::factory()->create(['name' => 'Tom']);
+        // Tom geht allein „ab 15:00".
+        DailyDeparture::create([
+            'child_id' => $tom->id,
+            'date' => $date,
+            'planned_time' => '15:00',
+            'planned_method' => DepartureMethod::SentHome,
+            'time_qualifier' => TimeQualifier::From,
+            'status' => DepartureStatus::Present,
+        ]);
+        $tomsParent = User::factory()->slackLinked()->create(['role' => UserRole::Parent]);
+        $tomsParent->children()->attach($tom);
+        $staff = $this->staff();
+
+        $this->actingAs($staff)->patch(route('weekly-plan.adjust'), [
+            'child_id' => $anna->id,
+            'date' => $date,
+            'planned_method' => DepartureMethod::WithChild->value,
+            'companion_child_id' => $tom->id,
+        ])->assertRedirect();
+
+        // The weekly grid mirrors Tom's „ab" qualifier onto Anna's day (even pending).
+        $this->actingAs($staff)->get(route('weekly-plan'))
+            ->assertInertia(fn ($page) => $page
+                ->where('currentWeek.0.name', 'Anna')
+                ->where('currentWeek.0.days.2.time', '15:00')
+                ->where('currentWeek.0.days.2.qualifier', TimeQualifier::From->value)
+                ->where('currentWeek.0.days.2.companion.name', 'Tom'));
+
+        // Once confirmed, the board shows the mirrored time with the „ab" prefix.
+        $departure = DailyDeparture::where('child_id', $anna->id)->firstOrFail();
+        $this->actingAs($tomsParent)->patch(route('companion.confirm', $departure), ['confirmed' => true]);
+
+        $this->actingAs($staff)->get(route('board', ['date' => $date]))
+            ->assertInertia(fn ($page) => $page
+                ->where('rows.0.name', 'Anna')
+                ->where('rows.0.planned_method', 'with_child')
+                ->where('rows.0.planned_time', '15:00')
+                ->where('rows.0.qualifier_prefix', TimeQualifier::From->prefix()));
     }
 
     public function test_a_companion_who_goes_with_a_third_child_is_rejected(): void
@@ -160,9 +207,9 @@ class CompanionDepartureTest extends TestCase
         $date = $this->wednesday();
         $anna = Child::factory()->create();
         $tom = Child::factory()->create();
-        $tomsParent = User::factory()->create(['role' => UserRole::Parent]);
+        $tomsParent = User::factory()->slackLinked()->create(['role' => UserRole::Parent]);
         $tomsParent->children()->attach($tom);
-        $annasParent = User::factory()->create(['role' => UserRole::Parent]);
+        $annasParent = User::factory()->slackLinked()->create(['role' => UserRole::Parent]);
         $annasParent->children()->attach($anna);
 
         $departure = DailyDeparture::create([
@@ -193,7 +240,7 @@ class CompanionDepartureTest extends TestCase
         $date = $this->wednesday();
         $anna = Child::factory()->create();
         $tom = Child::factory()->create();
-        $tomsParent = User::factory()->create(['role' => UserRole::Parent]);
+        $tomsParent = User::factory()->slackLinked()->create(['role' => UserRole::Parent]);
         $tomsParent->children()->attach($tom);
 
         // Tom is picked up → Anna's arrangement is auto-approved.
@@ -226,7 +273,7 @@ class CompanionDepartureTest extends TestCase
         $tom = Child::factory()->create(['name' => 'Tom']);
         WeeklySchedule::create(['child_id' => $anna->id, 'weekday' => 3, 'planned_time' => '14:00', 'method' => DepartureMethod::PickedUp]);
         WeeklySchedule::create(['child_id' => $tom->id, 'weekday' => 3, 'planned_time' => '15:00', 'method' => DepartureMethod::SentHome]);
-        $tomsParent = User::factory()->create(['role' => UserRole::Parent]);
+        $tomsParent = User::factory()->slackLinked()->create(['role' => UserRole::Parent]);
         $tomsParent->children()->attach($tom);
         $staff = $this->staff();
 
@@ -308,7 +355,7 @@ class CompanionDepartureTest extends TestCase
         ]);
 
         // A parent unrelated to Tom (the companion) may not answer.
-        $stranger = User::factory()->create(['role' => UserRole::Parent]);
+        $stranger = User::factory()->slackLinked()->create(['role' => UserRole::Parent]);
 
         $this->actingAs($stranger)
             ->patch(route('companion.confirm', $departure), ['confirmed' => true])
@@ -339,9 +386,9 @@ class CompanionDepartureTest extends TestCase
         $date = $this->wednesday();
         $anna = Child::factory()->create();
         $tom = Child::factory()->create();
-        $tomsParent = User::factory()->create(['role' => UserRole::Parent]);
+        $tomsParent = User::factory()->slackLinked()->create(['role' => UserRole::Parent]);
         $tomsParent->children()->attach($tom);
-        $annasParent = User::factory()->create(['role' => UserRole::Parent]);
+        $annasParent = User::factory()->slackLinked()->create(['role' => UserRole::Parent]);
         $annasParent->children()->attach($anna);
 
         $departure = DailyDeparture::create([
@@ -411,7 +458,7 @@ class CompanionDepartureTest extends TestCase
         $date = $this->wednesday();
         $anna = Child::factory()->create();
         $tom = Child::factory()->create();
-        $tomsParent = User::factory()->create(['role' => UserRole::Parent]);
+        $tomsParent = User::factory()->slackLinked()->create(['role' => UserRole::Parent]);
         $tomsParent->children()->attach($tom);
 
         // Tom goes alone → Anna's arrangement is pending.
@@ -441,7 +488,7 @@ class CompanionDepartureTest extends TestCase
         $date = $this->wednesday();
         $anna = Child::factory()->create();
         $tom = Child::factory()->create();
-        $tomsParent = User::factory()->create(['role' => UserRole::Parent]);
+        $tomsParent = User::factory()->slackLinked()->create(['role' => UserRole::Parent]);
         $tomsParent->children()->attach($tom);
 
         // Tom alone → Anna pending → the family confirms once.
@@ -478,7 +525,7 @@ class CompanionDepartureTest extends TestCase
         $date = $this->wednesday();
         $anna = Child::factory()->create(['name' => 'Anna']);
         $tom = Child::factory()->create(['name' => 'Tom']);
-        $annasParent = User::factory()->create(['role' => UserRole::Parent]);
+        $annasParent = User::factory()->slackLinked()->create(['role' => UserRole::Parent]);
         $annasParent->children()->attach($anna);
 
         // Anna is set to go home with Tom.
@@ -510,7 +557,7 @@ class CompanionDepartureTest extends TestCase
         $date = $this->wednesday();
         $anna = Child::factory()->create();
         $tom = Child::factory()->create();
-        $tomsParent = User::factory()->create(['role' => UserRole::Parent]);
+        $tomsParent = User::factory()->slackLinked()->create(['role' => UserRole::Parent]);
         $tomsParent->children()->attach($tom);
 
         $this->departsAt($tom, $date, DepartureMethod::SentHome);
@@ -571,7 +618,7 @@ class CompanionDepartureTest extends TestCase
         $date = $this->wednesday();
         $anna = Child::factory()->create(['name' => 'Anna']);
         $bob = Child::factory()->create(['name' => 'Bob']);
-        $annasParent = User::factory()->create(['role' => UserRole::Parent]);
+        $annasParent = User::factory()->slackLinked()->create(['role' => UserRole::Parent]);
         $annasParent->children()->attach($anna);
 
         DailyDeparture::create([
@@ -614,7 +661,7 @@ class CompanionDepartureTest extends TestCase
         $date = $this->wednesday();
         $anna = Child::factory()->create();
         $tom = Child::factory()->create();
-        $tomsParent = User::factory()->create(['role' => UserRole::Parent]);
+        $tomsParent = User::factory()->slackLinked()->create(['role' => UserRole::Parent]);
         $tomsParent->children()->attach($tom);
         $departure = DailyDeparture::create([
             'child_id' => $anna->id, 'date' => $date, 'status' => DepartureStatus::Present,
@@ -633,7 +680,7 @@ class CompanionDepartureTest extends TestCase
         $anna = Child::factory()->create(['name' => 'Anna']);
         $bob = Child::factory()->create(['name' => 'Bob']);
         $cara = Child::factory()->create(['name' => 'Cara']);
-        $annasParent = User::factory()->create(['role' => UserRole::Parent]);
+        $annasParent = User::factory()->slackLinked()->create(['role' => UserRole::Parent]);
         $annasParent->children()->attach($anna);
 
         // Cara is picked up (a valid companion later); Bob goes alone; Anna goes with Bob.
@@ -665,7 +712,7 @@ class CompanionDepartureTest extends TestCase
         $date = $this->wednesday();
         $anna = Child::factory()->create(['name' => 'Anna']);
         $bob = Child::factory()->create(['name' => 'Bob']);
-        $annasParent = User::factory()->create(['role' => UserRole::Parent]);
+        $annasParent = User::factory()->slackLinked()->create(['role' => UserRole::Parent]);
         $annasParent->children()->attach($anna);
 
         $this->departsAt($bob, $date, DepartureMethod::SentHome);
@@ -688,7 +735,7 @@ class CompanionDepartureTest extends TestCase
         $date = $this->wednesday();
         $anna = Child::factory()->create(['name' => 'Anna']);
         $tom = Child::factory()->create(['name' => 'Tom']);
-        $annasParent = User::factory()->create(['role' => UserRole::Parent]);
+        $annasParent = User::factory()->slackLinked()->create(['role' => UserRole::Parent]);
         $annasParent->children()->attach($anna);
 
         $this->departsAt($tom, $date, DepartureMethod::SentHome);
@@ -715,7 +762,7 @@ class CompanionDepartureTest extends TestCase
         $date = '2026-06-24';
         $anna = Child::factory()->create(['name' => 'Anna']);
         $tom = Child::factory()->create(['name' => 'Tom']);
-        $tomsParent = User::factory()->create(['role' => UserRole::Parent]);
+        $tomsParent = User::factory()->slackLinked()->create(['role' => UserRole::Parent]);
         $tomsParent->children()->attach($tom);
 
         $this->departsAt($tom, $date, DepartureMethod::SentHome);
@@ -739,7 +786,7 @@ class CompanionDepartureTest extends TestCase
         $date = $this->wednesday(); // 2026-06-24 = Wednesday, day index 2
         $anna = Child::factory()->create(['name' => 'Anna']);
         $tom = Child::factory()->create(['name' => 'Tom']);
-        $annasParent = User::factory()->create(['role' => UserRole::Parent]);
+        $annasParent = User::factory()->slackLinked()->create(['role' => UserRole::Parent]);
         $annasParent->children()->attach($anna);
 
         $this->departsAt($tom, $date, DepartureMethod::SentHome);

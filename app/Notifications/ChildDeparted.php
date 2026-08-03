@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Notifications;
 
 use App\Enums\DepartureStatus;
+use App\Enums\NotificationCategory;
 use App\Models\DailyDeparture;
 use Illuminate\Notifications\Slack\BlockKit\Blocks\ActionsBlock;
 use Illuminate\Notifications\Slack\BlockKit\Blocks\SectionBlock;
@@ -15,6 +16,11 @@ use NotificationChannels\WebPush\WebPushMessage;
 class ChildDeparted extends SlackNotification
 {
     public function __construct(public DailyDeparture $departure) {}
+
+    public function category(): string
+    {
+        return NotificationCategory::Departures->value;
+    }
 
     public function toSlack(object $notifiable): SlackMessage
     {

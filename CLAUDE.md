@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **hort-manager** — a management app for a German after-school daycare (*Hort*). Two-sided: **Erzieher** (staff) and **Eltern** (parents). The job it exists to do: track **when each child leaves each day, and how**.
 
-**The frontend UI language is German.** User-facing strings, labels, and routes that users see should be German (domain terms below are the canonical vocabulary). Code, comments, and identifiers stay English.
+**The frontend UI language is German** — but only the rendered UI. User-facing strings and labels are German (domain terms below are the canonical vocabulary). Everything else stays English: code, comments, identifiers, **route names _and_ URL paths**, backend messages. German is the default *display* language, not a convention that leaks into paths or code.
 
 ## Run everything through Laravel Sail
 
@@ -42,6 +42,8 @@ Two layers, both **Pest** (the fast suite is Pest running the existing PHPUnit-s
 User            role: staff | parent  (App\Enums\UserRole)   — isStaff() helper
   ⇄ children    child_user pivot (guardians)                  User::children / Child::guardians
 Child           name, date_of_birth?, note   (flat list — NO groups)
+                active_from (required, enrolment start) + active_until? (leave date, null =
+                still enrolled) — the „Aktivitätszeitraum" (see „Child enrolment period")
 WeeklySchedule  (Stammplan)  child + weekday 1–5 → planned_time + method + time_qualifier? + comment?
                 method = App\Enums\DepartureMethod: picked_up | sent_home (companion `with_child` is
                 Wochenplan/per-day only, NEVER the Stammplan — rejected server-side there)
@@ -57,12 +59,21 @@ DailyDeparture  (Tagesboard) one row per child+date (unique):
 Absence         (Krank/„Kommt nicht") one row per child+date with a required reason
                 (App\Enums\AbsenceReason: sick|away) + comment; the child is off the board/plan that day
 DailyProgram    (Tagesprogramm) one row per date: lunch + activity + homework_start/end (Hort-wide)
-                staff edit weekly at /programm; read-only on board + Abholplan
+                staff edit weekly at /program; read-only on board + Abholplan
 HomeworkDefault per-weekday default homework slot; DailyProgram homework overrides it
                 (effective = override ?? weekday default; equal-to-default is stored as no override)
 Excursion       (Ausflug)  name, date, depart_at, return_at, rsvp_deadline,
                 departed_at/returned_at (live state) + child_excursion pivot
                 pivot carries the parent RSVP: response (null=offen|true|false) + answered_by/answered_at
+HolidayPeriod   (Schließzeit / Ferienbetreuung) Hort-wide named date range:
+                name, starts_on…ends_on, note?, registration_deadline? (care only)
+                type = App\Enums\HolidayPeriodType: closed | care — see the two
+                sections below („Schließzeiten" and „Ferienbetreuung")
+HolidayCareDay  one offered day of a `care` period: date + starts_at/ends_at
+                (Betreuungszeit). Holds no content — Essen/Aktivität stay in DailyProgram
+HolidayCareAnswer  „this family answered for this Ferienbetreuung" (period + child).
+                Needed because picking *no* days is a valid answer that leaves no
+                DailyDeparture behind — without it the reminder would chase forever
 ```
 
 ### Ausflug participation poll
@@ -81,15 +92,65 @@ Two parts: **Diese Woche** = effective plan per child for the selected week (Sta
 ### Editing a day — the shared `DayEditor` popup
 **One component, `resources/js/Components/DayEditor.vue`, edits any child on any date — used by BOTH the Wochenplan (grid cells, timeline, „nicht da" pills) and the Heute board („Abholzeit ändern" + „Hortfrei" pills). Do NOT add a second inline editor.** Open it with `dayEditor.value.open(child, day, dayMeta)`; it always posts to `weekly-plan.adjust` (set a plan), `absences.store` (Krank/„Kommt nicht"), or `weekly-plan.reset` (revert to Stammplan). Companion („geht mit … mit") is offered here too — the board feeds its picker via a `children` prop (each child's effective time today). A **complete plan is required**: a real pickup needs BOTH a method and a time; `with_child` needs a companion (its time mirrors them). Enforced in the popup (Speichern disabled) **and** server-side in `AdjustDayRequest` (`planned_method` required; `planned_time` required unless `with_child`). The board's older `board.override` endpoint still exists but the UI now edits through `DayEditor`/`weekly-plan.adjust`.
 
-### Hortfrei vs. Absence — two different „not there"
+### Child enrolment period (Aktivitätszeitraum)
+A child is only shown while **enrolled**: `Child.active_from` (required, start) … `active_until`
+(nullable leave date; null = still enrolled). Existing children were backfilled to „enrolled since
+the start of last year, open-ended". Kids are typically at the Hort ~4 years, so `active_until` is usually open
+for a long time. Filtering is always **date-relative** (never a global „is active now" flag), which is
+what keeps history intact — a child who left in 2025 still appears in 2025's board/contributions but
+not from 2026 on. Three model scopes (each accepts a `Carbon`/`DateTime` *or* a `Y-m-d` string; a null
+`active_from` is treated defensively as always-active):
+- **`activeOn($date)`** — the Hort side (every view there is anchored to a specific date): board,
+  weekly plan, standard timetable, dashboard, birthdays, excursion invites (trip date),
+  missing-Stammplan reminder + „Wochenplan fehlt" banner.
+- **`activeBetween($from,$to)`** — a week (inclusive **overlap**: active *any* day in the range) — the
+  Wochenplan and weekly digest.
+- **`activeInYear($year)`** — the accounting side (enrolment overlaps the calendar year): the
+  contributions matrix, the booking child dropdowns (year of the booking's date), and the AI
+  suggester (children active in the **booking's** year — strict, so a payment dated after a child
+  left won't attribute to them). Plus `isActiveOn($date)` on the model.
+`/children` shows active children by default with an „Ehemalige" (former) toggle for leavers. Create
+requires `active_from` (defaults to today in the form); update only re-validates it when sent (the
+form always sends it). A child with bookings still can't be *deleted* (restrictOnDelete) — leaving
+(`active_until`) is the normal „gone" path.
+
+### Hortfrei vs. Absence — two different „not there" (and see Schließzeiten for the third)
 - **Hortfrei** = *structural* non-attendance: the child's Stammplan simply has no entry for that weekday (no `WeeklySchedule` row). No reason, no record. Surfaced explicitly as a muted „Heute hortfrei (Stammplan)" line on the board and per-weekday in the Wochenplan „Diese Woche nicht da" summary; names are **clickable pills** (own children for parents, all for staff) that open `DayEditor` to add a one-off pickup. A child with a same-day override is NOT listed as Hortfrei (they're on the board). Unplanned children (zero `WeeklySchedule` rows) are the „Wochenplan fehlt" case, not Hortfrei.
 - **„Kommt nicht" / „Krank"** = a *reported* `Absence` for a specific date, **with a required reason** — amber, undoable, and a separate flow. The Stammplan editor's non-attendance option is deliberately named **„Hortfrei"** (not „Kommt nicht") to keep the two apart.
+
+### Schließzeiten — the third „not there"
+A **`HolidayPeriod`** with `type = closed` means the **Hort doesn't exist** on those days — distinct from both entries above: nobody is *absent*, there is no day. Staff **and admins** manage them under „Schließzeiten" in the account menu (`/closures`, `HolidayPeriodPolicy`); reads are open to everyone, since parents plan their own holidays around them. A single day is `starts_on == ends_on` (Brückentag, Fortbildung).
+
+Everything date-anchored has to ask. The lookups are `HolidayPeriod::closesOn($date)` and `::closedDaysBetween($from, $to)` (date => name, **clamped** to the range — an overhanging period would otherwise leak days past the week):
+- **Board** — `DailyBoardController` returns *before* seeding, so no `DailyDeparture` rows are created for a closed day; the page renders a closure card only. `board.mark` / `board.override` 403 (a closure entered mid-morning orphans rows already seeded).
+- **Wochenplan** — cells are greyed, labelled and locked; the day drops out of the timetable (the Stammplan would refill it) and out of both „nicht da" summaries. `weekly-plan.adjust` / `.reset` 403. `absences.store` **skips** closed days inside a range rather than failing, so „krank Di–Do" across a shut Wednesday still records Tue + Thu.
+- **Tagesprogramm** — `/program` offers no fields; `program.update` skips those days and deletes any row entered before the closure. The Wochenplan's whole program entry is nulled, **including homework**: that comes from the per-weekday `HomeworkDefault`, which has no notion of dates, so filtering child lists never reaches it.
+- **Scheduled jobs** — `program:remind-missing` ignores closed days (filtered inside `DailyProgram::weekdaysWithoutLunch()`); `weekly:digest` skips a week closed Mo–Fr entirely and otherwise marks those days „🚫 <Name>", outranking a reported absence.
+- **Ausflüge** — `App\Rules\NotDuringClosure` rejects a trip date on a closed day (create + edit).
+- **TRMNL** — the feed's `today.closed` / `week[].closed` carry the name; the Liquid templates in `docs/trmnl/` branch on it.
+
+`/standard-plan` is keyed by weekday with no dates, so closures genuinely don't apply there.
+
+### Ferienbetreuung — a normal day with a different roster
+A `HolidayPeriod` with `type = care` is **not** a „not there" at all: the Hort is open, staff mark children off, „geht allein" and „geht mit … mit" work. Only two things change — **who** is there comes from sign-ups instead of the Stammplan (no school, so the weekday schedule says nothing), and the day's default pickup time comes from the `HolidayCareDay` instead.
+
+**Registration *is* the plan.** Ticking a day on `/care` creates that child's `DailyDeparture` for the date (`planned_time` = the day's `ends_at`, method inherited from their Stammplan: that weekday → any weekday → `picked_up`; `with_child` is never inherited). A row that already exists for that date — a Wochenplan pickup entered before the period existed — is **adopted** (its `holiday_care_day_id` is set, its time left alone): a sign-up is recognised by the care day it names, so without adopting it the tick would have no visible effect at all. Unticking deletes it, unless the child already left that day. There is deliberately **no separate registration table** — a care day is an ordinary Hort day, so the plan is the record and `DayEditor`, marking off, Absence and the „späte Änderung" rule all keep working untouched.
+
+- **Setup** (`/closures`, staff + admins): the list creates both kinds inline; „Öffnen" leads to the period's own page (`closures.edit`) with its fields, its offered days (Betreuungszeit, entfernen/wieder anbieten, „X Kinder") and its **roster** — mirroring an Ausflug, which also carries its answers on its edit page. Creating one generates a `HolidayCareDay` per **weekday** from `Setting::careDefaultWindow()` (08:30–16:00, staff-editable on `/program`); editing the range fills gaps and drops days outside it; removing a single day cascades its sign-ups away.
+- **Content** (`/program`): a care day swaps **Hausaufgaben for the Betreuungszeit** and keeps Essen + Aktivität — which is why the day holds no content of its own. The card is tinted and badged; `program:remind-missing` skips care days, since lunch there is optional.
+- **Sign-up**: parents on **„Ausflüge & Ferien"** (`/polls`) for their own children — one page for everything that wants an answer from a family, so a trip poll and a Ferien sign-up sit under one tab and one badge; staff in the **roster** on the period's own page, for anyone and also after the deadline. Both render `Components/Care/SignupList.vue` — from `CareSignupData::for($user, ownChildrenOnly: true)` on the family page (a staff guardian answers for their own child there, for everyone else on the period page) and `::forPeriod()` on the period page. **There is no `/care` page any more**: the route survives as a redirect (parents → `polls.index`, staff → `closures.index`), because Slack buttons and bookmarks point at it. Saving sends the full day set for one child and records a `HolidayCareAnswer`.
+- **Board / Wochenplan / Digest** — the roster is the sign-ups; an unregistered child reads „nicht angemeldet" (not „hortfrei", which needs a Stammplan); nobody is hortfrei on a care day; homework is dropped everywhere it is read.
+- **Telling parents** follows **Ausflüge exactly**: `HolidayPeriodObserver` announces a new period (`CareRegistrationOpened`), the shared `pendingCare` prop drives a banner while it's open, and `care:remind-open` DMs on the Anmeldeschluss via `HolidayPeriod::dueToday()` — the mirror of `excursions:remind-rsvps`. Both messages share the `care_registration` category. **The deadline lives on the period**, like an Ausflug's `rsvp_deadline`; there is no Hort-wide reminder setting, and a period without a deadline is never chased.
+
+A Schließzeit on the same date **wins** over a care day — the Hort being shut is the stronger statement.
 
 ### Tagesboard mechanics
 `DailyBoardController` targets **today, or the next weekday on weekends**. It lazily `firstOrCreate`s a `DailyDeparture` per scheduled child from the Stammplan (carrying `time_qualifier`). A row is "overridden" when its plan differs from the Stammplan (shown as „heute geändert"). Excursions are an **overlay** (`rows[].excursion`), not a status swap — a child on a trip still gets marked picked up after returning.
 
-## Routes / nav (German URLs, English route names)
-`board` (/tagesboard, "Heute") · `weekly-plan` (/wochenplan) · `standard-plan` (/stammplan, read-only) · `children` (/children) · `excursions` (/ausfluege, staff only) · `program` (/programm, staff only). Also `role.update` (/rolle, admin self role-switch). Nav lives in `AuthenticatedLayout.vue` (role-aware; bottom tab bar on mobile; the admin „Meine Rolle" toggle sits under Benutzer). Demo logins: `erzieher@hort.test` (staff+admin) / `eltern@hort.test`, both `password`. Extra demo data via `sail artisan db:seed --class=DemoExtrasSeeder` (Hortfrei days, bis/ab qualifiers, a no-plan child).
+## Routes / nav (English URLs and route names)
+`board` (/board, "Heute") · `weekly-plan` (/weekly-plan) · `standard-plan` (/standard-plan, read-only) · `children` (/children) · `excursions` (/excursions, staff only) · `program` (/program, staff only) · `closures.index` (/closures, „Schließzeiten" — reads open, writes staff+admin) · `closures.edit` (/closures/{id}/edit, one Ferien-Zeitraum with its days + roster, staff+admin) · `care.index` (/care — no page of its own any more, redirects: parents → `polls.index`, staff → `closures.index`) · `polls.index` (/polls, „Ausflüge & Ferien" — the parents' page for everything that wants an answer from them: the Ausflug poll *and* the Ferienbetreuung sign-up, whose sheet is the shared `Components/Care/SignupList.vue` fed by `App\Support\CareSignupData`). Also `role.update` (/role, admin self role-switch). URLs are English too — German lives only in the rendered UI, not the address bar. Nav lives in `AuthenticatedLayout.vue` (role-aware; bottom tab bar on mobile) — the parents' „Ausflüge & Ferien" tab badge counts open polls **and** unanswered Ferienbetreuungen, since both live behind it. The **account menu is grouped** — Verwaltung · Buchhaltung · Hort (Meine Kinder, **Ferien & Schließzeiten**: one entry for both kinds of Zeitraum, badged with open Anmeldungen) · Mein Konto · help/logout. Demo logins: `erzieher@hort.test` (staff+admin) / `eltern@hort.test`, both `password`. Extra demo data via `sail artisan db:seed --class=DemoExtrasSeeder` (Hortfrei days, bis/ab qualifiers, a no-plan child, one Schließzeit and two Ferienbetreuungen — one of them with today's Anmeldeschluss so `care:remind-open` has something to chase).
+
+**A Slack button's `?to=` target must be in `SlackController::TARGETS`** — it is a whitelist, and anything else silently lands on the dashboard (which is how „Programm ausfüllen" shipped broken). `SlackEntryTest` walks every target a notification uses.
 
 **Links use [Laravel Wayfinder](https://github.com/laravel/wayfinder), not Ziggy.** Import typed helpers and call `.url` — e.g. `import { index as childrenIndex } from '@/routes/children'` → `:href="childrenIndex().url"`; args `childrenEdit(child.id).url`; query `weeklyPlan({ query: { week: date } }).url`. Generated files under `resources/js/{routes,actions,wayfinder}` are gitignored (regenerated by the Vite plugin on build). Watch for clashes with local symbols — alias the import (e.g. `import { mark as boardMark }`). Active-nav state is plain URL-prefix matching in `AuthenticatedLayout.vue` (Ziggy is gone).
 
@@ -104,13 +165,39 @@ Three directions; **production setup is documented in [`docs/slack-setup.md`](do
   - Missing Stammplan: `wochenplan:remind-unset` (`ScheduleMissingReminder`) DMs the guardians of any child with no Stammplan yet; **`--dry-run`** lists who would be nudged without sending. Not scheduled (run manually after onboarding). A parent-facing „Wochenplan fehlt" banner (shared `childrenWithoutPlan` prop) nudges the same in-app.
   - App Home tab: `SlackHome` publishes a welcome + quick links on `app_home_opened`.
 - **Inbound** (all `POST`, signature-verified): `/slack/interactions` (`SlackInteractionController` — RSVP buttons), `/slack/commands` (`SlackCommandController` — `/hort` quick links), `/slack/events` (`SlackEventController` — url_verification + `app_home_opened`).
-- Notifications extend `SlackNotification` (base gates `via()` on the token). `SlackNotification`/`SlackRsvp`/`SlackHome` share the same Block Kit style; links use `route('slack.enter', …)` so `forceRootUrl(APP_URL)` keeps them correct behind the tunnel/proxy.
+- Notifications extend `SlackNotification` (base gates `via()` on the token **and** on the notifiable actually having a `slack_id` — without that check every Slack-less user queues a job that throws). `SlackNotification`/`SlackRsvp`/`SlackHome` share the same Block Kit style; links use `route('slack.enter', …)` so `forceRootUrl(APP_URL)` keeps them correct behind the tunnel/proxy.
+- The `slack` channel is decorated by `SelfHealingSlackChannel`: `channel_not_found` (deactivated account, left the workspace) **clears the user's `slack_id`** and logs it, so one stale id can't fail every future DM into `failed_jobs`; they fall back to web push and re-link on the next Slack sign-in. Every other Slack error still fails loudly.
+
+### Notification settings (audiences)
+Every notification belongs to a `App\Enums\NotificationCategory`, which the user toggles per channel (Slack/Push) on `/notifications` — an **opt-out** matrix (missing preference = on). Each category declares a `NotificationAudience`, and **users only see the categories they can actually receive**:
+- **`guardian`** (departures, excursions, companion, missing_plan, care_registration, weekly_digest) — every non-staff user, plus staff who are a guardian themselves. Deliberately not „role = parent": an Erzieher:in with their own Hort child still gets those DMs, so they must keep the toggles.
+- **`staff`** (late_change, program_missing) — `isStaff()`.
+A user in both audiences gets two labelled sections; with one audience the headings are hidden. `NotificationSettingsController::update()` **merges** into the stored preferences (the page renders only a subset, so replacing would wipe the other audience) and rejects categories the user is no audience for.
+
+### Späte Änderungen (late same-day changes)
+A Hort-wide cutoff time (default **12:00**, `Setting::LateChangeCutoff`, staff-editable on `/program`) splits the day: once it has passed, a **parent** changing **today** notifies every reachable staff member (`App\Support\LateChange` → `App\Notifications\LateChange`, category `late_change`). Staff's own changes never notify, and other days are never „late" whatever the clock says. Triggers: `WeeklyAdjustmentController::update` (only when the plan really moved) / `::reset`, and `AbsenceController::store` (per day of the range, only when the Absence was created/changed). `DayEditor` warns the parent **before** saving via the shared `lateChangeCutoff` prop, mirroring `LateChange::applies()`.
+
+### Wochenüberblick + „Wochenprogramm fehlt"
+The Monday parent digest (`weekly:digest`) goes out at **`Setting::WeeklyDigestTime`** (default 12:00, staff-editable on `/program`). Exactly **30 minutes earlier** (`Setting::programReminderTime()`, fixed lead — not separately settable) `program:remind-missing` DMs staff if the week's Tagesprogramm still has a weekday **without lunch** (`DailyProgram::weekdaysWithoutLunch()`; an Aktivität is optional and deliberately doesn't count, or it would nag forever). Silent when the week is complete. Both are registered in `routes/console.php` reading the setting, which `schedule:run` re-evaluates every minute — **changing the time takes effect without a deploy**. The digest weekday is still hardcoded to Monday.
+
+Hort-wide settings live in a `settings` key/value table behind `App\Models\Setting` (`get`/`set`, cached forever, busted on write; a missing table falls back to the default, since the schedule reads settings on every console boot). Add a constant + a default there rather than a new column.
+
+## Paperless integration (accounting receipts)
+Links each **accounting booking** to one document in an external **Paperless-ngx** archive. Admin-only (rides the accounting middleware). Config in `config/services.php` (`paperless.url` / `.token` / `.booking_field` / `.amount_field`); with no url+token the whole feature is inert (degrades silently, like Slack). **`docs/…` not written — this section is the spec.**
+
+- **`App\Services\Accounting\PaperlessService`** is the single point of contact with the Paperless REST API (one `Http::macro('paperless')` client, `Token` auth not Bearer). Best-effort throughout: returns `[]`/`null` and logs rather than throwing, so callers degrade cleanly. Nothing else talks HTTP to Paperless.
+- **Link storage**: two nullable columns on `accounting_bookings` — `paperless_document_id` + a cached `paperless_document_title` (so lists show a receipt without an API call). One document per booking. Linking rides the normal booking save (`BookingRequest`); a null id clears it.
+- **Two-way link**: when `PAPERLESS_BOOKING_FIELD` (a **pre-existing** Paperless custom-field id — the app never creates/edits field definitions) is set, the booking's edit-page deep link is written into that custom field on the document (and cleared when the link moves/removes), so the link is visible/filterable inside Paperless. Done by the queued `SyncPaperlessBookingLink` job (merges the field, preserving the document's other custom fields), dispatched from every place a link changes: `BookingController` store/update/confirmDraft and the import auto-link. `PaperlessService::setBookingLink()` does the merge.
+- **Picker** (`resources/js/Components/Accounting/PaperlessPicker.vue`, slotted into `BookingFields.vue`, shown only when configured): on open it shows the top ~5 **unlinked** documents most similar to the booking — **no AI** (that was deliberately removed; nobody waits on a synchronous LLM call). Also manual full-text search + paste an id/URL. Rows are three columns (proxied thumbnail · title/correspondent/date · amount). The linked-state card shows correspondent + amount (fetched via the `find` endpoint), a remove-confirm, and an **amber „Betrag weicht ab" warning when the receipt total ≠ the booking amount**.
+- **Retrieval** (`PaperlessService::candidatesFor`) combines strong signals: an **exact amount match** on the monetary custom field (`PAPERLESS_AMOUNT_FIELD`) first, then a full-text query narrowed to a **±7-day window around the valuta (value) date** — merged, deduped, capped. Already-linked docs are excluded at the source (`custom_field_query` „booking field not set") plus a DB `Booking::linkedDocumentIds()` safety net.
+- **Import auto-link is deterministic, not AI** — most bookings (Beiträge etc.) have no receipt, so an LLM would waste a serialized call on the majority. `PaperlessService::confidentMatch()` links a booking **only** when exactly one unlinked document has the exact amount within the valuta window; ambiguous/none → left for the user. The `LinkBookingReceipt` job (fast, unlocked, **not** gated on `accounting.ai_suggestions`, skips confirmed/transfer/linked) runs it. Dispatched at import (`ImportController::enrichDrafts`, **before** the slow Ollama category jobs so receipts appear first) and via the **„Belege verknüpfen"** button (`BookingController::relinkReceipts`, folded under the „Entwürfe prüfen" split button) over unconfirmed unlinked non-transfer bookings. The category AI (`SuggestBookingCategory`/`BookingCategorizer`) is separate and untouched.
+- **Proxying + access**: everything streams through the app (`PaperlessController`) so the token stays server-side. Because that token is a service account that can see the whole archive, the endpoints are scoped by accounting access: **search / resolve-by-id / download are editor-only** (`accounting:write` — archive-wide reads), while the **thumbnail is readable but only for a document actually linked to a booking** (so a read-only user sees ledger receipts without being able to enumerate the archive). `download` is forced to `attachment` and the thumbnail to `image/webp`, both with `nosniff`, so a malicious document can't execute inline. The „In Paperless öffnen" deep link needs `PAPERLESS_URL` (exposed as `paperlessUrl`) + the user's own Paperless access. Correspondent names + the document amount/payment type are resolved best-effort (needs a **superuser** token — `is_staff` isn't enough to read correspondents/custom fields behind object permissions).
 
 ## Status
 
 App is German end-to-end (`APP_LOCALE=de`, `lang/de/*` validation/auth messages; `Europe/Berlin` timezone). Built & tested: Kinder+Stammplan (with **„Hortfrei"** per weekday + **bis/genau um/ab** time qualifier), parent↔child roles + **admin user management** + admin self role-switch, Wochenplan/Stammplan timetable, Tagesboard, the **shared `DayEditor` popup** (Wochenplan + board), **companion pickups** („geht mit einem anderen Kind mit" with confirmation + cross-guardian Slack sync), Ausflug poll, Tagesprogramm + Hausaufgaben, birthdays, dark mode + de/en language switch, **full Slack integration** (SSO, departure/RSVP/companion/missing-plan DMs, interactive answers, `/hort` + App Home + free-text assistant), **installable PWA + web push** plus **freshness** (silent post-deploy reload, 15-min idle refresh, drag-down pull-to-refresh in `freshness.js` / `PullToRefresh.vue`). Self-hosted via a multi-arch GHCR image on a CalVer tag (see [`docs/deployment.md`](docs/deployment.md)).
 
-**Planned (not built):** Richer admin control over which parents belong to which child (guardian management UI beyond the current per-child links).
+**Planned (not built):** Richer admin control over which parents belong to which child (guardian management UI beyond the current per-child links). Turning a Ferienbetreuung outing into a real `Excursion` (with times + participants) instead of a free-text Aktivität, which also means scoping excursion invites to the registered children.
 
 ---
 

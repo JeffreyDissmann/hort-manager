@@ -1,0 +1,163 @@
+<?php
+
+declare(strict_types=1);
+
+use App\Models\Accounting\Account;
+use App\Models\Accounting\Booking;
+use App\Models\Accounting\Category;
+use App\Models\Accounting\Transfer;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Inertia\Testing\AssertableInertia;
+
+uses(RefreshDatabase::class);
+
+it('breaks transfers down per account in a zero-sum block, leaving the net untouched', function () {
+    $admin = User::factory()->admin()->accountingWriter()->create();
+    $this->actingAs($admin);
+    $income = Category::factory()->income()->create();
+    Booking::factory()->create(['category_id' => $income->id, 'amount_cents' => 5000, 'booking_date' => '2026-01-15']);
+
+    $bank = Account::factory()->create(['name' => 'Hort-Konto']);
+    $cash = Account::factory()->create(['name' => 'Bar-Kasse']);
+    Transfer::record(fromAccountId: $bank->id, toAccountId: $cash->id, amountCents: 5000, bookingDate: '2026-01-20');
+
+    $this->get('/accounting/reports?year=2026')
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->has('transferRows', 2)
+            // Bar-Kasse sorts before Hort-Konto; it received +50, the bank lost −50.
+            ->where('transferRows.0.name', 'Bar-Kasse')
+            ->where('transferRows.0.months.0', 5000)
+            ->where('transferRows.0.total', 5000)
+            ->where('transferRows.1.name', 'Hort-Konto')
+            ->where('transferRows.1.months.0', -5000)
+            ->where('transferRows.1.total', -5000)
+            ->where('transferMonths.0', 0)   // the block nets to zero per month
+            ->where('transferTotal', 0)
+            ->where('incomeTotal', 5000)     // …so the P&L is unaffected
+            ->where('netTotal', 5000));
+});
+
+it('scopes the summary to the selected accounts', function () {
+    $admin = User::factory()->admin()->accountingWriter()->create();
+    $this->actingAs($admin);
+    $bank = Account::factory()->create(['name' => 'Hort-Konto']);
+    $cash = Account::factory()->create(['name' => 'Bar-Kasse']);
+    $income = Category::factory()->income()->create();
+    $expense = Category::factory()->expense()->create();
+
+    Booking::factory()->create(['account_id' => $bank->id, 'category_id' => $income->id, 'amount_cents' => 5000, 'booking_date' => '2026-01-10']);
+    Booking::factory()->expense()->create(['account_id' => $cash->id, 'category_id' => $expense->id, 'amount_cents' => -3000, 'booking_date' => '2026-01-12']);
+    Transfer::record(fromAccountId: $bank->id, toAccountId: $cash->id, amountCents: 2000, bookingDate: '2026-01-20');
+
+    // Default: all accounts (ordered by name → Bar-Kasse, Hort-Konto).
+    $this->get('/accounting/reports?year=2026')
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('incomeTotal', 5000)
+            ->where('expenseTotal', -3000)
+            ->has('transferRows', 2)
+            ->where('transferMonths.0', 0)                  // both legs → nets to zero
+            ->where('selectedAccounts', [$cash->id, $bank->id]));
+
+    // Scoped to the cash account only.
+    $this->get('/accounting/reports?year=2026&accounts[]='.$cash->id)
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('selectedAccounts', [$cash->id])
+            ->where('incomeTotal', 0)                       // the income was on the bank → excluded
+            ->where('expenseTotal', -3000)                  // the cash expense stays
+            ->has('transferRows', 1)                        // only the cash leg
+            ->where('transferRows.0.name', 'Bar-Kasse')
+            ->where('transferRows.0.total', 2000)
+            ->where('transferMonths.0', 2000));             // one side only → no longer zero
+});
+
+it('forbids non-admins from the report', function () {
+    $this->actingAs(User::factory()->staff()->create())
+        ->get('/accounting/reports')
+        ->assertForbidden();
+});
+
+it('pivots confirmed bookings by category and month', function () {
+    $admin = User::factory()->admin()->accountingWriter()->create();
+    $income = Category::factory()->income()->create(['name' => 'Essensgeld']);
+    $expense = Category::factory()->expense()->create(['name' => 'Miete']);
+
+    Booking::factory()->create(['category_id' => $income->id, 'amount_cents' => 5000, 'booking_date' => '2026-01-15']);
+    Booking::factory()->create(['category_id' => $income->id, 'amount_cents' => 5000, 'booking_date' => '2026-03-10']);
+    Booking::factory()->expense()->create(['category_id' => $expense->id, 'amount_cents' => -352000, 'booking_date' => '2026-01-31']);
+    // Excluded from the pivot: an unconfirmed draft.
+    Booking::factory()->draft()->create(['category_id' => $income->id, 'amount_cents' => 9900, 'booking_date' => '2026-02-01']);
+
+    $this->actingAs($admin)
+        ->get('/accounting/reports?year=2026')
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->component('Accounting/Reports/Index')
+            ->where('year', 2026)
+            ->where('incomeTotal', 10000)      // 5000 + 5000; the draft is excluded
+            ->where('expenseTotal', -352000)
+            ->where('netTotal', -342000)
+            ->where('incomeMonths.0', 5000)    // January
+            ->where('incomeMonths.1', 0)       // February (only the excluded draft)
+            ->where('incomeMonths.2', 5000)    // March
+            ->has('incomeRows', 1)
+            ->has('expenseRows', 1));
+});
+
+it('defaults to the highest year and offers every year in the min–max range', function () {
+    $admin = User::factory()->admin()->accountingWriter()->create();
+
+    // Only 2024 and 2026 have bookings — 2025 should still appear (no gap).
+    Booking::factory()->create(['booking_date' => '2024-05-01']);
+    Booking::factory()->create(['booking_date' => '2026-05-01']);
+
+    $this->actingAs($admin)
+        ->get('/accounting/reports')
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('year', 2026)
+            ->where('years', [2026, 2025, 2024]));
+});
+
+it('rolls a grandchild category amount up into its parent and root rows', function () {
+    $admin = User::factory()->admin()->accountingWriter()->create();
+    $root = Category::factory()->expense()->create(['name' => 'Konsum', 'position' => 1]);
+    $child = Category::factory()->childOf($root)->create(['name' => 'Lebensmittel', 'position' => 1]);
+    $grand = Category::factory()->childOf($child)->create(['name' => 'Bio', 'position' => 1]);
+
+    Booking::factory()->expense()->create(['category_id' => $grand->id, 'amount_cents' => -5000, 'booking_date' => '2026-03-10']);
+
+    $this->actingAs($admin)
+        ->get('/accounting/reports?year=2026')
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('expenseRows.0.name', 'Konsum')        // root — rolled up
+            ->where('expenseRows.0.total', -5000)
+            ->where('expenseRows.1.name', 'Lebensmittel')   // child — rolled up
+            ->where('expenseRows.1.total', -5000)
+            ->where('expenseRows.2.name', 'Bio')            // the grandchild itself
+            ->where('expenseRows.2.total', -5000));
+});
+
+it('forbids non-admins from exporting the report', function () {
+    $this->actingAs(User::factory()->staff()->create())
+        ->get('/accounting/reports/export?year=2026&format=csv')
+        ->assertForbidden();
+});
+
+it('exports the report as a CSV download', function () {
+    $admin = User::factory()->admin()->accountingWriter()->create();
+    $income = Category::factory()->income()->create(['name' => 'Essensgeld']);
+    Booking::factory()->create(['category_id' => $income->id, 'amount_cents' => 5000, 'booking_date' => '2026-01-10']);
+
+    $this->actingAs($admin)
+        ->get('/accounting/reports/export?year=2026&format=csv')
+        ->assertOk()
+        ->assertDownload('report-2026.csv');
+});
+
+it('exports the report as an XLSX download', function () {
+    $admin = User::factory()->admin()->accountingWriter()->create();
+
+    $this->actingAs($admin)
+        ->get('/accounting/reports/export?year=2026&format=xlsx')
+        ->assertOk()
+        ->assertDownload('report-2026.xlsx');
+});

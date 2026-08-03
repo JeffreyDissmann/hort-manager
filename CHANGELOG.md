@@ -6,8 +6,247 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [2026.08.03] — 2026-08-03
+
+### Fixed
+
+- **A Ferienbetreuung day could not be ticked at all** when the child already had a plan
+  for that date — a pickup entered in the Wochenplan before the period existed. The
+  sign-up was skipped „to protect the family's own plan", but a sign-up is recognised by
+  the care day it names, so the box came back empty on every save while the flash said
+  „gespeichert". Such a row is now adopted as the registration, keeping its time.
+
+### Changed
+
+- The default Betreuungszeit for newly offered Ferienbetreuung days is **08:30–16:00**
+  (was 16:30). Days already offered keep their times.
+
+## [2026.08.02] — 2026-08-02
+
 ### Added
 
+- **Ferienbetreuung.** The second kind of Ferien-Zeitraum: the Hort is open, but only
+  children signed up for a given day are there. Staff set the period, its Anmeldeschluss
+  and the days it offers (from a settable 08:30–16:30 default), then plan each day's
+  Betreuungszeit, Essen and Aktivität on „Programm" — where a care day shows the
+  Betreuungszeit instead of Hausaufgaben. Parents tick individual days per child; the
+  sign-up *is* the child's plan for that day, so „Heute", der Wochenplan, Krankmeldungen
+  und das Abhaken funktionieren unverändert. Announced like an Ausflug when it opens,
+  nudged in-app while the Anmeldung runs, and reminded on the Anmeldeschluss.
+- **Schließzeiten.** Named Hort-wide date ranges (Ferien, Brückentag, Fortbildung),
+  managed by staff and admins under „Schließzeiten" and readable by everyone. A closed
+  day has no board, no editable Wochenplan, no Tagesprogramm and no homework band; it
+  drops out of the „nicht da" summaries, the Monday reminders and the Wochenüberblick
+  (a week closed Mo–Fr sends no digest at all), and no Ausflug can be scheduled on it.
+  The TRMNL staff-room feed reports it too.
+- **Rollen-gerechte Benachrichtigungen.** The settings matrix now shows only the
+  categories a user can actually receive, split into a parent and a staff section for
+  anyone who is both.
+- **„Späte Änderungen".** Once the Hort-wide cutoff has passed (default 12:00,
+  settable under „Programm"), a parent changing *today* — plan, companion, Krankmeldung
+  or its withdrawal — notifies staff, from every edit path. Parents see beforehand that
+  it will.
+- **„Wochenprogramm fehlt".** Staff are reminded 30 minutes before the parents'
+  Wochenüberblick when a weekday still has no lunch entered. The digest time itself is
+  now settable under „Programm".
+- **Eine neue Hilfe.** The manual is an overview plus eight chapters, each on its own
+  URL — including „Wenn ein Kind nicht da ist", which puts Krank, hortfrei and
+  Schließzeit side by side, and „Ferien & Schließzeiten".
+
+### Fixed
+
+- Slack DMs were queued for users without a Slack id whenever a bot token was
+  configured, failing with „Slack notification channel is not set".
+- A `slack_id` Slack no longer knows (deactivated account, left the workspace) made
+  *every* DM to that user fail into the failed-jobs table, unnoticed. It is now cleared
+  on `channel_not_found`, falling back to web push and re-linking on the next Slack login.
+- The „Programm ausfüllen" button in the „Wochenprogramm fehlt" DM landed on the
+  dashboard: `/program` was missing from the Slack deep-link whitelist.
+
+Fixed before release, from a review of the Ferien work — each one a way a
+Ferienbetreuung place could be lost or misreported:
+
+- A Krankmeldung deleted the sign-up, and clearing it never brought the place back;
+  „Auf Stammplan zurücksetzen" cancelled one just as quietly. Re-saving `/care` could
+  drop a child already in the Hort that morning.
+- The TRMNL staff-room feed built a care day's roster from the Stammplan, showing
+  children on holiday and hiding the ones who signed up. The companion picker had the
+  same fault: `EffectivePlan` no longer falls back to the Stammplan on a care day or a
+  closed day.
+- Shortening a Betreuungszeit left every existing sign-up on the old pickup time;
+  editing a period re-offered days staff had deliberately removed (they now leave a
+  tombstone, and can be offered again); `/care` listed children regardless of enrolment.
+- Every row on a care-day board read „heute geändert" (there is no Stammplan to deviate
+  from), and a Schließzeit could be entered over a live Ausflug.
+
+## [2026.07.26.1] — 2026-07-26
+
+### Added
+
+- **Paperless-ngx integration for accounting receipts.** Link a booking to a document
+  in an external Paperless archive: search / paste an ID or URL / pick from suggestions,
+  with a proxied thumbnail, hover preview, open-in-Paperless and download (the API token
+  stays server-side). The link is written back into a Paperless custom field (two-way),
+  and an amber warning flags a receipt whose amount doesn't match the booking. The
+  bookings list shows a receipt paperclip and a „Beleg" (with/without) filter. All
+  behind a single best-effort `PaperlessService`; inert when unconfigured.
+- **Deterministic receipt auto-linking on import** (exact amount within a valuta-date
+  window — no AI), running ahead of the category AI, plus a „Belege verknüpfen" button
+  to re-run it over unconfirmed bookings.
+- **„Belege zuordnen" wizard** (under „Aus Paperless importieren") to work through
+  unlinked receipts: gated behind finishing the review, a date-range + Zahlungsart
+  filter, then per receipt attach it to a matching booking, create a booking from it
+  (prefilled), skip, or mark „kein Beleg".
+- A combined **„Zu prüfen" status filter** (draft + suggested); the dashboard card links
+  straight to it.
+
+### Fixed
+
+- The Auswertung drill-down now carries the selected-accounts scope to the bookings list.
+
+## [2026.07.26] — 2026-07-26
+
+### Added
+
+- **Charts on the accounting pages**: the Auswertung gets two donuts (Einnahmen /
+  Ausgaben) breaking the year down by top-level category — sorted, with a „Sonstige"
+  fold for the tail, the total in the hole, and slices that drill into the ledger;
+  they respect the account filter. The Übersicht gains a per-account balance
+  **sparkline** (running month-end balance, teal up / red down) in a „Verlauf" column.
+
+### Changed
+
+- **Tidier bookings header**: Import (most-used) is now the primary action with an
+  attached „more" chevron for „Neue Buchung" / „Neue Umbuchung"; export collapses to a
+  primary „Export Excel" with „Export CSV" under a chevron. In the review's Umbuchung
+  mode the action button no longer wraps on mobile (stacks full-width) and the AI
+  category hint is hidden (it doesn't apply to a transfer).
+- The Auswertung export matches the bookings page — a „Export Excel" split button with
+  „Export CSV" under the chevron — and the header controls are tidied into one row.
+
+### Fixed
+
+- **CSV import no longer crashes on Windows-1252/Latin-1 files**: German bank exports
+  are often single-byte encoded (umlauts, ß, €). The reader only handled UTF-16/UTF-8,
+  so the malformed bytes crashed `json_encode` when stashing the decoded rows
+  („Malformed UTF-8 characters"). It now converts non-UTF files from Windows-1252 to
+  valid UTF-8. (Regression since the flexible import in 2026.07.24.)
+
+## [2026.07.25] — 2026-07-25
+
+### Added
+
+- **Convert a booking to a transfer from the edit window**: the „Als Umbuchung
+  verbuchen" action, previously only in the AI review, is now available when editing an
+  existing booking too.
+- **Account filter on the Auswertung**: a „Konten" dropdown scopes the whole summary
+  (income/expense pivot, Saldo and the Umbuchungen block) to the selected accounts —
+  all accounts by default, or e.g. just the Bar-Kasse to see only the movements and
+  transfers that touched the cash account. Carries through the year switch and the
+  CSV/Excel export.
+
+### Changed
+
+- **Clearer Buchung/Umbuchung editing**: the review and edit windows now use one
+  segmented „Buchung | Umbuchung" control instead of a separate transfer panel. Picking
+  Umbuchung swaps the categorization fields for a focused transfer sub-form (read-only
+  line summary + Gegenkonto) and turns the primary button into „Umbuchung erstellen"; the
+  normal Save is no longer shown in that mode, and switching back to Buchung is the way
+  out. The „wird als Erstattung verbucht" refund hint now sits directly under the
+  category picker. Both windows share `BookingFields`, `BookingModeToggle` and
+  `TransferForm`.
+
+### Fixed
+
+- **Review confirm/discard/skip no longer silently fails**: the step-through review form
+  posts `to_account_id` (null unless converting), which a non-nullable rule rejected as
+  „not an integer" (422 → the page just reappeared). Confirming, discarding and skipping
+  a draft in the review work again. (Regression since 2026.07.24.)
+
+## [2026.07.24] — 2026-07-24
+
+### Added
+
+- **Accounting access as its own permission**: a per-user `accounting_access` axis
+  (kein Zugriff / nur lesen / lesen & schreiben) — independent of the Erzieher/Parent
+  role and of admin — decides who may use the Buchhaltung module. Read users can view
+  every accounting page (and export) but see no write controls; write users can edit.
+  Admins assign it on the Benutzer page (existing admins were backfilled to write so
+  nobody lost access). Enforced server-side by an `accounting` / `accounting:write`
+  middleware split over the routes, with the write buttons hidden client-side too.
+- **Refunds / repayments (reversals)**: a booking can now run opposite to its
+  category — e.g. a store refund on an expense category is kept as a positive amount
+  (`kind` stays expense) that nets off the expenses in the Auswertung. In the draft
+  review the category picker offers all categories and the sign is taken from the
+  bank line automatically (pick the expense category → recorded as a refund); the
+  manual create/edit form gains an „Erstattung / Rückzahlung" checkbox that round-trips
+  on edit. The old „wrong direction" rejection on review is removed.
+- **Umbuchungen in the Auswertung**: internal transfers now appear as their own
+  zero-sum block below Ausgaben — one row per account showing that account's signed
+  movement (money out −, money in +), with the parent „Umbuchungen" row summing to
+  zero so the Saldo is untouched. Each cell drills into that account's transfer
+  bookings; included in the CSV/XLSX export.
+- **Book an imported line as a transfer**: in the draft review, „Als Umbuchung
+  verbuchen" reclassifies a bank line as an internal transfer to another account
+  (e.g. a cash withdrawal → Bar-Kasse) — it reuses the imported line as one leg and
+  creates the matching leg on the chosen account, so the money isn't double-counted.
+  The sign picks the direction automatically (withdrawal → out leg, deposit → in leg).
+- **Buchhaltung (accounting) — admin-only bookkeeping**: a full income/expense ledger
+  for the Hort. Bank statements are imported from CSV — now with a **flexible
+  column-mapping step**: after upload the columns (Buchungsdatum, Wertstellung,
+  Verwendungszweck, Betrag, Währung) are auto-detected from the header and shown for
+  confirmation or adjustment, with a live preview, before any drafts are created;
+  encoding (UTF-16/UTF-8), delimiter, date format and amount style are detected
+  automatically, so it's no longer tied to one bank's layout. Duplicate rows are skipped
+  and surfaced for one-tap confirmation. A local **AI model** (Ollama via `laravel/ai`)
+  suggests a category and counterparty per row, which staff review and confirm. Bookings
+  carry a category (a nestable income/expense tree), a counterparty (child / user / free
+  text), and transfers between accounts are booked as a linked pair. Two evaluations:
+  the **Auswertung** (month × category pivot of the confirmed ledger) and **Einnahmen je
+  Kind** (a child × month contributions matrix per income stream, flagging months a child
+  hasn't paid and contributions not linked to a child). Both, and the filtered bookings
+  list, **export to CSV and Excel (XLSX)**.
+- **Child enrolment period (Aktivitätszeitraum)**: each child now has an `active_from`
+  (start) and optional `active_until` (leave date; empty = still enrolled), so a child who
+  leaves the Hort disappears from the day-to-day views without erasing their history.
+  Filtering is always date-relative: the Hort side (board, Wochenplan, Stammplan,
+  birthdays, excursion invites…) shows a child only on dates they're enrolled; the
+  accounting side scopes to the selected year (the contributions matrix, the booking
+  child pickers and the AI suggester only offer children enrolled that year, and payments
+  attributed to a child not enrolled that year are surfaced separately so totals still
+  reconcile). The Kinder page lists active children by default with an „Ehemalige" toggle
+  for leavers; creating a child asks for the start date.
+- **Notification settings + weekly digest**: a „Benachrichtigungen" page (avatar menu)
+  with a per-category × per-channel opt-out matrix — each notification type (departures,
+  excursions, companion, missing plan, weekly digest) toggles independently for Slack
+  and Push. Stored as a default-on
+  `notification_preferences` JSON column and enforced in both send paths (the
+  `SlackNotification::via()` classes and the direct `SlackRsvp`/`SlackCompanion`
+  services). The Slack column disables (and shows off) without a linked Slack account,
+  and the device-push master now lives here instead of on the profile page. Plus a new
+  Monday 12:00 **weekly digest** DM (`weekly:digest`, scheduled): the week's Hort-wide
+  program (food, activities, homework) and each parent's per-child summary — pickup per
+  day, absences and excursions — on Slack and/or push, gated by the digest preference.
+
+- **Any-day Heute board** — 💛 **thanks to Julia**, whose idea this was: the daily board
+  is now navigable to any
+  weekday via `?date=` — a `DayNav` with prev/next arrows and a jump-to-any-day date
+  picker. Today stays live (staff marking); future weekdays are an editable preview
+  computed read-only from the Stammplan (`EffectivePlan`, no `DailyDeparture` rows
+  persisted on view); past days are read-only history, and the same-day `board.mark` /
+  `board.override` endpoints now 403 off-today. Past navigation is capped at the
+  data-retention floor. The Wochenplan's weekday headers link straight to that day's
+  board. Backed by a new reusable `DatePicker.vue` (hand-rolled month calendar with
+  month/year dropdowns, min/max, weekend-disabling, clearable, Escape/backdrop-to-close)
+  that also replaces the native date inputs on the child and excursion forms.
+- **Activity log (Protokoll)**: an admin-only audit trail at `/protokoll` (linked in the
+  avatar menu) recording who changed what — children, Stammplan, absences, excursions,
+  the Tagesprogramm and users/roles are auto-logged via `spatie/laravel-activitylog`,
+  plus explicit entries for departures marked, day-plan adjust/reset (with the before/
+  after: Uhrzeit, „geht allein" vs „geht mit … mit", Begleitkind), guardian links and
+  excursion RSVPs. Fully de/en — each row is composed in the frontend from structured
+  data (event + subject + neutral label), so nouns, field names and enum values follow
+  the language toggle. Sign-ins are deliberately not logged (noise).
 - **One shared edit popup everywhere** (`DayEditor.vue`): editing a child on a day is
   now the exact same dialog on the Heute board and the Wochenplan — Krank/„Kommt nicht",
   Uhrzeit, Art (incl. „geht mit einem anderen Kind mit"), bis/genau um/ab, Kommentar,
@@ -180,6 +419,10 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- A „geht mit … mit" pickup now inherits the companion's **time qualifier**
+  (bis/genau um/ab), not just their time — so a child going home with someone who
+  leaves „ab 15:30" now also shows „ab 15:30" on the board, Wochenplan and weekly
+  digest, instead of a bare „15:30". Found by Julia.
 - A child with a same-day override no longer *also* shows in the board's „Heute
   hortfrei" list — a manual pickup for today means they're on the board, not Hortfrei.
 - Wayfinder now generates **relative** route URLs, so the published image is

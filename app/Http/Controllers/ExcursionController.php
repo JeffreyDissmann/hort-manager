@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Child;
 use App\Models\Excursion;
+use App\Rules\NotDuringClosure;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -82,9 +83,9 @@ class ExcursionController extends Controller
 
         $excursion = Excursion::create($this->validateExcursion($request));
 
-        // Invite every child — each starts as an open poll entry for the parents.
-        // (Creating the excursion fires the ExcursionObserver, which DMs guardians.)
-        $excursion->children()->attach(Child::pluck('id')->all());
+        // Invite every child enrolled on the trip date — each starts as an open poll
+        // entry. (Creating the excursion fires the ExcursionObserver, which DMs guardians.)
+        $excursion->children()->attach(Child::activeOn($excursion->date)->pluck('id')->all());
 
         return redirect()
             ->route('excursions.index')
@@ -122,8 +123,10 @@ class ExcursionController extends Controller
 
         $excursion->update($this->validateExcursion($request));
 
-        // Keep the poll complete if children were added after the excursion was created.
-        $missing = Child::whereNotIn('id', $excursion->children()->pluck('children.id'))->pluck('id');
+        // Keep the poll complete if children (enrolled on the trip date) were added
+        // after the excursion was created.
+        $missing = Child::activeOn($excursion->date)
+            ->whereNotIn('id', $excursion->children()->pluck('children.id'))->pluck('id');
         $excursion->children()->attach($missing->all());
 
         return redirect()
@@ -174,7 +177,8 @@ class ExcursionController extends Controller
     {
         return $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'date' => ['required', 'date'],
+            // No trip on a day the Hort is shut — there'd be nobody to take.
+            'date' => ['required', 'date', new NotDuringClosure],
             'depart_at' => ['nullable', 'date_format:H:i'],
             'return_at' => ['nullable', 'date_format:H:i'],
             'rsvp_deadline' => ['required', 'date'],

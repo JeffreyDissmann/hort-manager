@@ -4,11 +4,15 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Notifications\Channels\SelfHealingSlackChannel;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Notifications\ChannelManager;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Notifications\SlackNotificationRouterChannel;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
@@ -45,6 +49,14 @@ class AppServiceProvider extends ServiceProvider
             $event->extendSocialite('slack', Provider::class);
         });
 
+        // Slack DMs go through a wrapper that clears a `slack_id` Slack no longer
+        // knows, so one stale id can't fail every future notification to that user.
+        Notification::resolved(function (ChannelManager $channels): void {
+            $channels->extend('slack', fn ($app) => new SelfHealingSlackChannel(
+                new SlackNotificationRouterChannel($app),
+            ));
+        });
+
         // The built-in password-reset e-mail is English; render it in German to
         // match the rest of the app. (The framework mail template's remaining
         // string is translated in lang/de.json.)
@@ -72,5 +84,12 @@ class AppServiceProvider extends ServiceProvider
             ->withToken(config('services.slack.notifications.bot_user_oauth_token'))
             ->timeout(10)
             ->retry(2, 200, throw: false));
+
+        // One configured Paperless-ngx REST client (service-account token) shared by
+        // PaperlessService. Auth is a „Token <key>" header, not Bearer.
+        Http::macro('paperless', fn (): PendingRequest => Http::baseUrl(rtrim((string) config('services.paperless.url'), '/').'/api')
+            ->withToken((string) config('services.paperless.token'), 'Token')
+            ->acceptJson()
+            ->timeout(15));
     }
 }

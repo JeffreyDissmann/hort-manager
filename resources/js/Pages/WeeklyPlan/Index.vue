@@ -6,12 +6,17 @@ import DayEditor from '@/Components/DayEditor.vue';
 import WeekNav from '@/Components/WeekNav.vue';
 import WeekTimetable from '@/Components/WeekTimetable.vue';
 import CompanionNotes from '@/Components/CompanionNotes.vue';
+import { t } from '@/i18n';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 
 const props = defineProps({
     week: { type: Object, default: () => ({}) },
     weekDays: { type: Array, default: () => [] },
+    // { 'YYYY-MM-DD': 'Sommerferien' } — days the Hort is shut.
+    closedDays: { type: Object, default: () => ({}) },
+    // { 'YYYY-MM-DD': 'Ferienbetreuung' } — days only signed-up children attend.
+    careDays: { type: Object, default: () => ({}) },
     currentWeek: { type: Array, default: () => [] },
     activities: { type: Array, default: () => [] },
     program: { type: Array, default: () => [] },
@@ -43,10 +48,11 @@ const qualifierPrefix = computed(() =>
     Object.fromEntries(props.qualifierOptions.map((o) => [o.value, o.prefix])),
 );
 
-// The prefix to show before a sent_home time — only for the meaningful deviations
-// (bis/ab); „genau um" is the default and stays implicit to keep the cell clean.
+// The prefix to show before a time — only for the meaningful deviations (bis/ab);
+// „genau um" is the default and stays implicit to keep the cell clean. Shown for
+// „geht allein" and for „geht mit … mit" (which mirrors the companion's qualifier).
 function timePrefix(method, qualifier) {
-    if (method !== 'sent_home' || !qualifier || qualifier === 'at') {
+    if ((method !== 'sent_home' && method !== 'with_child') || !qualifier || qualifier === 'at') {
         return '';
     }
     return qualifierPrefix.value[qualifier] ?? '';
@@ -54,7 +60,35 @@ function timePrefix(method, qualifier) {
 
 // The picked week's column headers show the weekday + its date; today is flagged.
 const weekColumns = computed(() =>
-    props.weekDays.map((d) => ({ label: d.label, sublabel: d.date_label, is_today: d.is_today })),
+    props.weekDays.map((d) => ({
+        label: d.label,
+        sublabel: d.date_label,
+        is_today: d.is_today,
+        date: d.date,
+        closed: props.closedDays[d.date] ?? null,
+        care: props.careDays[d.date] ?? null,
+    })),
+);
+
+// The week's Schließzeiten, named once above the grid rather than in every cell.
+const weekClosures = computed(() => [
+    ...new Set(props.weekDays.map((d) => props.closedDays[d.date]).filter(Boolean)),
+]);
+
+// The week's Ferienbetreuungen, named once above the grid.
+const weekCare = computed(() => [
+    ...new Set(props.weekDays.map((d) => props.careDays[d.date]).filter(Boolean)),
+]);
+
+// Most periods are simply called „Ferienbetreuung", and „Ferienbetreuung:
+// Ferienbetreuung" reads like a bug. Name them only when the name says more.
+const weekCareNames = computed(() =>
+    weekCare.value.filter((name) => name.trim().toLowerCase() !== t('weekly.care_short').toLowerCase()),
+);
+
+// Mo–Fr all shut → „geschlossen", otherwise „teilweise geschlossen".
+const wholeWeekClosed = computed(
+    () => props.weekDays.length > 0 && props.weekDays.every((d) => props.closedDays[d.date]),
 );
 
 function goWeek(date) {
@@ -96,7 +130,7 @@ function homeworkConflict(day, i) {
 
 // Solid `ink` time; the method reads from the warm/cool tint, and the "goes home
 // alone" case additionally gets a 🚶 icon.
-function cellClass(day) {
+function planClass(day) {
     // „Hortfrei" (no Hort that day): a clearly-visible muted slate chip — distinct from
     // both the coloured pickup days and the amber „reported absent" cells.
     if (!day.time) {
@@ -106,6 +140,73 @@ function cellClass(day) {
         ? 'bg-hort-orange/20 text-ink'
         : 'bg-hort-teal/20 text-ink';
 }
+
+/**
+ * Everything a day cell looks like, decided in one place: a Schließzeit outranks a
+ * reported absence, which outranks the planned pickup. `time` says whether to render
+ * the 🚶/„ab" prefixes, `extras` whether the companion/birthday/excursion badges
+ * belong there at all — on a closed day they'd contradict the „Geschlossen" label.
+ */
+// A pickup time is short and belongs in the cell's own size; a state („Geschlossen",
+// „Nicht angemeldet") is a whole word that has to survive a fifth of a phone screen,
+// so it renders smaller and is allowed to wrap.
+const STATE_LABEL = 'text-[10px] font-medium leading-tight';
+
+function cellUi(day) {
+    if (day.closed) {
+        return {
+            // Short form: „Geschlossen" doesn't fit a fifth of a phone screen, and the
+            // Schließzeit's name is one tap (or hover) away in the title.
+            label: t('weekly.closed_short'),
+            labelClass: STATE_LABEL,
+            title: day.closed,
+            class: 'bg-ink/10 text-ink/40',
+            time: false,
+            extras: false,
+        };
+    }
+
+    // Ferienbetreuung: not signed up is its own state — the child isn't „frei" that
+    // day, they simply aren't coming, and signing up happens on /care.
+    if (day.care && !day.care.registered) {
+        return {
+            label: t('weekly.care_not_registered'),
+            labelClass: STATE_LABEL,
+            title: t('weekly.care_not_registered_title'),
+            class: 'bg-ink/5 text-ink/40 ring-1 ring-inset ring-ink/10',
+            time: false,
+            extras: false,
+        };
+    }
+
+    if (day.absent) {
+        return {
+            label: day.absent.label,
+            labelClass: STATE_LABEL,
+            title: day.absent.label,
+            class: 'bg-amber-100 text-amber-700',
+            time: false,
+            extras: true,
+        };
+    }
+
+    return {
+        label: day.time ?? t('weekly.free'),
+        labelClass: 'text-sm font-semibold',
+        title: day.comment || undefined,
+        class: [planClass(day), day.adjusted ? 'ring-2 ring-amber-400' : ''].filter(Boolean).join(' '),
+        time: !!day.time,
+        extras: true,
+    };
+}
+
+// „Diese Woche" with each day's presentation resolved once per render.
+const decoratedWeek = computed(() =>
+    props.currentWeek.map((child) => ({
+        ...child,
+        days: child.days.map((day) => ({ ...day, ui: cellUi(day) })),
+    })),
+);
 
 // --- Day editor (shared popup) ---
 const dayEditor = ref(null);
@@ -157,13 +258,38 @@ function answerCompanion(id, confirmed) {
             <section class="space-y-3" @touchstart="onTouchStart" @touchend="onTouchEnd">
                 <WeekNav :week="week" @navigate="goWeek" />
 
+                <!-- Named once for the whole week; the cells themselves just grey out. -->
+                <p
+                    v-if="weekClosures.length"
+                    data-testid="week-closures"
+                    class="rounded-2xl bg-ink/5 px-4 py-3 text-sm text-ink/70"
+                >
+                    {{
+                        wholeWeekClosed
+                            ? $t('weekly.closed_week_all', { names: weekClosures.join(', ') })
+                            : $t('weekly.closed_week', { names: weekClosures.join(', ') })
+                    }}
+                </p>
+
+                <p
+                    v-if="weekCare.length"
+                    data-testid="week-care"
+                    class="rounded-2xl bg-hort-teal/10 px-4 py-3 text-sm text-ink/70 ring-1 ring-hort-teal/40"
+                >
+                    {{
+                        weekCareNames.length
+                            ? $t('weekly.care_week', { names: weekCareNames.join(', ') })
+                            : $t('weekly.care_week_plain')
+                    }}
+                </p>
+
                 <!-- Parents see + edit their own children; staff use the timeline below. -->
                 <template v-if="!isStaff">
                     <h3 class="text-sm font-semibold text-ink/70">{{ $t('weekly.your_children') }}</h3>
 
                     <ul v-if="currentWeek.length" class="space-y-3">
                     <li
-                        v-for="child in currentWeek"
+                        v-for="child in decoratedWeek"
                         :key="child.id"
                         class="rounded-2xl bg-surface p-4 shadow-sm"
                     >
@@ -179,11 +305,13 @@ function answerCompanion(id, confirmed) {
                             </span>
                         </div>
 
-                        <div class="grid grid-cols-5 gap-1.5">
+                        <!-- items-stretch + a growing cell: „Nicht angemeldet" wraps to
+                             two lines, and the whole row still lines up. -->
+                        <div class="grid grid-cols-5 items-stretch gap-1.5">
                             <div
                                 v-for="(day, i) in child.days"
                                 :key="day.date"
-                                class="rounded-lg text-center"
+                                class="flex flex-col rounded-lg text-center"
                                 :class="[
                                     day.past ? 'opacity-40' : '',
                                     weekDays[i].is_today ? 'bg-hort-teal/10 ring-1 ring-hort-teal/40' : '',
@@ -205,18 +333,18 @@ function answerCompanion(id, confirmed) {
                                     :is="day.editable ? 'button' : 'div'"
                                     type="button"
                                     :data-testid="`wp-cell-${child.id}-${day.date}`"
-                                    class="relative mt-1 w-full rounded-lg py-2 text-sm font-semibold"
+                                    class="relative mt-1 flex w-full grow flex-col justify-center overflow-hidden break-words rounded-lg px-0.5 py-2"
                                     :class="[
-                                        day.absent ? 'bg-amber-100 text-amber-700' : cellClass(day),
-                                        day.adjusted && !day.absent ? 'ring-2 ring-amber-400' : '',
+                                        day.ui.class,
+                                        day.ui.labelClass,
                                         day.editable ? 'cursor-pointer hover:brightness-95 active:scale-[0.97]' : '',
                                     ]"
-                                    :title="day.absent ? day.absent.label : day.comment || undefined"
+                                    :title="day.ui.title"
                                     @click="openCell(child, day, weekDays[i])"
                                 >
-                                    <template v-if="!day.absent && day.time"><span v-if="day.method === 'sent_home'">🚶&nbsp;</span><span v-if="timePrefix(day.method, day.qualifier)">{{ timePrefix(day.method, day.qualifier) }}&nbsp;</span></template>{{ day.absent ? day.absent.label : (day.time ?? $t('weekly.free')) }}
+                                    <template v-if="day.ui.time"><span v-if="day.method === 'sent_home'">🚶&nbsp;</span><span v-if="timePrefix(day.method, day.qualifier)">{{ timePrefix(day.method, day.qualifier) }}&nbsp;</span></template>{{ day.ui.label }}
                                     <span
-                                        v-if="day.companion"
+                                        v-if="day.companion && day.ui.extras"
                                         class="mt-0.5 block truncate text-[10px] font-normal leading-tight"
                                         :class="[
                                             day.companion.confirmed === true ? 'opacity-70' : 'font-medium',
@@ -227,21 +355,21 @@ function answerCompanion(id, confirmed) {
                                         {{ $t('weekly.companion_with', { name: day.companion.name }) }}<template v-if="day.companion.confirmed === null"> · {{ $t('weekly.companion_pending') }}</template><template v-else-if="day.companion.confirmed === false"> · {{ $t('weekly.companion_declined') }}</template>
                                     </span>
                                     <span
-                                        v-if="day.birthday !== null"
+                                        v-if="day.birthday !== null && day.ui.extras"
                                         class="mt-0.5 block text-[10px] leading-none"
                                         :title="$t('weekly.birthday_title')"
                                     >
                                         🎂
                                     </span>
                                     <span
-                                        v-if="day.excursion"
+                                        v-if="day.excursion && day.ui.extras"
                                         class="mt-0.5 block text-[10px] leading-none"
                                         :title="day.excursion.name"
                                     >
                                         🚌
                                     </span>
                                     <span
-                                        v-else-if="day.comment"
+                                        v-else-if="day.comment && day.ui.extras"
                                         class="mt-0.5 block truncate text-[10px] font-normal leading-tight opacity-70"
                                     >
                                         {{ day.comment }}

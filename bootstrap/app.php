@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Http\Middleware\EnsureAccountingAccess;
+use App\Http\Middleware\EnsureUserIsAdmin;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\SetLocale;
 use Illuminate\Foundation\Application;
@@ -21,6 +23,13 @@ return Application::configure(basePath: dirname(__DIR__))
             SetLocale::class,
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
+        ]);
+
+        // Admin-only route groups (user management). Buchhaltung uses `accounting`
+        // (read) / `accounting:write` for its own read/write access axis.
+        $middleware->alias([
+            'admin' => EnsureUserIsAdmin::class,
+            'accounting' => EnsureAccountingAccess::class,
         ]);
 
         // Behind the Cloudflare Tunnel / reverse proxy — honor X-Forwarded-* (scheme, IP).

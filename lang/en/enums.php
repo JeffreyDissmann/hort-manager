@@ -9,6 +9,11 @@ return [
         'staff' => 'Educator',
         'parent' => 'Parent',
     ],
+    'accounting_access' => [
+        'none' => 'No access',
+        'read' => 'Read only',
+        'write' => 'Read & write',
+    ],
     'absence_reason' => [
         'sick' => 'Sick',
         'away' => 'Not coming',
@@ -24,6 +29,10 @@ return [
         'sent_home' => 'Walks home alone',
         'with_child' => 'Goes with another child',
     ],
+    'holiday_period_type' => [
+        'closed' => 'Closed',
+        'care' => 'Holiday care',
+    ],
     'time_qualifier' => [
         'by' => 'By this time',
         'at' => 'Exactly at this time',
@@ -33,5 +42,24 @@ return [
         'by' => 'by',
         'at' => 'at',
         'from' => 'from',
+    ],
+    'category_direction' => [
+        'income' => 'Income',
+        'expense' => 'Expense',
+    ],
+    'booking_kind' => [
+        'income' => 'Income',
+        'expense' => 'Expense',
+        'transfer' => 'Transfer',
+    ],
+    'booking_status' => [
+        'draft' => 'Draft',
+        'suggested' => 'AI suggestion',
+        'confirmed' => 'Confirmed',
+    ],
+    'suggestion_confidence' => [
+        0 => 'Unsure',
+        1 => 'Medium',
+        2 => 'Confident',
     ],
 ];
