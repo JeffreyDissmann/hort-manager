@@ -215,14 +215,39 @@ return [
 
     // ---------------------------------------------------------------- Staff
     'staff' => [
-        'intro' => 'This chapter is for the Hort team. Parents are welcome to read along – it explains what happens behind the scenes.',
+        'intro' => 'This chapter is for the Hort team: the day on the pickup list, and everything you plan for the parents. Parents are welcome to read along – it explains what happens behind the scenes.',
 
-        'board_title' => 'Marking off on “Today”',
-        'board_text' => 'The <strong>Today</strong> page holds the day’s pickup list, sorted by time. Tap a child as they leave – their family gets a message straight away. You can also change a child’s pickup time here at short notice.',
+        'board_title' => 'The day on “Today”',
+        'board_text' => 'The <strong>Today</strong> page holds the day’s pickup list, sorted by time. Tap a child as they leave – their family gets a message straight away, so nobody has to make a phone call.',
+        'board_points' => [
+            '<strong>Picked up or alone:</strong> every child shows how they get home. “Walks home alone” is marked 🚶, with “by / at / from” when the family entered it that way.',
+            '<strong>“Changed today”:</strong> a day that differs from the standard plan says so on the row — so you see at a glance where today is different.',
+            '<strong>Short-notice changes:</strong> you can adjust a pickup time right here, for any child — handy when parents just ring up.',
+            '<strong>Not there:</strong> children reported sick are listed separately, and anyone who is hortfrei by their standard plan appears as a quiet note. You can enter both yourself when a family tells you in person.',
+            '<strong>Confirming “going along”:</strong> if a child wants to walk home with another one who goes alone, the app asks that child’s family. You can set the answer yourself when it was agreed at the door.',
+        ],
+
+        'children_title' => 'Children & standard plans',
+        'children_text' => 'Under <strong>Children</strong> every child sits with their standard plan — when they leave on which weekday, and how. You may edit any child; parents only their own.',
+        'children_points' => [
+            'A weekday with no entry means <strong>hortfrei</strong> — the child isn’t there at all that day. That is not an absence and needs no report.',
+            'Every child has an <strong>enrolment period</strong>: from when they attend and, once they leave, from when they don’t. A child who leaves isn’t deleted but gets an end date; from then on they drop out of lists and plans while staying visible in the past.',
+            '<strong>Show former children</strong> brings up the ones who have already left.',
+            'A second parent is linked on the child itself — after that both see and change the same thing.',
+        ],
+
+        'excursions_title' => 'Planning excursions',
+        'excursions_points' => [
+            'Under <strong>Excursions</strong> you create a trip: destination, date, departure and return, plus a <strong>deadline</strong> for answers.',
+            'Every child is invited automatically – parents get the poll as a message with yes/no buttons, and a reminder if they don’t answer.',
+            'The trip’s own page shows the state per child and lets you answer for a family who tells you directly – also after the deadline.',
+            'On the day you mark <strong>departed</strong> and <strong>back</strong> on “Today”. Being picked up is ticked off as usual afterwards.',
+            'A trip can’t be booked on a day the Hort is closed – and a closure can’t be laid over an existing trip.',
+        ],
 
         'program_title' => 'Daily programme',
         'program_text' => 'Under <strong>Programme</strong> you enter lunch, activity and homework times for the week – “no homework” is possible too. Parents see it in the weekly plan and on “Today”.',
-        'program_reminder' => 'If a lunch is still missing for the week on Monday, Hort-Manager reminds you shortly before the parents’ weekly overview goes out. The same page holds the time for <strong>late changes</strong> and for sending the weekly overview.',
+        'program_reminder' => 'If a lunch is still missing for the week on Monday, Hort-Manager reminds you shortly before the parents’ weekly overview goes out. At the bottom of the same page sit the <strong>general settings</strong>: when a change counts as “late”, when the weekly overview goes out, and the times new holiday care days start out with.',
 
         'holidays_title' => 'Setting up holidays & closures',
         'holidays_points' => [
@@ -233,10 +258,25 @@ return [
             'A closure beats holiday care: if both fall on the same day, the Hort is shut. An excursion inside the period has to be moved or cancelled first.',
         ],
 
+        'notifications_title' => 'What you get sent yourselves',
+        'notifications_points' => [
+            '<strong>Change for today:</strong> when parents change something about today after the configured time (usually 12:00) – a different pickup time, a sick report, going along with another child – you get a short message. Agreed in the morning is not the same as changed in the afternoon.',
+            '<strong>Weekly programme missing:</strong> on Monday, shortly before the weekly overview, if a lunch of the week is still empty.',
+            'Both are switched on or off per channel under <strong>Profile → Notifications</strong>. Anyone with a child of their own at the Hort also sees the parent topics there.',
+        ],
+
+        'admin_title' => 'Admins only',
+        'admin_points' => [
+            'Under <strong>Users</strong> you see every account, set the role (parent or staff) and make someone an admin.',
+            'The <strong>activity log</strong> shows who changed what – useful when a pickup time looks different than expected.',
+            'From the account menu you can switch <strong>your own role</strong> to see the app the way parents see it.',
+        ],
+
         'roles_title' => 'Who may do what?',
         'role_parents' => '<strong>Parents</strong> see everything, look after their own children and answer excursions and holiday care.',
         'role_staff' => '<strong>Staff</strong> mark departures off, plan excursions, the programme and the holidays – and may enter things for any child.',
         'role_admins' => '<strong>Admins</strong> additionally manage the users and assign the roles.',
+        'roles_note' => 'Reading, by the way, is open to everyone: who leaves when is visible to all – it saves questions and makes arrangements between families easier.',
     ],
 
     // ---------------------------------------------------------------- Glossary
