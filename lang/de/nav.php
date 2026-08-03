@@ -5,6 +5,8 @@ declare(strict_types=1);
 // Navigation labels, user menu, and the layout chrome (top bar / bottom tab bar).
 return [
     'excursions' => 'Ausflüge',
+    // Parents answer for trips *and* Ferienbetreuung on the same page.
+    'excursions_care' => 'Ausflüge & Ferien',
     'pickup_plan' => 'Wochenplan',
     'standard_plan' => 'Stammplan',
     // Section labels in the account menu.

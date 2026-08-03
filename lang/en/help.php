@@ -143,7 +143,7 @@ return [
 
     // ---------------------------------------------------------------- Holidays
     'holidays' => [
-        'intro' => 'In the holidays there are two possibilities: the Hort is <strong>closed</strong>, or there is <strong>holiday care</strong> you sign your child up for day by day. Both live in the menu at the top right.',
+        'intro' => 'In the holidays there are two possibilities: the Hort is <strong>closed</strong>, or there is <strong>holiday care</strong> you sign your child up for day by day. Closures live in the menu at the top right; signing up happens under <strong>Excursions &amp; holidays</strong>.',
 
         'closed_title' => 'Closures',
         'closed_text' => 'Under <strong>Closures</strong> you find every period the Hort is shut – with a name and dates, so you can plan your own holidays around them. In the weekly plan those days are greyed out and locked.',
@@ -151,7 +151,7 @@ return [
         'care_title' => 'Holiday care: signing up day by day',
         'care_text' => 'During <strong>holiday care</strong> the Hort is open – but only for the children who signed up. There is no school in the holidays, so the normal standard plan doesn’t apply: you say for <strong>each single day</strong> whether your child is coming.',
         'care_points' => [
-            'Open <strong>Holiday care</strong> in the menu. Every offered day is listed with its <strong>care window</strong> (e.g. 08:30–16:30).',
+            'Open <strong>Excursions &amp; holidays</strong>. Every offered day is listed with its <strong>care window</strong> (e.g. 08:30–16:00) – right next to the trips waiting for an answer.',
             'Tick the days your child is coming and save. Picking <strong>no day at all</strong> is just as valid an answer as picking every day.',
             'Watch the <strong>registration deadline</strong>. After it you can’t change anything yourself; ask the staff, they can still sign your child up.',
             'You get a message when holiday care opens, and a reminder on the deadline day if you haven’t answered yet.',

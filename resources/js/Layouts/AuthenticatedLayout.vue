@@ -103,7 +103,14 @@ const navItems = computed(() => {
           ]
         : [
               { label: t('common.today'), href: board().url, icon: 'sun' },
-              { label: t('nav.excursions'), href: pollsIndex().url, icon: 'map', badge: pendingPolls.value },
+              // Trips and Ferienbetreuung answer to the same reflex („will mein Kind
+              // mit?"), so parents get one tab — and one badge — for both.
+              {
+                  label: t('nav.excursions_care'),
+                  href: pollsIndex().url,
+                  icon: 'map',
+                  badge: pendingPolls.value + pendingCare.value.length,
+              },
               { label: t('nav.pickup_plan'), href: weeklyPlan().url, icon: 'calendar' },
               { label: t('nav.standard_plan'), href: standardPlan().url, icon: 'table' },
           ];
@@ -279,7 +286,9 @@ function isActive(item) {
                         >
                             {{ $t('nav.my_children') }}
                         </DropdownLink>
-                        <DropdownLink :href="careIndex().url" data-testid="nav-care">
+                        <!-- Staff only: parents sign up on „Ausflüge & Ferien", and a
+                             second door to the same sheet only confuses. -->
+                        <DropdownLink v-if="isStaff" :href="careIndex().url" data-testid="nav-care">
                             {{ $t('nav.care') }}
                             <span
                                 v-if="pendingCare.length"
@@ -397,7 +406,7 @@ function isActive(item) {
                     :key="item.label"
                     :href="item.href"
                     :class="[
-                        'flex flex-1 flex-col items-center gap-1 py-2.5 text-xs font-medium transition',
+                        'flex flex-1 flex-col items-center gap-1 px-1 py-2.5 text-center text-xs font-medium leading-tight transition',
                         isActive(item.href)
                             ? 'text-hort-teal-dark'
                             : 'text-ink/50',

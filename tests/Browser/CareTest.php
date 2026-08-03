@@ -78,7 +78,8 @@ it('lets a parent tick the days their child will come', function () {
     $period = carePeriod();
     [$monday, $tuesday] = $period->careDays()->orderBy('date')->take(2)->get()->all();
 
-    actAndVisit($parent, '/care')
+    // Parents sign up on „Ausflüge & Ferien" — /care is the staff screen.
+    actAndVisit($parent, '/polls')
         ->assertSee('Sommer-Ferienbetreuung')
         ->assertSee('noch nicht beantwortet')
         ->click("@care-pick-{$child->id}-{$monday->id}")
@@ -94,6 +95,24 @@ it('lets a parent tick the days their child will come', function () {
         ->toBe([$monday->date->toDateString()])
         ->and(HolidayCareAnswer::where('child_id', $child->id)->exists())->toBeTrue()
         ->and(DailyDeparture::whereDate('date', $tuesday->date)->exists())->toBeFalse();
+});
+
+it('puts trips and Ferienbetreuung on one page for parents', function () {
+    $parent = User::factory()->parent()->create();
+    $child = Child::factory()->create(['name' => 'Mia']);
+    $parent->children()->attach($child);
+    carePeriod();
+
+    // The sign-up sheet sits above the trips, under one heading …
+    $page = actAndVisit($parent, '/polls');
+    $page->script("document.querySelectorAll('dialog[open]').forEach((d) => d.close())");
+    $page->assertSee('Ausflüge & Ferien')
+        ->assertPresent('@poll-care')
+        ->assertSee('Sommer-Ferienbetreuung');
+
+    // … and /care sends a parent here rather than showing a second sheet.
+    $page = visit('/care');
+    $page->assertPathIs('/polls');
 });
 
 it('nudges a parent who has not answered, and stops once they have', function () {
@@ -126,7 +145,7 @@ it('locks the sign-up once the Anmeldeschluss has passed', function () {
     $period = carePeriod(deadline: Carbon::yesterday()->toDateString());
     $firstDay = $period->careDays()->orderBy('date')->first();
 
-    actAndVisit($parent, '/care')
+    actAndVisit($parent, '/polls')
         ->assertSee('Anmeldeschluss war am')
         // No save button and no tickable days once the window has closed.
         ->assertMissing("@care-save-{$period->id}-{$child->id}")

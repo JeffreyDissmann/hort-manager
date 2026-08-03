@@ -1,16 +1,26 @@
 <script setup>
 import { update as pollsUpdate } from '@/routes/polls';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import CareSignupList from '@/Components/Care/SignupList.vue';
 import ChildStatusBadge from '@/Components/ChildStatusBadge.vue';
 import CollapsibleChips from '@/Components/CollapsibleChips.vue';
+import { help } from '@/routes';
 import { t } from '@/i18n';
-import { Head, router, usePage } from '@inertiajs/vue3';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
 
-defineProps({
+const props = defineProps({
     upcoming: { type: Array, default: () => [] },
     past: { type: Array, default: () => [] },
+    // The Ferienbetreuung half of the page (see CareSignupData).
+    care: {
+        type: Object,
+        default: () => ({ children: [], periods: [], canOverrideDeadline: false }),
+    },
 });
+
+// The sign-up sheet only earns its section when there is something to sign up for.
+const hasCare = computed(() => props.care.periods.length > 0);
 
 const flash = computed(() => usePage().props.flash?.status);
 
@@ -82,7 +92,17 @@ function answer(excursion, child, response) {
 
     <AuthenticatedLayout>
         <template #header>
-            <h2 class="text-xl font-semibold text-ink">{{ $t('excursions.heading') }}</h2>
+            <div class="flex flex-wrap items-baseline justify-between gap-2">
+                <h2 class="text-xl font-semibold text-ink">{{ $t('excursions.poll_heading') }}</h2>
+                <!-- Signing up per day is the one thing parents have to learn here. -->
+                <Link
+                    v-if="hasCare"
+                    :href="help({ topic: 'holidays' }).url"
+                    class="text-sm font-medium text-hort-teal-dark underline-offset-2 hover:underline"
+                >
+                    {{ $t('care.how_it_works') }}
+                </Link>
+            </div>
         </template>
 
         <div class="space-y-8">
@@ -92,6 +112,20 @@ function answer(excursion, child, response) {
             >
                 {{ flash }}
             </div>
+
+            <!-- Ferienbetreuung first: it has an Anmeldeschluss and needs a decision
+                 per day, so it is the more urgent half of the page. -->
+            <section v-if="hasCare" class="space-y-3" data-testid="poll-care">
+                <h3 class="text-sm font-semibold uppercase tracking-wide text-ink/50">
+                    {{ $t('care.heading') }}
+                </h3>
+
+                <CareSignupList
+                    :children="care.children"
+                    :periods="care.periods"
+                    :can-override-deadline="care.canOverrideDeadline"
+                />
+            </section>
 
             <!-- Upcoming excursions (answerable while the poll is open) -->
             <section class="space-y-3">

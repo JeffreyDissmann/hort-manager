@@ -3,7 +3,8 @@
 // prop — a family that picked „keine Tage" has answered, so they aren't chased.
 import { computed } from 'vue';
 import { Link, usePage } from '@inertiajs/vue3';
-import { index as careIndex } from '@/routes/care';
+// Parents sign up on „Ausflüge & Ferien" — /care would only redirect them there.
+import { index as pollsIndex } from '@/routes/polls';
 
 const periods = computed(() => usePage().props.pendingCare ?? []);
 const locale = computed(() => usePage().props.locale || 'de');
@@ -33,7 +34,7 @@ function deadlineLabel(date) {
 
         <div class="mt-2">
             <Link
-                :href="careIndex().url"
+                :href="pollsIndex().url"
                 class="inline-block rounded-lg bg-hort-teal-dark px-3 py-1.5 font-semibold text-white transition hover:brightness-110"
             >
                 {{ $t('care_reminder.action') }}

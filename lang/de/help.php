@@ -143,7 +143,7 @@ return [
 
     // ---------------------------------------------------------------- Ferien
     'holidays' => [
-        'intro' => 'In den Ferien gibt es zwei Möglichkeiten: der Hort ist <strong>geschlossen</strong>, oder es gibt eine <strong>Ferienbetreuung</strong>, für die du dein Kind pro Tag anmeldest. Beides findest du im Menü oben rechts.',
+        'intro' => 'In den Ferien gibt es zwei Möglichkeiten: der Hort ist <strong>geschlossen</strong>, oder es gibt eine <strong>Ferienbetreuung</strong>, für die du dein Kind pro Tag anmeldest. Die Schließzeiten stehen im Menü oben rechts, die Anmeldung unter <strong>Ausflüge &amp; Ferien</strong>.',
 
         'closed_title' => 'Schließzeiten',
         'closed_text' => 'Unter <strong>Schließzeiten</strong> stehen alle Zeiträume, an denen der Hort zu hat – mit Name und Datum, damit du deine eigenen Ferien danach planen kannst. Im Wochenplan sind diese Tage grau hinterlegt und gesperrt.',
@@ -151,7 +151,7 @@ return [
         'care_title' => 'Ferienbetreuung: Tag für Tag anmelden',
         'care_text' => 'Bei einer <strong>Ferienbetreuung</strong> ist der Hort geöffnet – aber nur für die Kinder, die angemeldet sind. Weil in den Ferien keine Schule ist, gilt der normale Stammplan nicht: du sagst für <strong>jeden einzelnen Tag</strong>, ob dein Kind kommt.',
         'care_points' => [
-            'Öffne im Menü <strong>Ferienbetreuung</strong>. Dort steht jeder angebotene Tag mit seiner <strong>Betreuungszeit</strong> (z. B. 08:30–16:30).',
+            'Öffne unten <strong>Ausflüge &amp; Ferien</strong>. Dort steht jeder angebotene Tag mit seiner <strong>Betreuungszeit</strong> (z. B. 08:30–16:00) – gleich neben den Ausflügen, die eine Antwort brauchen.',
             'Setz bei deinem Kind einen Haken bei den Tagen, an denen es kommt – und speichere. <strong>Keinen Tag</strong> auszuwählen ist eine genauso gültige Antwort wie alle.',
             'Achte auf den <strong>Anmeldeschluss</strong>. Danach kannst du selbst nichts mehr ändern; sprich das Hort-Team an, es kann dich noch eintragen.',
             'Du bekommst eine Nachricht, sobald eine Ferienbetreuung geöffnet ist, und eine Erinnerung am Tag des Anmeldeschlusses, falls du noch nicht geantwortet hast.',

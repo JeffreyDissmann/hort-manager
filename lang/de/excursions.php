@@ -5,7 +5,8 @@ declare(strict_types=1);
 // Ausflug (excursion) screens: planning, the parent RSVP poll and history.
 return [
     'heading' => 'Ausflüge',
-    'poll_title' => 'Ausflüge – Abstimmung',
+    'poll_title' => 'Ausflüge & Ferien',
+    'poll_heading' => 'Ausflüge & Ferien',
     'plan_title' => 'Ausflug planen',
     'edit_heading' => 'Ausflug bearbeiten',
     'edit_title' => ':name bearbeiten',

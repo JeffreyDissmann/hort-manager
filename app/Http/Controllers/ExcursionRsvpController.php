@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\Jobs\SyncExcursionRsvp;
 use App\Models\Child;
 use App\Models\Excursion;
+use App\Support\CareSignupData;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -57,6 +58,9 @@ class ExcursionRsvpController extends Controller
             // Split by date (like the staff view); answering is gated on poll_open.
             'upcoming' => $excursions->filter(fn ($e) => $e['date'] >= $today)->values(),
             'past' => $excursions->filter(fn ($e) => $e['date'] < $today)->sortByDesc('date')->values(),
+            // „Ausflüge & Ferien": everything that wants an answer from this family on
+            // one page. The Ferienbetreuung sign-up sheet is the other half of it.
+            'care' => CareSignupData::for($user, ownChildrenOnly: true),
         ]);
     }
 
