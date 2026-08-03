@@ -80,6 +80,12 @@ const weekCare = computed(() => [
     ...new Set(props.weekDays.map((d) => props.careDays[d.date]).filter(Boolean)),
 ]);
 
+// Most periods are simply called „Ferienbetreuung", and „Ferienbetreuung:
+// Ferienbetreuung" reads like a bug. Name them only when the name says more.
+const weekCareNames = computed(() =>
+    weekCare.value.filter((name) => name.trim().toLowerCase() !== t('weekly.care_short').toLowerCase()),
+);
+
 // Mo–Fr all shut → „geschlossen", otherwise „teilweise geschlossen".
 const wholeWeekClosed = computed(
     () => props.weekDays.length > 0 && props.weekDays.every((d) => props.closedDays[d.date]),
@@ -141,9 +147,23 @@ function planClass(day) {
  * the 🚶/„ab" prefixes, `extras` whether the companion/birthday/excursion badges
  * belong there at all — on a closed day they'd contradict the „Geschlossen" label.
  */
+// A pickup time is short and belongs in the cell's own size; a state („Geschlossen",
+// „Nicht angemeldet") is a whole word that has to survive a fifth of a phone screen,
+// so it renders smaller and is allowed to wrap.
+const STATE_LABEL = 'text-[10px] font-medium leading-tight';
+
 function cellUi(day) {
     if (day.closed) {
-        return { label: t('weekly.closed'), title: day.closed, class: 'bg-ink/10 text-ink/40', time: false, extras: false };
+        return {
+            // Short form: „Geschlossen" doesn't fit a fifth of a phone screen, and the
+            // Schließzeit's name is one tap (or hover) away in the title.
+            label: t('weekly.closed_short'),
+            labelClass: STATE_LABEL,
+            title: day.closed,
+            class: 'bg-ink/10 text-ink/40',
+            time: false,
+            extras: false,
+        };
     }
 
     // Ferienbetreuung: not signed up is its own state — the child isn't „frei" that
@@ -151,6 +171,7 @@ function cellUi(day) {
     if (day.care && !day.care.registered) {
         return {
             label: t('weekly.care_not_registered'),
+            labelClass: STATE_LABEL,
             title: t('weekly.care_not_registered_title'),
             class: 'bg-ink/5 text-ink/40 ring-1 ring-inset ring-ink/10',
             time: false,
@@ -159,11 +180,19 @@ function cellUi(day) {
     }
 
     if (day.absent) {
-        return { label: day.absent.label, title: day.absent.label, class: 'bg-amber-100 text-amber-700', time: false, extras: true };
+        return {
+            label: day.absent.label,
+            labelClass: STATE_LABEL,
+            title: day.absent.label,
+            class: 'bg-amber-100 text-amber-700',
+            time: false,
+            extras: true,
+        };
     }
 
     return {
         label: day.time ?? t('weekly.free'),
+        labelClass: 'text-sm font-semibold',
         title: day.comment || undefined,
         class: [planClass(day), day.adjusted ? 'ring-2 ring-amber-400' : ''].filter(Boolean).join(' '),
         time: !!day.time,
@@ -247,7 +276,11 @@ function answerCompanion(id, confirmed) {
                     data-testid="week-care"
                     class="rounded-2xl bg-hort-teal/10 px-4 py-3 text-sm text-ink/70 ring-1 ring-hort-teal/40"
                 >
-                    {{ $t('weekly.care_week', { names: weekCare.join(', ') }) }}
+                    {{
+                        weekCareNames.length
+                            ? $t('weekly.care_week', { names: weekCareNames.join(', ') })
+                            : $t('weekly.care_week_plain')
+                    }}
                 </p>
 
                 <!-- Parents see + edit their own children; staff use the timeline below. -->
@@ -272,11 +305,13 @@ function answerCompanion(id, confirmed) {
                             </span>
                         </div>
 
-                        <div class="grid grid-cols-5 gap-1.5">
+                        <!-- items-stretch + a growing cell: „Nicht angemeldet" wraps to
+                             two lines, and the whole row still lines up. -->
+                        <div class="grid grid-cols-5 items-stretch gap-1.5">
                             <div
                                 v-for="(day, i) in child.days"
                                 :key="day.date"
-                                class="rounded-lg text-center"
+                                class="flex flex-col rounded-lg text-center"
                                 :class="[
                                     day.past ? 'opacity-40' : '',
                                     weekDays[i].is_today ? 'bg-hort-teal/10 ring-1 ring-hort-teal/40' : '',
@@ -298,9 +333,10 @@ function answerCompanion(id, confirmed) {
                                     :is="day.editable ? 'button' : 'div'"
                                     type="button"
                                     :data-testid="`wp-cell-${child.id}-${day.date}`"
-                                    class="relative mt-1 w-full rounded-lg py-2 text-sm font-semibold"
+                                    class="relative mt-1 flex w-full grow flex-col justify-center overflow-hidden break-words rounded-lg px-0.5 py-2"
                                     :class="[
                                         day.ui.class,
+                                        day.ui.labelClass,
                                         day.editable ? 'cursor-pointer hover:brightness-95 active:scale-[0.97]' : '',
                                     ]"
                                     :title="day.ui.title"

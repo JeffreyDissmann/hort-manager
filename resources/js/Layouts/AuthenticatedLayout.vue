@@ -31,7 +31,6 @@ import { update as switchRoleRoute } from '@/routes/role';
 import { index as childrenIndex } from '@/routes/children';
 import { index as excursionsIndex } from '@/routes/excursions';
 import { index as closuresIndex } from '@/routes/closures';
-import { index as careIndex } from '@/routes/care';
 import { index as usersIndex } from '@/routes/users';
 import { index as bookingsIndex } from '@/routes/accounting/bookings';
 import { index as accountsIndex } from '@/routes/accounting/accounts';
@@ -103,7 +102,14 @@ const navItems = computed(() => {
           ]
         : [
               { label: t('common.today'), href: board().url, icon: 'sun' },
-              { label: t('nav.excursions'), href: pollsIndex().url, icon: 'map', badge: pendingPolls.value },
+              // Trips and Ferienbetreuung answer to the same reflex („will mein Kind
+              // mit?"), so parents get one tab — and one badge — for both.
+              {
+                  label: t('nav.excursions_care'),
+                  href: pollsIndex().url,
+                  icon: 'map',
+                  badge: pendingPolls.value + pendingCare.value.length,
+              },
               { label: t('nav.pickup_plan'), href: weeklyPlan().url, icon: 'calendar' },
               { label: t('nav.standard_plan'), href: standardPlan().url, icon: 'table' },
           ];
@@ -279,17 +285,17 @@ function isActive(item) {
                         >
                             {{ $t('nav.my_children') }}
                         </DropdownLink>
-                        <DropdownLink :href="careIndex().url" data-testid="nav-care">
-                            {{ $t('nav.care') }}
+                        <!-- One entry for both kinds of Ferien-Zeitraum: parents read
+                             them here, staff open one to set it up and see its roster.
+                             Signing up happens on „Ausflüge & Ferien". -->
+                        <DropdownLink :href="closuresIndex().url" data-testid="nav-closures">
+                            {{ $t('nav.closures') }}
                             <span
                                 v-if="pendingCare.length"
                                 class="ml-1 rounded-full bg-hort-teal-dark px-1.5 py-0.5 text-[10px] font-bold text-white"
                             >
                                 {{ pendingCare.length }}
                             </span>
-                        </DropdownLink>
-                        <DropdownLink :href="closuresIndex().url" data-testid="nav-closures">
-                            {{ $t('nav.closures') }}
                         </DropdownLink>
 
                         <hr class="my-1 border-ink/10" />
@@ -397,7 +403,7 @@ function isActive(item) {
                     :key="item.label"
                     :href="item.href"
                     :class="[
-                        'flex flex-1 flex-col items-center gap-1 py-2.5 text-xs font-medium transition',
+                        'flex flex-1 flex-col items-center gap-1 px-1 py-2.5 text-center text-xs font-medium leading-tight transition',
                         isActive(item.href)
                             ? 'text-hort-teal-dark'
                             : 'text-ink/50',

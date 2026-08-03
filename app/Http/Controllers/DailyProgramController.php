@@ -105,6 +105,8 @@ class DailyProgramController extends Controller
             'weeklyDigestTime' => Setting::weeklyDigestTime(),
             'programReminderTime' => Setting::programReminderTime(),
             'programReminderLeadMinutes' => Setting::ProgramReminderLeadMinutes,
+            // The times a newly offered Ferienbetreuung day starts out with.
+            'careDefaultWindow' => array_combine(['start', 'end'], Setting::careDefaultWindow()),
         ]);
     }
 
@@ -254,6 +256,25 @@ class DailyProgramController extends Controller
         ]);
 
         Setting::set(Setting::WeeklyDigestTime, $validated['weekly_digest_time']);
+
+        return back()->with('status', __('flash.settings_saved'));
+    }
+
+    /**
+     * Save the default Betreuungszeit a new Ferienbetreuung day starts out with.
+     * Days already offered keep their times — this is a starting point, not a rule.
+     */
+    public function updateCareWindow(Request $request): RedirectResponse
+    {
+        $this->authorize('update', DailyProgram::class);
+
+        $validated = $request->validate([
+            'care_default_start' => ['required', 'date_format:H:i'],
+            'care_default_end' => ['required', 'date_format:H:i', 'after:care_default_start'],
+        ]);
+
+        Setting::set(Setting::CareDefaultStart, $validated['care_default_start']);
+        Setting::set(Setting::CareDefaultEnd, $validated['care_default_end']);
 
         return back()->with('status', __('flash.settings_saved'));
     }

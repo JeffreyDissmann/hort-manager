@@ -5,6 +5,7 @@ declare(strict_types=1);
 // Navigation labels, user menu, and the layout chrome (top bar / bottom tab bar).
 return [
     'excursions' => 'Excursions',
+    'excursions_care' => 'Excursions & holidays',
     'pickup_plan' => 'Weekly plan',
     'standard_plan' => 'Standard plan',
     // Section labels in the account menu.
@@ -14,7 +15,7 @@ return [
     'group_accounting' => 'Accounting',
 
     'care' => 'Holiday care',
-    'closures' => 'Closures',
+    'closures' => 'Holidays & closures',
     'program' => 'Program',
     'children' => 'Children',
     'users' => 'Users',

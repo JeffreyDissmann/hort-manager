@@ -307,10 +307,10 @@ class CareIntegrityTest extends TestCase
             'status' => DepartureStatus::Present,
         ]);
 
-        // /care must not show the day pre-ticked …
+        // „Ausflüge & Ferien" must not show the day pre-ticked …
         $this->actingAs($this->parent)
-            ->get(route('care.index'))
-            ->assertInertia(fn ($page) => $page->where('periods.0.days.1.children', []));
+            ->get(route('polls.index'))
+            ->assertInertia(fn ($page) => $page->where('care.periods.0.days.1.children', []));
 
         // … the Wochenplan must call the child „nicht angemeldet" …
         $this->actingAs($this->parent)
@@ -369,11 +369,11 @@ class CareIntegrityTest extends TestCase
         // The time they chose is theirs — adopting the row must not overwrite it.
         $this->assertSame('14:00', substr((string) $override->planned_time, 0, 5));
 
-        // …and /care now shows the day as ticked.
+        // …and the period's own page now shows the day as ticked.
         $this->actingAs($this->staff)
-            ->get(route('care.index'))
+            ->get(route('closures.edit', $this->period))
             ->assertInertia(fn ($page) => $page->where(
-                'periods.0.days.1.children',
+                'roster.periods.0.days.1.children',
                 [$this->child->id],
             ));
     }
