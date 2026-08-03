@@ -9,6 +9,7 @@ use App\Models\HolidayCareDay;
 use App\Models\HolidayPeriod;
 use App\Models\Setting;
 use App\Rules\NoExcursionInRange;
+use App\Support\CareSignupData;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -77,6 +78,47 @@ class HolidayPeriodController extends Controller
             'care' => $care->filter(fn (array $p): bool => $p['ends_on'] >= $today)->values(),
             'careDefaults' => ['starts_at' => $careStart, 'ends_at' => $careEnd],
             'canManage' => $request->user()->can('create', HolidayPeriod::class),
+        ]);
+    }
+
+    /**
+     * One Ferienbetreuung on its own page — the days it offers and who is signed up,
+     * the way an Ausflug carries its own fields and its answers. Setting a period up
+     * and filling its roster is one job, so it is one screen.
+     */
+    public function edit(Request $request, HolidayPeriod $closure): Response
+    {
+        $this->authorize('update', $closure);
+
+        $closure->load('careDays');
+
+        return Inertia::render('Closures/Edit', [
+            'period' => [
+                'id' => $closure->id,
+                'name' => $closure->name,
+                'type' => $closure->type->value,
+                'starts_on' => $closure->starts_on->toDateString(),
+                'ends_on' => $closure->ends_on->toDateString(),
+                'registration_deadline' => $closure->registration_deadline?->toDateString(),
+                'registration_open' => $closure->registrationIsOpen(),
+                'note' => $closure->note,
+                'days' => $closure->careDays->map(fn (HolidayCareDay $day): array => [
+                    'id' => $day->id,
+                    'date' => $day->date->toDateString(),
+                    'starts_at' => HolidayCareDay::short($day->starts_at),
+                    'ends_at' => HolidayCareDay::short($day->ends_at),
+                ])->values(),
+                // Days staff stopped offering — shown so removing one isn't final.
+                'removed_days' => $closure->careDays()->onlyTrashed()->orderBy('date')->get()
+                    ->map(fn (HolidayCareDay $day): array => [
+                        'id' => $day->id,
+                        'date' => $day->date->toDateString(),
+                    ])->values(),
+            ],
+            // The roster: every child, every offered day — empty for a Schließzeit.
+            'roster' => $closure->isCare()
+                ? CareSignupData::forPeriod($request->user(), $closure)
+                : null,
         ]);
     }
 

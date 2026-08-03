@@ -14,6 +14,8 @@ const props = defineProps({
     children: { type: Array, default: () => [] },
     periods: { type: Array, default: () => [] },
     canOverrideDeadline: { type: Boolean, default: false },
+    // The period's own page already says which period this is (and when it runs).
+    showPeriodHeader: { type: Boolean, default: true },
 });
 
 const locale = computed(() => usePage().props.locale || 'de');
@@ -122,8 +124,8 @@ function dateLabel(date) {
             :data-testid="`care-signup-${period.id}`"
             class="rounded-2xl bg-surface p-4 shadow-sm"
         >
-            <p class="font-semibold text-ink">{{ period.name }}</p>
-            <p class="text-sm text-ink/60">
+            <p v-if="showPeriodHeader" class="font-semibold text-ink">{{ period.name }}</p>
+            <p v-if="showPeriodHeader" class="text-sm text-ink/60">
                 {{ dateLabel(period.starts_on) }} – {{ dateLabel(period.ends_on) }}
             </p>
             <p class="mt-0.5 text-xs" :class="period.open ? 'text-ink/50' : 'text-hort-orange-dark'">
@@ -137,7 +139,7 @@ function dateLabel(date) {
                 <template v-else>{{ $t('care.no_deadline') }}</template>
                 <span v-if="!period.open && canOverrideDeadline"> · {{ $t('care.staff_may_still_edit') }}</span>
             </p>
-            <p v-if="period.note" class="mt-1 text-sm text-ink/60">{{ period.note }}</p>
+            <p v-if="period.note && showPeriodHeader" class="mt-1 text-sm text-ink/60">{{ period.note }}</p>
 
             <div
                 v-for="child in childrenFor(period)"

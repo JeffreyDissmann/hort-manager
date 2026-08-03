@@ -13,6 +13,8 @@ import { computed, ref } from 'vue';
 const props = defineProps({
     day: { type: Object, required: true },
     canManage: { type: Boolean, default: false },
+    // How many children are signed up for this day — null hides the count.
+    signedUp: { type: Number, default: null },
 });
 
 const locale = computed(() => usePage().props.locale || 'de');
@@ -57,6 +59,14 @@ const dayLabel = computed(() =>
         <div v-if="!editing" class="flex flex-wrap items-center gap-x-3 gap-y-1">
             <span class="w-24 shrink-0 text-sm font-medium text-ink">{{ dayLabel }}</span>
             <span class="text-sm text-ink/70">{{ day.starts_at }}–{{ day.ends_at }}</span>
+            <!-- What staff plan food and shifts by. -->
+            <span v-if="signedUp !== null" class="text-xs text-ink/50">
+                {{
+                    signedUp === 1
+                        ? $t('care.signed_up_one')
+                        : $t('care.signed_up_many', { count: signedUp })
+                }}
+            </span>
 
             <div v-if="canManage" class="ml-auto flex items-center gap-2">
                 <template v-if="confirmingRemove">

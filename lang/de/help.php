@@ -138,7 +138,7 @@ return [
 
         'closed_title' => '3. Schließzeit',
         'closed_text' => 'An einer <strong>Schließzeit</strong> hat der Hort selbst zu – Ferien, Brückentag oder Fortbildung. Dann gibt es für niemanden einen Hort-Tag: die Tage sind im Wochenplan grau, es gibt nichts einzutragen, und niemand muss sich abmelden.',
-        'closed_link' => 'Alle Schließzeiten stehen im Menü unter <strong>Schließzeiten</strong> – und dort steht auch, wann es stattdessen eine Ferienbetreuung gibt.',
+        'closed_link' => 'Alle Schließzeiten stehen im Menü unter <strong>Ferien &amp; Schließzeiten</strong> – und dort steht auch, wann es stattdessen eine Ferienbetreuung gibt.',
     ],
 
     // ---------------------------------------------------------------- Ferien
@@ -146,7 +146,7 @@ return [
         'intro' => 'In den Ferien gibt es zwei Möglichkeiten: der Hort ist <strong>geschlossen</strong>, oder es gibt eine <strong>Ferienbetreuung</strong>, für die du dein Kind pro Tag anmeldest. Die Schließzeiten stehen im Menü oben rechts, die Anmeldung unter <strong>Ausflüge &amp; Ferien</strong>.',
 
         'closed_title' => 'Schließzeiten',
-        'closed_text' => 'Unter <strong>Schließzeiten</strong> stehen alle Zeiträume, an denen der Hort zu hat – mit Name und Datum, damit du deine eigenen Ferien danach planen kannst. Im Wochenplan sind diese Tage grau hinterlegt und gesperrt.',
+        'closed_text' => 'Unter <strong>Ferien &amp; Schließzeiten</strong> stehen alle Zeiträume, an denen der Hort zu hat – mit Name und Datum, damit du deine eigenen Ferien danach planen kannst. Im Wochenplan sind diese Tage grau hinterlegt und gesperrt.',
 
         'care_title' => 'Ferienbetreuung: Tag für Tag anmelden',
         'care_text' => 'Bei einer <strong>Ferienbetreuung</strong> ist der Hort geöffnet – aber nur für die Kinder, die angemeldet sind. Weil in den Ferien keine Schule ist, gilt der normale Stammplan nicht: du sagst für <strong>jeden einzelnen Tag</strong>, ob dein Kind kommt.',
@@ -224,11 +224,12 @@ return [
         'program_text' => 'Unter <strong>Programm</strong> trägst du für die Woche Mittagessen, Aktivität und die Hausaufgabenzeiten ein – „keine Hausaufgaben“ ist ebenfalls möglich. Eltern sehen das im Wochenplan und auf „Heute“.',
         'program_reminder' => 'Fehlt am Montag noch ein Mittagessen für die Woche, erinnert dich der Hort-Manager kurz vor dem Wochenüberblick der Eltern. Auf derselben Seite stellst du auch die Uhrzeit für <strong>späte Änderungen</strong> und den Versand des Wochenüberblicks ein.',
 
-        'holidays_title' => 'Schließzeiten & Ferienbetreuung anlegen',
+        'holidays_title' => 'Ferien & Schließzeiten anlegen',
         'holidays_points' => [
-            'Unter <strong>Schließzeiten</strong> legst du beides an: einen geschlossenen Zeitraum oder eine <strong>Ferienbetreuung</strong>. Ein einzelner Tag ist einfach ein Zeitraum von einem Tag.',
-            'Bei einer Ferienbetreuung wird jeder Werktag des Zeitraums mit der Standard-Betreuungszeit angeboten. Du kannst die Zeiten pro Tag anpassen oder einen Tag ganz herausnehmen – und ihn später wieder anbieten.',
-            'Der <strong>Anmeldeschluss</strong> gehört zum Zeitraum. Bis dahin melden Eltern selbst an; danach kannst nur noch du eintragen.',
+            'Unter <strong>Ferien &amp; Schließzeiten</strong> legst du beides an: einen geschlossenen Zeitraum oder eine <strong>Ferienbetreuung</strong>. Ein einzelner Tag ist einfach ein Zeitraum von einem Tag.',
+            'Ein Tipp auf <strong>Öffnen</strong> bringt dich zum Zeitraum selbst – dort stehen die angebotenen Tage und die Anmeldungen, so wie ein Ausflug seine Antworten bei sich hat.',
+            'Bei einer Ferienbetreuung wird jeder Werktag des Zeitraums mit der Standard-Betreuungszeit angeboten (einstellbar unter „Programm“). Du kannst die Zeiten pro Tag anpassen oder einen Tag ganz herausnehmen – und ihn später wieder anbieten.',
+            'Der <strong>Anmeldeschluss</strong> gehört zum Zeitraum. Bis dahin melden Eltern selbst an; danach trägst du auf der Seite des Zeitraums ein – für jedes Kind.',
             'Eine Schließzeit sticht eine Ferienbetreuung: liegt beides auf demselben Tag, ist der Hort zu. Ein Ausflug im Zeitraum muss vorher verschoben oder abgesagt werden.',
         ],
 

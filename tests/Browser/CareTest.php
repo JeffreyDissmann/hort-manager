@@ -59,7 +59,8 @@ it('lets staff change a day’s Betreuungszeit', function () {
     $period = carePeriod();
     $first = $period->careDays()->orderBy('date')->first();
 
-    actAndVisit($staff, '/closures')
+    // A period is edited on its own page, the way an Ausflug is.
+    actAndVisit($staff, "/closures/{$period->id}/edit")
         ->assertSee('08:30–16:00')
         ->click("@care-day-edit-{$first->id}")
         ->select("@care-start-{$first->id}-hour", '09')
@@ -95,6 +96,22 @@ it('lets a parent tick the days their child will come', function () {
         ->toBe([$monday->date->toDateString()])
         ->and(HolidayCareAnswer::where('child_id', $child->id)->exists())->toBeTrue()
         ->and(DailyDeparture::whereDate('date', $tuesday->date)->exists())->toBeFalse();
+});
+
+it('opens a Ferienbetreuung from the list to set it up', function () {
+    $staff = User::factory()->staff()->create();
+    Child::factory()->create(['name' => 'Mia']);
+    $period = carePeriod();
+
+    // The list is a list; a period is set up on its own page, like an Ausflug.
+    $page = actAndVisit($staff, '/closures');
+    $page->script("document.querySelectorAll('dialog[open]').forEach((d) => d.close())");
+    $page->click("@care-edit-{$period->id}");
+
+    $page->assertSee('Angebotene Tage')
+        ->assertSee('Wer ist angemeldet?')
+        ->assertSee('Mia')
+        ->assertPathIs("/closures/{$period->id}/edit");
 });
 
 it('puts trips and Ferienbetreuung on one page for parents', function () {
@@ -160,7 +177,8 @@ it('lets staff sign a child up even after the deadline', function () {
     $period = carePeriod(deadline: Carbon::yesterday()->toDateString());
     $monday = $period->careDays()->orderBy('date')->first();
 
-    actAndVisit($staff, '/care')
+    // Staff fill the roster on the period's page — deadline or not.
+    actAndVisit($staff, "/closures/{$period->id}/edit")
         ->assertSee('Erzieher:innen können weiterhin eintragen')
         ->click("@care-pick-{$child->id}-{$monday->id}")
         ->click("@care-save-{$period->id}-{$child->id}")

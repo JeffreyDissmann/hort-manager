@@ -30,13 +30,35 @@ class CareSignupData
      */
     public static function for(User $user, bool $ownChildrenOnly = false): array
     {
-        $periods = HolidayPeriod::query()
-            ->care()
-            ->with('careDays')
-            ->whereDate('ends_on', '>=', Carbon::today())
-            ->orderBy('starts_on')
-            ->get();
+        return self::build(
+            $user,
+            HolidayPeriod::query()
+                ->care()
+                ->with('careDays')
+                ->whereDate('ends_on', '>=', Carbon::today())
+                ->orderBy('starts_on')
+                ->get(),
+            $ownChildrenOnly,
+        );
+    }
 
+    /**
+     * The same sheet for a single Ferienbetreuung — the staff view on its own page,
+     * where a period is set up and its roster filled in one place (as an Ausflug is).
+     *
+     * @return array{children: array<int, array{id: int, name: string}>, periods: array<int, array<string, mixed>>, canOverrideDeadline: bool}
+     */
+    public static function forPeriod(User $user, HolidayPeriod $period): array
+    {
+        return self::build($user, collect([$period->load('careDays')]), ownChildrenOnly: false);
+    }
+
+    /**
+     * @param  Collection<int, HolidayPeriod>  $periods
+     * @return array{children: array<int, array{id: int, name: string}>, periods: array<int, array<string, mixed>>, canOverrideDeadline: bool}
+     */
+    private static function build(User $user, Collection $periods, bool $ownChildrenOnly): array
+    {
         // Only children enrolled somewhere in the offered range: one who left in the
         // summer has no business on the autumn sign-up sheet. Which of them belongs to
         // which period is decided per period below — the page shows several at once.

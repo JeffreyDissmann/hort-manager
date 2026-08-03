@@ -327,7 +327,7 @@ class HolidayCareSignupTest extends TestCase
     public function test_the_merged_page_shows_a_staff_guardian_only_their_own_child(): void
     {
         // „Ausflüge & Ferien" is the family page — an Erzieher:in answers for their own
-        // child there and for every other child on /care.
+        // child there and for every other child on the period's own page.
         $this->staff->children()->attach($this->child);
         Child::factory()->create(['name' => 'Fremdes Kind']);
 
@@ -341,22 +341,21 @@ class HolidayCareSignupTest extends TestCase
             );
 
         $this->actingAs($this->staff)
-            ->get(route('care.index'))
-            ->assertInertia(fn (Assert $page) => $page->count('children', 2));
+            ->get(route('closures.edit', $this->period))
+            ->assertInertia(fn (Assert $page) => $page->count('roster.children', 2));
     }
 
-    public function test_a_parent_is_sent_from_care_to_the_merged_page(): void
+    public function test_the_old_care_page_points_at_the_page_that_replaced_it(): void
     {
-        // One page for everything that wants an answer from a family; /care is the
-        // staff screen (every child, and past the Anmeldeschluss).
+        // Slack buttons and bookmarks still say /care: a family answers on
+        // „Ausflüge & Ferien", staff pick the period from the Ferien list.
         $this->actingAs($this->parent)
             ->get(route('care.index'))
             ->assertRedirect(route('polls.index'));
 
         $this->actingAs($this->staff)
             ->get(route('care.index'))
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page->component('Care/Index'));
+            ->assertRedirect(route('closures.index'));
     }
 
     public function test_staff_see_every_child_and_may_override_the_deadline(): void
@@ -364,10 +363,10 @@ class HolidayCareSignupTest extends TestCase
         Child::factory()->create(['name' => 'Ben']);
 
         $this->actingAs($this->staff)
-            ->get(route('care.index'))
+            ->get(route('closures.edit', $this->period))
             ->assertInertia(fn (Assert $page) => $page
-                ->count('children', 2)
-                ->where('canOverrideDeadline', true)
+                ->count('roster.children', 2)
+                ->where('roster.canOverrideDeadline', true)
             );
     }
 

@@ -153,6 +153,8 @@ Route::middleware('auth')->group(function () {
     // Schließzeiten — readable by everyone, managed by staff (the controller guards).
     Route::get('/closures', [HolidayPeriodController::class, 'index'])->name('closures.index');
     Route::post('/closures', [HolidayPeriodController::class, 'store'])->name('closures.store');
+    // One period on its own page: its days and its roster, like an Ausflug's.
+    Route::get('/closures/{closure}/edit', [HolidayPeriodController::class, 'edit'])->name('closures.edit');
     Route::patch('/closures/{closure}', [HolidayPeriodController::class, 'update'])->name('closures.update');
     Route::delete('/closures/{closure}', [HolidayPeriodController::class, 'destroy'])->name('closures.destroy');
     // Ferienbetreuung: one offered day (Betreuungszeit + Aktivität).

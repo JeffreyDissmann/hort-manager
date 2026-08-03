@@ -2,15 +2,18 @@
 
 declare(strict_types=1);
 
-// Closures: days on which the Hort is shut completely.
+// Holidays & closures: the two Hort-wide period types — shut, or holiday care.
+// Both are created here and edited on their own page.
 return [
-    'title' => 'Closures',
-    'header' => 'Closures',
-    'intro' => 'Days the Hort is closed – holidays, bridge days, training days. There is no pickup plan and no day program on these days.',
+    'title' => 'Holidays & closures',
+    'header' => 'Holidays & closures',
+    'intro' => 'Periods without a normal Hort day: days the Hort is closed – holidays, bridge days, training days – and holiday care, which families sign up for day by day.',
 
-    'add_heading' => 'Add a closure',
-    'edit_heading' => 'Edit closure',
+    'add_heading' => 'Add a period',
+    'edit_heading' => 'Edit period',
     'add' => 'Add',
+    'open' => 'Open',
+    'back_to_list' => 'All periods',
 
     'name' => 'Name',
     'name_placeholder' => 'e.g. Summer holidays',

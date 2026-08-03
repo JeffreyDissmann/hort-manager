@@ -138,7 +138,7 @@ return [
 
         'closed_title' => '3. Closure',
         'closed_text' => 'On a <strong>closure</strong> the Hort itself is shut – holidays, a bridge day or staff training. Then there is no Hort day for anybody: those days are grey in the weekly plan, there is nothing to enter, and nobody has to report anything.',
-        'closed_link' => 'All closures are listed under <strong>Closures</strong> in the menu – along with when holiday care is offered instead.',
+        'closed_link' => 'All closures are listed under <strong>Holidays &amp; closures</strong> in the menu – along with when holiday care is offered instead.',
     ],
 
     // ---------------------------------------------------------------- Holidays
@@ -146,7 +146,7 @@ return [
         'intro' => 'In the holidays there are two possibilities: the Hort is <strong>closed</strong>, or there is <strong>holiday care</strong> you sign your child up for day by day. Closures live in the menu at the top right; signing up happens under <strong>Excursions &amp; holidays</strong>.',
 
         'closed_title' => 'Closures',
-        'closed_text' => 'Under <strong>Closures</strong> you find every period the Hort is shut – with a name and dates, so you can plan your own holidays around them. In the weekly plan those days are greyed out and locked.',
+        'closed_text' => 'Under <strong>Holidays &amp; closures</strong> you find every period the Hort is shut – with a name and dates, so you can plan your own holidays around them. In the weekly plan those days are greyed out and locked.',
 
         'care_title' => 'Holiday care: signing up day by day',
         'care_text' => 'During <strong>holiday care</strong> the Hort is open – but only for the children who signed up. There is no school in the holidays, so the normal standard plan doesn’t apply: you say for <strong>each single day</strong> whether your child is coming.',
@@ -224,11 +224,12 @@ return [
         'program_text' => 'Under <strong>Programme</strong> you enter lunch, activity and homework times for the week – “no homework” is possible too. Parents see it in the weekly plan and on “Today”.',
         'program_reminder' => 'If a lunch is still missing for the week on Monday, Hort-Manager reminds you shortly before the parents’ weekly overview goes out. The same page holds the time for <strong>late changes</strong> and for sending the weekly overview.',
 
-        'holidays_title' => 'Setting up closures & holiday care',
+        'holidays_title' => 'Setting up holidays & closures',
         'holidays_points' => [
-            'Under <strong>Closures</strong> you create both: a closed period or <strong>holiday care</strong>. A single day is simply a one-day period.',
-            'For holiday care every weekday of the period is offered with the default care window. You can adjust the times per day, take a day out entirely – and offer it again later.',
-            'The <strong>registration deadline</strong> belongs to the period. Until then parents sign up themselves; after it only you can.',
+            'Under <strong>Holidays &amp; closures</strong> you create both: a closed period or <strong>holiday care</strong>. A single day is simply a one-day period.',
+            'Tapping <strong>Open</strong> takes you to the period itself — the days it offers and who is signed up, the way an excursion carries its answers.',
+            'For holiday care every weekday of the period is offered with the default care window (set under „Programm“). You can adjust the times per day, take a day out entirely – and offer it again later.',
+            'The <strong>registration deadline</strong> belongs to the period. Until then parents sign up themselves; after it you enter days on the period’s page — for any child.',
             'A closure beats holiday care: if both fall on the same day, the Hort is shut. An excursion inside the period has to be moved or cancelled first.',
         ],
 

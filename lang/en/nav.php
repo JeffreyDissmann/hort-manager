@@ -15,7 +15,7 @@ return [
     'group_accounting' => 'Accounting',
 
     'care' => 'Holiday care',
-    'closures' => 'Closures',
+    'closures' => 'Holidays & closures',
     'program' => 'Program',
     'children' => 'Children',
     'users' => 'Users',

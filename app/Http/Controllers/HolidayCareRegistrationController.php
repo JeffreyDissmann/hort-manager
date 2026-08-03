@@ -16,8 +16,6 @@ use App\Support\CareSignupData;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
-use Inertia\Inertia;
-use Inertia\Response;
 
 /**
  * Parents sign their children up for individual Ferienbetreuung days; staff may do
@@ -26,20 +24,14 @@ use Inertia\Response;
 class HolidayCareRegistrationController extends Controller
 {
     /**
-     * The staff sign-up screen: every open Ferienbetreuung × every child, editable
-     * past the Anmeldeschluss. Parents answer for their own children on
-     * „Ausflüge & Ferien" — one page for everything that wants an answer from them —
-     * so they are sent there rather than shown a second, near-identical page.
+     * There is no sign-up page of its own any more: a family answers on
+     * „Ausflüge & Ferien" with everything else that wants an answer, and staff fill a
+     * roster on the Ferienbetreuung's own page — as they do for an Ausflug. The route
+     * survives as a signpost, because Slack messages and bookmarks point at it.
      */
-    public function index(Request $request): Response|RedirectResponse
+    public function index(Request $request): RedirectResponse
     {
-        $user = $request->user();
-
-        if (! $user->isStaff()) {
-            return redirect()->route('polls.index');
-        }
-
-        return Inertia::render('Care/Index', CareSignupData::for($user));
+        return redirect()->route($request->user()->isStaff() ? 'closures.index' : 'polls.index');
     }
 
     /** Save one child's days for one Ferienbetreuung — the full set, not a diff. */

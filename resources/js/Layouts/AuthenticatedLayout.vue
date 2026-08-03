@@ -31,7 +31,6 @@ import { update as switchRoleRoute } from '@/routes/role';
 import { index as childrenIndex } from '@/routes/children';
 import { index as excursionsIndex } from '@/routes/excursions';
 import { index as closuresIndex } from '@/routes/closures';
-import { index as careIndex } from '@/routes/care';
 import { index as usersIndex } from '@/routes/users';
 import { index as bookingsIndex } from '@/routes/accounting/bookings';
 import { index as accountsIndex } from '@/routes/accounting/accounts';
@@ -286,19 +285,17 @@ function isActive(item) {
                         >
                             {{ $t('nav.my_children') }}
                         </DropdownLink>
-                        <!-- Staff only: parents sign up on „Ausflüge & Ferien", and a
-                             second door to the same sheet only confuses. -->
-                        <DropdownLink v-if="isStaff" :href="careIndex().url" data-testid="nav-care">
-                            {{ $t('nav.care') }}
+                        <!-- One entry for both kinds of Ferien-Zeitraum: parents read
+                             them here, staff open one to set it up and see its roster.
+                             Signing up happens on „Ausflüge & Ferien". -->
+                        <DropdownLink :href="closuresIndex().url" data-testid="nav-closures">
+                            {{ $t('nav.closures') }}
                             <span
                                 v-if="pendingCare.length"
                                 class="ml-1 rounded-full bg-hort-teal-dark px-1.5 py-0.5 text-[10px] font-bold text-white"
                             >
                                 {{ pendingCare.length }}
                             </span>
-                        </DropdownLink>
-                        <DropdownLink :href="closuresIndex().url" data-testid="nav-closures">
-                            {{ $t('nav.closures') }}
                         </DropdownLink>
 
                         <hr class="my-1 border-ink/10" />

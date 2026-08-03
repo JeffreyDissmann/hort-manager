@@ -16,7 +16,8 @@ return [
     'group_accounting' => 'Buchhaltung',
 
     'care' => 'Ferienbetreuung',
-    'closures' => 'Schließzeiten',
+    // One entry for both kinds of Ferien-Zeitraum — the page shows both.
+    'closures' => 'Ferien & Schließzeiten',
     'program' => 'Programm',
     'children' => 'Kinder',
     'users' => 'Benutzer',

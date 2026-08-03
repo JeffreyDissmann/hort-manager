@@ -2,15 +2,18 @@
 
 declare(strict_types=1);
 
-// Schließzeiten: Tage, an denen der Hort komplett geschlossen ist.
+// Ferien & Schließzeiten: die beiden Hort-weiten Zeiträume — geschlossen oder
+// Ferienbetreuung. Beide werden hier angelegt und einzeln bearbeitet.
 return [
-    'title' => 'Schließzeiten',
-    'header' => 'Schließzeiten',
-    'intro' => 'Tage, an denen der Hort geschlossen ist – Ferien, Brückentage, Fortbildungen. An diesen Tagen gibt es keinen Abholplan und kein Tagesprogramm.',
+    'title' => 'Ferien & Schließzeiten',
+    'header' => 'Ferien & Schließzeiten',
+    'intro' => 'Zeiträume, in denen kein normaler Hort-Alltag ist: Tage, an denen der Hort geschlossen ist – Ferien, Brückentage, Fortbildungen – und Ferienbetreuung, für die sich Familien tageweise anmelden.',
 
-    'add_heading' => 'Schließzeit eintragen',
-    'edit_heading' => 'Schließzeit bearbeiten',
+    'add_heading' => 'Neuen Zeitraum eintragen',
+    'edit_heading' => 'Zeitraum bearbeiten',
     'add' => 'Eintragen',
+    'open' => 'Öffnen',
+    'back_to_list' => 'Alle Zeiträume',
 
     'name' => 'Name',
     'name_placeholder' => 'z. B. Sommerferien',

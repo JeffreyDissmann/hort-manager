@@ -369,11 +369,11 @@ class CareIntegrityTest extends TestCase
         // The time they chose is theirs — adopting the row must not overwrite it.
         $this->assertSame('14:00', substr((string) $override->planned_time, 0, 5));
 
-        // …and /care now shows the day as ticked.
+        // …and the period's own page now shows the day as ticked.
         $this->actingAs($this->staff)
-            ->get(route('care.index'))
+            ->get(route('closures.edit', $this->period))
             ->assertInertia(fn ($page) => $page->where(
-                'periods.0.days.1.children',
+                'roster.periods.0.days.1.children',
                 [$this->child->id],
             ));
     }
