@@ -164,7 +164,16 @@ class HolidayCareRegistrationController extends Controller
         ]);
 
         if ($departure->exists) {
-            return; // Already signed up — never overwrite a plan the family adjusted.
+            // A plan entered before the Ferienbetreuung existed (someone set a pickup
+            // for that date in the Wochenplan) is adopted as the sign-up: the family is
+            // saying the child comes, and the row already says when they leave. Without
+            // this the tick has no effect at all — the box comes back empty on every
+            // save, because a sign-up is recognised by the care day it names.
+            if ($departure->holiday_care_day_id === null) {
+                $departure->update(['holiday_care_day_id' => $day->id]);
+            }
+
+            return; // Never overwrite a time the family chose.
         }
 
         $departure->fill([

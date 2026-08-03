@@ -54,7 +54,7 @@ class HolidayCareSetupTest extends TestCase
 
         $this->assertSame('2026-08-03', $period->careDays->first()->date->toDateString());
         $this->assertSame('08:30', HolidayCareDay::short($period->careDays->first()->starts_at));
-        $this->assertSame('16:30', HolidayCareDay::short($period->careDays->first()->ends_at));
+        $this->assertSame('16:00', HolidayCareDay::short($period->careDays->first()->ends_at));
     }
 
     public function test_it_skips_weekends(): void

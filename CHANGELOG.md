@@ -6,6 +6,21 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [2026.08.03] — 2026-08-03
+
+### Fixed
+
+- **A Ferienbetreuung day could not be ticked at all** when the child already had a plan
+  for that date — a pickup entered in the Wochenplan before the period existed. The
+  sign-up was skipped „to protect the family's own plan", but a sign-up is recognised by
+  the care day it names, so the box came back empty on every save while the flash said
+  „gespeichert". Such a row is now adopted as the registration, keeping its time.
+
+### Changed
+
+- The default Betreuungszeit for newly offered Ferienbetreuung days is **08:30–16:00**
+  (was 16:30). Days already offered keep their times.
+
 ## [2026.08.02] — 2026-08-02
 
 ### Added

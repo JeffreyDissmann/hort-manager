@@ -342,6 +342,42 @@ class CareIntegrityTest extends TestCase
         $this->assertDatabaseHas('daily_departures', ['id' => $override->id]);
     }
 
+    public function test_ticking_a_day_adopts_a_plan_entered_before_the_ferienbetreuung(): void
+    {
+        // Someone set a pickup for that date in the Wochenplan before the period
+        // existed. Ticking the day must register the child — otherwise the box comes
+        // back empty on every save and the family can never get a place.
+        $override = DailyDeparture::create([
+            'child_id' => $this->child->id,
+            'date' => '2026-08-06',
+            'planned_time' => '14:00',
+            'planned_method' => DepartureMethod::PickedUp,
+            'status' => DepartureStatus::Present,
+        ]);
+
+        $thursday = HolidayCareDay::firstWhere('date', '2026-08-06');
+
+        $this->actingAs($this->staff)
+            ->patch(route('care.update', $this->period), [
+                'child_id' => $this->child->id,
+                'day_ids' => [$thursday->id],
+            ])
+            ->assertRedirect();
+
+        $override->refresh();
+        $this->assertSame($thursday->id, $override->holiday_care_day_id);
+        // The time they chose is theirs — adopting the row must not overwrite it.
+        $this->assertSame('14:00', substr((string) $override->planned_time, 0, 5));
+
+        // …and /care now shows the day as ticked.
+        $this->actingAs($this->staff)
+            ->get(route('care.index'))
+            ->assertInertia(fn ($page) => $page->where(
+                'periods.0.days.1.children',
+                [$this->child->id],
+            ));
+    }
+
     // --- a care day is still a normal Hort day ------------------------------------
 
     public function test_a_child_reported_sick_on_a_care_day_keeps_their_place(): void
@@ -436,7 +472,9 @@ class CareIntegrityTest extends TestCase
             ->patch(route('weekly-plan.adjust'), [
                 'child_id' => $this->child->id,
                 'date' => '2026-08-03',
-                'planned_time' => '16:00',
+                // Earlier than the Betreuungszeit ends — an identical plan is no change
+                // and deliberately notifies nobody.
+                'planned_time' => '14:00',
                 'planned_method' => 'picked_up',
             ])
             ->assertRedirect();

@@ -21,7 +21,7 @@ const props = defineProps({
     past: { type: Array, default: () => [] },
     // Ferienbetreuung periods, each with its offered days.
     care: { type: Array, default: () => [] },
-    careDefaults: { type: Object, default: () => ({ starts_at: '08:30', ends_at: '16:30' }) },
+    careDefaults: { type: Object, default: () => ({ starts_at: '08:30', ends_at: '16:00' }) },
     canManage: { type: Boolean, default: false },
 });
 

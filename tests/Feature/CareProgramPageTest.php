@@ -59,7 +59,7 @@ class CareProgramPageTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->where('days.0.care.name', 'Sommer-Ferienbetreuung')
                 ->where('days.0.care.starts_at', '08:30')
-                ->where('days.0.care.ends_at', '16:30')
+                ->where('days.0.care.ends_at', '16:00')
                 // No school → no homework slot offered, despite the weekday default.
                 ->where('days.0.homework_start', null)
                 ->where('days.0.homework_end', null)

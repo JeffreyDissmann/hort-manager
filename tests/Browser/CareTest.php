@@ -60,12 +60,12 @@ it('lets staff change a day’s Betreuungszeit', function () {
     $first = $period->careDays()->orderBy('date')->first();
 
     actAndVisit($staff, '/closures')
-        ->assertSee('08:30–16:30')
+        ->assertSee('08:30–16:00')
         ->click("@care-day-edit-{$first->id}")
         ->select("@care-start-{$first->id}-hour", '09')
         ->select("@care-start-{$first->id}-minute", '00')
         ->click("@care-day-save-{$first->id}")
-        ->assertSee('09:00–16:30');
+        ->assertSee('09:00–16:00');
 
     expect(HolidayCareDay::short($first->fresh()->starts_at))->toBe('09:00');
 });
@@ -83,7 +83,11 @@ it('lets a parent tick the days their child will come', function () {
         ->assertSee('noch nicht beantwortet')
         ->click("@care-pick-{$child->id}-{$monday->id}")
         ->click("@care-save-{$period->id}-{$child->id}")
-        ->assertDontSee('noch nicht beantwortet');
+        ->assertDontSee('noch nicht beantwortet')
+        // The saved day stays ticked — the boxes re-seed from the server, so an
+        // empty box here would tell the family they aren't registered.
+        ->assertChecked("@care-pick-{$child->id}-{$monday->id}")
+        ->assertNotChecked("@care-pick-{$child->id}-{$tuesday->id}");
 
     // The tick *is* the plan: a DailyDeparture on that date, none on the others.
     expect(DailyDeparture::where('child_id', $child->id)->pluck('date')->map->toDateString()->all())

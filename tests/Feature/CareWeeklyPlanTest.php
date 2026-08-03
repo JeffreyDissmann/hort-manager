@@ -100,7 +100,7 @@ class CareWeeklyPlanTest extends TestCase
             ->get(route('weekly-plan'))
             ->assertInertia(fn (Assert $page) => $page
                 ->where('currentWeek.0.days.0.care.registered', true)
-                ->where('currentWeek.0.days.0.time', '16:30')
+                ->where('currentWeek.0.days.0.time', '16:00')
                 ->where('currentWeek.0.days.0.editable', true)
                 // Nothing to deviate from, so it isn't „heute geändert".
                 ->where('currentWeek.0.days.0.adjusted', false)
@@ -151,7 +151,7 @@ class CareWeeklyPlanTest extends TestCase
             ->get(route('weekly-plan'))
             ->viewData('page')['props']['weekTimetable'];
 
-        // Monday holds only the sign-up (16:30); Tuesday nobody signed up for.
+        // Monday holds only the sign-up (16:00); Tuesday nobody signed up for.
         $monday = collect($timetable)->flatMap(fn (array $row): array => collect($row['days'][0])->all());
         $tuesday = collect($timetable)->flatMap(fn (array $row): array => collect($row['days'][1])->all());
 
@@ -195,7 +195,7 @@ class CareWeeklyPlanTest extends TestCase
             ->viewData('page')['props']['children'])->keyBy('name');
 
         // Monday is a care day: only Mia can be a companion, and at her sign-up time.
-        $this->assertSame('16:30', $children['Mia']['times']['2026-08-03']);
+        $this->assertSame('16:00', $children['Mia']['times']['2026-08-03']);
         $this->assertArrayNotHasKey('2026-08-03', $children['Ben']['times']);
 
         // Thursday is an ordinary day again — the Stammplan applies to both.

@@ -86,7 +86,7 @@ class CareDigestTest extends TestCase
 
         $digest = $this->digest();
 
-        $this->assertSame('08:30–16:30', $digest['program'][0]['care']);
+        $this->assertSame('08:30–16:00', $digest['program'][0]['care']);
         $this->assertNull($digest['program'][0]['homework']);
         // Wednesday is a normal day again.
         $this->assertNull($digest['program'][2]['care']);
@@ -122,7 +122,7 @@ class CareDigestTest extends TestCase
 
         $days = $this->digest()['children'][0]['days'];
 
-        $this->assertStringContainsString('16:30', $days[0]['summary']);
+        $this->assertStringContainsString('16:00', $days[0]['summary']);
         $this->assertSame('nicht angemeldet', $days[1]['summary']);
     }
 
