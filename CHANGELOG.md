@@ -6,6 +6,38 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [2026.08.04] — 2026-08-04
+
+### Changed
+
+- **Ferien work like Ausflüge now.** „Schließzeiten" showed both kinds of Zeitraum all
+  along, so the menu entry is **„Ferien & Schließzeiten"** — one entry for staff and
+  parents, badged with open Anmeldungen. A period is set up on **its own page**: its
+  fields, the days it offers (Betreuungszeit, entfernen/wieder anbieten, how many
+  children are signed up, a link into that week's Programm) and the roster of who is
+  coming — exactly how an Ausflug carries its answers. The list keeps inline creation.
+- **Parents answer everything on one page.** „Ausflüge & Ferien" (`/polls`) carries the
+  Ferienbetreuung sign-up above the trips, and its tab badge counts open trip polls
+  *and* unanswered Ferienbetreuungen. The separate Ferienbetreuung page is gone; its URL
+  redirects (parents to „Ausflüge & Ferien", staff to the Ferien list), so Slack buttons
+  and bookmarks still land somewhere sensible.
+- The **default Betreuungszeit** for newly offered Ferienbetreuung days is editable on
+  „Programm" instead of only in the database. Everything below „Woche speichern" there is
+  now a **Grundeinstellungen** block, saying plainly that those cards apply to every week
+  and each saves on its own.
+- The **„Für Erzieher:innen"** help chapter grew from four sections to eight: the day on
+  „Heute", Kinder & Stammpläne (incl. the Aktivitätszeitraum), Ausflüge planen, das
+  Tagesprogramm, Ferien & Schließzeiten, the notifications staff receive, and the admin
+  pages. German and English.
+
+### Fixed
+
+- **The Wochenplan on a phone.** „Geschlossen" spilled out of its day cell into the
+  neighbour, two „Ferienbetreuung" column headers painted over each other, child names
+  truncated to „Ch…", and the Friday column sat off-screen. Also: „In dieser Woche gibt
+  es Ferienbetreuung: Ferienbetreuung." now names a period only when its name says more
+  than the word itself.
+
 ## [2026.08.03] — 2026-08-03
 
 ### Fixed

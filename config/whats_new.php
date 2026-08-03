@@ -16,13 +16,24 @@ declare(strict_types=1);
 
 return [
     [
+        'version' => '2026.08.04',
+        'date' => '2026-08-04',
+        'title' => 'Ausflüge & Ferien an einem Ort 🏖️',
+        'items' => [
+            '🗺️ Der Tab unten heißt jetzt „Ausflüge & Ferien" – dort steht alles, was eine Antwort von dir braucht: die Ausflüge und die Anmeldung zur Ferienbetreuung. Die Zahl am Tab zählt beides zusammen.',
+            '📅 Die Anmeldung zur Ferienbetreuung ist also umgezogen: einfach unten auf „Ausflüge & Ferien" tippen, Tage ankreuzen, speichern. Ein eigener Menüpunkt dafür ist nicht mehr nötig.',
+            '🏖️ Im Menü oben rechts findest du unter „Ferien & Schließzeiten" beides an einer Stelle: wann der Hort zu ist und wann es Ferienbetreuung gibt.',
+            '📱 Der Wochenplan am Handy ist aufgeräumter: „Hort zu" und „Nicht angemeldet" passen jetzt in die Tage, die Namen werden nicht mehr abgeschnitten, und die ganze Woche ist ohne Wischen zu sehen.',
+        ],
+    ],
+    [
         'version' => '2026.08.02',
         'date' => '2026-08-02',
         'title' => 'Ferien 🏖️: Schließzeiten & Ferienbetreuung',
         'items' => [
             '🚫 Neu im Menü unter „Schließzeiten": alle Tage, an denen der Hort zu ist – Ferien, Brückentage, Fortbildungen. An diesen Tagen gibt es keinen Abholplan und kein Programm, und im Wochenplan sind sie grau hinterlegt. So siehst du früh, wann du selbst etwas organisieren musst.',
             '🏖️ Und neu: die Ferienbetreuung. Die Erzieher:innen legen den Zeitraum und die Betreuungszeiten fest – du meldest dein Kind tageweise an, ganz wie es in eure Ferien passt.',
-            '📅 Unter „Ferienbetreuung" kreuzt du einfach die Tage an, an denen dein Kind kommt. Die angemeldeten Tage stehen danach ganz normal im Wochenplan und auf „Heute" – mit Abholzeit, Krankmeldung und allem, was du kennst.',
+            '📅 Unter „Ausflüge & Ferien" kreuzt du einfach die Tage an, an denen dein Kind kommt. Die angemeldeten Tage stehen danach ganz normal im Wochenplan und auf „Heute" – mit Abholzeit, Krankmeldung und allem, was du kennst.',
             '🔔 Sobald eine Ferienbetreuung offen ist, bekommst du Bescheid, und bis zum Anmeldeschluss erinnert dich ein Hinweis in der App. Am Stichtag selbst gibt es noch eine letzte Erinnerung – aber nur, wenn du noch nicht geantwortet hast.',
             '🍽️ Essen und Aktivitäten der Ferientage stehen wie gewohnt im Wochenüberblick. Hausaufgaben gibt es in den Ferien natürlich keine.',
             '📖 Und die Hilfe ist neu sortiert: statt einer langen Seite gibt es jetzt Kapitel – darunter „Wenn ein Kind nicht da ist" (Krank, hortfrei und Schließzeit im Vergleich) und „Ferien & Schließzeiten".',
