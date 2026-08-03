@@ -64,8 +64,10 @@ function chipClass(method) {
 
 <template>
     <div class="overflow-x-auto rounded-2xl bg-surface p-2 shadow-sm">
+        <!-- 20rem, not 24: on a phone the whole Mo–Fr week has to be visible without a
+             sideways swipe, and child names wrap now instead of truncating. -->
         <div
-            class="grid min-w-[24rem] gap-x-1"
+            class="grid min-w-[20rem] gap-x-1"
             :style="{
                 gridTemplateColumns: '3rem repeat(5, auto minmax(0, 1fr))',
                 gridAutoRows: 'minmax(1.9rem, auto)',
@@ -120,10 +122,16 @@ function chipClass(method) {
                     </div>
                     <!-- Closed days carry no rows at all, so say why the column is empty.
                          A care day carries only the children who signed up. -->
-                    <div v-if="col.closed" class="text-[11px] font-medium text-ink/40">
-                        {{ $t('weekly.closed') }}
+                    <!-- Truncated: a column is a fifth of a phone screen wide, and
+                         „Ferienbetreuung" would otherwise run into the next day. -->
+                    <div v-if="col.closed" class="truncate text-[11px] font-medium text-ink/40" :title="col.closed">
+                        {{ $t('weekly.closed_short') }}
                     </div>
-                    <div v-else-if="col.care" class="text-[11px] font-medium text-hort-teal-dark">
+                    <div
+                        v-else-if="col.care"
+                        class="truncate text-[11px] font-medium text-hort-teal-dark"
+                        :title="col.care"
+                    >
                         {{ $t('weekly.care_short') }}
                     </div>
                 </component>
@@ -212,7 +220,9 @@ function chipClass(method) {
                             :title="kid.comment || undefined"
                             @click="editable && kid.editable ? emit('edit', kid, columns[j]) : null"
                         >
-                            <span class="block truncate">
+                            <!-- Wraps rather than truncates: „Ch…" tells nobody which
+                                 child that is, and a two-line chip costs one row. -->
+                            <span class="block hyphens-auto break-words">
                                 <span v-if="kid.excursion">🚌&nbsp;</span><span v-if="kid.method === 'sent_home'">🚶&nbsp;</span>{{ kid.name }}<span v-if="kid.qualifier_prefix" class="font-normal opacity-70">&nbsp;· {{ kid.qualifier_prefix }} {{ kid.time }}</span><span v-if="kid.companion" class="font-normal opacity-70">&nbsp;· {{ $t('weekly.companion_with', { name: kid.companion.name }) }}</span>
                             </span>
                             <span
