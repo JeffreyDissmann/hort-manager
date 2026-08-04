@@ -114,6 +114,32 @@ it('opens a Ferienbetreuung from the list to set it up', function () {
         ->assertPathIs("/closures/{$period->id}/edit");
 });
 
+it('sends an unregistered care day to the sign-up instead of an editor', function () {
+    $parent = User::factory()->parent()->create();
+    $child = Child::factory()->withGuardian($parent)->create(['name' => 'Mia']);
+
+    // A Ferienbetreuung covering today, which Mia is not signed up for.
+    $today = Carbon::today();
+    $period = HolidayPeriod::factory()->care()->create([
+        'name' => 'Sommer-Ferienbetreuung',
+        'starts_on' => $today->toDateString(),
+        'ends_on' => $today->copy()->addDays(2)->toDateString(),
+        'registration_deadline' => $today->copy()->addDay()->toDateString(),
+    ]);
+    $period->generateCareDays();
+
+    $page = actAndVisit($parent, '/weekly-plan');
+    $page->script("document.querySelectorAll('dialog[open]').forEach((d) => d.close())");
+
+    $page->assertSee('Nicht angemeldet')
+        // Tapping the cell must not open the day editor — there is nothing to plan.
+        ->click("@wp-cell-{$child->id}-{$today->toDateString()}")
+        ->assertMissing('@save');
+
+    // The way out is one link in the week's banner, not one per row or per cell.
+    $page->click('@wp-care-signup')->assertPathIs('/polls');
+});
+
 it('puts trips and Ferienbetreuung on one page for parents', function () {
     $parent = User::factory()->parent()->create();
     $child = Child::factory()->create(['name' => 'Mia']);

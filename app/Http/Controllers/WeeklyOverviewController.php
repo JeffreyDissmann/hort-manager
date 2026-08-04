@@ -166,7 +166,8 @@ class WeeklyOverviewController extends Controller
                 $schedule = $byWeekday->get($i + 1);
                 // Ferienbetreuung: no school, so the Stammplan says nothing about this
                 // day. Only a sign-up (a DailyDeparture) puts the child here at all.
-                $isCareDay = $careDays->has($day['date']);
+                $careDay = $careDays->get($day['date']);
+                $isCareDay = $careDay !== null;
                 $stdTime = $isCareDay || ! $schedule || ! $schedule->planned_time
                     ? null
                     : substr((string) $schedule->planned_time, 0, 5);
@@ -240,12 +241,19 @@ class WeeklyOverviewController extends Controller
                     // Ferienbetreuung: registered children are planned as usual; the
                     // rest aren't „hortfrei", they simply haven't signed up.
                     // A plan override predating the Ferienbetreuung is not a sign-up.
-                    'care' => $isCareDay ? ['registered' => $departure?->isCareRegistration() ?? false] : null,
-                    // Signing up happens on /care (it has a deadline), so an unregistered
-                    // care day can't be planned into existence from here.
+                    'care' => $careDay ? [
+                        'registered' => $departure?->isCareRegistration() ?? false,
+                        // Whether the family could still sign up — the cell offers the
+                        // way there instead of an editor that can't help.
+                        'open' => $careDay->period->registrationIsOpen(),
+                        'deadline' => $careDay->period->registration_deadline?->toDateString(),
+                    ] : null,
+                    // Signing up happens on „Ausflüge & Ferien" (it has a deadline), so an
+                    // unregistered care day can't be planned into existence from here.
+                    // A plan row that predates the period is not a sign-up either.
                     'editable' => $canManage && $day['date'] >= $todayString && ! $departed
                         && ! isset($closedDays[$day['date']])
-                        && (! $isCareDay || $departure !== null),
+                        && (! $isCareDay || ($departure?->isCareRegistration() ?? false)),
                     'excursion' => $excursion,
                     'conflict' => $conflict,
                     'birthday' => $birthday,

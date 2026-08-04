@@ -91,6 +91,42 @@ class CareWeeklyPlanTest extends TestCase
             );
     }
 
+    public function test_a_plan_predating_the_period_does_not_make_the_day_editable(): void
+    {
+        // The row exists but names no care day, so it is not a sign-up: the cell used
+        // to open an editor that saved something nobody could see.
+        $this->careDays();
+        DailyDeparture::create([
+            'child_id' => $this->child->id,
+            'date' => '2026-08-03',
+            'planned_time' => '15:00',
+            'planned_method' => DepartureMethod::PickedUp,
+            'status' => DepartureStatus::Present,
+        ]);
+
+        $this->actingAs($this->staff)
+            ->get(route('weekly-plan'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('currentWeek.0.days.0.care.registered', false)
+                ->where('currentWeek.0.days.0.editable', false)
+            );
+    }
+
+    public function test_an_unregistered_care_day_says_whether_signing_up_is_still_open(): void
+    {
+        // While the Anmeldung runs the cell offers the way to it; afterwards it can
+        // only explain itself, so the deadline travels with the day.
+        $period = $this->careDays();
+        $period->update(['registration_deadline' => '2026-08-01']);
+
+        $this->actingAs($this->staff)
+            ->get(route('weekly-plan'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('currentWeek.0.days.0.care.open', false)
+                ->where('currentWeek.0.days.0.care.deadline', '2026-08-01')
+            );
+    }
+
     public function test_a_registered_care_day_is_planned_as_usual(): void
     {
         $this->careDays();
