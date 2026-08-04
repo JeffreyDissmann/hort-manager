@@ -580,7 +580,9 @@ function editHortfrei(child) {
 
                         <template v-else>
                         <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-ink/40">
-                            {{ block.time ?? $t('board.no_fixed_time') }}<span v-if="block.time"> {{ $t('common.oclock') }}</span>
+                            <!-- &nbsp;, not a plain space: Vue condenses the whitespace at
+                                 the start of the span away and it read „16:30UHR". -->
+                            {{ block.time ?? $t('board.no_fixed_time') }}<span v-if="block.time">&nbsp;{{ $t('common.oclock') }}</span>
                         </p>
                         <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
                             <div

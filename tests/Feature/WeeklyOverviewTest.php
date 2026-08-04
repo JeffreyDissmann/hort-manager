@@ -6,6 +6,7 @@ namespace Tests\Feature;
 
 use App\Enums\DepartureMethod;
 use App\Enums\DepartureStatus;
+use App\Enums\TimeQualifier;
 use App\Enums\UserRole;
 use App\Models\Absence;
 use App\Models\Child;
@@ -125,6 +126,27 @@ class WeeklyOverviewTest extends TestCase
                 ->where('standard.2.time', '15:00')
                 ->where('standard.2.days.0.0.name', 'Mia')
                 ->where('standard.0.days.1', [])
+            );
+    }
+
+    public function test_the_standard_plan_carries_the_time_behind_a_bis_or_ab(): void
+    {
+        // The row is a half-hour bucket, so „Nora · bis" on its own says nothing —
+        // and 15:10 doesn't even sit in the row it names.
+        $nora = Child::factory()->create(['name' => 'Nora']);
+        $nora->weeklySchedules()->create([
+            'weekday' => 1,
+            'planned_time' => '15:10',
+            'method' => DepartureMethod::SentHome,
+            'time_qualifier' => TimeQualifier::By,
+        ]);
+
+        $this->actingAs(User::factory()->create(['role' => UserRole::Staff]))
+            ->get(route('standard-plan'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('standard.0.time', '15:00')
+                ->where('standard.0.days.0.0.time', '15:10')
+                ->where('standard.0.days.0.0.qualifier_prefix', TimeQualifier::By->prefix())
             );
     }
 

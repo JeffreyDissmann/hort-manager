@@ -19,6 +19,21 @@ function scheduledChild(string $name): Child
     return Child::factory()->scheduledOn(boardWeekday(), '15:00')->create(['name' => $name]);
 }
 
+it('writes the slot header as „15:00 Uhr", not „15:00UHR"', function () {
+    // Vue condenses whitespace at the start of a span, so the plain space between the
+    // time and „Uhr" disappeared — only visible in the rendered DOM.
+    $staff = User::factory()->staff()->create();
+    scheduledChild('Emma');
+
+    $page = actAndVisit($staff, '/board');
+    $header = $page->script(
+        "[...document.querySelectorAll('p')].map((p) => p.textContent.trim()).find((t) => /^15:00/.test(t))"
+    );
+
+    // The space is a non-breaking one — „15:00" and „Uhr" belong together.
+    expect(str_replace("\u{00a0}", ' ', (string) $header))->toBe('15:00 Uhr');
+});
+
 it('lets staff mark a child picked up', function () {
     $staff = User::factory()->staff()->create();
     $child = scheduledChild('Emma');
