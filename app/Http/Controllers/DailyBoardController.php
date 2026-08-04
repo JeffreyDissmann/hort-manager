@@ -316,7 +316,8 @@ class DailyBoardController extends Controller
         // being signed up is „nicht angemeldet", which the closure card explains.
         $hortfrei = $careDay ? collect() : Child::query()
             ->activeOn($date)
-            ->whereHas('weeklySchedules', fn ($q) => $q->whereNotNull('planned_time'))
+            // „Hortfrei" needs a Stammplan to be free from — see Child::hasStandardPlan().
+            ->whereNot(fn ($q) => $q->withoutSchedule())
             ->whereDoesntHave('weeklySchedules', fn ($q) => $q->where('weekday', $weekday)->whereNotNull('planned_time'))
             ->whereNotIn('id', $absentChildIds)
             ->whereNotIn('id', $departures->pluck('child_id')->all())

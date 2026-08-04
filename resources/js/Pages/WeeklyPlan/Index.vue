@@ -169,7 +169,7 @@ function dayMonth(date) {
         : '';
 }
 
-function cellUi(day) {
+function cellUi(day, hasPlan = true) {
     if (day.closed) {
         return {
             // Short form: „Geschlossen" doesn't fit a fifth of a phone screen, and the
@@ -210,6 +210,19 @@ function cellUi(day) {
         };
     }
 
+    // A child whose Stammplan is empty isn't „hortfrei" on every day — nobody has
+    // said yet when they go home. The banner above offers to enter it.
+    if (!day.time && !hasPlan) {
+        return {
+            label: t('weekly.no_plan'),
+            labelClass: STATE_LABEL,
+            title: t('weekly.no_plan_title'),
+            class: 'bg-ink/5 text-ink/40 ring-1 ring-inset ring-ink/10',
+            time: false,
+            extras: false,
+        };
+    }
+
     return {
         label: day.time ?? t('weekly.free'),
         labelClass: 'text-sm font-semibold',
@@ -224,7 +237,7 @@ function cellUi(day) {
 const decoratedWeek = computed(() =>
     props.currentWeek.map((child) => ({
         ...child,
-        days: child.days.map((day) => ({ ...day, ui: cellUi(day) })),
+        days: child.days.map((day) => ({ ...day, ui: cellUi(day, child.has_plan) })),
     })),
 );
 

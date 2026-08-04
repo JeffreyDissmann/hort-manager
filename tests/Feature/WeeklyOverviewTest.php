@@ -79,6 +79,29 @@ class WeeklyOverviewTest extends TestCase
             );
     }
 
+    public function test_a_child_without_a_stammplan_is_marked_as_such(): void
+    {
+        // The cells used to borrow „Hortfrei" — which claims a decision („kommt an dem
+        // Tag nicht") that nobody has made. The „nicht da"-Liste already leaves them
+        // out, so the two contradicted each other.
+        Carbon::setTestNow('2026-07-06');
+
+        $parent = User::factory()->create(['role' => UserRole::Parent]);
+        $planned = Child::factory()->create(['name' => 'Planned Kid']);
+        $planned->weeklySchedules()->create(['weekday' => 1, 'planned_time' => '15:00', 'method' => DepartureMethod::PickedUp]);
+        $unplanned = Child::factory()->create(['name' => 'Unplanned Kid']);
+        $parent->children()->attach([$planned->id, $unplanned->id]);
+
+        $this->actingAs($parent)
+            ->get(route('weekly-plan'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('currentWeek.0.name', 'Planned Kid')
+                ->where('currentWeek.0.has_plan', true)
+                ->where('currentWeek.1.name', 'Unplanned Kid')
+                ->where('currentWeek.1.has_plan', false)
+            );
+    }
+
     public function test_the_standard_plan_page_lists_every_child(): void
     {
         $emma = Child::factory()->create(['name' => 'Emma']);

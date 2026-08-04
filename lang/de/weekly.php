@@ -43,6 +43,8 @@ return [
     'care_short' => 'Ferienbetreuung',
     'care_not_registered' => 'Nicht angemeldet',
     'care_not_registered_title' => 'Für diesen Ferienbetreuungstag ist das Kind nicht angemeldet.',
+    'no_plan' => 'Kein Stammplan',
+    'no_plan_title' => 'Für dieses Kind ist noch kein Stammplan hinterlegt – trag oben ein, wann es nach Hause geht.',
     'care_signup_link' => 'Zur Anmeldung',
     'care_signup_closed' => 'Nicht angemeldet – der Anmeldeschluss war am :date.',
     'care_week' => 'In dieser Woche gibt es Ferienbetreuung: :names. Nur angemeldete Kinder sind da.',

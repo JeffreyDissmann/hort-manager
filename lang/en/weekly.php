@@ -43,6 +43,8 @@ return [
     'care_short' => 'Holiday care',
     'care_not_registered' => 'Not signed up',
     'care_not_registered_title' => 'This child is not signed up for this holiday care day.',
+    'no_plan' => 'No standard plan',
+    'no_plan_title' => 'This child has no standard plan yet – enter above when they go home.',
     'care_signup_link' => 'Sign up',
     'care_signup_closed' => 'Not signed up – the deadline was on :date.',
     'care_week' => 'Holiday care this week: :names. Only children signed up are there.',

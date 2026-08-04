@@ -266,6 +266,10 @@ class WeeklyOverviewController extends Controller
                 'id' => $child->id,
                 'name' => $child->name,
                 'can_manage' => $canManage,
+                // No Stammplan at all is not „hortfrei": hortfrei is a weekday this
+                // child deliberately doesn't come, and that decision hasn't been made
+                // yet. The cells say so instead of inventing a reason.
+                'has_plan' => $child->hasStandardPlan(),
                 'days' => $days,
             ];
         });
@@ -322,7 +326,7 @@ class WeeklyOverviewController extends Controller
                 ->filter(function (Child $c) use ($day, $weekday, $allOverrides, $absentKeys) {
                     $byWeekday = $c->weeklySchedules->keyBy('weekday');
 
-                    return $c->weeklySchedules->whereNotNull('planned_time')->isNotEmpty()
+                    return $c->hasStandardPlan()
                         && $byWeekday->get($weekday)?->planned_time === null
                         && ! $allOverrides->has($c->id.'|'.$day['date'])
                         && ! $absentKeys->has($c->id.'|'.$day['date']);
