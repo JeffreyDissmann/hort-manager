@@ -6,7 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Child;
 use App\Models\Excursion;
-use App\Rules\NotDuringClosure;
+use App\Rules\NotDuringHolidayPeriod;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -178,7 +178,7 @@ class ExcursionController extends Controller
         return $request->validate([
             'name' => ['required', 'string', 'max:255'],
             // No trip on a day the Hort is shut — there'd be nobody to take.
-            'date' => ['required', 'date', new NotDuringClosure],
+            'date' => ['required', 'date', new NotDuringHolidayPeriod],
             'depart_at' => ['nullable', 'date_format:H:i'],
             'return_at' => ['nullable', 'date_format:H:i'],
             'rsvp_deadline' => ['required', 'date'],

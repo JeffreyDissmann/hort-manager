@@ -13,7 +13,7 @@ use App\Models\Excursion;
 use App\Models\HolidayPeriod;
 use App\Models\User;
 use App\Models\WeeklySchedule;
-use App\Rules\NotDuringClosure;
+use App\Rules\NotDuringHolidayPeriod;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Validator;
@@ -109,9 +109,10 @@ class ClosureIntegrityTest extends TestCase
         $this->assertDatabaseMissing('holiday_periods', ['name' => 'Fortbildung']);
     }
 
-    public function test_a_ferienbetreuung_may_span_an_ausflug(): void
+    public function test_a_ferienbetreuung_may_not_span_an_ausflug_either(): void
     {
-        // The Hort is open during a Ferienbetreuung, so an outing is perfectly normal.
+        // During a Ferienbetreuung the whole group goes along anyway, so the outing is
+        // the day's Aktivität — an Ausflug with its own poll can't live inside one.
         Excursion::factory()->create(['name' => 'Zoo', 'date' => '2026-08-12']);
 
         $this->actingAs($this->staff)
@@ -121,9 +122,9 @@ class ClosureIntegrityTest extends TestCase
                 'starts_on' => '2026-08-10',
                 'ends_on' => '2026-08-14',
             ])
-            ->assertRedirect();
+            ->assertSessionHasErrors('ends_on');
 
-        $this->assertDatabaseHas('holiday_periods', ['name' => 'Sommer-Ferienbetreuung']);
+        $this->assertDatabaseMissing('holiday_periods', ['name' => 'Sommer-Ferienbetreuung']);
     }
 
     public function test_extending_a_closure_onto_an_ausflug_is_refused(): void
@@ -142,10 +143,10 @@ class ClosureIntegrityTest extends TestCase
         $this->assertSame('2026-08-10', $closure->refresh()->ends_on->toDateString());
     }
 
-    public function test_the_closure_rule_ignores_an_empty_date(): void
+    public function test_the_holiday_period_rule_ignores_an_empty_date(): void
     {
         // `required` is a separate rule's job — this one must not fire on null.
-        $validator = Validator::make(['date' => null], ['date' => [new NotDuringClosure]]);
+        $validator = Validator::make(['date' => null], ['date' => [new NotDuringHolidayPeriod]]);
 
         $this->assertFalse($validator->fails());
     }

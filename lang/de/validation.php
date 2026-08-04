@@ -13,6 +13,7 @@ return [
     'array' => ':attribute muss eine Liste sein.',
     'before' => ':attribute muss ein Datum vor :date sein.',
     'closed_day' => 'An diesem Tag ist der Hort geschlossen (:name).',
+    'care_day' => 'An diesem Tag läuft die Ferienbetreuung (:name) – dort sind alle angemeldeten Kinder ohnehin dabei. Trag den Ausflug als Aktivität im Tagesprogramm ein.',
     'excursion_in_range' => 'In diesem Zeitraum liegt ein Ausflug (:names). Bitte zuerst verschieben oder absagen.',
     'before_or_equal' => ':attribute muss ein Datum vor oder gleich :date sein.',
     'between' => [

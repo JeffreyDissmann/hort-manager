@@ -126,7 +126,7 @@ Everything date-anchored has to ask. The lookups are `HolidayPeriod::closesOn($d
 - **Wochenplan** — cells are greyed, labelled and locked; the day drops out of the timetable (the Stammplan would refill it) and out of both „nicht da" summaries. `weekly-plan.adjust` / `.reset` 403. `absences.store` **skips** closed days inside a range rather than failing, so „krank Di–Do" across a shut Wednesday still records Tue + Thu.
 - **Tagesprogramm** — `/program` offers no fields; `program.update` skips those days and deletes any row entered before the closure. The Wochenplan's whole program entry is nulled, **including homework**: that comes from the per-weekday `HomeworkDefault`, which has no notion of dates, so filtering child lists never reaches it.
 - **Scheduled jobs** — `program:remind-missing` ignores closed days (filtered inside `DailyProgram::weekdaysWithoutLunch()`); `weekly:digest` skips a week closed Mo–Fr entirely and otherwise marks those days „🚫 <Name>", outranking a reported absence.
-- **Ausflüge** — `App\Rules\NotDuringClosure` rejects a trip date on a closed day (create + edit).
+- **Ausflüge** — `App\Rules\NotDuringHolidayPeriod` rejects a trip date inside **either** kind of Ferien-Zeitraum (create + edit), and `NoExcursionInRange` guards the other direction for both. A closed day has nobody to travel; during a **Ferienbetreuung** every registered child is there all day, so an outing takes the whole group by definition — it is the day's **Aktivität** in the Tagesprogramm, not a poll with participants of its own.
 - **TRMNL** — the feed's `today.closed` / `week[].closed` carry the name; the Liquid templates in `docs/trmnl/` branch on it.
 
 `/standard-plan` is keyed by weekday with no dates, so closures genuinely don't apply there.

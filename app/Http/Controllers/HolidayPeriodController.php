@@ -240,8 +240,7 @@ class HolidayPeriodController extends Controller
      */
     private function validated(Request $request, ?HolidayPeriod $period = null): array
     {
-        // The type the period will have (it can't be changed on edit) — a Schließzeit
-        // has to clear the day of Ausflüge, a Ferienbetreuung happily hosts them.
+        // The type the period will have (it can't be changed on edit).
         $type = $period?->type->value ?? $request->input('type') ?? HolidayPeriodType::Closed->value;
 
         $validated = $request->validate([
@@ -249,14 +248,13 @@ class HolidayPeriodController extends Controller
             'type' => ['nullable', Rule::enum(HolidayPeriodType::class)],
             'starts_on' => ['required', 'date'],
             // A single closed day is starts_on == ends_on, so equality is allowed.
+            // Neither kind of Zeitraum may swallow an Ausflug: a closed day has nobody
+            // to go, and during a Ferienbetreuung the outing *is* the day's Aktivität.
             'ends_on' => [
                 'required',
                 'date',
                 'after_or_equal:starts_on',
-                Rule::when(
-                    $type === HolidayPeriodType::Closed->value,
-                    [new NoExcursionInRange($request->input('starts_on'))],
-                ),
+                new NoExcursionInRange($request->input('starts_on')),
             ],
             // Opting in after the Ferienbetreuung has started makes no sense.
             'registration_deadline' => ['nullable', 'date', 'before_or_equal:starts_on'],
