@@ -378,7 +378,7 @@ function answerCompanion(id, confirmed) {
                                     :is="day.editable ? 'button' : 'div'"
                                     type="button"
                                     :data-testid="`wp-cell-${child.id}-${day.date}`"
-                                    class="relative mt-1 flex w-full grow flex-col justify-center overflow-hidden break-words rounded-lg px-0.5 py-2"
+                                    class="relative mt-1 flex w-full grow flex-col justify-center overflow-hidden break-words rounded-lg px-0.5 py-1.5"
                                     :class="[
                                         day.ui.class,
                                         day.ui.labelClass,
@@ -387,7 +387,15 @@ function answerCompanion(id, confirmed) {
                                     :title="day.ui.title"
                                     @click="openCell(child, day, weekDays[i])"
                                 >
-                                    <template v-if="day.ui.time"><span v-if="day.method === 'sent_home'">🚶&nbsp;</span><span v-if="timePrefix(day.method, day.qualifier)">{{ timePrefix(day.method, day.qualifier) }}&nbsp;</span></template>{{ day.ui.label }}
+                                    <!-- „🚶 ab" on one line, the time under it: the cell is
+                                         a flex column, so these have to share a span. -->
+                                    <span
+                                        v-if="day.ui.time && (day.method === 'sent_home' || timePrefix(day.method, day.qualifier))"
+                                        class="block text-[11px] font-medium leading-none"
+                                    >
+                                        <template v-if="day.method === 'sent_home'">🚶</template><template v-if="timePrefix(day.method, day.qualifier)">&nbsp;{{ timePrefix(day.method, day.qualifier) }}</template>
+                                    </span>
+                                    {{ day.ui.label }}
                                     <span
                                         v-if="day.companion && day.ui.extras"
                                         class="mt-0.5 block truncate text-[10px] font-normal leading-tight"

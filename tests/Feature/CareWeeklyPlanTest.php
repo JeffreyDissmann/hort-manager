@@ -143,6 +143,45 @@ class CareWeeklyPlanTest extends TestCase
             );
     }
 
+    public function test_the_stammplan_comment_does_not_travel_into_a_care_day(): void
+    {
+        // „früher wegen Schwimmkurs" next to the Betreuungszeit contradicts the very
+        // time it is printed under — the Stammplan says nothing during the holidays.
+        $this->child->weeklySchedules()->where('weekday', 1)->update(['comment' => 'früher wegen Schwimmkurs']);
+        $this->careDays();
+        $this->signUp('2026-08-03');
+
+        $this->actingAs($this->staff)
+            ->get(route('weekly-plan'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('currentWeek.0.days.0.comment', null)
+                // …and the editor doesn't pre-fill it either.
+                ->where('currentWeek.0.days.0.note', null)
+                // Thursday is an ordinary day again, where it belongs.
+                ->where('currentWeek.0.days.3.comment', null)
+            );
+    }
+
+    public function test_an_unregistered_plan_stays_off_the_whole_week_timeline(): void
+    {
+        $this->careDays();
+        DailyDeparture::create([
+            'child_id' => $this->child->id,
+            'date' => '2026-08-03',
+            'planned_time' => '15:00',
+            'planned_method' => DepartureMethod::PickedUp,
+            'status' => DepartureStatus::Present,
+        ]);
+
+        $timetable = $this->actingAs($this->staff)
+            ->get(route('weekly-plan'))
+            ->viewData('page')['props']['weekTimetable'];
+
+        $monday = collect($timetable)->flatMap(fn (array $row): array => collect($row['days'][0])->all());
+
+        $this->assertCount(0, $monday);
+    }
+
     public function test_the_normal_days_of_the_week_are_untouched(): void
     {
         $this->careDays();

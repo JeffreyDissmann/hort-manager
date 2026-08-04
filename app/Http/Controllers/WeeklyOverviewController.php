@@ -172,6 +172,9 @@ class WeeklyOverviewController extends Controller
                     ? null
                     : substr((string) $schedule->planned_time, 0, 5);
                 $stdMethod = $isCareDay ? null : $schedule?->method?->value;
+                // …and neither does its comment: „früher wegen Schwimmkurs" next to a
+                // Betreuungszeit contradicts the very time it is printed under.
+                $stdComment = $isCareDay ? null : $schedule?->comment;
 
                 $departure = $departures->get($child->id.'|'.$day['date']);
                 $time = $departure
@@ -231,9 +234,9 @@ class WeeklyOverviewController extends Controller
                     // Companion for „geht mit … mit": { name, confirmed: null|true|false }.
                     'companion' => $companion,
                     // Shown on the cell: the override's own note, or the Stammplan comment.
-                    'comment' => $adjusted ? $departure?->note : $schedule?->comment,
+                    'comment' => $adjusted ? $departure?->note : $stdComment,
                     // Pre-fills the editor; an override defaults to the standard comment.
-                    'note' => $departure?->note ?? $schedule?->comment,
+                    'note' => $departure?->note ?? $stdComment,
                     'adjusted' => $adjusted,
                     'past' => $day['date'] < $todayString,
                     // The Hort is shut: nothing to plan, nothing to edit.
@@ -456,7 +459,9 @@ class WeeklyOverviewController extends Controller
                 // Ferienbetreuung: only children who signed up are here, so there is no
                 // Stammplan to fall back on — no sign-up means no row on the timeline.
                 if (in_array($day['date'], $careDates, true)) {
-                    if ($departure === null) {
+                    // A plan predating the period is not a sign-up — that child isn't
+                    // there, so they don't belong on the timeline either.
+                    if (! ($departure?->isCareRegistration() ?? false)) {
                         continue;
                     }
                     $schedule = null;

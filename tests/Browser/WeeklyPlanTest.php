@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Enums\DepartureMethod;
+use App\Enums\TimeQualifier;
 use App\Models\Child;
 use App\Models\DailyDeparture;
 use App\Models\User;
@@ -31,6 +33,27 @@ it('adjusts a day from the Wochenplan and resets it back to the Stammplan', func
 
     expect(DailyDeparture::where('child_id', $child->id)->whereDate('date', $date)->exists())
         ->toBeFalse();
+});
+
+it('keeps 🚶 and the „ab" prefix on one line above the time', function () {
+    // The cell is a flex column, so the inline pieces need their own span — without
+    // it „🚶", „ab" and „16:00" each land on a line of their own, which is how this
+    // regressed once already.
+    $parent = User::factory()->parent()->create();
+    $child = Child::factory()
+        ->scheduledOn(boardWeekday(), '16:00', DepartureMethod::SentHome)
+        ->withGuardian($parent)
+        ->create(['name' => 'Nora']);
+
+    $child->weeklySchedules()->first()->update(['time_qualifier' => TimeQualifier::From]);
+    $date = boardDate()->toDateString();
+
+    $page = actAndVisit($parent, '/weekly-plan');
+    $prefix = $page->script(
+        "document.querySelector('[data-testid=\"wp-cell-{$child->id}-{$date}\"] span').textContent.trim()"
+    );
+
+    expect(preg_replace('/\s+/u', ' ', (string) $prefix))->toBe('🚶 ab');
 });
 
 it('links each weekday header to that day\'s board', function () {
