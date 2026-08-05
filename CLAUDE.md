@@ -77,7 +77,7 @@ HolidayCareAnswer  „this family answered for this Ferienbetreuung" (period + c
 ```
 
 ### Ausflug participation poll
-Creating an excursion invites **every** child (a pending `child_excursion` row). Parents answer per child via `polls.update` (staff may answer too, even after the deadline). The answer lives on the child, so once either guardian answers it's resolved for both. `Excursion::participants()` = response `true` — that's who shows on the board. `pendingPolls` (shared Inertia prop) drives a parent notification banner until answered or the `rsvp_deadline` passes.
+Creating an excursion invites **every** child enrolled on the trip date (a pending `child_excursion` row), and a child created *later* is invited to every upcoming trip by `ChildObserver::created()` — the list used to freeze at creation time, so a family joining afterwards saw the trip without their own child on it. Re-saving a trip tops the list up too. Parents answer per child via `polls.update` (staff may answer too, even after the deadline). The answer lives on the child, so once either guardian answers it's resolved for both. `Excursion::participants()` = response `true` — that's who shows on the board. `pendingPolls` (shared Inertia prop) drives a parent notification banner until answered or the `rsvp_deadline` passes.
 
 ### Authorization (ChildPolicy + inline checks)
 - **Reads are open to everyone** (open information policy) — never scope read queries per-parent. The parent↔child link only identifies whose kid is whose.
