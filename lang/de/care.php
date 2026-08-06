@@ -14,6 +14,8 @@ return [
 
     'none' => 'Aktuell ist keine Ferienbetreuung geplant.',
     'not_answered' => 'noch nicht beantwortet',
+    'registered_for' => 'Angemeldet: :days',
+    'registered_none' => 'Nicht angemeldet',
     'how_it_works' => 'Wie funktioniert das?',
     'days_heading' => 'Angebotene Tage',
     'days_intro' => 'Die Betreuungszeit gilt für alle angemeldeten Kinder. Essen und Aktivität trägst du im Programm ein.',

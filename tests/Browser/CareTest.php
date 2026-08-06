@@ -190,10 +190,29 @@ it('locks the sign-up once the Anmeldeschluss has passed', function () {
 
     actAndVisit($parent, '/polls')
         ->assertSee('Anmeldeschluss war am')
-        // No save button and no tickable days once the window has closed.
+        // The sheet collapses to its result: a grid of dead checkboxes and a save
+        // button that cannot save are only scrolling.
         ->assertMissing("@care-save-{$period->id}-{$child->id}")
-        ->assertPresent("@care-pick-{$child->id}-{$firstDay->id}")
-        ->assertDisabled("@care-pick-{$child->id}-{$firstDay->id}");
+        ->assertMissing("@care-pick-{$child->id}-{$firstDay->id}")
+        ->assertSee('Nicht angemeldet');
+});
+
+it('names the booked days once the sign-up is closed', function () {
+    $parent = User::factory()->parent()->create();
+    $child = Child::factory()->create(['name' => 'Mia']);
+    $parent->children()->attach($child);
+
+    $period = carePeriod(deadline: Carbon::yesterday()->toDateString());
+    $day = $period->careDays()->orderBy('date')->first();
+    DailyDeparture::create([
+        'child_id' => $child->id,
+        'date' => $day->date->toDateString(),
+        'holiday_care_day_id' => $day->id,
+        'planned_time' => $day->ends_at,
+    ]);
+
+    // What the family still needs from a closed period is which days they hold.
+    actAndVisit($parent, '/polls')->assertSee('Angemeldet:');
 });
 
 it('lets staff sign a child up even after the deadline', function () {

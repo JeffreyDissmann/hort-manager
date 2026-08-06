@@ -14,6 +14,8 @@ return [
 
     'none' => 'No holiday care is planned at the moment.',
     'not_answered' => 'not answered yet',
+    'registered_for' => 'Signed up for: :days',
+    'registered_none' => 'Not signed up',
     'how_it_works' => 'How does this work?',
     'days_heading' => 'Offered days',
     'days_intro' => 'The care window applies to every registered child. Lunch and activity are entered under Programm.',

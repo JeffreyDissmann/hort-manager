@@ -95,6 +95,11 @@ function save(period, child) {
     );
 }
 
+/** The days this child is signed up for — the whole answer, once it can't change. */
+function registeredDays(period, child) {
+    return period.days.filter((day) => day.children.includes(child.id));
+}
+
 function hasAnswered(period, child) {
     return period.answered.includes(child.id);
 }
@@ -149,8 +154,10 @@ function dateLabel(date) {
                 <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
                     <p class="font-medium text-ink">
                         {{ child.name }}
+                        <!-- „nicht beantwortet" is a nudge; once the deadline has
+                             passed there is nothing left to nudge towards. -->
                         <span
-                            v-if="!hasAnswered(period, child)"
+                            v-if="!hasAnswered(period, child) && editable(period)"
                             class="ml-1 text-xs font-normal text-hort-orange-dark"
                         >
                             · {{ $t('care.not_answered') }}
@@ -167,7 +174,20 @@ function dateLabel(date) {
                     </div>
                 </div>
 
-                <ul class="space-y-1">
+                <!-- Nothing here can be answered any more, so the sheet becomes the
+                     answer: a grid of dead checkboxes is scrolling, not information. -->
+                <p v-if="!editable(period)" class="text-sm text-ink/70">
+                    <template v-if="registeredDays(period, child).length">
+                        {{
+                            $t('care.registered_for', {
+                                days: registeredDays(period, child).map((d) => dayLabel(d.date)).join(', '),
+                            })
+                        }}
+                    </template>
+                    <template v-else>{{ $t('care.registered_none') }}</template>
+                </p>
+
+                <ul v-else class="space-y-1">
                     <li
                         v-for="day in period.days"
                         :key="day.id"
