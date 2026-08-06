@@ -6,7 +6,10 @@ return [
     'title' => 'Kinder',
     'my_children' => 'Meine Kinder',
     'add_child' => 'Kind hinzufügen',
-    'edit_schedule' => 'Stammplan bearbeiten',
+    // The page behind this button holds the whole child — name, Geburtsdatum,
+    // Aktivitätszeitraum, Hinweise, Eltern *and* the Stammplan. Naming it after one
+    // section sent anyone looking for the others away.
+    'edit_schedule' => 'Kind bearbeiten',
     'delete_child' => 'Kind löschen',
     'delete_confirm' => '„:name“ wirklich löschen? Der Stammplan geht verloren.',
     'empty_manage' => 'Noch keine Kinder angelegt. Lege das erste Kind an, um seinen Stammplan festzulegen.',
@@ -25,7 +28,8 @@ return [
     'note_label' => 'Hinweise (optional)',
     'note_placeholder' => 'z. B. Abholberechtigte, Aktivitäten oder Hinweise zur Abholung …',
 
-    'schedule_title' => ':name – Stammplan',
+    'schedule_title' => ':name bearbeiten',
+    'schedule_intro' => 'Stammdaten, Stammplan und Eltern dieses Kindes.',
     'master_data' => 'Stammdaten',
     'schedule_heading' => 'Stammplan (Mo–Fr)',
     'schedule_hint' => 'Wähl für jeden Tag, ob das Kind kommt und wie es nach Hause geht – oder „Hortfrei", wenn es an dem Tag regulär nicht in den Hort kommt.',
@@ -33,7 +37,8 @@ return [
     'method_placeholder' => '— bitte wählen —',
     'not_coming' => 'Hortfrei',
     'schedule_needs_time' => 'Bitte für jeden Tag mit Abholung eine Uhrzeit wählen.',
-    'comment_placeholder' => 'Kommentar, z. B. wegen Fußball',
+    // Short enough to survive the narrow field — the old one was cut to „… wegen Fuß".
+    'comment_placeholder' => 'z. B. wegen Fußball',
 
     'parents_title' => 'Eltern',
     'parents_hint' => 'Wähle die Eltern dieses Kindes – z. B. den anderen Elternteil, damit ihr beide den Stammplan und kurzfristige Änderungen pflegen könnt.',
