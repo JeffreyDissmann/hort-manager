@@ -43,8 +43,8 @@ return [
             'help' => 'When a child wants to go home with yours, or that request is answered.',
         ],
         'missing_plan' => [
-            'label' => 'Missing weekly plan',
-            'help' => 'A reminder when your child still has no weekly plan set up.',
+            'label' => 'Missing standard plan',
+            'help' => 'A reminder when your child still has no standard plan set up.',
         ],
         'care_registration' => [
             'label' => 'Holiday care',

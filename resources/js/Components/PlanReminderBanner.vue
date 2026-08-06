@@ -14,7 +14,11 @@ const children = computed(() => usePage().props.childrenWithoutPlan ?? []);
         class="rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800"
     >
         <p class="font-semibold">⚠️ {{ $t('plan_reminder.title') }}</p>
-        <p class="mt-0.5">{{ $t('plan_reminder.body') }}</p>
+        <!-- One child is the usual case; „Für diese Kinder" for a single name reads
+             like the app hasn't looked. -->
+        <p class="mt-0.5">
+            {{ children.length === 1 ? $t('plan_reminder.body') : $t('plan_reminder.body_plural') }}
+        </p>
         <div class="mt-2 flex flex-wrap gap-2">
             <Link
                 v-for="child in children"

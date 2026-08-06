@@ -43,8 +43,8 @@ return [
             'help' => 'Wenn ein Kind mit deinem mitgehen möchte oder darauf geantwortet wird.',
         ],
         'missing_plan' => [
-            'label' => 'Fehlender Wochenplan',
-            'help' => 'Erinnerung, wenn für dein Kind noch kein Wochenplan hinterlegt ist.',
+            'label' => 'Fehlender Stammplan',
+            'help' => 'Erinnerung, wenn für dein Kind noch kein Stammplan hinterlegt ist.',
         ],
         'care_registration' => [
             'label' => 'Ferienbetreuung',
