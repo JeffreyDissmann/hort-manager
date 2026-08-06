@@ -9,6 +9,7 @@ return [
     'saved' => 'Benachrichtigungseinstellungen gespeichert.',
 
     'channel_slack' => 'Slack',
+    'slack_not_connected' => 'nicht verknüpft',
     'channel_push' => 'Push',
 
     'push_device_title' => 'Push-Benachrichtigungen auf diesem Gerät',

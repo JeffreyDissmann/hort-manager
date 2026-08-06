@@ -9,6 +9,7 @@ return [
     'saved' => 'Notification settings saved.',
 
     'channel_slack' => 'Slack',
+    'slack_not_connected' => 'not linked',
     'channel_push' => 'Push',
 
     'push_device_title' => 'Push notifications on this device',
