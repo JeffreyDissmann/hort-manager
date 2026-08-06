@@ -209,7 +209,7 @@ function cancelAbsence() {
                     </button>
                 </template>
                 <template v-else>
-                    <p class="text-sm text-ink/60">{{ $t('weekly.not_here_today') }}</p>
+                    <p class="text-sm text-ink/60">{{ $t('weekly.not_here') }}</p>
                     <div class="mt-2 flex gap-2">
                         <button
                             type="button"
@@ -322,8 +322,10 @@ function cancelAbsence() {
                     class="mt-1 block w-full"
                     :placeholder="stagingAbsence ? $t('weekly.reason_placeholder') : $t('weekly.note_placeholder')"
                 />
-                <p class="mt-1 text-xs" :class="stagingAbsence ? 'font-medium text-hort-orange-dark' : 'text-ink/50'">
-                    {{ stagingAbsence ? $t('weekly.reason_hint') : $t('weekly.note_hint') }}
+                <!-- No hint while reporting an absence: the amber line above already
+                     asks for the reason, and the label says „Pflicht". -->
+                <p v-if="!stagingAbsence" class="mt-1 text-xs text-ink/50">
+                    {{ $t('weekly.note_hint') }}
                 </p>
             </div>
 

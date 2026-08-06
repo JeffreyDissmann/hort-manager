@@ -56,7 +56,6 @@ return [
     'absence_needs_comment' => 'Please add a short reason below and save.',
     'reason_label' => 'Reason (required)',
     'reason_placeholder' => 'e.g. holiday, fever',
-    'reason_hint' => 'Please add a short reason.',
     'not_coming_heading' => 'Away this week',
 
     // „Goes with another child"
@@ -81,7 +80,7 @@ return [
 
     'reported_as' => 'Reported as “:label”.',
     'cancel_absence' => 'Cancel absence',
-    'not_here_today' => 'Child not here today?',
+    'not_here' => 'Child not coming that day?',
     'report_sick' => 'Report sick',
     'report_away' => 'Not coming',
     'reset_to_standard' => 'Reset to standard',

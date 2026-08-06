@@ -56,7 +56,6 @@ return [
     'absence_needs_comment' => 'Bitte unten kurz einen Grund angeben und speichern.',
     'reason_label' => 'Grund (Pflicht)',
     'reason_placeholder' => 'z. B. Urlaub, Fieber',
-    'reason_hint' => 'Bitte kurz einen Grund angeben.',
     'not_coming_heading' => 'Diese Woche nicht da',
 
     // „Geht mit einem anderen Kind mit"
@@ -81,7 +80,7 @@ return [
 
     'reported_as' => 'Als „:label“ gemeldet.',
     'cancel_absence' => 'Abwesenheit aufheben',
-    'not_here_today' => 'Kind ist heute nicht da?',
+    'not_here' => 'Kind kommt an diesem Tag nicht?',
     'report_sick' => 'Krank melden',
     'report_away' => 'Kommt nicht',
     'reset_to_standard' => 'Auf Standard',
