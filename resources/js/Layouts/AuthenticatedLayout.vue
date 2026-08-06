@@ -206,13 +206,22 @@ function isActive(item) {
                         :key="item.label"
                         :href="item.href"
                         :class="[
-                            'rounded-lg px-3 py-2 text-sm font-medium transition',
+                            'flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition',
                             isActive(item)
                                 ? 'bg-hort-teal/20 text-ink'
                                 : 'text-ink/60 hover:bg-ink/5 hover:text-ink',
                         ]"
                     >
                         {{ item.label }}
+                        <!-- The same count the mobile tab bar shows: on a laptop it used
+                             to be invisible that something was waiting for an answer. -->
+                        <span
+                            v-if="item.badge"
+                            :data-testid="`nav-badge-${item.icon}`"
+                            class="flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-bold text-white"
+                        >
+                            {{ item.badge }}
+                        </span>
                     </Link>
                 </nav>
 

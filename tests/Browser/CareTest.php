@@ -227,3 +227,14 @@ it('does not nudge on the page the nudge points at', function () {
     // …while everywhere else the banner still does its job.
     actAndVisit($parent, '/board')->assertPresent('@care-reminder');
 });
+
+it('shows the open-answers count in the desktop navigation too', function () {
+    $parent = User::factory()->parent()->create();
+    $child = Child::factory()->create(['name' => 'Mia']);
+    $parent->children()->attach($child);
+    carePeriod();
+
+    // Wide enough for the top bar rather than the mobile tab bar.
+    $page = actAndVisit($parent, '/board');
+    $page->resize(1280, 900)->assertPresent('@nav-badge-map');
+});
