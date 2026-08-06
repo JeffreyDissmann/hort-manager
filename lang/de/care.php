@@ -9,6 +9,7 @@ return [
     'deadline_open' => 'Anmeldung bis :date möglich',
     'deadline_passed' => 'Anmeldeschluss war am :date',
     'no_deadline' => 'Ohne Anmeldeschluss',
+    'times_vary' => 'Zeiten je Tag verschieden',
     'generates_days' => 'Für jeden Wochentag im Zeitraum wird ein Betreuungstag angelegt (:start–:end). Zeiten und Aktivität lassen sich danach pro Tag ändern.',
 
     'none' => 'Aktuell ist keine Ferienbetreuung geplant.',

@@ -10,6 +10,8 @@ import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import { store as closuresStore, edit as closuresEdit, destroy as closuresDestroy } from '@/routes/closures';
 import { program as programRoute } from '@/routes';
+import { index as pollsIndex } from '@/routes/polls';
+import { t } from '@/i18n';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 
@@ -69,6 +71,17 @@ function dateLabel(date) {
         month: 'long',
         year: 'numeric',
     });
+}
+
+/**
+ * The Betreuungszeit, which is what a parent planning around the week needs and
+ * only staff could see until now (on the period's own page). Days may differ, so
+ * say so rather than picking one of them to show.
+ */
+function timesLabel(period) {
+    const windows = new Set(period.days.map((day) => `${day.starts_at}–${day.ends_at}`));
+
+    return windows.size === 1 ? [...windows][0] : t('care.times_vary');
 }
 
 /** „12.–16. August 2026", or a single day when the period is one day long. */
@@ -146,6 +159,9 @@ function rangeLabel(period) {
                                         : $t('closures.day_many', { count: period.day_count })
                                 }}
                             </span>
+                            <span v-if="period.day_count" class="text-ink/40">
+                                · {{ timesLabel(period) }}
+                            </span>
                         </p>
                         <p
                             class="mt-0.5 text-xs"
@@ -170,6 +186,16 @@ function rangeLabel(period) {
                             class="mt-1 inline-block text-xs font-medium text-hort-teal-dark underline-offset-2 hover:underline"
                         >
                             {{ $t('care.plan_program') }}
+                        </Link>
+                        <!-- Parents read this page to plan around the period; without
+                             this they had to know that signing up happens elsewhere. -->
+                        <Link
+                            v-if="!canManage && period.registration_open"
+                            :href="pollsIndex().url"
+                            :data-testid="`care-signup-${period.id}`"
+                            class="mt-1 inline-block text-xs font-medium text-hort-teal-dark underline-offset-2 hover:underline"
+                        >
+                            {{ $t('weekly.care_signup_link') }} →
                         </Link>
                     </div>
 

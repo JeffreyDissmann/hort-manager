@@ -9,6 +9,7 @@ return [
     'deadline_open' => 'Registration open until :date',
     'deadline_passed' => 'Registration closed on :date',
     'no_deadline' => 'No deadline',
+    'times_vary' => 'Times differ per day',
     'generates_days' => 'A care day is created for every weekday in the range (:start–:end). Times and activity can be changed per day afterwards.',
 
     'none' => 'No holiday care is planned at the moment.',

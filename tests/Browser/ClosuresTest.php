@@ -49,3 +49,20 @@ it('removes a closure after confirming', function () {
 
     expect(HolidayPeriod::count())->toBe(0);
 });
+
+it('sends a parent from a Ferienbetreuung to the sign-up, with its times', function () {
+    $parent = User::factory()->parent()->create();
+    $parent->children()->attach(Child::factory()->create());
+
+    $period = HolidayPeriod::factory()->care()->create([
+        'name' => 'Herbstferien',
+        'registration_deadline' => now()->addWeek()->toDateString(),
+    ]);
+    $period->generateCareDays();
+
+    actAndVisit($parent, '/closures')
+        // The Betreuungszeit was on the period's own page, which parents can't open.
+        ->assertSee('08:30–16:00')
+        ->click("@care-signup-{$period->id}")
+        ->assertSee('Herbstferien');
+});
