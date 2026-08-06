@@ -234,6 +234,19 @@ class CareIntegrityTest extends TestCase
         $this->assertDatabaseMissing('daily_departures', ['date' => '2026-08-07']);
     }
 
+    public function test_moving_the_range_drops_its_old_days_on_any_path(): void
+    {
+        // Not only through the edit form: a period moved from a seeder or tinker used
+        // to keep the days of its old range, which then showed up on the sign-up sheet
+        // as offered days of dates the period no longer covers.
+        $this->signUp('2026-08-07');
+
+        $this->period->update(['starts_on' => '2026-08-10', 'ends_on' => '2026-08-12']);
+
+        $this->assertSame(0, $this->period->careDays()->withTrashed()->whereDate('date', '<', '2026-08-10')->count());
+        $this->assertDatabaseMissing('daily_departures', ['date' => '2026-08-07']);
+    }
+
     public function test_a_day_already_lived_through_keeps_its_history(): void
     {
         $departed = $this->signUp('2026-08-05');

@@ -36,7 +36,34 @@ class HolidayPeriodObserver
     {
         if (! $period->isCare()) {
             $this->stopOfferingClosedDays($period);
+
+            return;
         }
+
+        if ($period->wasChanged(['starts_on', 'ends_on'])) {
+            $this->dropDaysOutsideRange($period);
+        }
+    }
+
+    /**
+     * A Ferienbetreuung that moves leaves the days of its old range behind. On the
+     * sign-up sheet those looked like offered days of the *new* period — dates that
+     * aren't even inside it. The edit form used to clean this up on its way through
+     * the controller, so any other path (a seeder, tinker, a future import) produced
+     * a period offering days it doesn't cover.
+     *
+     * Force-deleted, not soft: a day outside the range was never un-offered by staff,
+     * and a tombstone would stop it coming back if the range moves back.
+     */
+    private function dropDaysOutsideRange(HolidayPeriod $period): void
+    {
+        $period->careDays()
+            ->withTrashed()
+            ->where(fn ($q) => $q->whereDate('date', '<', $period->starts_on)
+                ->orWhereDate('date', '>', $period->ends_on))
+            ->get()
+            ->each
+            ->forceDelete();
     }
 
     /**
