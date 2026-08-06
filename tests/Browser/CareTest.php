@@ -214,3 +214,16 @@ it('lets staff sign a child up even after the deadline', function () {
     expect(DailyDeparture::whereDate('date', $monday->date)->where('child_id', $child->id)->exists())
         ->toBeTrue();
 });
+
+it('does not nudge on the page the nudge points at', function () {
+    $parent = User::factory()->parent()->create();
+    $child = Child::factory()->create(['name' => 'Mia']);
+    $parent->children()->attach($child);
+    carePeriod();
+
+    // On „Ausflüge & Ferien" the sheet itself asks the question, per child.
+    actAndVisit($parent, '/polls')->assertMissing('@care-reminder');
+
+    // …while everywhere else the banner still does its job.
+    actAndVisit($parent, '/board')->assertPresent('@care-reminder');
+});

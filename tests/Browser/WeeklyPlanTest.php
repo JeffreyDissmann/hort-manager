@@ -64,3 +64,14 @@ it('links each weekday header to that day\'s board', function () {
     actAndVisit($staff, '/weekly-plan')
         ->assertPresent("@wp-day-link-{$date}"); // the timetable header links to Heute for that date
 });
+
+it('does not nudge about a missing Stammplan while a child is being edited', function () {
+    $parent = User::factory()->parent()->create();
+    $unplanned = Child::factory()->withGuardian($parent)->create(['name' => 'Ohne Plan']);
+
+    // Everywhere else the nudge belongs …
+    actAndVisit($parent, '/children')->assertSee('Stammplan fehlt noch');
+
+    // … but not on the form that answers it.
+    actAndVisit($parent, "/children/{$unplanned->id}/edit")->assertDontSee('Stammplan fehlt noch');
+});
