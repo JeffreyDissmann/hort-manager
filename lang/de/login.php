@@ -15,6 +15,19 @@ return [
     'new_here' => 'Neu hier?',
     'how_it_works' => 'So funktioniert der Hort-Manager',
 
+    // Erste Anmeldung — meist neue Eltern nach den Ferien. Es gibt keine
+    // Selbstregistrierung: entweder Slack legt das Konto an, oder es gibt schon eins.
+    'first_time_here' => 'Zum ersten Mal hier?',
+    'first_slack_title' => '1. Mit Slack anmelden',
+    'first_slack_text' => 'Der einfachste Weg: oben auf <strong>„Mit Slack anmelden“</strong> tippen. Du brauchst kein eigenes Passwort – dein Konto wird beim ersten Mal automatisch angelegt. Voraussetzung ist, dass du im Slack des Horts bist.',
+    // Der eigentliche Knackpunkt: wer nicht im Slack ist, probiert es sonst immer
+    // wieder mit dem Slack-Knopf, statt den zweiten Weg zu nehmen.
+    'first_slack_fallback' => '<strong>Klappt das nicht?</strong> Wenn du (noch) nicht im Slack des Horts bist oder die Slack-Anmeldung eine Fehlermeldung zeigt, dann nimm einfach Weg 2 – das funktioniert genauso gut.',
+    'first_password_title' => '2. Ohne Slack: erstes Passwort setzen',
+    // :url – der Weg dorthin ist der Punkt dieses Absatzes, also ist er anklickbar.
+    'first_password_text' => 'Gehe auf <a href=":url"><strong>„Passwort vergessen?“</strong></a> und gib deine E-Mail-Adresse an – die, die der Hort von dir hat. Über den Link aus der E-Mail vergibst du dein erstes Passwort und meldest dich danach ganz normal mit E-Mail und Passwort an.',
+    'first_stuck' => 'Kommt keine E-Mail an? Dann gibt es noch kein Konto für diese Adresse – melde dich kurz beim Hort-Team.',
+
     // Forgot password
     'forgot_title' => 'Passwort vergessen',
     'forgot_intro' => 'Passwort vergessen? Kein Problem. Gib einfach deine E-Mail-Adresse an und wir senden dir einen Link, mit dem du ein neues Passwort wählen kannst.',

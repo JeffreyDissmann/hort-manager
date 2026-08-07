@@ -37,7 +37,10 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\WeeklyAdjustmentController;
 use App\Http\Controllers\WeeklyOverviewController;
 use App\Http\Middleware\VerifySlackSignature;
+use App\Models\HolidayPeriod;
+use App\Support\NextHortDay;
 use Illuminate\Foundation\Application;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -55,11 +58,24 @@ Route::get('/sw.js', function () {
 })->name('sw');
 
 Route::get('/', function () {
+    $today = Carbon::today();
+
+    // Urlaubsschirm: while the Hort is shut, the first screen says so — and, more to
+    // the point, when it opens again. Closures are open information (no auth needed).
+    $closure = HolidayPeriod::query()->closed()->covering($today)->first();
+
     return Inertia::render('Welcome', [
         'canLogin' => Route::has('login'),
         'canRegister' => Route::has('register'),
         'laravelVersion' => Application::VERSION,
         'phpVersion' => PHP_VERSION,
+        'closure' => $closure ? [
+            'name' => $closure->name,
+            'note' => $closure->note,
+            // Today counts: on the last closed day this reads „nur noch heute".
+            'days_left' => (int) $today->diffInDays($closure->ends_on) + 1,
+        ] : null,
+        'nextOpen' => $closure ? NextHortDay::after($today) : null,
     ]);
 });
 
