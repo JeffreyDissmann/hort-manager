@@ -68,15 +68,26 @@ expect()->extend('toBeOne', function () {
 */
 
 /**
- * Act as the given user, visit a page, and close the „Was ist neu?" popup that
- * auto-opens on a fresh browser (its <dialog> backdrop would block clicks).
+ * Act as the given user, visit a page, and get the „Was ist neu?" popup out of the way
+ * — its <dialog> backdrop swallows the next click.
+ *
+ * Closing it is not enough: the popup re-opens on every Inertia visit until the browser
+ * has recorded the current version as seen, which only happens when a human closes it.
+ * So record it here too, exactly as the component would.
  */
 function actAndVisit(User $user, string $url)
 {
     test()->actingAs($user);
 
     $page = visit($url);
-    $page->script("document.querySelectorAll('dialog[open]').forEach((d) => d.close())");
+
+    // Compared for equality, not order — it has to be the newest version verbatim.
+    $seen = config('whats_new')[0]['version'] ?? '';
+
+    $page->script(
+        "localStorage.setItem('whats-new-seen', '{$seen}');"
+        ."document.querySelectorAll('dialog[open]').forEach((d) => d.close())"
+    );
 
     return $page;
 }
