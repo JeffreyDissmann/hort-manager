@@ -86,6 +86,9 @@ it('lets a parent tick the days their child will come', function () {
         ->click("@care-pick-{$child->id}-{$monday->id}")
         ->click("@care-save-{$period->id}-{$child->id}")
         ->assertDontSee('noch nicht beantwortet')
+        // Answered: the grid folds up and the summary confirms what landed.
+        ->assertSee('Angemeldet:')
+        ->click("@care-change-{$period->id}-{$child->id}")
         // The saved day stays ticked — the boxes re-seed from the server, so an
         // empty box here would tell the family they aren't registered.
         ->assertChecked("@care-pick-{$child->id}-{$monday->id}")
