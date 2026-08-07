@@ -90,18 +90,21 @@ const navItems = computed(() => {
         ];
     }
 
-    // Staff: full nav (Kinder last — changes least). Parents: Heute, Ausflüge, Abholplan.
+    // Ordered by how far ahead they look: today, this week, what's coming up, and last
+    // the standing default nobody changes twice a year. Heute and Wochenplan are the
+    // two daily pages, so nothing stands between them.
     const items = isStaff.value
         ? [
               { label: t('common.today'), href: board().url, icon: 'sun' },
-              { label: t('nav.excursions'), href: excursionsIndex().url, icon: 'map' },
               { label: t('nav.pickup_plan'), href: weeklyPlan().url, icon: 'calendar' },
+              { label: t('nav.excursions'), href: excursionsIndex().url, icon: 'map' },
               { label: t('nav.program'), href: program().url, icon: 'food' },
               { label: t('nav.children'), href: childrenIndex().url, icon: 'children' },
               { label: t('nav.standard_plan'), href: standardPlan().url, icon: 'table' },
           ]
         : [
               { label: t('common.today'), href: board().url, icon: 'sun' },
+              { label: t('nav.pickup_plan'), href: weeklyPlan().url, icon: 'calendar' },
               // Trips and Ferienbetreuung answer to the same reflex („will mein Kind
               // mit?"), so parents get one tab — and one badge — for both.
               {
@@ -110,7 +113,6 @@ const navItems = computed(() => {
                   icon: 'map',
                   badge: pendingPolls.value + pendingCare.value.length,
               },
-              { label: t('nav.pickup_plan'), href: weeklyPlan().url, icon: 'calendar' },
               { label: t('nav.standard_plan'), href: standardPlan().url, icon: 'table' },
           ];
 
@@ -206,13 +208,22 @@ function isActive(item) {
                         :key="item.label"
                         :href="item.href"
                         :class="[
-                            'rounded-lg px-3 py-2 text-sm font-medium transition',
+                            'flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition',
                             isActive(item)
                                 ? 'bg-hort-teal/20 text-ink'
                                 : 'text-ink/60 hover:bg-ink/5 hover:text-ink',
                         ]"
                     >
                         {{ item.label }}
+                        <!-- The same count the mobile tab bar shows: on a laptop it used
+                             to be invisible that something was waiting for an answer. -->
+                        <span
+                            v-if="item.badge"
+                            :data-testid="`nav-badge-${item.icon}`"
+                            class="flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-bold text-white"
+                        >
+                            {{ item.badge }}
+                        </span>
                     </Link>
                 </nav>
 

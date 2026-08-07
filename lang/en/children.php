@@ -6,7 +6,9 @@ return [
     'title' => 'Children',
     'my_children' => 'My children',
     'add_child' => 'Add child',
-    'edit_schedule' => 'Edit schedule',
+    // The page behind this button holds the whole child — name, date of birth,
+    // enrolment period, notes, parents *and* the standard plan.
+    'edit_schedule' => 'Edit child',
     'delete_child' => 'Delete child',
     'delete_confirm' => 'Really delete “:name”? The schedule will be lost.',
     'empty_manage' => 'No children added yet. Add the first child to set up its schedule.',
@@ -25,7 +27,8 @@ return [
     'note_label' => 'Notes (optional)',
     'note_placeholder' => 'e.g. authorised pick-up persons, activities or pick-up notes …',
 
-    'schedule_title' => ':name – Schedule',
+    'schedule_title' => 'Edit :name',
+    'schedule_intro' => 'Details, standard plan and parents of this child.',
     'master_data' => 'Details',
     'schedule_heading' => 'Schedule (Mon–Fri)',
     'schedule_hint' => 'For each day, choose whether the child comes and how they go home – or „Day off" if they’re regularly not at the Hort that day.',
@@ -33,7 +36,8 @@ return [
     'method_placeholder' => '— please choose —',
     'not_coming' => 'Day off',
     'schedule_needs_time' => 'Please choose a time for every day with a pickup.',
-    'comment_placeholder' => 'Comment, e.g. because of football',
+    // Short enough to survive the narrow field.
+    'comment_placeholder' => 'e.g. football practice',
 
     'parents_title' => 'Parents',
     'parents_hint' => 'Choose this child’s parents – e.g. the other parent, so you can both maintain the schedule and short-term changes.',

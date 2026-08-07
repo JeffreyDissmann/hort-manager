@@ -166,11 +166,15 @@ class WeeklyOverviewController extends Controller
                 $schedule = $byWeekday->get($i + 1);
                 // Ferienbetreuung: no school, so the Stammplan says nothing about this
                 // day. Only a sign-up (a DailyDeparture) puts the child here at all.
-                $isCareDay = $careDays->has($day['date']);
+                $careDay = $careDays->get($day['date']);
+                $isCareDay = $careDay !== null;
                 $stdTime = $isCareDay || ! $schedule || ! $schedule->planned_time
                     ? null
                     : substr((string) $schedule->planned_time, 0, 5);
                 $stdMethod = $isCareDay ? null : $schedule?->method?->value;
+                // …and neither does its comment: „früher wegen Schwimmkurs" next to a
+                // Betreuungszeit contradicts the very time it is printed under.
+                $stdComment = $isCareDay ? null : $schedule?->comment;
 
                 $departure = $departures->get($child->id.'|'.$day['date']);
                 $time = $departure
@@ -230,9 +234,9 @@ class WeeklyOverviewController extends Controller
                     // Companion for „geht mit … mit": { name, confirmed: null|true|false }.
                     'companion' => $companion,
                     // Shown on the cell: the override's own note, or the Stammplan comment.
-                    'comment' => $adjusted ? $departure?->note : $schedule?->comment,
+                    'comment' => $adjusted ? $departure?->note : $stdComment,
                     // Pre-fills the editor; an override defaults to the standard comment.
-                    'note' => $departure?->note ?? $schedule?->comment,
+                    'note' => $departure?->note ?? $stdComment,
                     'adjusted' => $adjusted,
                     'past' => $day['date'] < $todayString,
                     // The Hort is shut: nothing to plan, nothing to edit.
@@ -240,12 +244,19 @@ class WeeklyOverviewController extends Controller
                     // Ferienbetreuung: registered children are planned as usual; the
                     // rest aren't „hortfrei", they simply haven't signed up.
                     // A plan override predating the Ferienbetreuung is not a sign-up.
-                    'care' => $isCareDay ? ['registered' => $departure?->isCareRegistration() ?? false] : null,
-                    // Signing up happens on /care (it has a deadline), so an unregistered
-                    // care day can't be planned into existence from here.
+                    'care' => $careDay ? [
+                        'registered' => $departure?->isCareRegistration() ?? false,
+                        // Whether the family could still sign up — the cell offers the
+                        // way there instead of an editor that can't help.
+                        'open' => $careDay->period->registrationIsOpen(),
+                        'deadline' => $careDay->period->registration_deadline?->toDateString(),
+                    ] : null,
+                    // Signing up happens on „Ausflüge & Ferien" (it has a deadline), so an
+                    // unregistered care day can't be planned into existence from here.
+                    // A plan row that predates the period is not a sign-up either.
                     'editable' => $canManage && $day['date'] >= $todayString && ! $departed
                         && ! isset($closedDays[$day['date']])
-                        && (! $isCareDay || $departure !== null),
+                        && (! $isCareDay || ($departure?->isCareRegistration() ?? false)),
                     'excursion' => $excursion,
                     'conflict' => $conflict,
                     'birthday' => $birthday,
@@ -258,6 +269,10 @@ class WeeklyOverviewController extends Controller
                 'id' => $child->id,
                 'name' => $child->name,
                 'can_manage' => $canManage,
+                // No Stammplan at all is not „hortfrei": hortfrei is a weekday this
+                // child deliberately doesn't come, and that decision hasn't been made
+                // yet. The cells say so instead of inventing a reason.
+                'has_plan' => $child->hasStandardPlan(),
                 'days' => $days,
             ];
         });
@@ -314,7 +329,7 @@ class WeeklyOverviewController extends Controller
                 ->filter(function (Child $c) use ($day, $weekday, $allOverrides, $absentKeys) {
                     $byWeekday = $c->weeklySchedules->keyBy('weekday');
 
-                    return $c->weeklySchedules->whereNotNull('planned_time')->isNotEmpty()
+                    return $c->hasStandardPlan()
                         && $byWeekday->get($weekday)?->planned_time === null
                         && ! $allOverrides->has($c->id.'|'.$day['date'])
                         && ! $absentKeys->has($c->id.'|'.$day['date']);
@@ -444,7 +459,9 @@ class WeeklyOverviewController extends Controller
                 // Ferienbetreuung: only children who signed up are here, so there is no
                 // Stammplan to fall back on — no sign-up means no row on the timeline.
                 if (in_array($day['date'], $careDates, true)) {
-                    if ($departure === null) {
+                    // A plan predating the period is not a sign-up — that child isn't
+                    // there, so they don't belong on the timeline either.
+                    if (! ($departure?->isCareRegistration() ?? false)) {
                         continue;
                     }
                     $schedule = null;

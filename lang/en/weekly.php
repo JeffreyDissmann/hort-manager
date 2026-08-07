@@ -43,6 +43,10 @@ return [
     'care_short' => 'Holiday care',
     'care_not_registered' => 'Not signed up',
     'care_not_registered_title' => 'This child is not signed up for this holiday care day.',
+    'no_plan' => 'No standard plan',
+    'no_plan_title' => 'This child has no standard plan yet – enter above when they go home.',
+    'care_signup_link' => 'Sign up',
+    'care_signup_closed' => 'Not signed up – the deadline was on :date.',
     'care_week' => 'Holiday care this week: :names. Only children signed up are there.',
     'care_week_plain' => 'There is holiday care this week. Only children signed up are there.',
     'closed_week' => 'The Hort is partly closed this week: :names.',
@@ -52,7 +56,6 @@ return [
     'absence_needs_comment' => 'Please add a short reason below and save.',
     'reason_label' => 'Reason (required)',
     'reason_placeholder' => 'e.g. holiday, fever',
-    'reason_hint' => 'Please add a short reason.',
     'not_coming_heading' => 'Away this week',
 
     // „Goes with another child"
@@ -77,7 +80,7 @@ return [
 
     'reported_as' => 'Reported as “:label”.',
     'cancel_absence' => 'Cancel absence',
-    'not_here_today' => 'Child not here today?',
+    'not_here' => 'Child not coming that day?',
     'report_sick' => 'Report sick',
     'report_away' => 'Not coming',
     'reset_to_standard' => 'Reset to standard',

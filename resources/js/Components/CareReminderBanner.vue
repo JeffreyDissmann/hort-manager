@@ -6,8 +6,14 @@ import { Link, usePage } from '@inertiajs/vue3';
 // Parents sign up on „Ausflüge & Ferien" — /care would only redirect them there.
 import { index as pollsIndex } from '@/routes/polls';
 
-const periods = computed(() => usePage().props.pendingCare ?? []);
-const locale = computed(() => usePage().props.locale || 'de');
+const page = usePage();
+
+// Not on the page it points at: „Tage auswählen" would lead nowhere, and the sheet
+// itself is right there, saying the same thing per child.
+const periods = computed(() =>
+    page.component === 'Excursions/Poll' ? [] : (page.props.pendingCare ?? []),
+);
+const locale = computed(() => page.props.locale || 'de');
 
 function deadlineLabel(date) {
     return new Date(`${date}T00:00:00`).toLocaleDateString(locale.value, {

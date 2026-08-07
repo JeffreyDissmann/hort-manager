@@ -147,8 +147,14 @@ function save() {
                             <thead>
                                 <tr class="border-b border-ink/10 text-xs uppercase tracking-wide text-ink/50">
                                     <th class="py-2 pr-4 font-medium"></th>
+                                    <!-- Why the whole column is dead has to stand over
+                                         the column; the note under the table is a
+                                         scroll away once both sections are shown. -->
                                     <th class="px-3 py-2 text-center font-medium">
                                         {{ $t('notifications.channel_slack') }}
+                                        <span v-if="!slackConnected" class="block normal-case tracking-normal text-ink/40">
+                                            {{ $t('notifications.slack_not_connected') }}
+                                        </span>
                                     </th>
                                     <th class="px-3 py-2 text-center font-medium">
                                         {{ $t('notifications.channel_push') }}

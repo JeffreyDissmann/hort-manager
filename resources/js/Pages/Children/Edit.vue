@@ -123,9 +123,14 @@ function destroy() {
 
     <AuthenticatedLayout :wide="true">
         <template #header>
-            <h2 class="text-xl font-semibold leading-tight text-ink">
-                {{ $t('children.schedule_title', { name: child.name }) }}
-            </h2>
+            <div>
+                <h2 class="text-xl font-semibold leading-tight text-ink">
+                    {{ $t('children.schedule_title', { name: child.name }) }}
+                </h2>
+                <!-- Says what is on the page: someone looking for the second parent or
+                     the „im Hort bis" date shouldn't have to guess. -->
+                <p class="text-sm text-ink/50">{{ $t('children.schedule_intro') }}</p>
+            </div>
         </template>
 
         <div class="mx-auto max-w-3xl lg:max-w-none">

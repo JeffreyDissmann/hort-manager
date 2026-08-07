@@ -6,6 +6,7 @@ namespace Tests\Feature;
 
 use App\Enums\DepartureMethod;
 use App\Enums\DepartureStatus;
+use App\Enums\TimeQualifier;
 use App\Enums\UserRole;
 use App\Models\Absence;
 use App\Models\Child;
@@ -79,6 +80,29 @@ class WeeklyOverviewTest extends TestCase
             );
     }
 
+    public function test_a_child_without_a_stammplan_is_marked_as_such(): void
+    {
+        // The cells used to borrow „Hortfrei" — which claims a decision („kommt an dem
+        // Tag nicht") that nobody has made. The „nicht da"-Liste already leaves them
+        // out, so the two contradicted each other.
+        Carbon::setTestNow('2026-07-06');
+
+        $parent = User::factory()->create(['role' => UserRole::Parent]);
+        $planned = Child::factory()->create(['name' => 'Planned Kid']);
+        $planned->weeklySchedules()->create(['weekday' => 1, 'planned_time' => '15:00', 'method' => DepartureMethod::PickedUp]);
+        $unplanned = Child::factory()->create(['name' => 'Unplanned Kid']);
+        $parent->children()->attach([$planned->id, $unplanned->id]);
+
+        $this->actingAs($parent)
+            ->get(route('weekly-plan'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('currentWeek.0.name', 'Planned Kid')
+                ->where('currentWeek.0.has_plan', true)
+                ->where('currentWeek.1.name', 'Unplanned Kid')
+                ->where('currentWeek.1.has_plan', false)
+            );
+    }
+
     public function test_the_standard_plan_page_lists_every_child(): void
     {
         $emma = Child::factory()->create(['name' => 'Emma']);
@@ -102,6 +126,27 @@ class WeeklyOverviewTest extends TestCase
                 ->where('standard.2.time', '15:00')
                 ->where('standard.2.days.0.0.name', 'Mia')
                 ->where('standard.0.days.1', [])
+            );
+    }
+
+    public function test_the_standard_plan_carries_the_time_behind_a_bis_or_ab(): void
+    {
+        // The row is a half-hour bucket, so „Nora · bis" on its own says nothing —
+        // and 15:10 doesn't even sit in the row it names.
+        $nora = Child::factory()->create(['name' => 'Nora']);
+        $nora->weeklySchedules()->create([
+            'weekday' => 1,
+            'planned_time' => '15:10',
+            'method' => DepartureMethod::SentHome,
+            'time_qualifier' => TimeQualifier::By,
+        ]);
+
+        $this->actingAs(User::factory()->create(['role' => UserRole::Staff]))
+            ->get(route('standard-plan'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('standard.0.time', '15:00')
+                ->where('standard.0.days.0.0.time', '15:10')
+                ->where('standard.0.days.0.0.qualifier_prefix', TimeQualifier::By->prefix())
             );
     }
 

@@ -22,7 +22,8 @@ const tiles = computed(() => {
             href: board().url,
         },
         {
-            title: t('dashboard.excursions'),
+            // Parents land on „Ausflüge & Ferien" — the card says so too.
+            title: isStaff.value ? t('dashboard.excursions') : t('dashboard.excursions_parent'),
             text: isStaff.value
                 ? t('dashboard.excursions_text_staff')
                 : t('dashboard.excursions_text_parent'),

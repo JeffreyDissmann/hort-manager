@@ -11,11 +11,13 @@ return [
     'today_text_staff' => 'Who leaves when today? Check off pick-ups.',
     'today_text_parent' => 'Who leaves when today?',
 
+    // The card has to carry the same name as the tab it leads to.
     'excursions' => 'Excursions',
+    'excursions_parent' => 'Excursions & holidays',
     'excursions_text_staff' => 'Plan excursions and see responses.',
-    'excursions_text_parent' => 'Vote on excursions for your child.',
+    'excursions_text_parent' => 'Answer excursion polls and sign your child up for holiday care.',
 
-    'weekly_plan' => 'Pick-up plan',
+    'weekly_plan' => 'Weekly plan',
     'weekly_plan_text' => 'Pick-up times, lunch and activities for the week.',
 
     'program' => 'Program',

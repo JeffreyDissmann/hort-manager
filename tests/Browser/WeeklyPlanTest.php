@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Enums\DepartureMethod;
+use App\Enums\TimeQualifier;
 use App\Models\Child;
 use App\Models\DailyDeparture;
 use App\Models\User;
@@ -33,6 +35,27 @@ it('adjusts a day from the Wochenplan and resets it back to the Stammplan', func
         ->toBeFalse();
 });
 
+it('keeps 🚶 and the „ab" prefix on one line above the time', function () {
+    // The cell is a flex column, so the inline pieces need their own span — without
+    // it „🚶", „ab" and „16:00" each land on a line of their own, which is how this
+    // regressed once already.
+    $parent = User::factory()->parent()->create();
+    $child = Child::factory()
+        ->scheduledOn(boardWeekday(), '16:00', DepartureMethod::SentHome)
+        ->withGuardian($parent)
+        ->create(['name' => 'Nora']);
+
+    $child->weeklySchedules()->first()->update(['time_qualifier' => TimeQualifier::From]);
+    $date = boardDate()->toDateString();
+
+    $page = actAndVisit($parent, '/weekly-plan');
+    $prefix = $page->script(
+        "document.querySelector('[data-testid=\"wp-cell-{$child->id}-{$date}\"] span').textContent.trim()"
+    );
+
+    expect(preg_replace('/\s+/u', ' ', (string) $prefix))->toBe('🚶 ab');
+});
+
 it('links each weekday header to that day\'s board', function () {
     $staff = User::factory()->staff()->create();
     Child::factory()->scheduledOn(boardWeekday(), '15:00')->create(['name' => 'Nils']);
@@ -40,4 +63,15 @@ it('links each weekday header to that day\'s board', function () {
 
     actAndVisit($staff, '/weekly-plan')
         ->assertPresent("@wp-day-link-{$date}"); // the timetable header links to Heute for that date
+});
+
+it('does not nudge about a missing Stammplan while a child is being edited', function () {
+    $parent = User::factory()->parent()->create();
+    $unplanned = Child::factory()->withGuardian($parent)->create(['name' => 'Ohne Plan']);
+
+    // Everywhere else the nudge belongs …
+    actAndVisit($parent, '/children')->assertSee('Stammplan fehlt noch');
+
+    // … but not on the form that answers it.
+    actAndVisit($parent, "/children/{$unplanned->id}/edit")->assertDontSee('Stammplan fehlt noch');
 });

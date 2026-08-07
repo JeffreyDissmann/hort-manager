@@ -24,6 +24,9 @@ const locale = computed(() => usePage().props.locale || 'de');
 const picks = reactive({});
 const saving = ref(null);
 
+// Children whose answer is in but whose grid the user opened again, by `key()`.
+const reopened = reactive({});
+
 function key(periodId, childId) {
     return `${periodId}|${childId}`;
 }
@@ -89,14 +92,33 @@ function save(period, child) {
             // actually stored: a day it refused (already over, or closed since the page
             // loaded) would otherwise stay ticked and look registered. Only this child's
             // entry, so a sibling's unsaved ticks survive.
-            onSuccess: () => delete picks[k],
+            // …and fold the grid back up: the summary it leaves behind is the
+            // confirmation that the answer landed.
+            onSuccess: () => {
+                delete picks[k];
+                delete reopened[k];
+            },
             onFinish: () => (saving.value = null),
         },
     );
 }
 
+/** The days this child is signed up for — the whole answer, once it can't change. */
+function registeredDays(period, child) {
+    return period.days.filter((day) => day.children.includes(child.id));
+}
+
 function hasAnswered(period, child) {
     return period.answered.includes(child.id);
+}
+
+/**
+ * The days are only worth a grid while they're a question. An answered child (or a
+ * period past its deadline) shows the answer instead, until „Ändern" asks again —
+ * a family with three children was scrolling three full grids for nothing.
+ */
+function asksForAnAnswer(period, child) {
+    return editable(period) && (! hasAnswered(period, child) || reopened[key(period.id, child.id)]);
 }
 
 function dayLabel(date) {
@@ -149,15 +171,17 @@ function dateLabel(date) {
                 <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
                     <p class="font-medium text-ink">
                         {{ child.name }}
+                        <!-- „nicht beantwortet" is a nudge; once the deadline has
+                             passed there is nothing left to nudge towards. -->
                         <span
-                            v-if="!hasAnswered(period, child)"
+                            v-if="!hasAnswered(period, child) && editable(period)"
                             class="ml-1 text-xs font-normal text-hort-orange-dark"
                         >
                             · {{ $t('care.not_answered') }}
                         </span>
                     </p>
 
-                    <div v-if="editable(period)" class="flex gap-2">
+                    <div v-if="asksForAnAnswer(period, child)" class="flex gap-2">
                         <SecondaryButton @click="pickAll(period, child, true)">
                             {{ $t('care.all_days') }}
                         </SecondaryButton>
@@ -165,9 +189,30 @@ function dateLabel(date) {
                             {{ $t('care.no_days') }}
                         </SecondaryButton>
                     </div>
+
+                    <SecondaryButton
+                        v-else-if="editable(period)"
+                        :data-testid="`care-change-${period.id}-${child.id}`"
+                        @click="reopened[`${period.id}|${child.id}`] = true"
+                    >
+                        {{ $t('common.edit') }}
+                    </SecondaryButton>
                 </div>
 
-                <ul class="space-y-1">
+                <!-- The answer, not the question: either it's already given, or the
+                     deadline has passed and the grid would be dead checkboxes. -->
+                <p v-if="!asksForAnAnswer(period, child)" class="text-sm text-ink/70">
+                    <template v-if="registeredDays(period, child).length">
+                        {{
+                            $t('care.registered_for', {
+                                days: registeredDays(period, child).map((d) => dayLabel(d.date)).join(', '),
+                            })
+                        }}
+                    </template>
+                    <template v-else>{{ $t('care.registered_none') }}</template>
+                </p>
+
+                <ul v-else class="space-y-1">
                     <li
                         v-for="day in period.days"
                         :key="day.id"
@@ -196,7 +241,7 @@ function dateLabel(date) {
                     </li>
                 </ul>
 
-                <div v-if="editable(period)" class="mt-2 flex justify-end">
+                <div v-if="asksForAnAnswer(period, child)" class="mt-2 flex justify-end">
                     <PrimaryButton
                         :data-testid="`care-save-${period.id}-${child.id}`"
                         :disabled="saving === `${period.id}|${child.id}`"

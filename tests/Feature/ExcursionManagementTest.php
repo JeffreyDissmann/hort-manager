@@ -168,12 +168,14 @@ class ExcursionManagementTest extends TestCase
         $pendingChild = Child::factory()->create();
         $pendingGuardian = User::factory()->create(['role' => UserRole::Parent, 'slack_id' => 'U1']);
         $pendingChild->guardians()->attach($pendingGuardian);
-        $excursion->children()->attach($pendingChild->id); // response stays null
+        // The observer already invited them (a new child joins upcoming trips);
+        // syncWithoutDetaching keeps the test explicit without duplicating the row.
+        $excursion->children()->syncWithoutDetaching([$pendingChild->id]); // response stays null
 
         $answeredChild = Child::factory()->create();
         $answeredGuardian = User::factory()->create(['role' => UserRole::Parent, 'slack_id' => 'U2']);
         $answeredChild->guardians()->attach($answeredGuardian);
-        $excursion->children()->attach($answeredChild->id, ['response' => true]);
+        $excursion->children()->syncWithoutDetaching([$answeredChild->id => ['response' => true]]);
 
         $this->artisan('excursions:remind-rsvps')->assertSuccessful();
 
@@ -192,7 +194,7 @@ class ExcursionManagementTest extends TestCase
         $guardian = User::factory()->create(['role' => UserRole::Parent, 'slack_id' => null]);
         $guardian->updatePushSubscription('https://push.example/g', 'k', 'a');
         $child->guardians()->attach($guardian);
-        $excursion->children()->attach($child->id); // response stays null
+        $excursion->children()->syncWithoutDetaching([$child->id]); // response stays null
 
         $this->artisan('excursions:remind-rsvps')->assertSuccessful();
 
@@ -368,9 +370,11 @@ class ExcursionManagementTest extends TestCase
         $declined = Child::factory()->create(['name' => 'Anna']);
         $joining = Child::factory()->create(['name' => 'Zoe']);
         $pending = Child::factory()->create(['name' => 'Mia']);
-        $excursion->children()->attach($declined->id, ['response' => false]);
-        $excursion->children()->attach($joining->id, ['response' => true]);
-        $excursion->children()->attach($pending->id); // null → undecided
+        $excursion->children()->syncWithoutDetaching([
+            $declined->id => ['response' => false],
+            $joining->id => ['response' => true],
+            $pending->id => [], // null → undecided
+        ]);
 
         $this->actingAs($this->staff())
             ->get(route('excursions.index'))
@@ -385,7 +389,7 @@ class ExcursionManagementTest extends TestCase
     {
         $excursion = Excursion::factory()->create();
         $child = Child::factory()->create();
-        $excursion->children()->attach($child->id);
+        $excursion->children()->syncWithoutDetaching([$child->id]);
 
         $this->actingAs($this->staff())
             ->delete(route('excursions.destroy', $excursion))

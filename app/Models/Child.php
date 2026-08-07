@@ -115,14 +115,25 @@ class Child extends Model
     }
 
     /**
-     * Children whose Stammplan hasn't been set up yet (no weekday entries at all),
-     * so their Wochenplan is still empty.
+     * „Hat einen Stammplan" means: at least one weekday says when the child goes
+     * home. Rows without a time are „Hortfrei" entries and answer nothing — a child
+     * with only those has still not been planned. One definition, because the banner,
+     * the reminder and every „hortfrei vs. kein Plan" decision have to agree.
+     */
+    public function hasStandardPlan(): bool
+    {
+        return $this->weeklySchedules->whereNotNull('planned_time')->isNotEmpty();
+    }
+
+    /**
+     * The query-side counterpart of {@see self::hasStandardPlan()}: children whose
+     * Stammplan hasn't been set up yet, so their Wochenplan is still empty.
      *
      * @param  Builder<Child>  $query
      */
     public function scopeWithoutSchedule(Builder $query): void
     {
-        $query->whereDoesntHave('weeklySchedules');
+        $query->whereDoesntHave('weeklySchedules', fn ($q) => $q->whereNotNull('planned_time'));
     }
 
     /** @return HasMany<Absence, $this> */

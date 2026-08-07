@@ -41,6 +41,14 @@ it('labels both sections for staff who are a guardian themselves', function () {
         ->assertSee('Späte Änderungen');
 });
 
+it('says over the Slack column why it is switched off', function () {
+    // Without a linked account every Slack toggle is dead. The note under the
+    // table is a scroll away for staff, who get two sections above it.
+    $parent = User::factory()->parent()->create(['slack_id' => null]);
+
+    actAndVisit($parent, '/notifications')->assertSee('nicht verknüpft');
+});
+
 it('links the late-change toggle to its cutoff on the program page', function () {
     Setting::set(Setting::LateChangeCutoff, '13:15');
     $staff = User::factory()->staff()->create();

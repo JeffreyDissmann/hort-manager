@@ -46,6 +46,26 @@ class MissingScheduleReminderTest extends TestCase
             );
     }
 
+    public function test_only_hortfrei_rows_are_still_no_plan(): void
+    {
+        // A weekday row without a time says „hortfrei" — it answers when the child is
+        // *not* there, never when they go home. One definition for the banner, the
+        // reminder and the Wochenplan cells (Child::hasStandardPlan()).
+        $parent = User::factory()->create(['role' => UserRole::Parent]);
+        $child = Child::factory()->create(['name' => 'Nur Hortfrei']);
+        $child->weeklySchedules()->create(['weekday' => 1, 'planned_time' => null, 'method' => null]);
+        $parent->children()->attach($child);
+
+        $this->assertFalse($child->fresh()->hasStandardPlan());
+        $this->assertTrue(Child::withoutSchedule()->whereKey($child->id)->exists());
+
+        $this->actingAs($parent)
+            ->get(route('children.index'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('childrenWithoutPlan', fn ($list) => collect($list)->pluck('name')->all() === ['Nur Hortfrei'])
+            );
+    }
+
     public function test_staff_get_no_such_banner(): void
     {
         Child::factory()->create(); // unplanned, but staff manage everyone

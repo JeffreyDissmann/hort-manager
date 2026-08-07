@@ -11,11 +11,13 @@ return [
     'today_text_staff' => 'Wer geht heute wann? Abholungen abhaken.',
     'today_text_parent' => 'Wer geht heute wann?',
 
+    // The card has to carry the same name as the tab it leads to.
     'excursions' => 'Ausflüge',
+    'excursions_parent' => 'Ausflüge & Ferien',
     'excursions_text_staff' => 'Ausflüge planen und Rückmeldungen sehen.',
-    'excursions_text_parent' => 'Für Ausflüge deines Kindes abstimmen.',
+    'excursions_text_parent' => 'Für Ausflüge abstimmen und dein Kind für die Ferienbetreuung anmelden.',
 
-    'weekly_plan' => 'Abholplan',
+    'weekly_plan' => 'Wochenplan',
     'weekly_plan_text' => 'Abholzeiten, Essen und Aktivitäten der Woche.',
 
     'program' => 'Programm',

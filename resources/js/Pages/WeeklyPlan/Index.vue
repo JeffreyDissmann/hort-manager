@@ -1,5 +1,6 @@
 <script setup>
 import { weeklyPlan, standardPlan } from '@/routes';
+import { index as pollsIndex } from '@/routes/polls';
 import { confirm as companionConfirm } from '@/routes/companion';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import DayEditor from '@/Components/DayEditor.vue';
@@ -80,6 +81,12 @@ const weekCare = computed(() => [
     ...new Set(props.weekDays.map((d) => props.careDays[d.date]).filter(Boolean)),
 ]);
 
+// Whether a Ferienbetreuung of this week still takes answers — then the banner
+// offers the way to the sign-up (also for a family that wants to change theirs).
+const careSignupOpen = computed(() =>
+    props.currentWeek.some((child) => child.days.some((day) => day.care?.open)),
+);
+
 // Most periods are simply called „Ferienbetreuung", and „Ferienbetreuung:
 // Ferienbetreuung" reads like a bug. Name them only when the name says more.
 const weekCareNames = computed(() =>
@@ -152,7 +159,17 @@ function planClass(day) {
 // so it renders smaller and is allowed to wrap.
 const STATE_LABEL = 'text-[10px] font-medium leading-tight';
 
-function cellUi(day) {
+/** „2. August" — for the „Anmeldeschluss war am …" hint. */
+function dayMonth(date) {
+    return date
+        ? new Date(`${date}T00:00:00`).toLocaleDateString(usePage().props.locale || 'de', {
+              day: 'numeric',
+              month: 'long',
+          })
+        : '';
+}
+
+function cellUi(day, hasPlan = true) {
     if (day.closed) {
         return {
             // Short form: „Geschlossen" doesn't fit a fifth of a phone screen, and the
@@ -167,12 +184,15 @@ function cellUi(day) {
     }
 
     // Ferienbetreuung: not signed up is its own state — the child isn't „frei" that
-    // day, they simply aren't coming, and signing up happens on /care.
+    // day, they simply aren't coming. There is nothing to edit here; while the
+    // Anmeldung runs the cell offers the way to it instead.
     if (day.care && !day.care.registered) {
         return {
             label: t('weekly.care_not_registered'),
             labelClass: STATE_LABEL,
-            title: t('weekly.care_not_registered_title'),
+            title: day.care.open
+                ? t('weekly.care_not_registered_title')
+                : t('weekly.care_signup_closed', { date: dayMonth(day.care.deadline) }),
             class: 'bg-ink/5 text-ink/40 ring-1 ring-inset ring-ink/10',
             time: false,
             extras: false,
@@ -190,6 +210,19 @@ function cellUi(day) {
         };
     }
 
+    // A child whose Stammplan is empty isn't „hortfrei" on every day — nobody has
+    // said yet when they go home. The banner above offers to enter it.
+    if (!day.time && !hasPlan) {
+        return {
+            label: t('weekly.no_plan'),
+            labelClass: STATE_LABEL,
+            title: t('weekly.no_plan_title'),
+            class: 'bg-ink/5 text-ink/40 ring-1 ring-inset ring-ink/10',
+            time: false,
+            extras: false,
+        };
+    }
+
     return {
         label: day.time ?? t('weekly.free'),
         labelClass: 'text-sm font-semibold',
@@ -204,7 +237,7 @@ function cellUi(day) {
 const decoratedWeek = computed(() =>
     props.currentWeek.map((child) => ({
         ...child,
-        days: child.days.map((day) => ({ ...day, ui: cellUi(day) })),
+        days: child.days.map((day) => ({ ...day, ui: cellUi(day, child.has_plan) })),
     })),
 );
 
@@ -281,6 +314,16 @@ function answerCompanion(id, confirmed) {
                             ? $t('weekly.care_week', { names: weekCareNames.join(', ') })
                             : $t('weekly.care_week_plain')
                     }}
+                    <!-- Signing up is a fact about the week, not about one row — one
+                         link here beats one per child (or, worse, one per cell). -->
+                    <Link
+                        v-if="careSignupOpen"
+                        :href="pollsIndex().url"
+                        data-testid="wp-care-signup"
+                        class="ml-1 whitespace-nowrap font-medium text-hort-teal-dark underline-offset-2 hover:underline"
+                    >
+                        {{ $t('weekly.care_signup_link') }} →
+                    </Link>
                 </p>
 
                 <!-- Parents see + edit their own children; staff use the timeline below. -->
@@ -297,8 +340,10 @@ function answerCompanion(id, confirmed) {
                             <p class="font-semibold text-ink">
                                 {{ child.name }}
                             </p>
+                            <!-- Only promise a tap when some day of the week takes one:
+                                 a week nobody is signed up for has nothing to edit. -->
                             <span
-                                v-if="child.can_manage"
+                                v-if="child.can_manage && child.days.some((d) => d.editable)"
                                 class="text-xs text-ink/40"
                             >
                                 {{ $t('weekly.tap_to_change') }}
@@ -333,7 +378,7 @@ function answerCompanion(id, confirmed) {
                                     :is="day.editable ? 'button' : 'div'"
                                     type="button"
                                     :data-testid="`wp-cell-${child.id}-${day.date}`"
-                                    class="relative mt-1 flex w-full grow flex-col justify-center overflow-hidden break-words rounded-lg px-0.5 py-2"
+                                    class="relative mt-1 flex w-full grow flex-col justify-center overflow-hidden break-words rounded-lg px-0.5 py-1.5"
                                     :class="[
                                         day.ui.class,
                                         day.ui.labelClass,
@@ -342,7 +387,15 @@ function answerCompanion(id, confirmed) {
                                     :title="day.ui.title"
                                     @click="openCell(child, day, weekDays[i])"
                                 >
-                                    <template v-if="day.ui.time"><span v-if="day.method === 'sent_home'">🚶&nbsp;</span><span v-if="timePrefix(day.method, day.qualifier)">{{ timePrefix(day.method, day.qualifier) }}&nbsp;</span></template>{{ day.ui.label }}
+                                    <!-- „🚶 ab" on one line, the time under it: the cell is
+                                         a flex column, so these have to share a span. -->
+                                    <span
+                                        v-if="day.ui.time && (day.method === 'sent_home' || timePrefix(day.method, day.qualifier))"
+                                        class="block text-[11px] font-medium leading-none"
+                                    >
+                                        <template v-if="day.method === 'sent_home'">🚶</template><template v-if="timePrefix(day.method, day.qualifier)">&nbsp;{{ timePrefix(day.method, day.qualifier) }}</template>
+                                    </span>
+                                    {{ day.ui.label }}
                                     <span
                                         v-if="day.companion && day.ui.extras"
                                         class="mt-0.5 block truncate text-[10px] font-normal leading-tight"

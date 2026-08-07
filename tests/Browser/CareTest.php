@@ -86,6 +86,9 @@ it('lets a parent tick the days their child will come', function () {
         ->click("@care-pick-{$child->id}-{$monday->id}")
         ->click("@care-save-{$period->id}-{$child->id}")
         ->assertDontSee('noch nicht beantwortet')
+        // Answered: the grid folds up and the summary confirms what landed.
+        ->assertSee('Angemeldet:')
+        ->click("@care-change-{$period->id}-{$child->id}")
         // The saved day stays ticked — the boxes re-seed from the server, so an
         // empty box here would tell the family they aren't registered.
         ->assertChecked("@care-pick-{$child->id}-{$monday->id}")
@@ -112,6 +115,32 @@ it('opens a Ferienbetreuung from the list to set it up', function () {
         ->assertSee('Wer ist angemeldet?')
         ->assertSee('Mia')
         ->assertPathIs("/closures/{$period->id}/edit");
+});
+
+it('sends an unregistered care day to the sign-up instead of an editor', function () {
+    $parent = User::factory()->parent()->create();
+    $child = Child::factory()->withGuardian($parent)->create(['name' => 'Mia']);
+
+    // A Ferienbetreuung covering today, which Mia is not signed up for.
+    $today = Carbon::today();
+    $period = HolidayPeriod::factory()->care()->create([
+        'name' => 'Sommer-Ferienbetreuung',
+        'starts_on' => $today->toDateString(),
+        'ends_on' => $today->copy()->addDays(2)->toDateString(),
+        'registration_deadline' => $today->copy()->addDay()->toDateString(),
+    ]);
+    $period->generateCareDays();
+
+    $page = actAndVisit($parent, '/weekly-plan');
+    $page->script("document.querySelectorAll('dialog[open]').forEach((d) => d.close())");
+
+    $page->assertSee('Nicht angemeldet')
+        // Tapping the cell must not open the day editor — there is nothing to plan.
+        ->click("@wp-cell-{$child->id}-{$today->toDateString()}")
+        ->assertMissing('@save');
+
+    // The way out is one link in the week's banner, not one per row or per cell.
+    $page->click('@wp-care-signup')->assertPathIs('/polls');
 });
 
 it('puts trips and Ferienbetreuung on one page for parents', function () {
@@ -164,10 +193,29 @@ it('locks the sign-up once the Anmeldeschluss has passed', function () {
 
     actAndVisit($parent, '/polls')
         ->assertSee('Anmeldeschluss war am')
-        // No save button and no tickable days once the window has closed.
+        // The sheet collapses to its result: a grid of dead checkboxes and a save
+        // button that cannot save are only scrolling.
         ->assertMissing("@care-save-{$period->id}-{$child->id}")
-        ->assertPresent("@care-pick-{$child->id}-{$firstDay->id}")
-        ->assertDisabled("@care-pick-{$child->id}-{$firstDay->id}");
+        ->assertMissing("@care-pick-{$child->id}-{$firstDay->id}")
+        ->assertSee('Nicht angemeldet');
+});
+
+it('names the booked days once the sign-up is closed', function () {
+    $parent = User::factory()->parent()->create();
+    $child = Child::factory()->create(['name' => 'Mia']);
+    $parent->children()->attach($child);
+
+    $period = carePeriod(deadline: Carbon::yesterday()->toDateString());
+    $day = $period->careDays()->orderBy('date')->first();
+    DailyDeparture::create([
+        'child_id' => $child->id,
+        'date' => $day->date->toDateString(),
+        'holiday_care_day_id' => $day->id,
+        'planned_time' => $day->ends_at,
+    ]);
+
+    // What the family still needs from a closed period is which days they hold.
+    actAndVisit($parent, '/polls')->assertSee('Angemeldet:');
 });
 
 it('lets staff sign a child up even after the deadline', function () {
@@ -187,4 +235,28 @@ it('lets staff sign a child up even after the deadline', function () {
 
     expect(DailyDeparture::whereDate('date', $monday->date)->where('child_id', $child->id)->exists())
         ->toBeTrue();
+});
+
+it('does not nudge on the page the nudge points at', function () {
+    $parent = User::factory()->parent()->create();
+    $child = Child::factory()->create(['name' => 'Mia']);
+    $parent->children()->attach($child);
+    carePeriod();
+
+    // On „Ausflüge & Ferien" the sheet itself asks the question, per child.
+    actAndVisit($parent, '/polls')->assertMissing('@care-reminder');
+
+    // …while everywhere else the banner still does its job.
+    actAndVisit($parent, '/board')->assertPresent('@care-reminder');
+});
+
+it('shows the open-answers count in the desktop navigation too', function () {
+    $parent = User::factory()->parent()->create();
+    $child = Child::factory()->create(['name' => 'Mia']);
+    $parent->children()->attach($child);
+    carePeriod();
+
+    // Wide enough for the top bar rather than the mobile tab bar.
+    $page = actAndVisit($parent, '/board');
+    $page->resize(1280, 900)->assertPresent('@nav-badge-map');
 });

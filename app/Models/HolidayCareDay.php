@@ -99,7 +99,9 @@ class HolidayCareDay extends Model
     public static function betweenKeyed(Carbon|string $from, Carbon|string $to): Collection
     {
         return static::query()
-            ->with('period:id,name')
+            // The deadline travels with the day: the Wochenplan tells an unregistered
+            // family whether signing up is still possible.
+            ->with('period:id,name,registration_deadline')
             ->whereBetween('date', [
                 $from instanceof Carbon ? $from->toDateString() : $from,
                 $to instanceof Carbon ? $to->toDateString() : $to,

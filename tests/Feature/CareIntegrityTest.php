@@ -234,6 +234,19 @@ class CareIntegrityTest extends TestCase
         $this->assertDatabaseMissing('daily_departures', ['date' => '2026-08-07']);
     }
 
+    public function test_moving_the_range_drops_its_old_days_on_any_path(): void
+    {
+        // Not only through the edit form: a period moved from a seeder or tinker used
+        // to keep the days of its old range, which then showed up on the sign-up sheet
+        // as offered days of dates the period no longer covers.
+        $this->signUp('2026-08-07');
+
+        $this->period->update(['starts_on' => '2026-08-10', 'ends_on' => '2026-08-12']);
+
+        $this->assertSame(0, $this->period->careDays()->withTrashed()->whereDate('date', '<', '2026-08-10')->count());
+        $this->assertDatabaseMissing('daily_departures', ['date' => '2026-08-07']);
+    }
+
     public function test_a_day_already_lived_through_keeps_its_history(): void
     {
         $departed = $this->signUp('2026-08-05');
@@ -482,18 +495,20 @@ class CareIntegrityTest extends TestCase
         Notification::assertSentTo($this->staff, LateChange::class);
     }
 
-    public function test_an_excursion_may_be_planned_on_a_care_day(): void
+    public function test_an_excursion_cannot_be_planned_on_a_care_day(): void
     {
-        // Only a Schließzeit blocks a trip — Ferienbetreuung is when they happen most.
+        // Everyone who is there that day is there all day, so an outing takes the whole
+        // group — there is nobody to invite and nothing to answer. It belongs in the
+        // Tagesprogramm as the day's Aktivität, which the error says.
         $this->actingAs($this->staff)
             ->post(route('excursions.store'), [
                 'name' => 'Zoo',
                 'date' => '2026-08-05',
                 'rsvp_deadline' => '2026-08-04',
             ])
-            ->assertRedirect();
+            ->assertSessionHasErrors('date');
 
-        $this->assertDatabaseHas('excursions', ['name' => 'Zoo']);
+        $this->assertDatabaseMissing('excursions', ['name' => 'Zoo']);
     }
 
     public function test_a_closure_on_the_same_day_wins_everywhere(): void

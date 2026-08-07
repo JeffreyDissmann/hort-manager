@@ -255,7 +255,8 @@ return [
             'Tapping <strong>Open</strong> takes you to the period itself — the days it offers and who is signed up, the way an excursion carries its answers.',
             'For holiday care every weekday of the period is offered with the default care window (set under „Programm“). You can adjust the times per day, take a day out entirely – and offer it again later.',
             'The <strong>registration deadline</strong> belongs to the period. Until then parents sign up themselves; after it you enter days on the period’s page — for any child.',
-            'A closure beats holiday care: if both fall on the same day, the Hort is shut. An excursion inside the period has to be moved or cancelled first.',
+            'A closure beats holiday care: if both fall on the same day, the Hort is shut.',
+            'There are no <strong>excursions</strong> as a separate poll inside a holiday period – every registered child is there all day anyway, so an outing takes the whole group. Enter it as the day’s <strong>activity</strong> under Programm. If a trip already falls inside the range, move or cancel it first.',
         ],
 
         'notifications_title' => 'What you get sent yourselves',

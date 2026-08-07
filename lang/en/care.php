@@ -9,10 +9,13 @@ return [
     'deadline_open' => 'Registration open until :date',
     'deadline_passed' => 'Registration closed on :date',
     'no_deadline' => 'No deadline',
+    'times_vary' => 'Times differ per day',
     'generates_days' => 'A care day is created for every weekday in the range (:start–:end). Times and activity can be changed per day afterwards.',
 
     'none' => 'No holiday care is planned at the moment.',
     'not_answered' => 'not answered yet',
+    'registered_for' => 'Signed up for: :days',
+    'registered_none' => 'Not signed up',
     'how_it_works' => 'How does this work?',
     'days_heading' => 'Offered days',
     'days_intro' => 'The care window applies to every registered child. Lunch and activity are entered under Programm.',

@@ -28,6 +28,7 @@ return [
     'ascii' => 'The :attribute field must only contain single-byte alphanumeric characters and symbols.',
     'before' => 'The :attribute field must be a date before :date.',
     'closed_day' => 'The Hort is closed on this day (:name).',
+    'care_day' => 'Holiday care runs on this day (:name) – every registered child is there anyway. Enter the outing as the day’s activity under Programm.',
     'excursion_in_range' => 'An excursion falls in this range (:names). Please move or cancel it first.',
     'before_or_equal' => 'The :attribute field must be a date before or equal to :date.',
     'between' => [

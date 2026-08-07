@@ -255,7 +255,8 @@ return [
             'Ein Tipp auf <strong>Öffnen</strong> bringt dich zum Zeitraum selbst – dort stehen die angebotenen Tage und die Anmeldungen, so wie ein Ausflug seine Antworten bei sich hat.',
             'Bei einer Ferienbetreuung wird jeder Werktag des Zeitraums mit der Standard-Betreuungszeit angeboten (einstellbar unter „Programm“). Du kannst die Zeiten pro Tag anpassen oder einen Tag ganz herausnehmen – und ihn später wieder anbieten.',
             'Der <strong>Anmeldeschluss</strong> gehört zum Zeitraum. Bis dahin melden Eltern selbst an; danach trägst du auf der Seite des Zeitraums ein – für jedes Kind.',
-            'Eine Schließzeit sticht eine Ferienbetreuung: liegt beides auf demselben Tag, ist der Hort zu. Ein Ausflug im Zeitraum muss vorher verschoben oder abgesagt werden.',
+            'Eine Schließzeit sticht eine Ferienbetreuung: liegt beides auf demselben Tag, ist der Hort zu.',
+            'In einem Ferien-Zeitraum gibt es keine <strong>Ausflüge</strong> als eigene Abstimmung – in den Ferien sind ohnehin alle angemeldeten Kinder den ganzen Tag da, ein Ausflug nimmt also die ganze Gruppe mit. Trag ihn einfach als <strong>Aktivität</strong> im Tagesprogramm ein. Liegt schon ein Ausflug im Zeitraum, verschieb oder sag ihn vorher ab.',
         ],
 
         'notifications_title' => 'Was ihr selbst geschickt bekommt',

@@ -43,6 +43,10 @@ return [
     'care_short' => 'Ferienbetreuung',
     'care_not_registered' => 'Nicht angemeldet',
     'care_not_registered_title' => 'Für diesen Ferienbetreuungstag ist das Kind nicht angemeldet.',
+    'no_plan' => 'Kein Stammplan',
+    'no_plan_title' => 'Für dieses Kind ist noch kein Stammplan hinterlegt – trag oben ein, wann es nach Hause geht.',
+    'care_signup_link' => 'Zur Anmeldung',
+    'care_signup_closed' => 'Nicht angemeldet – der Anmeldeschluss war am :date.',
     'care_week' => 'In dieser Woche gibt es Ferienbetreuung: :names. Nur angemeldete Kinder sind da.',
     'care_week_plain' => 'In dieser Woche gibt es Ferienbetreuung. Nur angemeldete Kinder sind da.',
     'closed_week' => 'In dieser Woche ist der Hort teilweise geschlossen: :names.',
@@ -52,7 +56,6 @@ return [
     'absence_needs_comment' => 'Bitte unten kurz einen Grund angeben und speichern.',
     'reason_label' => 'Grund (Pflicht)',
     'reason_placeholder' => 'z. B. Urlaub, Fieber',
-    'reason_hint' => 'Bitte kurz einen Grund angeben.',
     'not_coming_heading' => 'Diese Woche nicht da',
 
     // „Geht mit einem anderen Kind mit"
@@ -77,7 +80,7 @@ return [
 
     'reported_as' => 'Als „:label“ gemeldet.',
     'cancel_absence' => 'Abwesenheit aufheben',
-    'not_here_today' => 'Kind ist heute nicht da?',
+    'not_here' => 'Kind kommt an diesem Tag nicht?',
     'report_sick' => 'Krank melden',
     'report_away' => 'Kommt nicht',
     'reset_to_standard' => 'Auf Standard',

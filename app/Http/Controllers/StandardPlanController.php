@@ -57,6 +57,9 @@ class StandardPlanController extends Controller
                         'id' => $s->child->id,
                         'name' => $s->child->name,
                         'method' => $s->method?->value,
+                        // The row is a half-hour bucket, so „bis" needs the child's own
+                        // time next to it — „Ben · bis" alone says nothing.
+                        'time' => substr((string) $s->planned_time, 0, 5),
                         // „geht allein" bis/ab label; the default „genau um" stays implicit.
                         'qualifier_prefix' => $s->method === DepartureMethod::SentHome
                             && $s->time_qualifier && $s->time_qualifier !== TimeQualifier::At
