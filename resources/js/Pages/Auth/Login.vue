@@ -9,7 +9,7 @@ import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { computed, nextTick, ref } from 'vue';
 
 defineProps({
     canResetPassword: {
@@ -21,6 +21,31 @@ defineProps({
 });
 
 const slackError = computed(() => usePage().props.errors?.slack);
+
+// Folded away: someone who already has an account should meet the two fields, not
+// a wall of onboarding text.
+const showFirstSteps = ref(false);
+const firstSteps = ref(null);
+
+/**
+ * The panel opens below the fold on a phone, so unfolding it looks like nothing
+ * happened. Scroll it into view — but only on opening, and not against a reader who
+ * asked for less motion.
+ */
+async function toggleFirstSteps() {
+    showFirstSteps.value = !showFirstSteps.value;
+
+    if (! showFirstSteps.value) {
+        return;
+    }
+
+    await nextTick();
+
+    firstSteps.value?.scrollIntoView({
+        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+        block: 'nearest',
+    });
+}
 
 const form = useForm({
     email: '',
@@ -135,11 +160,53 @@ const submit = () => {
             </div>
         </form>
 
-        <p class="mt-6 text-center text-sm text-ink/70">
-            {{ $t('login.new_here') }}
-            <Link :href="help().url" class="font-medium text-hort-teal-dark underline hover:text-ink">
-                {{ $t('login.how_it_works') }}
-            </Link>
-        </p>
+        <!-- First-time parents arrive after the holidays and have no account yet.
+             Both ways in are explained here rather than on the help page, because
+             this is the screen they are stuck on. -->
+        <div class="mt-6 border-t border-ink/10 pt-4">
+            <button
+                type="button"
+                data-testid="new-here"
+                class="flex w-full items-center justify-center gap-2 rounded-xl bg-hort-teal/20 px-4 py-3 text-base font-semibold text-ink transition hover:bg-hort-teal/30 focus:outline-none focus:ring-2 focus:ring-hort-teal focus:ring-offset-2"
+                :aria-expanded="showFirstSteps"
+                @click="toggleFirstSteps"
+            >
+                <span aria-hidden="true">👋</span>
+                {{ $t('login.first_time_here') }}
+                <span class="text-ink/50" aria-hidden="true">{{ showFirstSteps ? '▾' : '▸' }}</span>
+            </button>
+
+            <div
+                v-if="showFirstSteps"
+                ref="firstSteps"
+                data-testid="new-here-panel"
+                class="mt-3 space-y-3 text-sm text-ink/70"
+            >
+                <div>
+                    <p class="font-semibold text-ink">{{ $t('login.first_slack_title') }}</p>
+                    <p class="mt-0.5" v-html="$t('login.first_slack_text')" />
+                </div>
+                <!-- The trap: someone who isn't in the Slack keeps retrying that button
+                     instead of taking the other way in. Say so between the two steps. -->
+                <p
+                    class="rounded-lg bg-hort-orange/10 px-3 py-2 text-hort-orange-dark"
+                    v-html="$t('login.first_slack_fallback')"
+                />
+                <div>
+                    <p class="font-semibold text-ink">{{ $t('login.first_password_title') }}</p>
+                    <!-- The link's styling lives here, not in the lang file. -->
+                    <p
+                        class="mt-0.5 [&_a]:text-hort-teal-dark [&_a]:underline [&_a]:underline-offset-2 [&_a:hover]:text-ink"
+                        v-html="$t('login.first_password_text', { url: passwordRequest().url })"
+                    />
+                </div>
+                <p class="text-ink/50">{{ $t('login.first_stuck') }}</p>
+                <p>
+                    <Link :href="help().url" class="font-medium text-hort-teal-dark underline hover:text-ink">
+                        {{ $t('login.how_it_works') }}
+                    </Link>
+                </p>
+            </div>
+        </div>
     </GuestLayout>
 </template>

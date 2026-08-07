@@ -48,3 +48,20 @@ it('greets a shut Hort with the holiday screen', function () {
         ->assertSee($next->translatedFormat('l, j. F'))
         ->assertSee('ganz normaler Hort-Tag');
 });
+
+it('explains both ways in to a first-time parent', function () {
+    // Folded away by default — someone who has an account wants the two fields.
+    visit('/login')
+        ->assertDontSee('Mit Slack anmelden. Du brauchst kein eigenes Passwort')
+        ->assertMissing('@new-here-panel')
+        ->click('@new-here')
+        ->assertPresent('@new-here-panel')
+        ->assertSee('Mit Slack anmelden')
+        // The bridge to the second way in, for anyone not in the Hort's Slack.
+        ->assertSee('Klappt das nicht?')
+        ->assertSee('erstes Passwort setzen')
+        ->assertSee('melde dich kurz beim Hort-Team')
+        // „Passwort vergessen?" in the text is the way there, so it is clickable.
+        ->click('[data-testid="new-here-panel"] a[href$="/forgot-password"]')
+        ->assertPathIs('/forgot-password');
+});
