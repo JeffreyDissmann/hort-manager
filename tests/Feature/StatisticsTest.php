@@ -89,6 +89,30 @@ class StatisticsTest extends TestCase
             ]));
     }
 
+    public function test_actual_times_read_when_the_child_was_marked_off(): void
+    {
+        // Planned 15:00, actually gone at 15:41 — and a day nobody marked off at all.
+        $this->departure('2026-07-20', '15:00')->update(['left_at' => '2026-07-20 15:41:00']);
+        $this->departure('2026-07-21', '15:00');
+
+        $admin = User::factory()->staff()->admin()->create();
+
+        $this->actingAs($admin)
+            ->get(route('statistics', ['basis' => 'actual']))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('basis', 'actual')
+                // Only the marked-off day counts, in its real slot — an unmarked day is
+                // not quietly filled in with its plan.
+                ->where('pickupTimes', [['time' => '15:30', 'count' => 1, 'remaining' => 0]]));
+
+        // The plan reading still sees both days, unchanged.
+        $this->actingAs($admin)
+            ->get(route('statistics'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('basis', 'planned')
+                ->where('pickupTimes', [['time' => '15:00', 'count' => 2, 'remaining' => 0]]));
+    }
+
     public function test_it_keeps_sick_and_away_apart_per_month(): void
     {
         foreach ([['2026-07-06', AbsenceReason::Sick], ['2026-07-07', AbsenceReason::Sick], ['2026-07-08', AbsenceReason::Away]] as [$date, $reason]) {

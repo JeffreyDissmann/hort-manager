@@ -17,9 +17,10 @@ class HortStatistics
 {
     /**
      * How the pickup times of a period are distributed, in the same half-hour slots the
-     * Wochenplan uses. Counted by the *planned* time rather than by `left_at`: a plan
-     * exists for every day including the ones nobody got round to marking off, and it
-     * is the number the Hort staffs against.
+     * Wochenplan uses. Two readings, because they answer different questions: the
+     * *planned* time exists for every day and is what the Hort staffs against, while
+     * the *actual* `left_at` is what happened — and only for the days someone marked
+     * off, which is why the two can't be mixed into one series.
      *
      * A day a child was reported away is not a pickup, so it gets its own bucket at the
      * far left (`time` = null) rather than being dropped: those children left before
@@ -31,21 +32,29 @@ class HortStatistics
      *
      * @return list<array{time: string|null, count: int, remaining: float}>
      */
-    public static function pickupTimes(Carbon $from, Carbon $to): array
+    public static function pickupTimes(Carbon $from, Carbon $to, string $basis = 'planned'): array
     {
+        // „actual" reads `left_at` — when staff really marked the child off. Only days
+        // that were marked can count, so a day nobody got round to is left out rather
+        // than silently filled in with its plan.
+        $actual = $basis === 'actual';
+        $column = $actual ? 'left_at' : 'planned_time';
+
         $rows = DailyDeparture::query()
             ->whereBetween('date', [$from->toDateString(), $to->toDateString()])
-            ->whereNotNull('planned_time')
+            ->whereNotNull($column)
             ->whereNotExists(fn ($q) => $q->selectRaw(1)
                 ->from('absences')
                 ->whereColumn('absences.child_id', 'daily_departures.child_id')
                 ->whereColumn('absences.date', 'daily_departures.date'))
-            ->get(['planned_time']);
+            ->get([$column]);
 
         $slots = [];
 
         foreach ($rows as $row) {
-            $slot = self::slot((string) $row->planned_time);
+            // `left_at` is a timestamp, `planned_time` a time — both reduce to „HH:MM".
+            $time = $actual ? $row->left_at->format('H:i') : (string) $row->planned_time;
+            $slot = self::slot($time);
             $slots[$slot] = ($slots[$slot] ?? 0) + 1;
         }
 

@@ -22,6 +22,11 @@ return [
 
     'pickup_times_title' => 'Wann die Kinder gehen',
     'pickup_times_intro' => 'Geplante Abholzeiten in halben Stunden – also die Zeiten, für die der Hort besetzt sein muss. Ganz links die Tage, an denen ein Kind krank oder abgemeldet war. Die Linie zeigt, wie viel Prozent nach dieser Uhrzeit noch da sind.',
+    'pickup_times_intro_actual' => 'Tatsächliche Zeiten – wann die Kinder wirklich abgemeldet wurden. Tage, an denen niemand abgemeldet hat, fehlen hier; dafür steht ganz links wieder, wer gar nicht da war.',
+    'basis' => [
+        'planned' => 'geplant',
+        'actual' => 'tatsächlich',
+    ],
     'pickup_absent' => 'gar nicht da',
     'pickup_remaining' => 'noch da',
 ];

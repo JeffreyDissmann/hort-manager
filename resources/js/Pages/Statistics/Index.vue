@@ -10,6 +10,8 @@ import { computed } from 'vue';
 
 const props = defineProps({
     range: { type: String, default: 'quarter' },
+    // 'planned' = the times in the plans, 'actual' = when staff marked them off.
+    basis: { type: String, default: 'planned' },
     from: { type: String, default: '' },
     to: { type: String, default: '' },
     // [{ time, count }] — pickups per half-hour slot.
@@ -21,6 +23,7 @@ const props = defineProps({
 const locale = computed(() => usePage().props.locale || 'de');
 
 const ranges = ['quarter', 'school-year', 'year'];
+const bases = ['planned', 'actual'];
 
 function dateLabel(date) {
     return new Date(`${date}T00:00:00`).toLocaleDateString(locale.value, {
@@ -95,7 +98,7 @@ const hasAbsences = computed(() => props.absences.some((month) => month.sick + m
                     <Link
                         v-for="option in ranges"
                         :key="option"
-                        :href="statistics({ query: { range: option } }).url"
+                        :href="statistics({ query: { range: option, basis } }).url"
                         :data-testid="`range-${option}`"
                         class="rounded-lg px-3 py-1.5 text-sm font-medium transition"
                         :class="range === option
@@ -110,8 +113,33 @@ const hasAbsences = computed(() => props.absences.some((month) => month.sick + m
                 </div>
 
                 <section class="rounded-2xl bg-surface p-4 shadow-sm sm:p-6">
-                    <h3 class="font-semibold text-ink">{{ $t('statistics.pickup_times_title') }}</h3>
-                    <p class="mt-0.5 text-sm text-ink/60">{{ $t('statistics.pickup_times_intro') }}</p>
+                    <div class="flex flex-wrap items-start justify-between gap-3">
+                        <h3 class="font-semibold text-ink">{{ $t('statistics.pickup_times_title') }}</h3>
+
+                        <!-- Plan or reality: the same chart answers two questions, and
+                             which one you want depends on whether you are staffing the
+                             week or checking how it actually ran. -->
+                        <div class="flex gap-0.5 rounded-lg bg-ink/5 p-0.5">
+                            <Link
+                                v-for="option in bases"
+                                :key="option"
+                                :href="statistics({ query: { range, basis: option } }).url"
+                                :data-testid="`basis-${option}`"
+                                class="rounded-md px-2.5 py-1 text-xs font-medium transition"
+                                :class="basis === option
+                                    ? 'bg-surface text-ink shadow-sm'
+                                    : 'text-ink/50 hover:text-ink'"
+                            >
+                                {{ $t(`statistics.basis.${option}`) }}
+                            </Link>
+                        </div>
+                    </div>
+
+                    <p class="mt-0.5 text-sm text-ink/60">
+                        {{ basis === 'actual'
+                            ? $t('statistics.pickup_times_intro_actual')
+                            : $t('statistics.pickup_times_intro') }}
+                    </p>
 
                     <div class="mt-4" data-testid="pickup-times">
                         <BarChart

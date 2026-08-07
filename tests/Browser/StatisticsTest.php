@@ -48,5 +48,12 @@ it('switches the period from the buttons', function () {
 
     actAndVisit($admin, '/admin/statistics')
         ->click('@range-year')
-        ->assertQueryStringHas('range', 'year');
+        ->assertQueryStringHas('range', 'year')
+        // The chosen period survives the plan/reality toggle, and the other way round.
+        ->click('@basis-actual')
+        ->assertQueryStringHas('range', 'year')
+        ->assertQueryStringHas('basis', 'actual')
+        ->assertSee('Tatsächliche Zeiten')
+        ->click('@range-quarter')
+        ->assertQueryStringHas('basis', 'actual');
 });

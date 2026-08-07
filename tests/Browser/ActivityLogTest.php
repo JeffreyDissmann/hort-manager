@@ -11,17 +11,12 @@ it('lets an admin switch into Verwaltung and open the activity log', function ()
     $this->actingAs($admin);
     Child::factory()->create(['name' => 'Protokoll Kind']);
 
-    $page = actAndVisit($admin, '/board')
+    actAndVisit($admin, '/board')
         // The wordmark is the way between worlds; Verwaltung opens on Statistik.
         ->click('@world-switch')
         ->click('@world-admin')
-        ->assertPathIs('/admin/statistics');
-
-    // The layout remounts on the world switch, so „Was ist neu?" opens again and its
-    // backdrop would swallow the next click.
-    $page->script("document.querySelectorAll('dialog[open]').forEach((d) => d.close())");
-
-    $page->click('@user-menu')
+        ->assertPathIs('/admin/statistics')
+        ->click('@user-menu')
         ->click('@nav-activity-log')
         ->assertPathIs('/admin/activity-log')
         ->assertSee('Protokoll')

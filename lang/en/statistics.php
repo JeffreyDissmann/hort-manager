@@ -22,6 +22,11 @@ return [
 
     'pickup_times_title' => 'When the children leave',
     'pickup_times_intro' => 'Planned pickup times in half-hour slots — the times the Hort has to be staffed for. On the far left, the days a child was reported sick or away. The line shows what share is still there after each time.',
+    'pickup_times_intro_actual' => 'Actual times — when children were really marked off. Days nobody marked off are missing here; the far-left bucket is again who never came.',
+    'basis' => [
+        'planned' => 'planned',
+        'actual' => 'actual',
+    ],
     'pickup_absent' => 'never came',
     'pickup_remaining' => 'still here',
 ];

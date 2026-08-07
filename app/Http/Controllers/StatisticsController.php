@@ -17,8 +17,11 @@ use Inertia\Response;
  */
 class StatisticsController extends Controller
 {
-    /** The ranges offered above the charts, as `key => [from, to]`. */
+    /** The ranges offered above the charts. */
     public const RANGES = ['quarter', 'school-year', 'year'];
+
+    /** „So war es geplant" vs. „so ist es gelaufen". */
+    public const BASES = ['planned', 'actual'];
 
     public function __invoke(Request $request): Response
     {
@@ -28,13 +31,18 @@ class StatisticsController extends Controller
             ? $request->query('range')
             : 'quarter';
 
+        $basis = in_array($request->query('basis'), self::BASES, true)
+            ? $request->query('basis')
+            : 'planned';
+
         [$from, $to] = $this->period($range);
 
         return Inertia::render('Statistics/Index', [
             'range' => $range,
+            'basis' => $basis,
             'from' => $from->toDateString(),
             'to' => $to->toDateString(),
-            'pickupTimes' => HortStatistics::pickupTimes($from, $to),
+            'pickupTimes' => HortStatistics::pickupTimes($from, $to, $basis),
             'absences' => HortStatistics::absences($from, $to),
         ]);
     }
