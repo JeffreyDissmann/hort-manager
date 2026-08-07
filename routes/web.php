@@ -31,6 +31,7 @@ use App\Http\Controllers\SlackCommandController;
 use App\Http\Controllers\SlackEventController;
 use App\Http\Controllers\SlackInteractionController;
 use App\Http\Controllers\StandardPlanController;
+use App\Http\Controllers\StatisticsController;
 use App\Http\Controllers\SwitchRoleController;
 use App\Http\Controllers\TrmnlDashboardController;
 use App\Http\Controllers\UserController;
@@ -143,6 +144,9 @@ Route::middleware('auth')->group(function () {
         Route::post('/users/sync', [UserController::class, 'sync'])->name('users.sync');
         Route::patch('/users/{user}', [UserController::class, 'update'])->name('users.update');
         Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
+
+        // What the Hort's own records add up to.
+        Route::get('/statistics', StatisticsController::class)->name('statistics');
 
         // The activity log / audit trail.
         Route::get('/activity-log', [ActivityLogController::class, 'index'])->name('activity-log');
