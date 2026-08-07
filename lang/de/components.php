@@ -49,6 +49,7 @@ return [
 
     'timetable' => [
         'homework_range' => 'Hausaufgaben :start–:end',
+        'homework_short' => 'Hausaufgaben',
     ],
 
     'child_status' => [

@@ -53,6 +53,16 @@ function bandRow(startStr, endStr) {
     return `${s + 2} / span ${Math.max(1, e - s + 1)}`;
 }
 
+/**
+ * How many time slots a band covers — a one-slot band is ~1.9rem tall, which the icon
+ * alone fills, so a label would only be its own first letter.
+ */
+function bandSpan(startStr, endStr) {
+    const row = bandRow(startStr, endStr);
+
+    return row ? parseInt(row.split('span ')[1], 10) : 0;
+}
+
 // The child's name is always solid `ink`. The method reads from the warm/cool tint;
 // the safety-relevant "goes home alone" case additionally gets a 🚶 icon.
 function chipClass(method) {
@@ -167,15 +177,21 @@ function chipClass(method) {
                     v-for="(ex, k) in day || []"
                     v-show="bandRow(ex.depart_at, ex.return_at)"
                     :key="'ex' + j + '-' + k"
-                    class="my-0.5 flex flex-col items-center gap-1 rounded-md bg-hort-purple/20 px-0.5 py-1 text-hort-purple"
+                    class="my-0.5 flex flex-col items-center gap-1 overflow-hidden rounded-md bg-hort-purple/20 px-0.5 py-1 text-hort-purple"
                     :style="{
                         gridColumn: `${bandCol(j)} / ${bandCol(j) + 1}`,
                         gridRow: bandRow(ex.depart_at, ex.return_at) || 'auto',
                     }"
                     :title="ex.name + (ex.depart_at ? ` (${ex.depart_at}–${ex.return_at})` : '')"
                 >
-                    <span class="text-xs leading-none">🚌</span>
-                    <span class="text-[9px] font-semibold [writing-mode:vertical-rl]">
+                    <span class="shrink-0 text-xs leading-none">🚌</span>
+                    <!-- Ellipsis, not a hard cut: „Schwimm" reads as a trip called
+                         Schwimm. In vertical writing mode `truncate` clips on the
+                         block axis, which needs the bounded height from min-h-0. -->
+                    <span
+                        v-if="bandSpan(ex.depart_at, ex.return_at) > 1"
+                        class="min-h-0 flex-1 truncate text-[9px] font-semibold [writing-mode:vertical-rl]"
+                    >
                         {{ ex.name }}
                     </span>
                 </div>
@@ -185,14 +201,22 @@ function chipClass(method) {
             <template v-for="(p, j) in program" :key="'hwday' + j">
                 <div
                     v-if="p && p.homework_start"
-                    class="my-0.5 flex flex-col items-center justify-start rounded-md bg-amber-100 px-0.5 py-1 text-amber-700"
+                    class="my-0.5 flex flex-col items-center gap-1 overflow-hidden rounded-md bg-amber-100 px-0.5 py-1 text-amber-700"
                     :style="{
                         gridColumn: `${bandCol(j)} / ${bandCol(j) + 1}`,
                         gridRow: bandRow(p.homework_start, p.homework_end) || 'auto',
                     }"
                     :title="$t('components.timetable.homework_range', { start: p.homework_start, end: p.homework_end || '' })"
                 >
-                    <span class="text-xs leading-none">📚</span>
+                    <span class="shrink-0 text-xs leading-none">📚</span>
+                    <!-- The amber stripe said nothing on its own: its only label was a
+                         `title`, which a phone has no way to show. -->
+                    <span
+                        v-if="bandSpan(p.homework_start, p.homework_end) > 1"
+                        class="min-h-0 flex-1 truncate text-[9px] font-semibold [writing-mode:vertical-rl]"
+                    >
+                        {{ $t('components.timetable.homework_short') }}
+                    </span>
                 </div>
             </template>
 
