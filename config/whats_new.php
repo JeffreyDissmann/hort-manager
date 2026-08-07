@@ -16,6 +16,18 @@ declare(strict_types=1);
 
 return [
     [
+        'version' => '2026.08.07',
+        'date' => '2026-08-07',
+        'title' => 'Ferien-Gruß 🪁 und ein leichterer Start',
+        'items' => [
+            '🪁 Ist der Hort gerade geschlossen, begrüßt dich die Startseite mit den Ferien – und sagt dir vor allem, wann es weitergeht: an welchem Tag der Hort wieder öffnet und ob das ein ganz normaler Hort-Tag ist oder eine Ferienbetreuung, für die du dein Kind anmelden musst.',
+            '👋 Neu auf der Anmeldeseite: „Zum ersten Mal hier?" erklärt in zwei Schritten, wie man reinkommt – mit Slack, oder über „Passwort vergessen?", wenn Slack nicht geht. Praktisch für alle, die nach den Ferien neu dazukommen.',
+            '📅 Unter „Ferien & Schließzeiten" steht jetzt auch, von wann bis wann die Ferienbetreuung an den einzelnen Tagen läuft – und ein Link führt direkt zur Anmeldung.',
+            '✅ Die Anmeldung selbst ist kürzer geworden: Für ein Kind, das schon geantwortet hat, steht nur noch da, an welchen Tagen es kommt („Bearbeiten" öffnet die Liste wieder). Und ist der Anmeldeschluss vorbei, gibt es keine Kästchen mehr zum Ankreuzen, sondern das Ergebnis.',
+            '🗂️ Die Reiter sind neu sortiert – Heute, Wochenplan, Ausflüge & Ferien, Stammplan – von „heute" bis „ändert sich selten".',
+        ],
+    ],
+    [
         'version' => '2026.08.04',
         'date' => '2026-08-04',
         'title' => 'Ausflüge & Ferien an einem Ort 🏖️',
