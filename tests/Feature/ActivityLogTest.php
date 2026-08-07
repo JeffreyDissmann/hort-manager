@@ -24,7 +24,7 @@ it('shows the activity log to admins', function () {
     activity()->log('Testeintrag');
 
     $this->actingAs($admin)
-        ->get('/activity-log')
+        ->get('/admin/activity-log')
         ->assertOk()
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->component('ActivityLog/Index')
@@ -34,7 +34,7 @@ it('shows the activity log to admins', function () {
 it('forbids non-admins from the activity log', function () {
     $staff = User::factory()->staff()->create(); // staff, but not an admin
 
-    $this->actingAs($staff)->get('/activity-log')->assertForbidden();
+    $this->actingAs($staff)->get('/admin/activity-log')->assertForbidden();
 });
 
 it('records model changes as activity, with the causer and a label', function () {
