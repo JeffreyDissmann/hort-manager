@@ -31,6 +31,7 @@ return [
     'homework_defaults_saved' => 'Default homework times saved.',
     'settings_saved' => 'Setting saved.',
     'closure_saved' => 'Closure saved.',
+    'retention_saved' => 'Retention period saved.',
     'closure_deleted' => 'Closure deleted.',
     'care_day_saved' => 'Day saved.',
     'care_day_removed' => 'Day removed.',

@@ -1,16 +1,21 @@
 <script setup>
 import { computed } from 'vue';
+import { Doughnut } from 'vue-chartjs';
+import { ArcElement, Chart as ChartJS, Tooltip } from 'chart.js';
+import { useChartTheme } from '@/charts';
 import { formatEuroShort } from '@/money';
 import { t } from '@/i18n';
 
-// A lightweight hand-rolled SVG donut with a compact legend. Segments are drawn as
-// stroke-dash arcs (robust for any count incl. a single 100% slice). The long tail
-// is folded into „Sonstige" so the legend stays small and the donut isn't a mess of
-// slivers. Clicking a slice or legend row emits `select` with the segment id.
+ChartJS.register(ArcElement, Tooltip);
+
+// A donut with a compact legend of its own — Chart.js's legend can only show labels,
+// and every row here carries a share and a real amount as well. Segment sizes use the
+// magnitude (expense totals are negative); the legend shows the signed value. The long
+// tail folds into „Sonstige" so the legend stays small and the donut isn't a mess of
+// slivers. Clicking a slice or a legend row emits `select` with the segment id.
 const props = defineProps({
     title: { type: String, default: '' },
-    // [{ id, label, value }] — value may be signed (expense totals are negative);
-    // slice size uses the magnitude, the legend shows the real signed amount.
+    // [{ id, label, value }] — value may be signed.
     segments: { type: Array, default: () => [] },
     emptyLabel: { type: String, default: '' },
     // Show at most this many rows; the rest fold into „Sonstige".
@@ -21,9 +26,8 @@ const emit = defineEmits(['select']);
 // Validated categorical palette (dataviz skill, light mode) + a neutral for „Sonstige".
 const PALETTE = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#4a3aa7', '#e34948'];
 const OTHER_COLOR = '#94a3b8';
-const R = 36;
-const C = 2 * Math.PI * R;
-const GAP = 2; // small surface gap between slices (circumference units)
+
+const { theme, themeColor } = useChartTheme();
 
 const totalValue = computed(() => props.segments.reduce((sum, s) => sum + s.value, 0));
 
@@ -49,21 +53,56 @@ const items = computed(() => {
     }
 
     const total = rows.reduce((sum, s) => sum + s.abs, 0);
-    let acc = 0;
-    return rows.map((s, i) => {
-        const frac = total > 0 ? s.abs / total : 0;
-        const len = Math.max(frac * C - GAP, 0.5);
-        const seg = {
-            ...s,
-            color: s.isOther ? OTHER_COLOR : PALETTE[i % PALETTE.length],
-            pct: Math.round(frac * 100),
-            dash: `${len} ${C - len}`,
-            offset: -acc * C,
-        };
-        acc += frac;
-        return seg;
-    });
+
+    return rows.map((s, i) => ({
+        ...s,
+        color: s.isOther ? OTHER_COLOR : PALETTE[i % PALETTE.length],
+        pct: total > 0 ? Math.round((s.abs / total) * 100) : 0,
+    }));
 });
+
+const chartData = computed(() => {
+    theme.value; // re-evaluate when the theme flips
+
+    return {
+        labels: items.value.map((it) => it.label),
+        datasets: [{
+            data: items.value.map((it) => it.abs),
+            backgroundColor: items.value.map((it) => it.color),
+            // The ring reads as separate slices without a stroke of its own colour.
+            borderColor: themeColor('--color-surface'),
+            borderWidth: 2,
+            hoverOffset: 4,
+        }],
+    };
+});
+
+const chartOptions = computed(() => ({
+    responsive: true,
+    maintainAspectRatio: false,
+    cutout: '68%',
+    plugins: {
+        legend: { display: false },
+        tooltip: {
+            displayColors: false,
+            callbacks: {
+                label: (item) => {
+                    const it = items.value[item.dataIndex];
+
+                    return `${formatEuroShort(it.value)} · ${it.pct}%`;
+                },
+            },
+        },
+    },
+    // „Sonstige" is several categories at once, so there is nothing to select.
+    onClick: (event, elements) => {
+        const it = items.value[elements[0]?.index];
+
+        if (it && ! it.isOther) {
+            emit('select', it.id);
+        }
+    },
+}));
 </script>
 
 <template>
@@ -75,24 +114,7 @@ const items = computed(() => {
         <!-- flex-1 fills the card below the title; items-center vertically centres the donut -->
         <div v-else class="flex flex-1 items-center gap-5">
             <div class="relative h-28 w-28 shrink-0">
-                <svg viewBox="0 0 100 100" class="h-full w-full -rotate-90">
-                    <circle cx="50" cy="50" :r="R" fill="none" stroke-width="14" class="stroke-ink/5" />
-                    <circle
-                        v-for="it in items"
-                        :key="it.id"
-                        cx="50"
-                        cy="50"
-                        :r="R"
-                        fill="none"
-                        :stroke="it.color"
-                        stroke-width="14"
-                        stroke-linecap="butt"
-                        :stroke-dasharray="it.dash"
-                        :stroke-dashoffset="it.offset"
-                        class="cursor-pointer transition-opacity hover:opacity-80"
-                        @click="emit('select', it.id)"
-                    />
-                </svg>
+                <Doughnut :data="chartData" :options="chartOptions" />
                 <!-- Total in the hole — whole euros so it fits. -->
                 <div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
                     <span class="text-[10px] uppercase tracking-wide text-ink/40">Σ</span>

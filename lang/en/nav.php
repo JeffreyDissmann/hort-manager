@@ -22,6 +22,7 @@ return [
     'activity_log' => 'Activity log',
     'accounting' => 'Accounting',
     'hort_world' => 'Hort',
+    'admin_world' => 'Administration',
     'accounting_overview' => 'Overview',
     'accounts' => 'Accounts',
     'categories' => 'Categories',

@@ -37,6 +37,19 @@ class Setting extends Model
 
     public const DefaultCareEnd = '16:00';
 
+    /** Months of day-to-day records to keep (0 = keep everything). */
+    public const RetentionMonths = 'retention_months';
+
+    /**
+     * Two years. Long enough that „Statistik" can compare a Schuljahr with the one
+     * before it, short enough that nobody's daily comings and goings are kept for the
+     * whole of their time at the Hort.
+     */
+    public const DefaultRetentionMonths = 24;
+
+    /** The periods offered on „Datenpflege"; 0 is „alles behalten". */
+    public const RetentionOptions = [0, 3, 6, 12, 24, 36];
+
     protected $primaryKey = 'key';
 
     protected $keyType = 'string';
@@ -82,6 +95,20 @@ class Setting extends Model
     public static function lateChangeCutoff(): string
     {
         return (string) self::get(self::LateChangeCutoff, self::DefaultLateChangeCutoff);
+    }
+
+    /** How many months of day-to-day records to keep, or 0 for „keep everything". */
+    public static function retentionMonths(): int
+    {
+        return (int) self::get(self::RetentionMonths, self::DefaultRetentionMonths);
+    }
+
+    /** The date before which records may be deleted, or null while nothing is pruned. */
+    public static function retentionCutoff(): ?Carbon
+    {
+        $months = self::retentionMonths();
+
+        return $months > 0 ? Carbon::today()->subMonths($months) : null;
     }
 
     /** When the Monday digest goes out to parents, as `H:i`. */

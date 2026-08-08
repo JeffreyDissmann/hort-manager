@@ -19,6 +19,7 @@ use App\Http\Controllers\ChildController;
 use App\Http\Controllers\CompanionConfirmationController;
 use App\Http\Controllers\DailyBoardController;
 use App\Http\Controllers\DailyProgramController;
+use App\Http\Controllers\DataUpkeepController;
 use App\Http\Controllers\ExcursionController;
 use App\Http\Controllers\ExcursionRsvpController;
 use App\Http\Controllers\HolidayCareRegistrationController;
@@ -31,6 +32,7 @@ use App\Http\Controllers\SlackCommandController;
 use App\Http\Controllers\SlackEventController;
 use App\Http\Controllers\SlackInteractionController;
 use App\Http\Controllers\StandardPlanController;
+use App\Http\Controllers\StatisticsController;
 use App\Http\Controllers\SwitchRoleController;
 use App\Http\Controllers\TrmnlDashboardController;
 use App\Http\Controllers\UserController;
@@ -135,14 +137,24 @@ Route::middleware('auth')->group(function () {
 
     Route::resource('children', ChildController::class)->except('show');
 
-    // User management (admin only — the controller guards every action).
-    Route::get('/users', [UserController::class, 'index'])->name('users.index');
-    Route::post('/users/sync', [UserController::class, 'sync'])->name('users.sync');
-    Route::patch('/users/{user}', [UserController::class, 'update'])->name('users.update');
-    Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
+    // „Verwaltung" — its own world, like /accounting, so which world you are in stays
+    // one rule: the URL prefix. Gated on the group, so a controller added here later
+    // cannot forget; the controllers keep their own checks as a second lock.
+    Route::prefix('admin')->middleware('admin')->group(function () {
+        Route::get('/users', [UserController::class, 'index'])->name('users.index');
+        Route::post('/users/sync', [UserController::class, 'sync'])->name('users.sync');
+        Route::patch('/users/{user}', [UserController::class, 'update'])->name('users.update');
+        Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
 
-    // Admin-only: the activity log / audit trail (the controller guards it).
-    Route::get('/activity-log', [ActivityLogController::class, 'index'])->name('activity-log');
+        // What the Hort's own records add up to — and what they say is still missing.
+        Route::get('/statistics', StatisticsController::class)->name('statistics');
+        Route::get('/data-upkeep', [DataUpkeepController::class, 'index'])->name('data-upkeep');
+        Route::patch('/data-upkeep/retention', [DataUpkeepController::class, 'update'])
+            ->name('data-upkeep.retention');
+
+        // The activity log / audit trail.
+        Route::get('/activity-log', [ActivityLogController::class, 'index'])->name('activity-log');
+    });
 
     Route::get('/weekly-plan', WeeklyOverviewController::class)->name('weekly-plan');
     Route::patch('/weekly-plan/adjust', [WeeklyAdjustmentController::class, 'update'])->name('weekly-plan.adjust');

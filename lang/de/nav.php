@@ -24,6 +24,7 @@ return [
     'activity_log' => 'Protokoll',
     'accounting' => 'Buchhaltung',
     'hort_world' => 'Hort',
+    'admin_world' => 'Verwaltung',
     'accounting_overview' => 'Übersicht',
     'accounts' => 'Konten',
     'categories' => 'Kategorien',

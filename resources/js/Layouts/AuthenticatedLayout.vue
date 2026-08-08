@@ -25,7 +25,7 @@ import {
     ChevronDownIcon,
     CheckIcon,
 } from '@heroicons/vue/24/outline';
-import { board, weeklyPlan, standardPlan, program, logout, dashboard, help, activityLog } from '@/routes';
+import { board, weeklyPlan, standardPlan, program, logout, dashboard, help, activityLog, statistics, dataUpkeep } from '@/routes';
 import { dashboard as accountingDashboard } from '@/routes/accounting';
 import { update as switchRoleRoute } from '@/routes/role';
 import { index as childrenIndex } from '@/routes/children';
@@ -74,11 +74,34 @@ const pendingPolls = computed(() => usePage().props.pendingPolls ?? 0);
 const pendingCare = computed(() => usePage().props.pendingCare ?? []);
 const pendingCompanions = computed(() => usePage().props.pendingCompanions ?? 0);
 
-// Which "world" we're in is decided purely by the URL: /accounting/* = accounting.
+// Which "world" we're in is decided purely by the URL: /accounting/* = Buchhaltung,
+// /admin/* = Verwaltung, everything else = the Hort itself.
 const inAccounting = computed(() => usePage().url.startsWith('/accounting'));
+const inAdmin = computed(() => usePage().url.startsWith('/admin'));
+
+// The wordmark only becomes a switcher for someone who has somewhere to switch to.
+const hasWorlds = computed(() => canReadAccounting.value || isAdmin.value);
+
+const worldName = computed(() => {
+    if (inAccounting.value) {
+        return t('nav.accounting');
+    }
+
+    return inAdmin.value ? t('nav.admin_world') : appName.value;
+});
 
 // Primary navigation — shown as top links on desktop and as a bottom tab bar on mobile.
 const navItems = computed(() => {
+    // Verwaltung: the housekeeping that used to hide in the account menu.
+    if (inAdmin.value) {
+        return [
+            { label: t('data_upkeep.title'), href: dataUpkeep().url, icon: 'overview' },
+            { label: t('statistics.title'), href: statistics().url, icon: 'chart' },
+            { label: t('nav.users'), href: usersIndex().url, icon: 'users' },
+            { label: t('nav.activity_log'), href: activityLog().url, icon: 'overview' },
+        ];
+    }
+
     // Accounting world has its own top-bar items.
     if (inAccounting.value) {
         return [
@@ -169,32 +192,48 @@ function isActive(item) {
                     <!-- House icon always links home. Non-admins' wordmark links home too. -->
                     <Link :href="dashboard().url" class="flex items-center gap-2">
                         <ApplicationLogo class="h-9 w-9" />
-                        <span v-if="!canReadAccounting" class="font-display text-2xl text-ink">{{ appName }}</span>
+                        <!-- Only when the wordmark isn't already the world switcher —
+                             otherwise the bar reads „Hort-Manager Verwaltung". -->
+                        <span v-if="!hasWorlds" class="font-display text-2xl text-ink">{{ appName }}</span>
                     </Link>
 
-                    <!-- Accounting users: the wordmark is the world switcher (Hort ↔ Buchhaltung). -->
-                    <Dropdown v-if="canReadAccounting" align="left" width="48">
+                    <!-- The wordmark is the world switcher: Hort ↔ Buchhaltung ↔ Verwaltung,
+                         each shown only to someone who may enter it. -->
+                    <Dropdown v-if="hasWorlds" align="left" width="48">
                         <template #trigger>
                             <button
                                 type="button"
                                 data-testid="world-switch"
                                 class="flex items-center gap-1 font-display text-2xl text-ink transition hover:opacity-80"
                             >
-                                {{ inAccounting ? $t('nav.accounting') : appName }}
+                                {{ worldName }}
                                 <ChevronDownIcon class="h-4 w-4 text-ink/40" />
                             </button>
                         </template>
                         <template #content>
                             <DropdownLink :href="board().url" data-testid="world-hort">
                                 <span class="inline-flex items-center gap-2">
-                                    <CheckIcon class="h-4 w-4 text-hort-teal-dark" :class="{ invisible: inAccounting }" />
+                                    <CheckIcon
+                                        class="h-4 w-4 text-hort-teal-dark"
+                                        :class="{ invisible: inAccounting || inAdmin }"
+                                    />
                                     {{ $t('nav.hort_world') }}
                                 </span>
                             </DropdownLink>
-                            <DropdownLink :href="accountingDashboard().url" data-testid="world-accounting">
+                            <DropdownLink
+                                v-if="canReadAccounting"
+                                :href="accountingDashboard().url"
+                                data-testid="world-accounting"
+                            >
                                 <span class="inline-flex items-center gap-2">
                                     <CheckIcon class="h-4 w-4 text-hort-teal-dark" :class="{ invisible: !inAccounting }" />
                                     {{ $t('nav.accounting') }}
+                                </span>
+                            </DropdownLink>
+                            <DropdownLink v-if="isAdmin" :href="dataUpkeep().url" data-testid="world-admin">
+                                <span class="inline-flex items-center gap-2">
+                                    <CheckIcon class="h-4 w-4 text-hort-teal-dark" :class="{ invisible: !inAdmin }" />
+                                    {{ $t('nav.admin_world') }}
                                 </span>
                             </DropdownLink>
                         </template>
@@ -267,6 +306,11 @@ function isActive(item) {
                                 </div>
                             </div>
                             <hr class="my-1 border-ink/10" />
+                        </template>
+                        <!-- Nutzer und Protokoll live in the Verwaltung world now (the
+                             wordmark switches to it); repeating them here would be two
+                             doors to one room. -->
+                        <template v-if="inAdmin">
                             <p :class="menuHeadingClass">{{ $t('nav.group_admin') }}</p>
                             <DropdownLink :href="usersIndex().url">
                                 {{ $t('nav.users') }}

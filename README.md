@@ -75,7 +75,9 @@ Two layers, both [Pest](https://pestphp.com):
 Key environment variables (see `.env.example` for the full list):
 
 - `SLACK_*` — Sign-in-with-Slack, the bot token, signing secret and workspace (`docs/slack-setup.md`).
-- `DATA_RETENTION_WEEKS` — how long to keep operational data (default `4`).
+
+How long day-to-day records are kept is no longer an env variable: it lives in the
+`settings` table and is changed under **Verwaltung → Datenpflege** (default 24 months).
 
 ## Deployment
 

@@ -11,6 +11,7 @@ use App\Models\DailyDeparture;
 use App\Models\DailyProgram;
 use App\Models\Excursion;
 use App\Models\ExcursionSlackMessage;
+use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -23,8 +24,8 @@ class PruneOldDataTest extends TestCase
 
     public function test_it_prunes_data_older_than_the_retention_period(): void
     {
-        config(['hort.retention_weeks' => 4]);
-        Carbon::setTestNow('2026-06-28'); // cutoff = 2026-05-31
+        Setting::set(Setting::RetentionMonths, 1);
+        Carbon::setTestNow('2026-06-28'); // cutoff = 2026-05-28
         Http::fake();
 
         $child = Child::factory()->create();
@@ -72,7 +73,7 @@ class PruneOldDataTest extends TestCase
 
     public function test_pruning_old_excursions_sends_no_slack_messages(): void
     {
-        config(['hort.retention_weeks' => 4]);
+        Setting::set(Setting::RetentionMonths, 1);
         Carbon::setTestNow('2026-06-28');
         Http::fake();
 
@@ -90,19 +91,36 @@ class PruneOldDataTest extends TestCase
         Http::assertNothingSent();
     }
 
-    public function test_the_retention_period_is_configurable(): void
+    public function test_the_retention_period_is_a_setting(): void
     {
-        config(['hort.retention_weeks' => 1]);
-        Carbon::setTestNow('2026-06-28'); // cutoff = 2026-06-21
+        // Changed on „Datenpflege", so the next night's run uses it without a deploy.
+        Setting::set(Setting::RetentionMonths, 3);
+        Carbon::setTestNow('2026-06-28'); // cutoff = 2026-03-28
         Http::fake();
 
         $child = Child::factory()->create();
-        $justInside = DailyDeparture::factory()->create(['child_id' => $child->id, 'date' => '2026-06-22']);
-        $justOutside = DailyDeparture::factory()->create(['child_id' => $child->id, 'date' => '2026-06-20']);
+        $justInside = DailyDeparture::factory()->create(['child_id' => $child->id, 'date' => '2026-03-29']);
+        $justOutside = DailyDeparture::factory()->create(['child_id' => $child->id, 'date' => '2026-03-27']);
 
         $this->artisan('hort:prune-old-data')->assertSuccessful();
 
         $this->assertModelExists($justInside);
         $this->assertModelMissing($justOutside);
+    }
+
+    public function test_keeping_everything_deletes_nothing(): void
+    {
+        Setting::set(Setting::RetentionMonths, 0);
+        Carbon::setTestNow('2026-06-28');
+        Http::fake();
+
+        $ancient = DailyDeparture::factory()->create([
+            'child_id' => Child::factory()->create()->id,
+            'date' => '2020-01-06',
+        ]);
+
+        $this->artisan('hort:prune-old-data')->assertSuccessful();
+
+        $this->assertModelExists($ancient);
     }
 }
