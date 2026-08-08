@@ -19,6 +19,7 @@ use App\Http\Controllers\ChildController;
 use App\Http\Controllers\CompanionConfirmationController;
 use App\Http\Controllers\DailyBoardController;
 use App\Http\Controllers\DailyProgramController;
+use App\Http\Controllers\DataUpkeepController;
 use App\Http\Controllers\ExcursionController;
 use App\Http\Controllers\ExcursionRsvpController;
 use App\Http\Controllers\HolidayCareRegistrationController;
@@ -145,8 +146,9 @@ Route::middleware('auth')->group(function () {
         Route::patch('/users/{user}', [UserController::class, 'update'])->name('users.update');
         Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
 
-        // What the Hort's own records add up to.
+        // What the Hort's own records add up to — and what they say is still missing.
         Route::get('/statistics', StatisticsController::class)->name('statistics');
+        Route::get('/data-upkeep', DataUpkeepController::class)->name('data-upkeep');
 
         // The activity log / audit trail.
         Route::get('/activity-log', [ActivityLogController::class, 'index'])->name('activity-log');

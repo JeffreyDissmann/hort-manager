@@ -5,9 +5,14 @@ declare(strict_types=1);
 namespace App\Support;
 
 use App\Enums\AbsenceReason;
+use App\Enums\UserRole;
 use App\Models\Absence;
+use App\Models\Child;
 use App\Models\DailyDeparture;
+use App\Models\Excursion;
+use App\Models\User;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 /**
  * The queries behind „Statistik". Aggregates only — a number here never identifies a
@@ -124,6 +129,96 @@ class HortStatistics
             array_keys($months),
             array_values($months),
         );
+    }
+
+    /**
+     * The gaps worth fixing, counted as they stand today — deliberately not tied to the
+     * page's Zeitraum: „drei Kinder haben keinen Stammplan" is true now or not at all.
+     *
+     * Every entry is something someone can go and do; a check that only produces
+     * interest belongs in a chart instead.
+     *
+     * @return array<string, int>
+     */
+    public static function gaps(): array
+    {
+        $today = Carbon::today();
+
+        return [
+            // No Stammplan means no board, no Wochenplan, nothing to change.
+            'children_without_plan' => Child::query()->activeOn($today)->withoutSchedule()->count(),
+            // Nobody to notify and nobody who may edit the child.
+            'children_without_guardian' => Child::query()->activeOn($today)
+                ->whereDoesntHave('guardians')->count(),
+            // They still get web push, but every Slack message misses them.
+            'guardians_without_slack' => User::query()
+                ->whereNull('slack_id')->whereHas('children')->count(),
+            // Accounts belonging to nobody: not staff, not an admin, and not a
+            // guardian. A Slack import leaves these behind when someone's child has
+            // long left, and they keep receiving whatever goes to „alle Eltern".
+            'orphaned_accounts' => User::query()
+                ->where('role', UserRole::Parent)
+                ->where('is_admin', false)
+                ->whereDoesntHave('children')
+                ->count(),
+            // Silent until someone looks: a stale Slack id or a dead push endpoint
+            // piles up here and nothing in the app ever says so.
+            'failed_jobs' => DB::table('failed_jobs')->count(),
+            // Invitations to coming trips nobody has answered. Straight off the pivot:
+            // `wherePivotNull` is a relation method and doesn't survive a withCount
+            // closure, which silently counted nothing at all.
+            'open_excursion_answers' => DB::table('child_excursion')
+                ->whereNull('response')
+                ->whereIn('excursion_id', Excursion::query()
+                    ->whereDate('date', '>=', $today)
+                    ->select('id'))
+                ->count(),
+        ];
+    }
+
+    /**
+     * What is actually stored, and since when. The app writes one row per child per
+     * day and never stops, so „wie viel liegt hier eigentlich" is the question that
+     * makes an Aufbewahrungsfrist a real decision rather than an abstract one.
+     *
+     * @return array{records: list<array{key: string, count: int, oldest: string|null}>, children_active: int, children_former: int, users: int, users_with_slack: int, database_bytes: int|null}
+     */
+    public static function inventory(): array
+    {
+        $today = Carbon::today();
+
+        $records = [
+            ['key' => 'departures', 'table' => 'daily_departures', 'column' => 'date'],
+            ['key' => 'absences', 'table' => 'absences', 'column' => 'date'],
+            ['key' => 'activity_log', 'table' => 'activity_log', 'column' => 'created_at'],
+        ];
+
+        return [
+            'records' => array_map(fn (array $record): array => [
+                'key' => $record['key'],
+                'count' => DB::table($record['table'])->count(),
+                // A date string either way — `created_at` carries a time we don't need.
+                'oldest' => substr((string) DB::table($record['table'])->min($record['column']), 0, 10) ?: null,
+            ], $records),
+            'children_active' => Child::query()->activeOn($today)->count(),
+            // History, not clutter: a child who left still belongs to their own year.
+            'children_former' => Child::query()->whereNotNull('active_until')
+                ->whereDate('active_until', '<', $today)->count(),
+            'users' => User::query()->count(),
+            'users_with_slack' => User::query()->whereNotNull('slack_id')->count(),
+            'database_bytes' => self::databaseSize(),
+        ];
+    }
+
+    /**
+     * The SQLite file's size — the one number that says „this is what a backup costs".
+     * Null when the database isn't a file (`:memory:` in tests, or another driver).
+     */
+    private static function databaseSize(): ?int
+    {
+        $path = DB::connection()->getDatabaseName();
+
+        return is_string($path) && is_file($path) ? (filesize($path) ?: null) : null;
     }
 
     /** „15:17" → „15:00", „15:42" → „15:30" — the Wochenplan's half-hour grid. */

@@ -25,7 +25,7 @@ import {
     ChevronDownIcon,
     CheckIcon,
 } from '@heroicons/vue/24/outline';
-import { board, weeklyPlan, standardPlan, program, logout, dashboard, help, activityLog, statistics } from '@/routes';
+import { board, weeklyPlan, standardPlan, program, logout, dashboard, help, activityLog, statistics, dataUpkeep } from '@/routes';
 import { dashboard as accountingDashboard } from '@/routes/accounting';
 import { update as switchRoleRoute } from '@/routes/role';
 import { index as childrenIndex } from '@/routes/children';
@@ -95,6 +95,7 @@ const navItems = computed(() => {
     // Verwaltung: the housekeeping that used to hide in the account menu.
     if (inAdmin.value) {
         return [
+            { label: t('data_upkeep.title'), href: dataUpkeep().url, icon: 'overview' },
             { label: t('statistics.title'), href: statistics().url, icon: 'chart' },
             { label: t('nav.users'), href: usersIndex().url, icon: 'users' },
             { label: t('nav.activity_log'), href: activityLog().url, icon: 'overview' },
@@ -229,7 +230,7 @@ function isActive(item) {
                                     {{ $t('nav.accounting') }}
                                 </span>
                             </DropdownLink>
-                            <DropdownLink v-if="isAdmin" :href="statistics().url" data-testid="world-admin">
+                            <DropdownLink v-if="isAdmin" :href="dataUpkeep().url" data-testid="world-admin">
                                 <span class="inline-flex items-center gap-2">
                                     <CheckIcon class="h-4 w-4 text-hort-teal-dark" :class="{ invisible: !inAdmin }" />
                                     {{ $t('nav.admin_world') }}

@@ -12,10 +12,11 @@ it('lets an admin switch into Verwaltung and open the activity log', function ()
     Child::factory()->create(['name' => 'Protokoll Kind']);
 
     actAndVisit($admin, '/board')
-        // The wordmark is the way between worlds; Verwaltung opens on Statistik.
+        // The wordmark is the way between worlds; Verwaltung opens on the one page
+        // that says whether anything needs doing.
         ->click('@world-switch')
         ->click('@world-admin')
-        ->assertPathIs('/admin/statistics')
+        ->assertPathIs('/admin/data-upkeep')
         ->click('@user-menu')
         ->click('@nav-activity-log')
         ->assertPathIs('/admin/activity-log')
