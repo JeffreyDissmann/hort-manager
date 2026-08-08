@@ -8,18 +8,29 @@ use App\Models\Absence;
 use App\Models\DailyDeparture;
 use App\Models\DailyProgram;
 use App\Models\Excursion;
+use App\Models\Setting;
 use Illuminate\Console\Command;
 
 class PruneOldData extends Command
 {
     protected $signature = 'hort:prune-old-data';
 
-    protected $description = 'Delete day boards, day programs, excursions and absences older than the retention period';
+    protected $description = 'Delete day boards, day programs, excursions and absences older than the retention period (Setting::RetentionMonths)';
 
     public function handle(): int
     {
-        $weeks = (int) config('hort.retention_weeks');
-        $cutoff = now()->subWeeks($weeks)->startOfDay()->toDateString();
+        // The period is a Hort-wide setting, so it can be changed on „Datenpflege"
+        // without a deploy. Zero means keep everything — then there is nothing to do.
+        $cutoffDate = Setting::retentionCutoff();
+
+        if (! $cutoffDate) {
+            $this->info('Aufbewahrung: alles behalten – nichts gelöscht.');
+
+            return self::SUCCESS;
+        }
+
+        $months = Setting::retentionMonths();
+        $cutoff = $cutoffDate->toDateString();
 
         // Mass deletes (query builder) skip model events on purpose: pruning weeks-old
         // data must NOT fire the excursion "Ausflug abgesagt" or companion "hat sich
@@ -30,7 +41,7 @@ class PruneOldData extends Command
         $excursions = Excursion::where('date', '<', $cutoff)->delete();
         $absences = Absence::where('date', '<', $cutoff)->delete();
 
-        $this->info("Älter als {$weeks} Wochen aufgeräumt: {$departures} Abholungen, {$programs} Programme, {$excursions} Ausflüge, {$absences} Abwesenheiten.");
+        $this->info("Älter als {$months} Monate aufgeräumt: {$departures} Abholungen, {$programs} Programme, {$excursions} Ausflüge, {$absences} Abwesenheiten.");
 
         return self::SUCCESS;
     }

@@ -5,16 +5,33 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { index as childrenIndex } from '@/routes/children';
 import { index as excursionsIndex } from '@/routes/excursions';
 import { index as usersIndex } from '@/routes/users';
+import { retention as retentionUpdate } from '@/routes/data-upkeep';
 import { t } from '@/i18n';
-import { Head, Link, usePage } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
+import { computed, ref } from 'vue';
 
 const props = defineProps({
     // { check => count } as things stand today.
     gaps: { type: Object, default: () => ({}) },
     // What is stored and since when — the case for an Aufbewahrungsfrist.
     inventory: { type: Object, default: () => ({}) },
+    // How long day-to-day records are kept; 0 = keep everything.
+    retentionMonths: { type: Number, default: 0 },
+    retentionOptions: { type: Array, default: () => [] },
+    retentionCutoff: { type: String, default: null },
 });
+
+const months = ref(props.retentionMonths);
+
+// Saved on change rather than behind a button: it is one value, and the line beside it
+// updates to say what the new period actually means.
+function saveRetention() {
+    router.patch(
+        retentionUpdate().url,
+        { retention_months: months.value },
+        { preserveScroll: true },
+    );
+}
 
 const locale = computed(() => usePage().props.locale || 'de');
 
@@ -143,6 +160,37 @@ const headline = computed(() => [
                             <dd class="text-base font-semibold tabular-nums text-ink">{{ stat.value }}</dd>
                         </div>
                     </dl>
+                </section>
+
+                <!-- Why the oldest entry above is where it is. -->
+                <section class="mt-6 rounded-2xl bg-surface p-4 shadow-sm sm:p-6" data-testid="retention">
+                    <h3 class="font-semibold text-ink">{{ $t('data_upkeep.retention_title') }}</h3>
+                    <p class="mt-0.5 text-sm text-ink/60">{{ $t('data_upkeep.retention_intro') }}</p>
+
+                    <div class="mt-3 flex flex-wrap items-center gap-3">
+                        <select
+                            v-model.number="months"
+                            data-testid="retention-months"
+                            class="rounded-md border-ink/20 text-sm shadow-sm focus:border-hort-teal focus:ring-hort-teal"
+                            @change="saveRetention"
+                        >
+                            <option v-for="option in retentionOptions" :key="option" :value="option">
+                                {{ option === 0
+                                    ? $t('data_upkeep.retention_forever')
+                                    : $t('data_upkeep.retention_months', { count: option }) }}
+                            </option>
+                        </select>
+
+                        <p class="text-sm text-ink/60">
+                            {{ retentionCutoff
+                                ? $t('data_upkeep.retention_cutoff', { date: dateLabel(retentionCutoff) })
+                                : $t('data_upkeep.retention_nothing_deleted') }}
+                        </p>
+                    </div>
+
+                    <!-- The Stammplan, the children and the accounts are not day-to-day
+                         records; saying so here saves the obvious worry. -->
+                    <p class="mt-3 text-xs text-ink/50">{{ $t('data_upkeep.retention_kept') }}</p>
                 </section>
             </div>
         </div>

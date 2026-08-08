@@ -148,7 +148,9 @@ Route::middleware('auth')->group(function () {
 
         // What the Hort's own records add up to — and what they say is still missing.
         Route::get('/statistics', StatisticsController::class)->name('statistics');
-        Route::get('/data-upkeep', DataUpkeepController::class)->name('data-upkeep');
+        Route::get('/data-upkeep', [DataUpkeepController::class, 'index'])->name('data-upkeep');
+        Route::patch('/data-upkeep/retention', [DataUpkeepController::class, 'update'])
+            ->name('data-upkeep.retention');
 
         // The activity log / audit trail.
         Route::get('/activity-log', [ActivityLogController::class, 'index'])->name('activity-log');

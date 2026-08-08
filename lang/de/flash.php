@@ -31,6 +31,7 @@ return [
     'homework_defaults_saved' => 'Standard-Hausaufgabenzeiten gespeichert.',
     'settings_saved' => 'Einstellung gespeichert.',
     'closure_saved' => 'Schließzeit gespeichert.',
+    'retention_saved' => 'Aufbewahrungsfrist gespeichert.',
     'closure_deleted' => 'Schließzeit gelöscht.',
     'care_day_saved' => 'Tag gespeichert.',
     'care_day_removed' => 'Tag entfernt.',

@@ -7,6 +7,7 @@ namespace Tests\Feature;
 use App\Models\Child;
 use App\Models\DailyDeparture;
 use App\Models\Excursion;
+use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -103,6 +104,33 @@ class DataUpkeepTest extends TestCase
         $this->actingAs(User::factory()->staff()->admin()->create())
             ->get(route('data-upkeep'))
             ->assertInertia(fn (Assert $page) => $page->where('gaps.children_without_plan', 0));
+    }
+
+    public function test_an_admin_changes_how_long_records_are_kept(): void
+    {
+        $this->actingAs(User::factory()->staff()->admin()->create())
+            ->patch(route('data-upkeep.retention'), ['retention_months' => 12])
+            ->assertRedirect();
+
+        $this->assertSame(12, Setting::retentionMonths());
+    }
+
+    public function test_only_the_offered_periods_are_accepted(): void
+    {
+        // Otherwise a hand-crafted request could set „1 month" on a whim and quietly
+        // delete two years of records that night.
+        $this->actingAs(User::factory()->staff()->admin()->create())
+            ->patch(route('data-upkeep.retention'), ['retention_months' => 7])
+            ->assertSessionHasErrors('retention_months');
+    }
+
+    public function test_changing_the_period_needs_an_admin(): void
+    {
+        $this->actingAs(User::factory()->staff()->create())
+            ->patch(route('data-upkeep.retention'), ['retention_months' => 12])
+            ->assertForbidden();
+
+        $this->assertSame(Setting::DefaultRetentionMonths, Setting::retentionMonths());
     }
 
     public function test_it_counts_unanswered_invitations_to_coming_trips(): void

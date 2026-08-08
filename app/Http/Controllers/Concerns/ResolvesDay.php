@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Concerns;
 
+use App\Models\Setting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 
@@ -64,12 +65,16 @@ trait ResolvesDay
         return [$date, $day];
     }
 
-    /** The earliest weekday that still has data (mirrors PruneOldData's cutoff). */
+    /**
+     * The earliest weekday that still has data (mirrors PruneOldData's cutoff). With
+     * retention off nothing is ever deleted, so the floor is the start of the year the
+     * Hort could plausibly have records for — the picker still needs a bound.
+     */
     private function retentionFloor(): Carbon
     {
-        $weeks = (int) config('hort.retention_weeks');
+        $cutoff = Setting::retentionCutoff() ?? now()->subYears(5)->startOfDay();
 
-        return $this->nextWeekday(now()->subWeeks($weeks)->startOfDay());
+        return $this->nextWeekday($cutoff->copy()->startOfDay());
     }
 
     private function nextWeekday(Carbon $date): Carbon

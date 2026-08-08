@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Models\Child;
+use App\Models\Setting;
 use App\Models\User;
 
 // „Datenpflege" — the page an admin opens to find out whether anything needs doing.
@@ -24,4 +25,15 @@ it('says so plainly when there is nothing to do', function () {
         ->assertSee('Alles gepflegt')
         // No rows at all, so no counts to misread as work.
         ->assertMissing('@check-children_without_plan');
+});
+
+it('lets an admin change how long records are kept', function () {
+    $admin = User::factory()->staff()->admin()->create();
+
+    actAndVisit($admin, '/admin/data-upkeep')
+        ->assertSee('Aufbewahrung')
+        ->select('@retention-months', '12')
+        ->assertSee('Gelöscht wird alles vor dem');
+
+    expect(Setting::retentionMonths())->toBe(12);
 });

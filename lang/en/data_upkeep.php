@@ -18,7 +18,7 @@ return [
     ],
 
     'inventory_title' => 'What is stored',
-    'inventory_intro' => 'The Hort-Manager writes one row per child per day — and deletes none of it so far. This is how much has piled up and how far back it goes.',
+    'inventory_intro' => 'The Hort-Manager writes one row per child per day. This is how much has piled up and how far back it goes — the oldest entry is the retention period below.',
     'inventory_what' => 'Data',
     'inventory_count' => 'Records',
     'inventory_oldest' => 'oldest',
@@ -30,4 +30,12 @@ return [
     'children_count' => 'Children (former)',
     'users_count' => 'Accounts',
     'database_size' => 'Database',
+
+    'retention_title' => 'Retention',
+    'retention_intro' => 'How long the Hort-Manager keeps departures, programs, trips and absences. Anything older is deleted overnight.',
+    'retention_forever' => 'Keep everything',
+    'retention_months' => ':count months',
+    'retention_cutoff' => 'Everything before :date is deleted.',
+    'retention_nothing_deleted' => 'Nothing is deleted.',
+    'retention_kept' => 'Children, parent links, Stammpläne and accounts are always kept — only the entries of individual days are deleted.',
 ];

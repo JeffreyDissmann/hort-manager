@@ -11,6 +11,7 @@ use App\Enums\UserRole;
 use App\Models\Child;
 use App\Models\DailyDeparture;
 use App\Models\Excursion;
+use App\Models\Setting;
 use App\Models\User;
 use App\Models\WeeklySchedule;
 use App\Notifications\ChildDeparted;
@@ -484,7 +485,9 @@ class DailyBoardTest extends TestCase
     public function test_navigating_before_the_retention_floor_is_clamped(): void
     {
         $this->travelTo(Carbon::parse('2026-06-22')); // Monday
-        $floor = Carbon::today()->subWeeks((int) config('hort.retention_weeks'))->startOfDay();
+        // The picker can't reach past what the nightly prune keeps.
+        Setting::set(Setting::RetentionMonths, 1);
+        $floor = Carbon::today()->subMonths(1)->startOfDay();
         while ($floor->isWeekend()) {
             $floor->addDay();
         }

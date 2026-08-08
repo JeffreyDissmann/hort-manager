@@ -9,12 +9,12 @@ return [
     | Data retention
     |--------------------------------------------------------------------------
     |
-    | How many weeks of operational data to keep. The hort:prune-old-data
-    | command deletes day boards, day programs and excursions older than this.
-    | Children, guardians, the Stammplan and accounts are never pruned.
+    | Lives in the `settings` table now, not here: see Setting::RetentionMonths
+    | and „Datenpflege" under Verwaltung, where an admin can change it without a
+    | deploy. hort:prune-old-data reads it nightly and deletes day boards, day
+    | programs, excursions and absences older than that. Children, guardians, the
+    | Stammplan and accounts are never pruned.
     |
     */
-
-    'retention_weeks' => (int) env('DATA_RETENTION_WEEKS', 4),
 
 ];
