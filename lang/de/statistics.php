@@ -14,6 +14,10 @@ return [
 
     'empty' => 'Für diesen Zeitraum gibt es noch nichts zu zeigen.',
 
+    'attendance_title' => 'Wie voll der Hort war',
+    'attendance_intro' => 'Kinder pro Hort-Tag, im Wochenschnitt – nicht die Summe, sonst sähe eine Woche mit Feiertag nach einer ruhigen Woche aus statt nach einer kurzen.',
+    'attendance_suffix' => 'Kinder im Schnitt',
+
     'absences_title' => 'Krank und abwesend',
     'absences_intro' => 'Gemeldete Abwesenheiten pro Monat, getrennt nach Grund – eine Erkältungswelle sieht anders aus als ein paar Arzttermine.',
     'absences_empty' => 'In diesem Zeitraum wurde niemand abgemeldet.',

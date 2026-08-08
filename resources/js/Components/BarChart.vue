@@ -2,7 +2,8 @@
 // A bar chart on Chart.js, themed from the app's own CSS variables so it follows the
 // light/dark switch instead of carrying its own palette. Only the pieces a bar chart
 // needs are registered — the rest of Chart.js is tree-shaken away.
-import { computed, onMounted, onBeforeUnmount, ref } from 'vue';
+import { computed } from 'vue';
+import { axisStyle, useChartTheme } from '@/charts';
 import { Bar } from 'vue-chartjs';
 import {
     BarElement,
@@ -42,24 +43,7 @@ const props = defineProps({
     valueSuffix: { type: String, default: '' },
 });
 
-/** `--color-teal` holds „126 190 195", so it has to be wrapped to be a colour. */
-function themeColor(name, alpha = 1) {
-    const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-
-    return value ? `rgb(${value} / ${alpha})` : 'currentColor';
-}
-
-// Re-read on every theme switch: Chart.js paints to a canvas, so unlike CSS it cannot
-// follow a variable that changes under it.
-const theme = ref(0);
-let observer = null;
-
-onMounted(() => {
-    observer = new MutationObserver(() => theme.value++);
-    observer.observe(document.documentElement, { attributeFilter: ['class'] });
-});
-
-onBeforeUnmount(() => observer?.disconnect());
+const { theme, themeColor } = useChartTheme();
 
 const shape = { borderRadius: 6, borderSkipped: false, maxBarThickness: 56 };
 
@@ -141,18 +125,7 @@ const chartOptions = computed(() => {
             },
         },
         scales: {
-            x: {
-                grid: { display: false },
-                border: { color: ink(0.15) },
-                ticks: { color: ink(0.5), font: { size: 11 } },
-            },
-            y: {
-                beginAtZero: true,
-                grid: { color: ink(0.08) },
-                border: { display: false },
-                // Counts are whole children; „2.5" on the axis would be nonsense.
-                ticks: { color: ink(0.4), font: { size: 11 }, precision: 0 },
-            },
+            ...axisStyle(themeColor),
             // Fixed 0–100 so the curve means the same thing in every period; its grid
             // is off, or two sets of lines would cross the same plot.
             percent: {

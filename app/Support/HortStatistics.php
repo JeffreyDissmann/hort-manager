@@ -95,6 +95,45 @@ class HortStatistics
     }
 
     /**
+     * How full the Hort was, week by week: the average number of children on the board
+     * per Hort day. Averaged rather than summed, because a week with a Feiertag has
+     * four days and would otherwise look like a quiet week rather than a short one.
+     *
+     * Weekly, not daily: two years of days is five hundred points nobody can read,
+     * while two years of weeks is a hundred — and the shape is the point.
+     *
+     * @return list<array{week: string, average: float}>
+     */
+    public static function attendance(Carbon $from, Carbon $to): array
+    {
+        $rows = DailyDeparture::query()
+            ->whereBetween('date', [$from->toDateString(), $to->toDateString()])
+            ->selectRaw('date, count(*) as children')
+            ->groupBy('date')
+            ->pluck('children', 'date');
+
+        $weeks = [];
+
+        foreach ($rows as $date => $children) {
+            // Monday of that week — the label the whole week hangs on.
+            $week = Carbon::parse((string) $date)->startOfWeek(Carbon::MONDAY)->toDateString();
+
+            $weeks[$week][] = (int) $children;
+        }
+
+        ksort($weeks);
+
+        return array_map(
+            fn (string $week, array $days): array => [
+                'week' => $week,
+                'average' => round(array_sum($days) / count($days), 1),
+            ],
+            array_keys($weeks),
+            array_values($weeks),
+        );
+    }
+
+    /**
      * Reported absences per month, kept apart by reason: „krank" is a wave that runs
      * through the whole Hort in February, „kommt nicht" is a family's own appointment.
      * Adding them up would hide exactly the difference worth seeing.

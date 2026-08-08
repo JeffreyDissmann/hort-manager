@@ -3,6 +3,7 @@
 // is an aggregate, so no single child is ever named.
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import BarChart from '@/Components/BarChart.vue';
+import LineChart from '@/Components/LineChart.vue';
 import { statistics } from '@/routes';
 import { t } from '@/i18n';
 import { Head, Link, usePage } from '@inertiajs/vue3';
@@ -16,6 +17,8 @@ const props = defineProps({
     to: { type: String, default: '' },
     // [{ time, count }] — pickups per half-hour slot.
     pickupTimes: { type: Array, default: () => [] },
+    // [{ week, average }] — average children per Hort day, per week.
+    attendance: { type: Array, default: () => [] },
     // [{ month, sick, away }] — one entry per month of the range.
     absences: { type: Array, default: () => [] },
 });
@@ -50,6 +53,24 @@ const stillHere = computed(() => ({
     color: '--color-orange-dark',
     values: props.pickupTimes.map((slot) => slot.remaining),
 }));
+
+// „KW 33" — the week is the unit here, and a date on every point would be unreadable.
+const attendancePoints = computed(() =>
+    props.attendance.map((week) => ({
+        label: `KW ${weekNumber(week.week)}`,
+        value: week.average,
+    })),
+);
+
+/** ISO week number of a „Y-m-d" Monday. */
+function weekNumber(date) {
+    const day = new Date(`${date}T00:00:00Z`);
+    // Thursday decides which year (and week) a date belongs to, per ISO 8601.
+    day.setUTCDate(day.getUTCDate() + 3);
+    const firstThursday = new Date(Date.UTC(day.getUTCFullYear(), 0, 4));
+
+    return 1 + Math.round((day - firstThursday) / (7 * 24 * 3600 * 1000));
+}
 
 /** „2026-02" → „Feb 26" — short enough that twelve of them fit on a phone. */
 function monthLabel(month) {
@@ -145,6 +166,19 @@ const hasAbsences = computed(() => props.absences.some((month) => month.sick + m
                         <BarChart
                             :bars="bars"
                             :line="stillHere"
+                            :empty-label="$t('statistics.empty')"
+                        />
+                    </div>
+                </section>
+
+                <section class="rounded-2xl bg-surface p-4 shadow-sm sm:p-6">
+                    <h3 class="font-semibold text-ink">{{ $t('statistics.attendance_title') }}</h3>
+                    <p class="mt-0.5 text-sm text-ink/60">{{ $t('statistics.attendance_intro') }}</p>
+
+                    <div class="mt-4" data-testid="attendance">
+                        <LineChart
+                            :points="attendancePoints"
+                            :value-suffix="$t('statistics.attendance_suffix')"
                             :empty-label="$t('statistics.empty')"
                         />
                     </div>

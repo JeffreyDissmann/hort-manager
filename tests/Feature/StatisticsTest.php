@@ -113,6 +113,25 @@ class StatisticsTest extends TestCase
                 ->where('pickupTimes', [['time' => '15:00', 'count' => 2, 'remaining' => 0]]));
     }
 
+    public function test_attendance_is_averaged_per_week_not_summed(): void
+    {
+        // Mon–Wed of one week: 2, 1, 3 children on the board.
+        foreach ([['2026-07-06', 2], ['2026-07-07', 1], ['2026-07-08', 3]] as [$date, $children]) {
+            for ($i = 0; $i < $children; $i++) {
+                $this->departure($date, '15:00');
+            }
+        }
+        // A single day in the next week — a short week, not a quiet one.
+        $this->departure('2026-07-13', '15:00');
+
+        $this->actingAs(User::factory()->staff()->admin()->create())
+            ->get(route('statistics'))
+            ->assertInertia(fn (Assert $page) => $page->where('attendance', [
+                ['week' => '2026-07-06', 'average' => 2],
+                ['week' => '2026-07-13', 'average' => 1],
+            ]));
+    }
+
     public function test_it_keeps_sick_and_away_apart_per_month(): void
     {
         foreach ([['2026-07-06', AbsenceReason::Sick], ['2026-07-07', AbsenceReason::Sick], ['2026-07-08', AbsenceReason::Away]] as [$date, $reason]) {

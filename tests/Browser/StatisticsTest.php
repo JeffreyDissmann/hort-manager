@@ -57,3 +57,23 @@ it('switches the period from the buttons', function () {
         ->click('@range-quarter')
         ->assertQueryStringHas('basis', 'actual');
 });
+
+it('draws the attendance trend', function () {
+    $admin = User::factory()->staff()->admin()->create();
+    $child = Child::factory()->create();
+
+    foreach ([7, 14, 21] as $daysAgo) {
+        DailyDeparture::create([
+            'child_id' => $child->id,
+            'date' => today()->subDays($daysAgo)->toDateString(),
+            'planned_time' => '15:00',
+        ]);
+    }
+
+    $page = actAndVisit($admin, '/admin/statistics')
+        ->assertSee('Wie voll der Hort war')
+        ->assertPresent('@attendance');
+
+    expect($page->script("document.querySelector('[data-testid=attendance] canvas')?.width ?? 0"))
+        ->toBeGreaterThan(0);
+});

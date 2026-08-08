@@ -43,6 +43,7 @@ class StatisticsController extends Controller
             'from' => $from->toDateString(),
             'to' => $to->toDateString(),
             'pickupTimes' => HortStatistics::pickupTimes($from, $to, $basis),
+            'attendance' => HortStatistics::attendance($from, $to),
             'absences' => HortStatistics::absences($from, $to),
         ]);
     }

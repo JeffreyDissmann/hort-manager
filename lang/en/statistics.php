@@ -14,6 +14,10 @@ return [
 
     'empty' => 'Nothing to show for this period yet.',
 
+    'attendance_title' => 'How full the Hort was',
+    'attendance_intro' => 'Children per Hort day, averaged over the week — not summed, or a week with a public holiday would look quiet rather than short.',
+    'attendance_suffix' => 'children on average',
+
     'absences_title' => 'Sick and away',
     'absences_intro' => 'Reported absences per month, split by reason — a cold going round looks different from a few appointments.',
     'absences_empty' => 'Nobody was reported absent in this period.',
