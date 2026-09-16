@@ -8,7 +8,7 @@ use Carbon\CarbonImmutable;
 use Carbon\Exceptions\InvalidFormatException;
 
 /**
- * Turns the raw table from {@see CsvReader} into normalized statement rows using a
+ * Turns the raw table from {@see CsvReader} or {@see SpreadsheetReader} into normalized statement rows using a
  * user-confirmed column mapping (field → column index). Date and amount formats are
  * auto-detected per value, so the user only has to point each column at a field.
  *
@@ -30,7 +30,7 @@ class StatementMapper
      * @var array<string, list<string>>
      */
     private const HINTS = [
-        'booking_date' => ['buchungstag', 'buchungsdatum', 'booking', 'datum', 'date'],
+        'booking_date' => ['buchungstag', 'buchungsdatum', 'booking', 'datum', 'date', 'buchung'],
         'valuta_date' => ['valuta', 'wertstellung', 'value'],
         'purpose' => ['verwendungszweck', 'buchungstext', 'purpose', 'zweck', 'beschreibung', 'text', 'description'],
         'amount' => ['betrag', 'umsatz', 'amount', 'wert'],

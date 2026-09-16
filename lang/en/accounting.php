@@ -210,11 +210,12 @@ return [
 
     'import' => [
         'title' => 'Import bank statement',
-        'intro' => 'Upload the statement CSV. Next you map the columns; each line then becomes a draft to review and confirm.',
+        'intro' => 'Upload the statement as a CSV or Excel file. Next you map the columns; each line then becomes a draft to review and confirm.',
         'account' => 'Account',
         'pick_account' => 'Choose account …',
-        'file' => 'CSV file',
-        'file_invalid' => 'Please upload a CSV file (max. 5 MB).',
+        'file' => 'File (CSV or Excel)',
+        'file_invalid' => 'Please upload a CSV or Excel file (max. 5 MB).',
+        'file_unreadable' => 'The file could not be read as a spreadsheet. Is it damaged or password-protected?',
         'file_empty' => 'No data rows were found in the file.',
         'upload' => 'Upload',
         // Column-mapping step (upload → map columns → import).
@@ -225,6 +226,7 @@ return [
         'field_purpose' => 'Reference',
         'field_amount' => 'Amount',
         'field_currency' => 'Currency',
+        'currency_default_hint' => 'Without a column, every booking is created in EUR.',
         'preview_note' => 'Preview of the first :shown of :total rows.',
         'column_none' => '— none —',
         'column_n' => 'Column :n',

@@ -16,6 +16,7 @@ use App\Models\Accounting\Booking;
 use App\Models\Accounting\Import;
 use App\Services\Accounting\PaperlessService;
 use App\Support\Accounting\CsvReader;
+use App\Support\Accounting\SpreadsheetReader;
 use App\Support\Accounting\StatementMapper;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -25,7 +26,7 @@ use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * Admin-only bank-statement CSV import. Three steps: upload → confirm the
+ * Admin-only bank-statement import (CSV or Excel). Three steps: upload → confirm the
  * auto-guessed column mapping → post-upload summary. The upload only decodes the
  * file and stores its raw columns; drafts are created once the mapping is confirmed.
  */
@@ -47,10 +48,18 @@ class ImportController extends Controller
      * Decode the upload into a raw table and stash it against a pending import, then
      * send the user to confirm the guessed column mapping. No drafts are created yet.
      */
-    public function store(StoreImportRequest $request, CsvReader $reader): RedirectResponse
+    public function store(StoreImportRequest $request, CsvReader $csv, SpreadsheetReader $spreadsheet): RedirectResponse
     {
         $account = Account::findOrFail($request->integer('account_id'));
-        $table = $reader->read($request->file('file')->get());
+        $file = $request->file('file');
+
+        $table = in_array(strtolower($file->getClientOriginalExtension()), SpreadsheetReader::EXTENSIONS, true)
+            ? $spreadsheet->read($file->getRealPath())
+            : $csv->read($file->get());
+
+        if ($table === null) {
+            return back()->withErrors(['file' => __('accounting.import.file_unreadable')]);
+        }
 
         if ($table['header'] === [] || $table['rows'] === []) {
             return back()->withErrors(['file' => __('accounting.import.file_empty')]);

@@ -73,6 +73,10 @@ function submit() {
                                 {{ name || $t('accounting.import.column_n', { n: i + 1 }) }}
                             </option>
                         </select>
+                        <!-- Mirrors StatementMapper::normalize(): no currency column → EUR. -->
+                        <p v-if="field === 'currency' && form.mapping.currency === null" class="mt-1 text-xs text-ink/50">
+                            {{ $t('accounting.import.currency_default_hint') }}
+                        </p>
                         <InputError :message="form.errors[`mapping.${field}`]" class="mt-1" />
                     </div>
                 </div>

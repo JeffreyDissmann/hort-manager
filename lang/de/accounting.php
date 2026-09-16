@@ -210,11 +210,12 @@ return [
 
     'import' => [
         'title' => 'Kontoauszug importieren',
-        'intro' => 'CSV-Datei des Kontoauszugs hochladen. Danach ordnest du die Spalten zu; jede Zeile wird als Entwurf angelegt und anschließend geprüft und bestätigt.',
+        'intro' => 'Kontoauszug als CSV- oder Excel-Datei hochladen. Danach ordnest du die Spalten zu; jede Zeile wird als Entwurf angelegt und anschließend geprüft und bestätigt.',
         'account' => 'Konto',
         'pick_account' => 'Konto wählen …',
-        'file' => 'CSV-Datei',
-        'file_invalid' => 'Bitte eine CSV-Datei (max. 5 MB) hochladen.',
+        'file' => 'Datei (CSV oder Excel)',
+        'file_invalid' => 'Bitte eine CSV- oder Excel-Datei (max. 5 MB) hochladen.',
+        'file_unreadable' => 'Die Datei konnte nicht als Tabelle gelesen werden. Ist sie beschädigt oder passwortgeschützt?',
         'file_empty' => 'In der Datei wurden keine Datenzeilen gefunden.',
         'upload' => 'Hochladen',
         // Column-mapping step (upload → Spalten zuordnen → Import).
@@ -225,6 +226,7 @@ return [
         'field_purpose' => 'Verwendungszweck',
         'field_amount' => 'Betrag',
         'field_currency' => 'Währung',
+        'currency_default_hint' => 'Ohne Spalte wird jede Buchung in EUR angelegt.',
         'preview_note' => 'Vorschau der ersten :shown von :total Zeilen.',
         'column_none' => '— keine —',
         'column_n' => 'Spalte :n',
