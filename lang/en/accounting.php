@@ -226,6 +226,7 @@ return [
         'field_purpose' => 'Reference',
         'field_amount' => 'Amount',
         'field_currency' => 'Currency',
+        'currency_default_hint' => 'Without a column, every booking is created in EUR.',
         'preview_note' => 'Preview of the first :shown of :total rows.',
         'column_none' => '— none —',
         'column_n' => 'Column :n',

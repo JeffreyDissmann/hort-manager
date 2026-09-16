@@ -226,6 +226,7 @@ return [
         'field_purpose' => 'Verwendungszweck',
         'field_amount' => 'Betrag',
         'field_currency' => 'Währung',
+        'currency_default_hint' => 'Ohne Spalte wird jede Buchung in EUR angelegt.',
         'preview_note' => 'Vorschau der ersten :shown von :total Zeilen.',
         'column_none' => '— keine —',
         'column_n' => 'Spalte :n',
