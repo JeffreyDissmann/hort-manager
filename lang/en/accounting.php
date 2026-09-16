@@ -210,11 +210,12 @@ return [
 
     'import' => [
         'title' => 'Import bank statement',
-        'intro' => 'Upload the statement CSV. Next you map the columns; each line then becomes a draft to review and confirm.',
+        'intro' => 'Upload the statement as a CSV or Excel file. Next you map the columns; each line then becomes a draft to review and confirm.',
         'account' => 'Account',
         'pick_account' => 'Choose account …',
-        'file' => 'CSV file',
-        'file_invalid' => 'Please upload a CSV file (max. 5 MB).',
+        'file' => 'File (CSV or Excel)',
+        'file_invalid' => 'Please upload a CSV or Excel file (max. 5 MB).',
+        'file_unreadable' => 'The file could not be read as a spreadsheet. Is it damaged or password-protected?',
         'file_empty' => 'No data rows were found in the file.',
         'upload' => 'Upload',
         // Column-mapping step (upload → map columns → import).

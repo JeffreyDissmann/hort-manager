@@ -20,6 +20,7 @@
         "laravel/tinker": "^3.0",
         "laravel/wayfinder": "^0.1.20",
         "openspout/openspout": "^5.8",
+        "phpoffice/phpspreadsheet": "^5.9",
         "socialiteproviders/slack": "^5.2",
         "spatie/laravel-activitylog": "^5.0"
     },

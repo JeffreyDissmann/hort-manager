@@ -7,7 +7,7 @@ namespace App\Http\Requests\Accounting;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-/** Upload a bank-statement CSV against one account. */
+/** Upload a bank statement (CSV or Excel) against one account. */
 class StoreImportRequest extends FormRequest
 {
     /**
@@ -19,7 +19,7 @@ class StoreImportRequest extends FormRequest
             'account_id' => ['required', Rule::exists('accounting_accounts', 'id')],
             // Validate by extension, not MIME: bank CSVs are often UTF-16 and get
             // detected as application/octet-stream, which a mimes: rule would reject.
-            'file' => ['required', 'file', 'extensions:csv,txt', 'max:5120'],
+            'file' => ['required', 'file', 'extensions:csv,txt,xls,xlsx,ods', 'max:5120'],
         ];
     }
 

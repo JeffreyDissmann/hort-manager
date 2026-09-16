@@ -11,6 +11,8 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Inertia\Testing\AssertableInertia;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
 
 uses(RefreshDatabase::class);
 
@@ -63,6 +65,42 @@ it('accepts a UTF-16 .csv but rejects other extensions with a friendly message',
         'account_id' => $account->id,
         'file' => UploadedFile::fake()->create('statement.pdf', 10),
     ])->assertSessionHasErrors(['file' => __('accounting.import.file_invalid')]);
+});
+
+it('imports an Excel (.xls) bank export as drafts', function () {
+    $admin = User::factory()->admin()->accountingWriter()->create();
+    $account = Account::factory()->create();
+    $this->actingAs($admin);
+
+    $spreadsheet = new Spreadsheet;
+    $spreadsheet->getActiveSheet()->fromArray([
+        ['IBAN', 'Konto', 'Verwendungszweck', 'Buchung', 'Valuta', 'Betrag'],
+        ['DE00123', 'SCHÜLERLADEN e.V.', 'LASTSCHRIFT Krankenkasse', '2026-08-27', '2026-08-27', '-2.396,78 EUR'],
+        ['DE00123', 'SCHÜLERLADEN e.V.', 'SEPA-DAUERAUFTRAG Essensgeld', '2026-08-19', '2026-08-19', '65,00 EUR'],
+    ]);
+    $path = tempnam(sys_get_temp_dir(), 'statement');
+    IOFactory::createWriter($spreadsheet, 'Xls')->save($path);
+
+    $import = importStatement(
+        $account,
+        UploadedFile::fake()->createWithContent('Transaktionen.xls', file_get_contents($path)),
+        ['booking_date' => 3, 'valuta_date' => 4, 'purpose' => 2, 'amount' => 5, 'currency' => null],
+    );
+
+    expect($import->imported_count)->toBe(2)
+        ->and(Booking::orderBy('amount_cents')->pluck('amount_cents')->all())->toBe([-239678, 6500]);
+});
+
+it('rejects a spreadsheet extension on a file that is not a spreadsheet', function () {
+    $admin = User::factory()->admin()->accountingWriter()->create();
+    $account = Account::factory()->create();
+
+    $this->actingAs($admin)->post('/accounting/import', [
+        'account_id' => $account->id,
+        'file' => UploadedFile::fake()->createWithContent('umsatz.xlsx', 'not really a workbook'),
+    ])->assertSessionHasErrors(['file' => __('accounting.import.file_unreadable')]);
+
+    expect(Import::count())->toBe(0);
 });
 
 it('parks the upload as a pending import and sends the user to map the columns', function () {

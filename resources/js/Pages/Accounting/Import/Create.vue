@@ -52,7 +52,7 @@ function submit() {
                     <input
                         id="file"
                         type="file"
-                        accept=".csv,text/csv,text/plain"
+                        accept=".csv,.txt,.xls,.xlsx,.ods,text/csv,text/plain"
                         class="mt-1 block w-full text-sm text-ink/70 file:mr-4 file:rounded-lg file:border-0 file:bg-ink/5 file:px-4 file:py-2 file:text-sm file:font-medium file:text-ink hover:file:bg-ink/10"
                         @input="form.file = $event.target.files[0]"
                     />
