@@ -1,10 +1,16 @@
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 import laravel from 'laravel-vite-plugin';
 import vue from '@vitejs/plugin-vue';
 import { wayfinder } from '@laravel/vite-plugin-wayfinder';
 import { VitePWA } from 'vite-plugin-pwa';
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
+    server: {
+        // Sail publishes VITE_PORT from .env; Vite has to listen on the same port so
+        // several Sail projects can run their dev servers side by side.
+        port: Number(loadEnv(mode, process.cwd(), '').VITE_PORT || 5173),
+        strictPort: true,
+    },
     plugins: [
         laravel({
             input: 'resources/js/app.js',
@@ -60,4 +66,4 @@ export default defineConfig({
             },
         }),
     ],
-});
+}));
