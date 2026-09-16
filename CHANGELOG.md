@@ -6,6 +6,33 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [2026.09.16] — 2026-09-16
+
+### Added
+
+- **Bank statements import from Excel.** The Buchhaltung import accepts `.xls`, `.xlsx`
+  and `.ods` next to CSV — the bank's own „Transaktionen" download no longer has to be
+  converted first. The spreadsheet is read into the same column-mapping step as a CSV;
+  date and number cells arrive as dates and plain amounts, formulas are evaluated. A
+  column named „Buchung" is now recognised as the booking date.
+- The column-mapping screen says that **without a Währung column every booking is
+  created in EUR**, instead of leaving that default implicit.
+
+### Changed
+
+- **Exports without OpenSpout.** The XLSX export is written with PhpSpreadsheet (now
+  needed for the import anyway) and the CSV export with plain `fputcsv` — byte-identical
+  to before. One spreadsheet dependency instead of two.
+- The Docker image installs the PHP `gd` extension, which PhpSpreadsheet requires.
+- Development: Vite listens on `VITE_PORT`, so several Sail projects can run side by side
+  with distinct `APP_PORT`/`VITE_PORT` values in `.env`.
+
+### Fixed
+
+- **A purpose starting with „=" became a live formula in the XLSX export.** Cells are
+  now written with explicit types, so bank texts stay text and cannot run as Excel
+  formulas when the file is opened.
+
 ## [2026.08.04] — 2026-08-04
 
 ### Changed
