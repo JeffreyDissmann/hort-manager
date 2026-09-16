@@ -153,6 +153,8 @@ return [
         'clear_selection' => 'Auswahl aufheben',
         'confirm_selected' => 'Bestätigen',
         'confirm_selected_hint' => 'Nur Buchungen mit Kategorie werden bestätigt.',
+        'assign_category' => 'Kategorie setzen',
+        'assign_category_hint' => 'Nur vorbelegt, nicht bestätigt: Gegenpartei und Beleg noch einzeln prüfen.',
     ],
 
     'paperless' => [

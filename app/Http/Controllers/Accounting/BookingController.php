@@ -25,6 +25,8 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -83,10 +85,10 @@ class BookingController extends Controller
                     'counterparty' => $b->counterpartyLabel(),
                     'purpose' => $b->purpose,
                     'paperless_document_id' => $b->paperless_document_id,
-                    // Confirmable in bulk: unconfirmed and already categorised.
-                    'can_confirm' => ! $isTransfer
-                        && in_array($b->status, [BookingStatus::Draft, BookingStatus::Suggested], true)
-                        && $b->category_id !== null,
+                    // Selectable for the bulk actions: unconfirmed and not a transfer.
+                    // Only the categorised ones among them are actually confirmed.
+                    'can_select' => ! $isTransfer
+                        && in_array($b->status, [BookingStatus::Draft, BookingStatus::Suggested], true),
                 ];
             });
 
@@ -104,9 +106,9 @@ class BookingController extends Controller
             'paperlessEnabled' => $this->paperless->enabled(),
             // Base URL for the per-row „open receipt in Paperless" link (null when disabled).
             'paperlessUrl' => $this->paperless->baseUrl(),
-            // How many unconfirmed+categorised bookings match the current filter
-            // (the count „select all matching" would bulk-confirm).
-            'confirmableTotal' => Booking::needsReview()->whereNotNull('category_id')
+            // How many unconfirmed non-transfer bookings match the current filter
+            // (what „select all matching" hands to the bulk actions).
+            'selectableTotal' => Booking::needsReview()->where('kind', '!=', BookingKind::Transfer)
                 ->tap(fn ($q) => $this->applyFilters($q, $filters))->count(),
             'filterOptions' => [
                 'accounts' => Account::orderBy('name')->get(['id', 'name']),
@@ -527,6 +529,46 @@ class BookingController extends Controller
      */
     public function bulkConfirm(Request $request): RedirectResponse
     {
+        $query = $this->selection($request, Booking::needsReview()->whereNotNull('category_id'));
+
+        $count = $query->update(['status' => BookingStatus::Confirmed]);
+
+        return back()->with('status', __('flash.bookings_confirmed', ['count' => $count]));
+    }
+
+    /**
+     * Pre-fill one category on many unconfirmed bookings at once — the given ids or
+     * every booking matching the current filter. Only the category changes: the status
+     * (Entwurf / KI-Vorschlag) and everything else stay, since each booking still needs
+     * its own check (counterparty, Paperless receipt) before it is confirmed. Bookings
+     * whose bank sign doesn't fit the category's direction are left alone.
+     */
+    public function bulkAssignCategory(Request $request): RedirectResponse
+    {
+        $category = Category::findOrFail($request->validate([
+            'category_id' => ['required', 'integer', Rule::exists('accounting_categories', 'id')->where('active', true)],
+        ])['category_id']);
+
+        $query = $this->selection($request, Booking::needsReview()->where('kind', '!=', BookingKind::Transfer));
+
+        $matching = (clone $query)->where('amount_cents', $category->direction === CategoryDirection::Income ? '>=' : '<', 0);
+        $count = $matching->update(['category_id' => $category->id, 'updated_by' => Auth::id()]);
+        $skipped = $query->count() - $count;
+
+        return back()->with('status', $skipped > 0
+            ? __('flash.bookings_category_assigned_skipped', ['count' => $count, 'skipped' => $skipped])
+            : __('flash.bookings_category_assigned', ['count' => $count]));
+    }
+
+    /**
+     * Narrow a bulk action's base query to what the overview selected: the given ids,
+     * or every booking matching the posted filter („alle passenden auswählen").
+     *
+     * @param  Builder<Booking>  $query
+     * @return Builder<Booking>
+     */
+    private function selection(Request $request, Builder $query): Builder
+    {
         $data = $request->validate([
             'ids' => ['array'],
             'ids.*' => ['integer'],
@@ -534,17 +576,13 @@ class BookingController extends Controller
             'filters' => ['array'],
         ]);
 
-        $query = Booking::needsReview()->whereNotNull('category_id');
-
         if ($data['all'] ?? false) {
             $this->applyFilters($query, $data['filters'] ?? []);
         } else {
             $query->whereIn('id', $data['ids'] ?? []);
         }
 
-        $count = $query->update(['status' => BookingStatus::Confirmed]);
-
-        return back()->with('status', __('flash.bookings_confirmed', ['count' => $count]));
+        return $query;
     }
 
     /**
