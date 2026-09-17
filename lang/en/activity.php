@@ -41,6 +41,8 @@ return [
         'daily_program' => 'Daily program',
         'homework_default' => 'Homework default',
         'user' => 'User',
+        'holiday_period' => 'Holiday period',
+        'holiday_care_day' => 'Holiday care day',
     ],
 
     // Changed-field names (shown in the diff).
@@ -68,6 +70,15 @@ return [
         'depart_at' => 'Departure',
         'return_at' => 'Return',
         'rsvp_deadline' => 'RSVP deadline',
+        'active_from' => 'Enrolled from',
+        'active_until' => 'Enrolled until',
+        'reason' => 'Reason',
+        'type' => 'Type',
+        'starts_on' => 'From',
+        'ends_on' => 'Until',
+        'registration_deadline' => 'Registration deadline',
+        'starts_at' => 'Care from',
+        'ends_at' => 'Care until',
     ],
 
     // Known enum values shown in the diff (method, qualifier, role, reason).
@@ -82,5 +93,7 @@ return [
         'away' => 'away',
         'staff' => 'Staff',
         'parent' => 'Parent',
+        'closed' => 'Closure',
+        'care' => 'Holiday care',
     ],
 ];
