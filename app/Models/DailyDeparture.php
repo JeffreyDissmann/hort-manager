@@ -30,6 +30,9 @@ class DailyDeparture extends Model
         'status',
         'planned_time',
         'time_qualifier',
+        // „Kommt später": optional arrival time + reason for this one day.
+        'arrives_at',
+        'arrival_note',
         'planned_method',
         'companion_child_id',
         'companion_confirmed',
@@ -97,6 +100,27 @@ class DailyDeparture extends Model
     public function isCareRegistration(): bool
     {
         return $this->holiday_care_day_id !== null;
+    }
+
+    /** The „kommt später" arrival time as HH:MM, or null when the child arrives as usual. */
+    public function arrivalTime(): ?string
+    {
+        return $this->arrives_at ? substr((string) $this->arrives_at, 0, 5) : null;
+    }
+
+    /**
+     * One German line for a late arrival — „kommt erst um 14:30 (Arzttermin)" — shared
+     * by the Späte-Änderung DM, the Wochenüberblick and the TRMNL feed. Null without a time.
+     */
+    public static function describeArrival(?string $time, ?string $note): ?string
+    {
+        if (! $time) {
+            return null;
+        }
+
+        $note = trim((string) $note);
+
+        return 'kommt erst um '.substr($time, 0, 5).($note !== '' ? " ({$note})" : '');
     }
 
     /**

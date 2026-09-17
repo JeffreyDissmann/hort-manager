@@ -6,6 +6,21 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [2026.09.17.1] — 2026-09-17
+
+### Added
+
+- **„Kommt später".** A day can now carry an optional arrival time plus a reason
+  (Arzttermin, Training …), entered in the shared `DayEditor` from the Wochenplan or the
+  board. Day-only — the Stammplan never carries one, nobody marks the arrival, and „Auf
+  Standard" clears it with the rest of the day. The arrival has to be before the pickup,
+  including the mirrored time of a „geht mit … mit" companion.
+- It shows wherever the day shows: a badge on the board card **and** a „Kommt heute
+  später" group next to „Heute hortfrei"; the Wochenplan cell plus a line in the day
+  header next to Essen/Aktivität; the Späte-Änderung DM to staff; the Monday
+  Wochenüberblick; and the TRMNL „Heute" screen (new `arrival` field — repaste
+  `docs/trmnl/heute.liquid`). Changes are labelled in the Protokoll.
+
 ## [2026.09.17] — 2026-09-17
 
 ### Added

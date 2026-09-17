@@ -84,7 +84,7 @@ class CareDashboardTest extends TestCase
         $this->assertSame(1, $today['present_count']);
         $this->assertSame('16:00', $today['next_pickup']);
         $this->assertSame('16:00', $today['departures'][0]['time']);
-        $this->assertSame([['name' => 'Mia', 'alone' => false, 'left' => false, 'excursion' => false, 'deviation' => null]], $today['departures'][0]['children']);
+        $this->assertSame([['name' => 'Mia', 'alone' => false, 'left' => false, 'excursion' => false, 'deviation' => null, 'arrival' => null]], $today['departures'][0]['children']);
     }
 
     public function test_a_plain_override_on_that_date_is_not_a_sign_up(): void

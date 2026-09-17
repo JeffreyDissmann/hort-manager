@@ -16,6 +16,16 @@ declare(strict_types=1);
 
 return [
     [
+        'version' => '2026.09.17.1',
+        'date' => '2026-09-17',
+        'title' => 'Kommt später? Sag kurz Bescheid 🕑',
+        'items' => [
+            '🕑 Kommt dein Kind an einem Tag später in den Hort – Arzttermin, Training, Musikschule –, kannst du das jetzt eintragen: im Wochenplan oder auf „Heute" den Tag antippen und „Kommt später an?" wählen. Uhrzeit rein, Grund dazu, fertig. Danke an Stepan für die Idee!',
+            '👀 Die Erzieher:innen sehen es dann sofort: auf „Heute" steht oben „Kommt heute später" mit Zeit und Grund, im Wochenplan steht es beim jeweiligen Tag neben dem Essen. So weiß niemand mittags rätseln, wo dein Kind bleibt.',
+            '📋 Die Angabe gilt nur für diesen einen Tag – der Stammplan bleibt, wie er ist. „Auf Standard" nimmt sie wieder weg, und im Wochenüberblick am Montag steht sie mit dabei.',
+        ],
+    ],
+    [
         'version' => '2026.08.07',
         'date' => '2026-08-07',
         'title' => 'Ferien-Gruß 🪁 und ein leichterer Start',

@@ -23,7 +23,9 @@ const props = defineProps({
 });
 
 const editing = ref(null); // { childId, childName, date, label, absent }
-const form = reactive({ planned_time: '', planned_method: '', time_qualifier: 'at', companion_child_id: '', note: '', absence_reason: '' });
+const form = reactive({ planned_time: '', planned_method: '', time_qualifier: 'at', companion_child_id: '', note: '', absence_reason: '', arrives_at: '', arrival_note: '' });
+// „Kommt später" is optional extra info — folded away until asked for (or already set).
+const showArrival = ref(false);
 const saveError = ref('');
 const saving = ref(false);
 
@@ -46,8 +48,28 @@ function open(child, day, dayMeta) {
     form.companion_child_id = day.companion?.id ?? '';
     form.note = day.note ?? '';
     form.absence_reason = '';
+    form.arrives_at = day.arrives_at ?? '';
+    form.arrival_note = day.arrival_note ?? '';
+    showArrival.value = !!day.arrives_at;
     saveError.value = '';
 }
+
+function removeArrival() {
+    form.arrives_at = '';
+    form.arrival_note = '';
+    showArrival.value = false;
+}
+
+// Arriving at or after the pickup time can't happen (mirrors AdjustDayRequest). With a
+// companion the pickup is mirrored from them, so that time is the one to beat.
+const arrivalAfterPickup = computed(() => {
+    if (!form.arrives_at) {
+        return false;
+    }
+    const pickup = goingWithChild.value ? selectedCompanionTime.value : form.planned_time;
+
+    return !!pickup && form.arrives_at >= pickup;
+});
 
 function close() {
     editing.value = null;
@@ -56,7 +78,7 @@ function close() {
 defineExpose({ open });
 
 function showFirstError(errors) {
-    saveError.value = errors.companion_child_id || errors.planned_time || Object.values(errors)[0] || '';
+    saveError.value = errors.companion_child_id || errors.planned_time || errors.arrives_at || Object.values(errors)[0] || '';
 }
 
 const stagingAbsence = computed(() => form.absence_reason !== '');
@@ -101,6 +123,9 @@ const notifiesStaff = computed(() => {
 const canSave = computed(() => {
     if (stagingAbsence.value) {
         return !!form.note.trim();
+    }
+    if (arrivalAfterPickup.value) {
+        return false;
     }
     if (goingWithChild.value) {
         // The time is mirrored from the companion, so only a valid companion is needed.
@@ -149,6 +174,8 @@ function save() {
             time_qualifier: form.planned_method === 'sent_home' ? form.time_qualifier || null : null,
             companion_child_id: goingWithChild.value ? form.companion_child_id || null : null,
             note: form.note || null,
+            arrives_at: form.arrives_at || null,
+            arrival_note: form.arrives_at ? form.arrival_note || null : null,
         },
         opts,
     );
@@ -237,6 +264,51 @@ function cancelAbsence() {
                     </p>
                 </template>
             </div>
+
+            <!-- „Kommt später": optional, only for this day — no arrival gets marked.
+                 Right under Krank/Kommt nicht: the other „not here as usual" answer. -->
+            <fieldset
+                :disabled="!!editing.absent || stagingAbsence"
+                :class="editing.absent || stagingAbsence ? 'opacity-40' : ''"
+            >
+                <button
+                    v-if="!showArrival"
+                    type="button"
+                    data-testid="arrival-toggle"
+                    class="text-sm font-medium text-hort-teal-dark underline-offset-2 hover:underline"
+                    @click="showArrival = true"
+                >
+                    + {{ $t('weekly.arrival_add') }}
+                </button>
+                <div v-else class="space-y-3 rounded-lg bg-hort-blue/10 p-3" data-testid="arrival-section">
+                    <div class="flex items-center justify-between">
+                        <InputLabel for="arrives-at" :value="$t('weekly.arrival_label')" />
+                        <button
+                            type="button"
+                            class="text-xs font-medium text-ink/50 underline-offset-2 hover:underline"
+                            @click="removeArrival"
+                        >
+                            {{ $t('weekly.arrival_remove') }}
+                        </button>
+                    </div>
+                    <TimeSelect id="arrives-at" v-model="form.arrives_at" test-id="arrives-at" class="block w-full" />
+                    <p v-if="arrivalAfterPickup" class="text-xs font-medium text-red-700">
+                        {{ $t('weekly.arrival_after_pickup') }}
+                    </p>
+                    <div>
+                        <InputLabel for="arrival-note" :value="$t('weekly.arrival_note_label')" />
+                        <TextInput
+                            id="arrival-note"
+                            v-model="form.arrival_note"
+                            data-testid="arrival-note"
+                            type="text"
+                            maxlength="255"
+                            class="mt-1 block w-full"
+                            :placeholder="$t('weekly.arrival_note_placeholder')"
+                        />
+                    </div>
+                </div>
+            </fieldset>
 
             <!-- Pickup plan — disabled while the child is (or is being) reported away -->
             <fieldset

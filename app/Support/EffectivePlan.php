@@ -20,7 +20,7 @@ use Illuminate\Support\Carbon;
 class EffectivePlan
 {
     /**
-     * @return array{time: ?string, method: ?string, qualifier: ?string, companion_child_id: ?int}
+     * @return array{time: ?string, method: ?string, qualifier: ?string, companion_child_id: ?int, arrives_at: ?string, arrival_note: ?string}
      */
     public static function for(int $childId, string $date): array
     {
@@ -60,6 +60,9 @@ class EffectivePlan
             'method' => $schedule?->method?->value,
             'qualifier' => $schedule?->time_qualifier?->value,
             'companion_child_id' => null,
+            // „Kommt später" is day-only — the Stammplan never carries one.
+            'arrives_at' => null,
+            'arrival_note' => null,
         ];
     }
 
@@ -70,7 +73,7 @@ class EffectivePlan
      *
      * @param  array<int, int>  $childIds
      * @param  array<int, string>  $dates
-     * @return array<string, array{time: ?string, method: ?string, qualifier: ?string, companion_child_id: ?int}>
+     * @return array<string, array{time: ?string, method: ?string, qualifier: ?string, companion_child_id: ?int, arrives_at: ?string, arrival_note: ?string}>
      */
     public static function forMany(array $childIds, array $dates): array
     {
@@ -128,6 +131,8 @@ class EffectivePlan
                     'method' => $schedule?->method?->value,
                     'qualifier' => $schedule?->time_qualifier?->value,
                     'companion_child_id' => null,
+                    'arrives_at' => null,
+                    'arrival_note' => null,
                 ];
             }
         }
@@ -136,7 +141,7 @@ class EffectivePlan
     }
 
     /**
-     * @return array{time: ?string, method: ?string, qualifier: ?string, companion_child_id: ?int}
+     * @return array{time: ?string, method: ?string, qualifier: ?string, companion_child_id: ?int, arrives_at: ?string, arrival_note: ?string}
      */
     private static function fromOverride(DailyDeparture $override): array
     {
@@ -145,17 +150,19 @@ class EffectivePlan
             'method' => $override->planned_method?->value,
             'qualifier' => $override->time_qualifier?->value,
             'companion_child_id' => $override->companion_child_id,
+            'arrives_at' => $override->arrivalTime(),
+            'arrival_note' => $override->arrival_note,
         ];
     }
 
     /**
      * No plan at all — the day doesn't exist for this child.
      *
-     * @return array{time: ?string, method: ?string, qualifier: ?string, companion_child_id: ?int}
+     * @return array{time: ?string, method: ?string, qualifier: ?string, companion_child_id: ?int, arrives_at: ?string, arrival_note: ?string}
      */
     private static function nothing(): array
     {
-        return ['time' => null, 'method' => null, 'qualifier' => null, 'companion_child_id' => null];
+        return ['time' => null, 'method' => null, 'qualifier' => null, 'companion_child_id' => null, 'arrives_at' => null, 'arrival_note' => null];
     }
 
     private static function short(?string $time): ?string

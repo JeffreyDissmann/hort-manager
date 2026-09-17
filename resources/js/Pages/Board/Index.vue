@@ -62,6 +62,14 @@ const visibleRows = computed(() => {
     return props.rows.filter((r) => r.is_own);
 });
 
+// „Kommt heute später": children still expected, surfaced next to the absences so a
+// missing child at lunch reads as „on the way", not „lost". Earliest arrival first.
+const arrivingLater = computed(() =>
+    props.rows
+        .filter((r) => r.arrives_at && r.status === 'present')
+        .sort((a, b) => a.arrives_at.localeCompare(b.arrives_at) || a.name.localeCompare(b.name)),
+);
+
 const methodLabels = computed(() =>
     Object.fromEntries(props.methodOptions.map((o) => [o.value, o.label])),
 );
@@ -293,6 +301,8 @@ function editRow(row) {
             qualifier: row.qualifier,
             companion: row.companion,
             note: row.note,
+            arrives_at: row.arrives_at,
+            arrival_note: row.arrival_note,
         },
         todayMeta(),
     );
@@ -419,7 +429,7 @@ function editHortfrei(child) {
             <!-- Not at the Hort today — one block combining reported absences (amber,
                  needs attention) and regular „Hortfrei" days (muted, expected). -->
             <div
-                v-if="absent.length || hortfrei.length"
+                v-if="absent.length || arrivingLater.length || hortfrei.length"
                 class="space-y-2 rounded-2xl bg-ink/5 p-4 text-sm"
             >
                 <div v-if="absent.length">
@@ -444,9 +454,31 @@ function editHortfrei(child) {
                 </div>
 
                 <div
+                    v-if="arrivingLater.length"
+                    data-testid="arriving-later"
+                    :class="absent.length ? 'border-t border-ink/10 pt-2' : ''"
+                >
+                    <p class="mb-1 font-semibold text-hort-blue">{{ $t('board.arriving_later_today') }}</p>
+                    <div class="flex flex-wrap gap-1.5">
+                        <component
+                            :is="row.can_override ? 'button' : 'span'"
+                            v-for="row in arrivingLater"
+                            :key="row.child_id"
+                            :type="row.can_override ? 'button' : undefined"
+                            :data-testid="`arriving-later-${row.child_id}`"
+                            class="inline-flex items-center gap-1 rounded-lg bg-hort-blue/15 px-2 py-1 text-xs font-medium text-hort-blue"
+                            :class="row.can_override ? 'transition hover:bg-hort-blue/25' : ''"
+                            @click="row.can_override ? editRow(row) : null"
+                        >
+                            {{ row.name }} · {{ $t('weekly.arrives_later_short', { time: row.arrives_at }) }}<span v-if="row.arrival_note" class="font-normal opacity-80"> · {{ row.arrival_note }}</span>
+                        </component>
+                    </div>
+                </div>
+
+                <div
                     v-if="hortfrei.length"
                     class="flex flex-wrap items-center gap-1.5 text-ink/50"
-                    :class="absent.length ? 'border-t border-ink/10 pt-2' : ''"
+                    :class="absent.length || arrivingLater.length ? 'border-t border-ink/10 pt-2' : ''"
                 >
                     <span class="font-medium">{{ $t('board.hortfrei_today') }}:</span>
                     <template v-for="c in hortfrei" :key="c.id">
@@ -616,6 +648,13 @@ function editHortfrei(child) {
                                 >
                                     {{ $t('board.changed_today') }}
                                 </span>
+                            </p>
+                            <p
+                                v-if="row.arrives_at"
+                                class="mt-1 inline-flex items-center gap-1 rounded-lg bg-hort-blue/15 px-2 py-1 text-xs font-semibold text-hort-blue"
+                                :data-testid="`late-arrival-${row.child_id}`"
+                            >
+                                {{ $t('weekly.arrives_later', { time: row.arrives_at }) }}<span v-if="row.arrival_note" class="font-normal"> · {{ row.arrival_note }}</span>
                             </p>
                             <p
                                 v-if="row.excursion"

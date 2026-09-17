@@ -43,6 +43,9 @@ class WeeklyAdjustmentController extends Controller
             'companion_confirmed_by' => null,
             'companion_confirmed_at' => null,
             'note' => $validated['note'] ?? null,
+            // „Kommt später" — the reason is dropped along with the time.
+            'arrives_at' => $validated['arrives_at'] ?? null,
+            'arrival_note' => ($validated['arrives_at'] ?? null) ? ($validated['arrival_note'] ?? null) : null,
         ];
 
         if ($method === DepartureMethod::WithChild->value) {
@@ -226,6 +229,8 @@ class WeeklyAdjustmentController extends Controller
             'method' => $this->planValue('planned_method', $departure->planned_method),
             'time_qualifier' => $this->planValue('time_qualifier', $departure->time_qualifier),
             'companion' => $this->planValue('companion_child_id', $departure->companion_child_id),
+            'arrives_at' => $this->planValue('arrives_at', $departure->arrivalTime()),
+            'arrival_note' => $this->planValue('arrival_note', $departure->arrival_note),
         ];
     }
 

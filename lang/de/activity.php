@@ -79,6 +79,8 @@ return [
         'registration_deadline' => 'Anmeldeschluss',
         'starts_at' => 'Betreuung von',
         'ends_at' => 'Betreuung bis',
+        'arrives_at' => 'Kommt erst um',
+        'arrival_note' => 'Grund fürs spätere Kommen',
     ],
 
     // Known enum values shown in the diff (method, qualifier, role, reason).
