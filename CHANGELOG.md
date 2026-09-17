@@ -6,6 +6,24 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [2026.09.17] — 2026-09-17
+
+### Added
+
+- **One category for many bookings.** The bulk bar on „Buchungen" can set a category on
+  the selected — or all matching — unconfirmed bookings. It only pre-fills: the status
+  stays „Entwurf" / „KI-Vorschlag", and counterparty, Paperless receipt and confidence
+  are untouched, since each booking still needs its own check. Bookings whose bank sign
+  doesn't fit the category's direction are skipped and counted. Uncategorised bookings
+  can now be selected too; „Bestätigen" still confirms only categorised ones.
+
+### Fixed
+
+- **The Protokoll showed raw keys for Ferien entries** („activity.subjects.holiday_period",
+  „type", „starts_on" …). Ferien-Zeiträume and Betreuungstage — and a few older fields
+  (Kind „Im Hort seit/bis", Abwesenheit „Grund") — now have German and English labels,
+  existing entries included. A test makes sure every logged model and field has one.
+
 ## [2026.09.16] — 2026-09-16
 
 ### Added

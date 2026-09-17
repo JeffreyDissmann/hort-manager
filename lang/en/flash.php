@@ -57,6 +57,8 @@ return [
     'receipt_attached' => 'Receipt linked.',
     'receipt_ignored' => 'Document marked as „not a receipt".',
     'bookings_confirmed' => ':count bookings confirmed.',
+    'bookings_category_assigned' => 'Category set on :count bookings – not confirmed yet.',
+    'bookings_category_assigned_skipped' => 'Category set on :count bookings – not confirmed yet. :skipped skipped because income/expense does not match the category.',
     'ai_disabled' => 'AI analysis is currently disabled.',
     'transfer_created' => 'Transfer created.',
 

@@ -18,6 +18,7 @@ import {
     reanalyse as bookingsReanalyse,
     relinkReceipts as bookingsRelinkReceipts,
     bulkConfirm as bookingsBulkConfirm,
+    bulkAssignCategory as bookingsBulkAssignCategory,
     download as bookingsExport,
 } from '@/routes/accounting/bookings';
 import { review as paperlessReview } from '@/routes/accounting/paperless';
@@ -32,7 +33,7 @@ const props = defineProps({
     filterOptions: { type: Object, required: true },
     reviewCount: { type: Number, default: 0 },
     unconfirmedCount: { type: Number, default: 0 },
-    confirmableTotal: { type: Number, default: 0 },
+    selectableTotal: { type: Number, default: 0 },
     pendingCount: { type: Number, default: 0 },
     aiEnabled: { type: Boolean, default: false },
     paperlessEnabled: { type: Boolean, default: false },
@@ -71,24 +72,28 @@ const { canWrite } = useAccountingAccess();
 const shouldPoll = computed(() => props.aiEnabled && props.pendingCount > 0 && props.bookings.data.length === 0);
 const { start: startPoll, stop: stopPoll } = usePoll(
     4000,
-    { only: ['bookings', 'pendingCount', 'reviewCount', 'unconfirmedCount', 'confirmableTotal'], preserveScroll: true },
+    { only: ['bookings', 'pendingCount', 'reviewCount', 'unconfirmedCount', 'selectableTotal'], preserveScroll: true },
     { autoStart: false },
 );
 watch(shouldPoll, (on) => (on ? startPoll() : stopPoll()), { immediate: true });
 
-// --- Bulk selection / confirm ---------------------------------------------
+// --- Bulk selection: confirm / pre-fill a category --------------------------
 const selectedIds = ref(new Set());
 const selectAllMatching = ref(false);
 
-const confirmableRows = computed(() => props.bookings.data.filter((b) => b.can_confirm));
+const selectableRows = computed(() => props.bookings.data.filter((b) => b.can_select));
 const allPageSelected = computed(
-    () => confirmableRows.value.length > 0 && confirmableRows.value.every((b) => selectedIds.value.has(b.id)),
+    () => selectableRows.value.length > 0 && selectableRows.value.every((b) => selectedIds.value.has(b.id)),
 );
 const hasSelection = computed(() => selectAllMatching.value || selectedIds.value.size > 0);
-const selectionCount = computed(() => (selectAllMatching.value ? props.confirmableTotal : selectedIds.value.size));
+const selectionCount = computed(() => (selectAllMatching.value ? props.selectableTotal : selectedIds.value.size));
 const canSelectAllMatching = computed(
-    () => allPageSelected.value && !selectAllMatching.value && props.confirmableTotal > selectedIds.value.size,
+    () => allPageSelected.value && !selectAllMatching.value && props.selectableTotal > selectedIds.value.size,
 );
+
+// Only active categories can be pre-filled (the filter list also carries inactive ones).
+const assignableCategories = computed(() => props.filterOptions.categories.filter((c) => c.active));
+const assignCategoryId = ref('');
 
 function toggleRow(booking) {
     selectAllMatching.value = false;
@@ -101,21 +106,31 @@ function togglePage() {
     selectAllMatching.value = false;
     const next = new Set(selectedIds.value);
     const select = !allPageSelected.value;
-    confirmableRows.value.forEach((b) => (select ? next.add(b.id) : next.delete(b.id)));
+    selectableRows.value.forEach((b) => (select ? next.add(b.id) : next.delete(b.id)));
     selectedIds.value = next;
 }
 
 function clearSelection() {
     selectedIds.value = new Set();
     selectAllMatching.value = false;
+    assignCategoryId.value = '';
+}
+
+// Either the ticked ids, or „all matching" as the current filter.
+function selectionPayload() {
+    return selectAllMatching.value ? { all: true, filters: activeFilters() } : { ids: [...selectedIds.value] };
 }
 
 function confirmSelected() {
-    const activeFilters = Object.fromEntries(Object.entries(filters).filter(([, v]) => v !== '' && v !== null));
-    const payload = selectAllMatching.value
-        ? { all: true, filters: activeFilters }
-        : { ids: [...selectedIds.value] };
-    router.post(bookingsBulkConfirm().url, payload, { preserveScroll: true, onSuccess: clearSelection });
+    router.post(bookingsBulkConfirm().url, selectionPayload(), { preserveScroll: true, onSuccess: clearSelection });
+}
+
+function assignCategory() {
+    router.post(
+        bookingsBulkAssignCategory().url,
+        { ...selectionPayload(), category_id: assignCategoryId.value },
+        { preserveScroll: true, onSuccess: clearSelection },
+    );
 }
 
 // Reset selection whenever the list changes (filter / page navigation).
@@ -388,8 +403,8 @@ function destroy(booking) {
                 </div>
             </div>
 
-            <!-- Bulk-confirm bar -->
-            <div v-if="canWrite && hasSelection" class="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-hort-teal/10 p-3">
+            <!-- Bulk bar: pre-fill a category (status untouched) or confirm -->
+            <div v-if="canWrite && hasSelection" class="space-y-3 rounded-2xl bg-hort-teal/10 p-3" data-testid="bookings-bulk-bar">
                 <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
                     <span class="font-medium text-ink">
                         {{ selectAllMatching
@@ -397,16 +412,46 @@ function destroy(booking) {
                             : $t('accounting.bookings.selected_count', { count: selectionCount }) }}
                     </span>
                     <button v-if="canSelectAllMatching" type="button" class="text-hort-teal-dark hover:underline" @click="selectAllMatching = true">
-                        {{ $t('accounting.bookings.select_all_matching', { count: confirmableTotal }) }}
+                        {{ $t('accounting.bookings.select_all_matching', { count: selectableTotal }) }}
                     </button>
                     <button type="button" class="text-ink/50 hover:text-ink" @click="clearSelection">
                         {{ $t('accounting.bookings.clear_selection') }}
                     </button>
-                    <span class="text-ink/40">· {{ $t('accounting.bookings.confirm_selected_hint') }}</span>
                 </div>
-                <PrimaryButton :disabled="selectionCount === 0" @click="confirmSelected">
-                    <CheckIcon class="mr-1 h-4 w-4" /> {{ $t('accounting.bookings.confirm_selected') }} ({{ selectionCount }})
-                </PrimaryButton>
+                <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                    <div class="flex-1 space-y-1">
+                        <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+                            <div class="relative w-full sm:max-w-sm">
+                                <TagIcon class="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/40" />
+                                <select
+                                    v-model="assignCategoryId"
+                                    class="w-full rounded-md border-ink/20 pl-8 text-sm focus:border-hort-teal focus:ring-hort-teal"
+                                    :aria-label="$t('accounting.bookings.assign_category')"
+                                    data-testid="bookings-assign-category-select"
+                                >
+                                    <option value="">{{ $t('accounting.bookings.pick_category') }}</option>
+                                    <option v-for="c in assignableCategories" :key="c.id" :value="c.id">{{ c.path }}</option>
+                                </select>
+                            </div>
+                            <button
+                                type="button"
+                                class="flex shrink-0 items-center justify-center gap-1 rounded-md bg-surface px-3 py-2 text-sm font-medium text-ink shadow-sm ring-1 ring-ink/10 transition hover:bg-ink/5 disabled:opacity-50"
+                                :disabled="!assignCategoryId || selectionCount === 0"
+                                data-testid="bookings-assign-category"
+                                @click="assignCategory"
+                            >
+                                <TagIcon class="h-4 w-4" /> {{ $t('accounting.bookings.assign_category') }}
+                            </button>
+                        </div>
+                        <p class="text-xs text-ink/50">{{ $t('accounting.bookings.assign_category_hint') }}</p>
+                    </div>
+                    <div class="space-y-1 lg:text-right">
+                        <PrimaryButton :disabled="selectionCount === 0" @click="confirmSelected">
+                            <CheckIcon class="mr-1 h-4 w-4" /> {{ $t('accounting.bookings.confirm_selected') }} ({{ selectionCount }})
+                        </PrimaryButton>
+                        <p class="text-xs text-ink/50">{{ $t('accounting.bookings.confirm_selected_hint') }}</p>
+                    </div>
+                </div>
             </div>
 
             <!-- List -->
@@ -429,7 +474,7 @@ function destroy(booking) {
                         <tr>
                             <th v-if="canWrite" class="w-8 px-3 py-2">
                                 <input
-                                    v-if="confirmableRows.length"
+                                    v-if="selectableRows.length"
                                     type="checkbox"
                                     :checked="allPageSelected"
                                     class="rounded border-ink/20 text-hort-teal-dark focus:ring-hort-teal"
@@ -446,13 +491,14 @@ function destroy(booking) {
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-ink/5">
-                        <tr v-for="b in bookings.data" :key="b.id" class="hover:bg-ink/5" :class="{ 'bg-hort-teal/5': selectAllMatching ? b.can_confirm : selectedIds.has(b.id) }">
+                        <tr v-for="b in bookings.data" :key="b.id" class="hover:bg-ink/5" :class="{ 'bg-hort-teal/5': selectAllMatching ? b.can_select : selectedIds.has(b.id) }">
                             <td v-if="canWrite" class="px-3 py-2">
                                 <input
-                                    v-if="b.can_confirm"
+                                    v-if="b.can_select"
                                     type="checkbox"
                                     :checked="selectAllMatching || selectedIds.has(b.id)"
                                     :disabled="selectAllMatching"
+                                    data-testid="booking-select"
                                     class="rounded border-ink/20 text-hort-teal-dark focus:ring-hort-teal disabled:opacity-50"
                                     @change="toggleRow(b)"
                                 />

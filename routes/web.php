@@ -248,6 +248,8 @@ Route::middleware('auth')->group(function () {
             Route::post('paperless/ignore', [PaperlessReviewController::class, 'ignore'])->name('paperless.ignore');
             // Bulk-confirm bookings from the overview.
             Route::post('bookings/confirm', [BookingController::class, 'bulkConfirm'])->name('bookings.bulk-confirm');
+            // Pre-fill one category on many unconfirmed bookings (status untouched).
+            Route::post('bookings/assign-category', [BookingController::class, 'bulkAssignCategory'])->name('bookings.bulk-assign-category');
             // Reclassify an existing booking as an internal transfer to another account.
             Route::post('bookings/{booking}/convert-transfer', [BookingController::class, 'convertToTransfer'])->name('bookings.convert-transfer');
             Route::resource('bookings', BookingController::class)->except(['show', 'index']);

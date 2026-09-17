@@ -57,6 +57,8 @@ return [
     'receipt_attached' => 'Beleg verknüpft.',
     'receipt_ignored' => 'Beleg als „kein Beleg" markiert.',
     'bookings_confirmed' => ':count Buchungen bestätigt.',
+    'bookings_category_assigned' => 'Kategorie für :count Buchungen gesetzt – noch nicht bestätigt.',
+    'bookings_category_assigned_skipped' => 'Kategorie für :count Buchungen gesetzt – noch nicht bestätigt. :skipped übersprungen, weil Ein- und Ausgabe nicht zur Kategorie passen.',
     'ai_disabled' => 'Die KI-Analyse ist aktuell deaktiviert.',
     'transfer_created' => 'Umbuchung angelegt.',
 

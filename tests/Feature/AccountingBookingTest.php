@@ -347,6 +347,105 @@ it('bulk-confirming all honours the active filter, leaving non-matching bookings
         ->and($b->refresh()->status)->toBe(BookingStatus::Suggested);
 });
 
+it('bulk-assigns a category without confirming or touching anything else', function () {
+    $admin = User::factory()->admin()->accountingWriter()->create();
+    $this->actingAs($admin);
+    $essensgeld = Category::factory()->income()->create();
+    $draft = Booking::factory()->draft()->create(['category_id' => null, 'paperless_document_id' => null]);
+    $suggested = Booking::factory()->suggested()->create(['counterparty_name' => 'Familie Huber']);
+
+    $this->post('/accounting/bookings/assign-category', [
+        'ids' => [$draft->id, $suggested->id],
+        'category_id' => $essensgeld->id,
+    ])->assertRedirect()->assertSessionHas('status', __('flash.bookings_category_assigned', ['count' => 2]));
+
+    $draft->refresh();
+    $suggested->refresh();
+    expect($draft->category_id)->toBe($essensgeld->id)
+        ->and($draft->status)->toBe(BookingStatus::Draft)
+        ->and($draft->updated_by)->toBe($admin->id)
+        ->and($suggested->category_id)->toBe($essensgeld->id)
+        ->and($suggested->status)->toBe(BookingStatus::Suggested)
+        ->and($suggested->confidence)->toBe(SuggestionConfidence::Medium)
+        ->and($suggested->counterparty_name)->toBe('Familie Huber');
+});
+
+it('bulk-assigning a category leaves confirmed bookings and transfers alone', function () {
+    $admin = User::factory()->admin()->accountingWriter()->create();
+    $this->actingAs($admin);
+    $category = Category::factory()->income()->create();
+    $confirmed = Booking::factory()->create();
+    $transfer = Booking::factory()->draft()->create(['kind' => BookingKind::Transfer, 'category_id' => null]);
+
+    $this->post('/accounting/bookings/assign-category', [
+        'ids' => [$confirmed->id, $transfer->id],
+        'category_id' => $category->id,
+    ])->assertRedirect();
+
+    expect($confirmed->refresh()->category_id)->not->toBe($category->id)
+        ->and($transfer->refresh()->category_id)->toBeNull();
+});
+
+it('bulk-assigning skips bookings whose sign does not fit the category direction', function () {
+    $admin = User::factory()->admin()->accountingWriter()->create();
+    $this->actingAs($admin);
+    $expenseCategory = Category::factory()->expense()->create();
+    $expense = Booking::factory()->draft()->expense()->create(['category_id' => null]);
+    $income = Booking::factory()->draft()->create(['category_id' => null]);
+
+    $this->post('/accounting/bookings/assign-category', [
+        'ids' => [$expense->id, $income->id],
+        'category_id' => $expenseCategory->id,
+    ])->assertSessionHas('status', __('flash.bookings_category_assigned_skipped', ['count' => 1, 'skipped' => 1]));
+
+    expect($expense->refresh()->category_id)->toBe($expenseCategory->id)
+        ->and($income->refresh()->category_id)->toBeNull();
+});
+
+it('bulk-assigning to all matching honours the active filter', function () {
+    $admin = User::factory()->admin()->accountingWriter()->create();
+    $this->actingAs($admin);
+    $category = Category::factory()->income()->create();
+    $accountA = Account::factory()->create();
+    $a = Booking::factory()->draft()->create(['account_id' => $accountA->id, 'category_id' => null]);
+    $b = Booking::factory()->draft()->create(['category_id' => null]);
+
+    $this->post('/accounting/bookings/assign-category', [
+        'all' => true,
+        'filters' => ['account' => $accountA->id],
+        'category_id' => $category->id,
+    ])->assertRedirect();
+
+    expect($a->refresh()->category_id)->toBe($category->id)
+        ->and($b->refresh()->category_id)->toBeNull();
+});
+
+it('rejects bulk-assigning an inactive category and forbids read-only users', function () {
+    $booking = Booking::factory()->draft()->create(['category_id' => null]);
+    $inactive = Category::factory()->income()->create(['active' => false]);
+
+    $this->actingAs(User::factory()->admin()->accountingWriter()->create())
+        ->post('/accounting/bookings/assign-category', ['ids' => [$booking->id], 'category_id' => $inactive->id])
+        ->assertSessionHasErrors('category_id');
+
+    $this->actingAs(User::factory()->admin()->accountingReader()->create())
+        ->post('/accounting/bookings/assign-category', ['ids' => [$booking->id], 'category_id' => Category::factory()->income()->create()->id])
+        ->assertForbidden();
+
+    expect($booking->refresh()->category_id)->toBeNull();
+});
+
+it('lets uncategorised unconfirmed bookings be selected for the bulk actions', function () {
+    $admin = User::factory()->admin()->accountingWriter()->create();
+    Booking::factory()->draft()->create(['category_id' => null]);
+    Booking::factory()->create(); // confirmed → not selectable
+
+    $this->actingAs($admin)->get('/accounting/bookings')
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('selectableTotal', 1)
+            ->where('bookings.data', fn ($rows) => collect($rows)->pluck('can_select')->sort()->values()->all() === [false, true]));
+});
+
 it('deletes a booking', function () {
     $admin = User::factory()->admin()->accountingWriter()->create();
     $this->actingAs($admin);

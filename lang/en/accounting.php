@@ -153,6 +153,8 @@ return [
         'clear_selection' => 'Clear selection',
         'confirm_selected' => 'Confirm',
         'confirm_selected_hint' => 'Only categorised bookings will be confirmed.',
+        'assign_category' => 'Set category',
+        'assign_category_hint' => 'Pre-fills only, nothing is confirmed: still check counterparty and receipt one by one.',
     ],
 
     'paperless' => [
