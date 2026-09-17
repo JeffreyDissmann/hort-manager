@@ -17,6 +17,7 @@ return [
 
     'absent_today' => 'Heute abwesend',
     'hortfrei_today' => 'Heute hortfrei (Stammplan)',
+    'arriving_later_today' => 'Kommt heute später',
 
     'children_count' => ':n Kinder',
     'away_since' => 'Unterwegs seit :time',

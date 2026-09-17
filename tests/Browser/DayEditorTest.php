@@ -29,6 +29,38 @@ it('requires a method and a time before saving', function () {
         ->toBe(DepartureMethod::PickedUp);
 });
 
+it('adds a „kommt später" arrival with a reason, shown on the board', function () {
+    $staff = User::factory()->staff()->create();
+    $otherWeekday = (boardWeekday() % 5) + 1;
+    $child = Child::factory()->scheduledOn($otherWeekday, '15:00')->create(['name' => 'Theo']);
+
+    actAndVisit($staff, '/board')
+        ->click("@hortfrei-pill-{$child->id}")
+        ->select('@method', 'picked_up')
+        ->select('@time-hour', '16')
+        ->select('@time-minute', '00')
+        ->assertMissing('@arrival-section')   // folded away until asked for
+        ->click('@arrival-toggle')
+        ->select('@arrives-at-hour', '16')
+        ->select('@arrives-at-minute', '30')
+        ->assertDisabled('@save')             // arriving after the pickup can't be saved
+        ->select('@arrives-at-hour', '14')
+        ->type('@arrival-note', 'Arzttermin')
+        ->assertEnabled('@save')
+        ->click('@save')
+        ->assertMissing('@save')
+        ->assertVisible("@late-arrival-{$child->id}")
+        // …and in the summary next to the absences, so a missing child reads as „on the way".
+        ->assertVisible("@arriving-later-{$child->id}")
+        ->assertSeeIn('@arriving-later', 'Theo')
+        ->assertSee('Arzttermin')
+        ->assertNoJavaScriptErrors();
+
+    expect(DailyDeparture::where('child_id', $child->id)->whereDate('date', boardDate())->first())
+        ->arrivalTime()->toBe('14:30')
+        ->arrival_note->toBe('Arzttermin');
+});
+
 it('sets up a companion pickup („geht mit … mit")', function () {
     $staff = User::factory()->staff()->create();
     // Theo is „Hortfrei" today (scheduled another weekday) → editable via the pill.

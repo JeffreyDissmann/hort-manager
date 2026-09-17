@@ -43,6 +43,7 @@
                       {%- if kid.excursion %} 🚌{% endif -%}
                     </span>
                     {%- if kid.deviation %}<span class="label label--underline">⚠ {{ kid.deviation }}</span>{% endif -%}
+                    {%- if kid.arrival %}<span class="label label--small">🕑 {{ kid.arrival }}</span>{% endif -%}
                     {%- unless forloop.last %}<span class="label">·</span>{% endunless -%}
                   {%- endfor -%}
                 </td>

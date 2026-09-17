@@ -52,8 +52,15 @@ class LateChange
         Notification::send($recipients, new LateChangeNotification($child, $actor, $summary));
     }
 
-    /** A one-line description of a departure's plan, for the DM body. */
+    /** A one-line description of a departure's plan, for the DM body — incl. a late arrival. */
     public static function describePlan(DailyDeparture $departure): string
+    {
+        $arrival = DailyDeparture::describeArrival($departure->arrivalTime(), $departure->arrival_note);
+
+        return $arrival ? self::describePickup($departure).', '.$arrival : self::describePickup($departure);
+    }
+
+    private static function describePickup(DailyDeparture $departure): string
     {
         $method = $departure->planned_method;
 

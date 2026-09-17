@@ -226,7 +226,11 @@ function cellUi(day, hasPlan = true) {
     return {
         label: day.time ?? t('weekly.free'),
         labelClass: 'text-sm font-semibold',
-        title: day.comment || undefined,
+        // Hover: the comment plus a late arrival with its reason (the cell only fits the time).
+        title: [
+            day.comment,
+            day.arrives_at ? [t('weekly.arrives_later', { time: day.arrives_at }), day.arrival_note].filter(Boolean).join(' · ') : null,
+        ].filter(Boolean).join('\n') || undefined,
         class: [planClass(day), day.adjusted ? 'ring-2 ring-amber-400' : ''].filter(Boolean).join(' '),
         time: !!day.time,
         extras: true,
@@ -406,6 +410,13 @@ function answerCompanion(id, confirmed) {
                                         ]"
                                     >
                                         {{ $t('weekly.companion_with', { name: day.companion.name }) }}<template v-if="day.companion.confirmed === null"> · {{ $t('weekly.companion_pending') }}</template><template v-else-if="day.companion.confirmed === false"> · {{ $t('weekly.companion_declined') }}</template>
+                                    </span>
+                                    <span
+                                        v-if="day.arrives_at && day.ui.extras"
+                                        class="mt-0.5 block truncate text-[10px] font-medium leading-tight text-hort-blue"
+                                        :data-testid="`late-arrival-${child.id}-${day.date}`"
+                                    >
+                                        {{ $t('weekly.arrives_later_short', { time: day.arrives_at }) }}
                                     </span>
                                     <span
                                         v-if="day.birthday !== null && day.ui.extras"

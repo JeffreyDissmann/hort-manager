@@ -42,6 +42,9 @@ class AdjustDayRequest extends FormRequest
                 'nullable', 'integer', 'exists:children,id', 'different:child_id',
             ],
             'note' => ['nullable', 'string', 'max:255'],
+            // „Kommt später": optional, day-only. The reason only means something with a time.
+            'arrives_at' => ['nullable', 'date_format:H:i'],
+            'arrival_note' => ['nullable', 'string', 'max:255'],
         ];
     }
 
@@ -49,6 +52,13 @@ class AdjustDayRequest extends FormRequest
     public function after(): array
     {
         return [function (Validator $validator) {
+            // A child can't arrive after they've already gone home.
+            $arrives = $this->input('arrives_at');
+            $leaves = $this->input('planned_time');
+            if ($arrives && $leaves && ! $validator->errors()->hasAny(['arrives_at', 'planned_time']) && $arrives >= $leaves) {
+                $validator->errors()->add('arrives_at', __('weekly.arrival_after_pickup'));
+            }
+        }, function (Validator $validator) {
             if ($this->input('planned_method') !== DepartureMethod::WithChild->value) {
                 return;
             }
@@ -71,6 +81,15 @@ class AdjustDayRequest extends FormRequest
 
             if ($unavailable) {
                 $validator->errors()->add('companion_child_id', __('weekly.companion_unavailable'));
+
+                return;
+            }
+
+            // „geht mit … mit" carries no own time, so the first closure can't check the
+            // arrival — compare it against the companion's mirrored pickup instead.
+            $arrives = $this->input('arrives_at');
+            if ($arrives && $arrives >= $plan['time']) {
+                $validator->errors()->add('arrives_at', __('weekly.arrival_after_pickup'));
             }
         }];
     }

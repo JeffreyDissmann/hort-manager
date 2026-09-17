@@ -240,6 +240,9 @@ class DailyBoardController extends Controller
                 // Pre-fills the override editor; defaults to the standard comment.
                 'note' => $d->note ?? ($std['comment'] ?? null),
                 'is_overridden' => $overridden,
+                // „Kommt später": expected later than usual today (informational only).
+                'arrives_at' => $d->arrivalTime(),
+                'arrival_note' => $d->arrival_note,
                 'can_override' => $editable && ($user->isStaff() || ($myChildIds?->contains($d->child_id) ?? false)),
                 'is_own' => $myChildIds?->contains($d->child_id) ?? false,
                 'excursion' => $excursionByChild[$d->child_id] ?? null,
@@ -283,6 +286,8 @@ class DailyBoardController extends Controller
                     'comment' => $std['comment'],
                     'note' => $std['comment'],
                     'is_overridden' => false,
+                    'arrives_at' => null, // a Stammplan preview row carries no day update
+                    'arrival_note' => null,
                     'can_override' => $editable && ($user->isStaff() || $own),
                     'is_own' => $own,
                     'excursion' => $excursionByChild[$child->id] ?? null,

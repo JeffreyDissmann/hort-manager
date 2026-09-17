@@ -237,6 +237,12 @@ class WeeklyOverviewController extends Controller
                     'comment' => $adjusted ? $departure?->note : $stdComment,
                     // Pre-fills the editor; an override defaults to the standard comment.
                     'note' => $departure?->note ?? $stdComment,
+                    // „Kommt später" — day-only, so it lives on the override row alone.
+                    // A reported absence wins: on a care day the sign-up row survives one
+                    // (it is the child's place), and „Krank" plus „kommt erst 15:00" on the
+                    // same cell would contradict each other.
+                    'arrives_at' => $absence ? null : $departure?->arrivalTime(),
+                    'arrival_note' => $absence ? null : $departure?->arrival_note,
                     'adjusted' => $adjusted,
                     'past' => $day['date'] < $todayString,
                     // The Hort is shut: nothing to plan, nothing to edit.
@@ -515,6 +521,8 @@ class WeeklyOverviewController extends Controller
                     'companion' => $companion,
                     'comment' => $adjusted ? $departure?->note : $schedule?->comment,
                     'note' => $departure?->note ?? $schedule?->comment,
+                    'arrives_at' => $departure?->arrivalTime(),
+                    'arrival_note' => $departure?->arrival_note,
                     'adjusted' => $adjusted,
                     'excursion' => isset($excursionByChildDate[$child->id.'|'.$day['date']]),
                     'date' => $day['date'],

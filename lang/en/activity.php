@@ -79,6 +79,8 @@ return [
         'registration_deadline' => 'Registration deadline',
         'starts_at' => 'Care from',
         'ends_at' => 'Care until',
+        'arrives_at' => 'Arrives at',
+        'arrival_note' => 'Reason for arriving later',
     ],
 
     // Known enum values shown in the diff (method, qualifier, role, reason).

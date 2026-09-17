@@ -4,7 +4,7 @@ import { Link } from '@inertiajs/vue3';
 import { board } from '@/routes';
 
 const props = defineProps({
-    // Rows: [{ time, days: [ [ {id,name,method,comment,adjusted?,excursion?} ] × 5 ] }]
+    // Rows: [{ time, days: [ [ {id,name,method,comment,arrives_at?,arrival_note?,adjusted?,excursion?} ] × 5 ] }]
     rows: { type: Array, default: () => [] },
     // Column headers: [{ label, sublabel? }] × 5
     columns: { type: Array, default: () => [] },
@@ -62,6 +62,17 @@ function bandSpan(startStr, endStr) {
 
     return row ? parseInt(row.split('span ')[1], 10) : 0;
 }
+
+// „Kommt später" per day, earliest first — lifted into the day header next to the food,
+// since a chip line at the pickup time is easy to miss in a full column.
+const arrivals = computed(() =>
+    props.columns.map((_, j) =>
+        props.rows
+            .flatMap((row) => row.days[j] ?? [])
+            .filter((kid) => kid.arrives_at)
+            .sort((a, b) => a.arrives_at.localeCompare(b.arrives_at) || a.name.localeCompare(b.name)),
+    ),
+);
 
 // The child's name is always solid `ink`. The method reads from the warm/cool tint;
 // the safety-relevant "goes home alone" case additionally gets a 🚶 icon.
@@ -159,6 +170,19 @@ function chipClass(method) {
                 >
                     🎨 {{ program[j].activity }}
                 </div>
+                <component
+                    :is="editable && kid.editable ? 'button' : 'div'"
+                    v-for="kid in arrivals[j]"
+                    :key="'arr' + kid.id"
+                    :type="editable && kid.editable ? 'button' : undefined"
+                    :data-testid="`wp-arrival-${kid.date}-${kid.id}`"
+                    class="mt-0.5 block w-full truncate rounded bg-hort-blue/15 px-1 text-[11px] font-medium text-hort-blue"
+                    :class="editable && kid.editable ? 'transition hover:bg-hort-blue/25' : ''"
+                    :title="[$t('weekly.arrives_later', { time: kid.arrives_at }), kid.arrival_note].filter(Boolean).join(' · ')"
+                    @click="editable && kid.editable ? emit('edit', kid, columns[j]) : null"
+                >
+                    🕑 {{ kid.name }} · {{ $t('weekly.arrives_later_short', { time: kid.arrives_at }) }}
+                </component>
             </div>
 
             <!-- Time labels -->

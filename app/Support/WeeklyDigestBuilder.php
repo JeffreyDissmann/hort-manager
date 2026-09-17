@@ -197,7 +197,7 @@ class WeeklyDigestBuilder
     /**
      * A one-line pickup description for a resolved effective plan.
      *
-     * @param  array{time: ?string, method: ?string, qualifier: ?string, companion_child_id: ?int}|null  $plan
+     * @param  array{time: ?string, method: ?string, qualifier: ?string, companion_child_id: ?int, arrives_at: ?string, arrival_note: ?string}|null  $plan
      * @param  Collection<int, string>  $childNames
      */
     private static function planSummary(?array $plan, string $date, $childNames): string
@@ -205,6 +205,20 @@ class WeeklyDigestBuilder
         if ($plan === null || $plan['method'] === null) {
             return '';
         }
+
+        // „Kommt später" rides along after the pickup: „wird abgeholt 16:00, kommt erst um 14:30 (Arzt)".
+        $arrival = DailyDeparture::describeArrival($plan['arrives_at'], $plan['arrival_note']);
+        $pickup = self::pickupSummary($plan, $date, $childNames);
+
+        return $arrival ? "{$pickup}, {$arrival}" : $pickup;
+    }
+
+    /**
+     * @param  array{time: ?string, method: ?string, qualifier: ?string, companion_child_id: ?int, arrives_at: ?string, arrival_note: ?string}  $plan
+     * @param  Collection<int, string>  $childNames
+     */
+    private static function pickupSummary(array $plan, string $date, $childNames): string
+    {
 
         // „geht mit … mit": mirror the companion (time is resolved one level up),
         // including their bis/ab qualifier.

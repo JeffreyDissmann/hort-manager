@@ -56,6 +56,24 @@ it('keeps 🚶 and the „ab" prefix on one line above the time', function () {
     expect(preg_replace('/\s+/u', ' ', (string) $prefix))->toBe('🚶 ab');
 });
 
+it('lists a late arrival in the day header, next to the food', function () {
+    $staff = User::factory()->staff()->create();
+    $child = Child::factory()->scheduledOn(boardWeekday(), '16:00')->create(['name' => 'Nils']);
+    $date = boardDate()->toDateString();
+    DailyDeparture::create([
+        'child_id' => $child->id, 'date' => $date, 'status' => 'present',
+        'planned_time' => '16:00', 'planned_method' => DepartureMethod::PickedUp,
+        'arrives_at' => '15:00', 'arrival_note' => 'K2D',
+    ]);
+
+    actAndVisit($staff, "/weekly-plan?week={$date}")
+        ->assertVisible("@wp-arrival-{$date}-{$child->id}")
+        ->assertSeeIn("@wp-arrival-{$date}-{$child->id}", 'Nils · kommt erst 15:00')
+        ->click("@wp-arrival-{$date}-{$child->id}")   // staff can open the day from there
+        ->assertVisible('@arrival-section')
+        ->assertNoJavaScriptErrors();
+});
+
 it('links each weekday header to that day\'s board', function () {
     $staff = User::factory()->staff()->create();
     Child::factory()->scheduledOn(boardWeekday(), '15:00')->create(['name' => 'Nils']);

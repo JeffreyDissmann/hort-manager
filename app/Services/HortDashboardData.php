@@ -137,6 +137,8 @@ class HortDashboardData
                 'excursion' => $onExcursion->contains($child->id),
                 // German note when today deviates from the Stammplan, else null.
                 'deviation' => $this->deviation($schedule, $override, $time, $method),
+                // „kommt erst um 14:30 (Arzttermin)", or null when arriving as usual.
+                'arrival' => DailyDeparture::describeArrival($override?->arrivalTime(), $override?->arrival_note),
             ];
         })->filter();
     }
@@ -165,6 +167,7 @@ class HortDashboardData
                     'left' => $departure->status->hasLeft(),
                     'excursion' => $onExcursion->contains($departure->child_id),
                     'deviation' => null,
+                    'arrival' => DailyDeparture::describeArrival($departure->arrivalTime(), $departure->arrival_note),
                 ];
             })
             ->filter()
