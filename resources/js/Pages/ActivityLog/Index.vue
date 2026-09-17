@@ -23,8 +23,9 @@ function eventLabel(event) {
 
 function title(entry) {
     if (CRUD_EVENTS.includes(entry.event) && entry.subject) {
-        const noun = t(`activity.subjects.${entry.subject}`);
-        return entry.description ? `${noun} · ${entry.description}` : noun;
+        const key = `activity.subjects.${entry.subject}`;
+        const noun = t(key) === key ? null : t(key); // untranslated → just the label, never the raw key
+        return [noun, entry.description].filter(Boolean).join(' · ');
     }
     return entry.description;
 }

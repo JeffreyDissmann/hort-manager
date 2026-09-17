@@ -41,6 +41,8 @@ return [
         'daily_program' => 'Tagesprogramm',
         'homework_default' => 'Hausaufgaben-Standard',
         'user' => 'Benutzer',
+        'holiday_period' => 'Ferien-Zeitraum',
+        'holiday_care_day' => 'Ferienbetreuungstag',
     ],
 
     // Changed-field names (shown in the diff).
@@ -68,6 +70,15 @@ return [
         'depart_at' => 'Abfahrt',
         'return_at' => 'Rückkehr',
         'rsvp_deadline' => 'Antwortfrist',
+        'active_from' => 'Im Hort seit',
+        'active_until' => 'Im Hort bis',
+        'reason' => 'Grund',
+        'type' => 'Art',
+        'starts_on' => 'Von',
+        'ends_on' => 'Bis',
+        'registration_deadline' => 'Anmeldeschluss',
+        'starts_at' => 'Betreuung von',
+        'ends_at' => 'Betreuung bis',
     ],
 
     // Known enum values shown in the diff (method, qualifier, role, reason).
@@ -82,5 +93,7 @@ return [
         'away' => 'kommt nicht',
         'staff' => 'Erzieher:in',
         'parent' => 'Elternteil',
+        'closed' => 'Schließzeit',
+        'care' => 'Ferienbetreuung',
     ],
 ];

@@ -7,13 +7,16 @@ use App\Enums\DepartureMethod;
 use App\Enums\DepartureStatus;
 use App\Models\Absence;
 use App\Models\Child;
+use App\Models\Concerns\LogsChanges;
 use App\Models\DailyDeparture;
 use App\Models\HomeworkDefault;
 use App\Models\User;
 use App\Support\CompanionAnswer;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Lang;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia;
 use Spatie\Activitylog\Models\Activity;
 
@@ -29,6 +32,35 @@ it('shows the activity log to admins', function () {
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->component('ActivityLog/Index')
             ->has('activities.data'));
+});
+
+it('has a de + en label for every logged model and every logged field', function () {
+    // Every model that writes to the Protokoll, found by its trait — so a model that
+    // starts logging later can't ship with raw keys like „activity.subjects.foo".
+    $models = collect(glob(app_path('Models/*.php')))
+        ->map(fn (string $path): string => 'App\\Models\\'.basename($path, '.php'))
+        ->filter(fn (string $class): bool => in_array(LogsChanges::class, class_uses_recursive($class), true));
+
+    expect($models)->not->toBeEmpty();
+
+    $missing = [];
+    foreach ($models as $class) {
+        $subject = Str::snake(class_basename($class));
+        $fields = (new ReflectionMethod($class, 'activityAttributes'))->invoke(new $class);
+
+        foreach (['de', 'en'] as $locale) {
+            if (! Lang::has("activity.subjects.{$subject}", $locale, false)) {
+                $missing[] = "{$locale}: activity.subjects.{$subject}";
+            }
+            foreach ($fields as $field) {
+                if (! Lang::has("activity.fields.{$field}", $locale, false)) {
+                    $missing[] = "{$locale}: activity.fields.{$field} ({$class})";
+                }
+            }
+        }
+    }
+
+    expect($missing)->toBe([]);
 });
 
 it('forbids non-admins from the activity log', function () {
