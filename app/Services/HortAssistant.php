@@ -19,6 +19,7 @@ use App\Models\HomeworkDefault;
 use App\Models\User;
 use App\Models\WeeklySchedule;
 use App\Support\CompanionReconciler;
+use App\Support\ExcursionPickup;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Laravel\Ai\Enums\Lab;
@@ -48,6 +49,7 @@ class HortAssistant
             'krank' => $this->reportAbsence($user, $children, $intent, AbsenceReason::Sick),
             'abwesend' => $this->reportAbsence($user, $children, $intent, AbsenceReason::Away),
             'abholzeit' => $this->changePickup($children, $intent),
+            'ankunft' => $this->setArrival($children, $intent),
             'ausflug' => $this->rsvp($user, $children, $intent),
             'frage' => $this->answer($children, $text),
             default => $this->help(),
@@ -94,9 +96,13 @@ class HortAssistant
             return 'Für welchen Tag? Bitte „heute“, „morgen“ oder ein Datum angeben.';
         }
 
-        Absence::report($child, $date, $reason, $user->id);
+        // „krank, Fieber" — the reason travels with the report, as it does in the app.
+        $comment = $this->reasonFrom($intent);
 
-        return "✅ *{$child->name}* ist {$this->humanDate($date)} als „{$reason->label()}“ gemeldet.";
+        Absence::report($child, $date, $reason, $user->id, $comment);
+
+        return "✅ *{$child->name}* ist {$this->humanDate($date)} als „{$reason->label()}“ gemeldet."
+            .($comment ? " ({$comment})" : '');
     }
 
     /** @param Collection<int, Child> $children */
@@ -139,6 +145,10 @@ class HortAssistant
         if (! $departure->exists) {
             $departure->status = DepartureStatus::Present;
         }
+        // „…, Zahnarzt" — the day's note, same field the DayEditor's Kommentar writes.
+        if ($note = $this->reasonFrom($intent)) {
+            $departure->note = $note;
+        }
         // The assistant sets a concrete pickup, so any „geht mit … mit" arrangement no
         // longer applies — clear it (the assistant can't create one).
         $departure->companion_child_id = null;
@@ -156,7 +166,117 @@ class HortAssistant
             default => $method->label(),
         };
 
-        return "✅ *{$child->name}* {$this->humanDate($date)}: {$how}.";
+        return "✅ *{$child->name}* {$this->humanDate($date)}: {$how}."
+            .($departure->note ? " ({$departure->note})" : '')
+            .$this->clashHint($child, $date, $departure->planned_time);
+    }
+
+    /**
+     * „Kommt später": an arrival time (and why) for one day. The day keeps its pickup —
+     * this only says when the child turns up.
+     *
+     * @param  Collection<int, Child>  $children
+     */
+    private function setArrival(Collection $children, array $intent): string
+    {
+        $child = $this->matchChild($children, $intent['kind'] ?? null);
+        if (! $child) {
+            return $this->whichChild($children);
+        }
+
+        $date = $this->resolveDate($intent['datum'] ?? null);
+        if (! $date) {
+            return 'An welchem Tag kommt dein Kind später?';
+        }
+
+        $time = $intent['uhrzeit'] ?? null;
+        if (! is_string($time) || ! preg_match('/^\d{2}:\d{2}$/', $time)) {
+            return "Um wie viel Uhr kommt *{$child->name}* {$this->humanDate($date)}? Bitte eine Uhrzeit angeben.";
+        }
+
+        $departure = DailyDeparture::firstOrNew(['child_id' => $child->id, 'date' => $date]);
+
+        // A child can't arrive after they've gone home again — the plan decides.
+        $pickup = $this->short($departure->planned_time)
+            ?? $this->short(WeeklySchedule::where('child_id', $child->id)
+                ->where('weekday', Carbon::parse($date)->dayOfWeekIso)->value('planned_time'));
+
+        if ($pickup !== null && $time >= $pickup) {
+            return "*{$child->name}* wird {$this->humanDate($date)} schon um {$pickup} Uhr abgeholt – die Ankunft muss davor liegen.";
+        }
+
+        if (! $departure->exists) {
+            $departure->status = DepartureStatus::Present;
+            // Keep the day as planned; only the arrival is news.
+            $schedule = WeeklySchedule::where('child_id', $child->id)
+                ->where('weekday', Carbon::parse($date)->dayOfWeekIso)->first();
+            $departure->planned_time = $schedule?->planned_time;
+            $departure->planned_method = $schedule?->method;
+            $departure->time_qualifier = $schedule?->time_qualifier;
+        }
+
+        $reason = $this->reasonFrom($intent);
+        $departure->arrives_at = $time;
+        $departure->arrival_note = $reason;
+        $departure->save();
+
+        return "✅ *{$child->name}* kommt {$this->humanDate($date)} erst um {$time} Uhr"
+            .($reason ? " ({$reason})" : '').'.';
+    }
+
+    /**
+     * A line warning that the pickup now sits inside the Hausaufgabenzeit, a timed
+     * Aktivität or an Ausflug — the same collisions the app flags on screen.
+     */
+    private function clashHint(Child $child, string $date, mixed $plannedTime): string
+    {
+        $time = $this->short($plannedTime);
+        if ($time === null) {
+            return '';
+        }
+
+        $program = DailyProgram::where('date', $date)->first();
+        $default = HomeworkDefault::where('weekday', Carbon::parse($date)->dayOfWeekIso)->first();
+        [$hwStart, $hwEnd] = DailyProgram::effectiveHomework($program, $default);
+
+        $hits = [];
+
+        if ($hwStart && $hwEnd && $time >= $this->short($hwStart) && $time < $this->short($hwEnd)) {
+            $hits[] = 'in der Hausaufgabenzeit ('.$this->short($hwStart).'–'.$this->short($hwEnd).')';
+        }
+
+        if ($program?->activity && $program->activity_start && $program->activity_end
+            && $time >= $this->short($program->activity_start) && $time < $this->short($program->activity_end)) {
+            $hits[] = "in der Aktivität „{$program->activity}\" (".$this->short($program->activity_start).'–'.$this->short($program->activity_end).')';
+        }
+
+        $trip = Excursion::whereDate('date', $date)
+            ->whereHas('participants', fn ($q) => $q->whereKey($child->id))
+            ->first();
+
+        if ($trip?->return_at && $time >= ($this->short($trip->depart_at) ?? '00:00') && $time < $this->short($trip->return_at)) {
+            $hits[] = "im Ausflug „{$trip->name}\" (bis ".$this->short($trip->return_at).')';
+        }
+
+        return $hits === [] ? '' : "\n⚠️ Die Abholung liegt ".implode(' und ', $hits).'.';
+    }
+
+    private function short(mixed $time): ?string
+    {
+        return $time ? substr((string) $time, 0, 5) : null;
+    }
+
+    /**
+     * The reason a parent gave, if any — „krank, Fieber", „um 15 Uhr abgeholt,
+     * Zahnarzt", „kommt später, Training". Kept short; it is shown as written.
+     *
+     * @param  array<string, mixed>  $intent
+     */
+    private function reasonFrom(array $intent): ?string
+    {
+        $reason = is_string($intent['grund'] ?? null) ? trim($intent['grund']) : '';
+
+        return $reason !== '' ? mb_substr($reason, 0, 255) : null;
     }
 
     /** @param Collection<int, Child> $children */
@@ -183,9 +303,22 @@ class HortAssistant
         $excursion->children()->syncWithoutDetaching([
             $child->id => ['response' => $attending, 'answered_by' => $user->id, 'answered_at' => now()],
         ]);
+
+        // Joining moves a pickup that would fall inside the trip, exactly as answering
+        // on „Ausflüge & Ferien" or with the Slack buttons does.
+        $movedFrom = $attending ? ExcursionPickup::moveToReturn($excursion, $child, $user) : null;
+
         SyncExcursionRsvp::dispatch($excursion, $child);
 
-        return "✅ *{$child->name}* ".($attending ? 'kommt' : 'kommt nicht')." beim Ausflug „{$excursion->name}“ mit.";
+        $reply = "✅ *{$child->name}* ".($attending ? 'kommt' : 'kommt nicht')." beim Ausflug „{$excursion->name}“ mit.";
+
+        if ($movedFrom !== null) {
+            $return = $this->short($excursion->return_at);
+            $reply .= "\n🕒 Die Abholung lag im Ausflug ({$movedFrom} Uhr) und steht jetzt auf *{$return} Uhr*"
+                .' – nur an diesem Tag, der Stammplan bleibt unverändert.';
+        }
+
+        return $reply;
     }
 
     /** @param Collection<int, Child> $children */
@@ -259,7 +392,8 @@ class HortAssistant
         $default = HomeworkDefault::where('weekday', $today->dayOfWeekIso)->first();
         [$hwStart, $hwEnd] = DailyProgram::effectiveHomework($program, $default);
         $lines[] = 'Heute: Mittagessen '.($program?->lunch ?: '—')
-            .', Aktivität '.($program?->activity ?: '—')
+            // The Aktivität carries its window when it has one („Waldtag (09:00–12:00)").
+            .', Aktivität '.($program?->activityText() ?: '—')
             .', Hausaufgaben '.($hwStart ? substr((string) $hwStart, 0, 5).'–'.substr((string) $hwEnd, 0, 5) : 'keine').'.';
 
         $excursions = Excursion::whereDate('date', '>=', $today->toDateString())->orderBy('date')->get();
@@ -307,6 +441,17 @@ class HortAssistant
                     ? 'um '.substr((string) $d->planned_time, 0, 5).' Uhr'.($d->planned_method ? ' ('.$d->planned_method->label().')' : '')
                     : 'keine feste Abholzeit';
                 $deviations->push([$date->toDateString(), $nameOf($d->child_id).' '.$how]);
+            });
+
+        // „Kommt später" is its own kind of exception: the pickup may be unchanged.
+        DailyDeparture::whereIn('child_id', $ids)->whereBetween('date', [$from, $to])
+            ->whereNotNull('arrives_at')->get()
+            ->each(function (DailyDeparture $d) use ($deviations, $nameOf): void {
+                $deviations->push([
+                    $d->date->toDateString(),
+                    $nameOf($d->child_id).' kommt erst um '.substr((string) $d->arrives_at, 0, 5).' Uhr'
+                        .($d->arrival_note ? ' ('.$d->arrival_note.')' : ''),
+                ]);
             });
 
         if ($deviations->isEmpty()) {
@@ -424,6 +569,6 @@ class HortAssistant
 
     private function help(): string
     {
-        return "Hallo! 👋 Du kannst hier z. B. schreiben:\n• „Tom ist krank“\n• „Lena wird morgen um 16:30 abgeholt“\n• „Tom kommt beim Zoo-Ausflug mit“\n• „Wann geht Lena heute?“";
+        return "Hallo! 👋 Du kannst hier z. B. schreiben:\n• „Tom ist krank“\n• „Lena wird morgen um 16:30 abgeholt“\n• „Tom kommt morgen erst um 14 Uhr, Arzttermin“\n• „Tom kommt beim Zoo-Ausflug mit“\n• „Wann geht Lena heute?“";
     }
 }

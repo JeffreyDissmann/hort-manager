@@ -12,7 +12,9 @@ use App\Enums\UserRole;
 use App\Jobs\SyncExcursionRsvp;
 use App\Models\Child;
 use App\Models\DailyDeparture;
+use App\Models\DailyProgram;
 use App\Models\Excursion;
+use App\Models\HomeworkDefault;
 use App\Models\User;
 use App\Notifications\CompanionRequest;
 use App\Services\HortAssistant;
@@ -41,8 +43,118 @@ class HortAssistantTest extends TestCase
     {
         HortIntentAgent::fake(fn () => array_merge([
             'intent' => 'unbekannt', 'kind' => null, 'datum' => null,
-            'uhrzeit' => null, 'art' => null, 'ausflug' => null, 'zusage' => null,
+            'uhrzeit' => null, 'art' => null, 'grund' => null, 'ausflug' => null, 'zusage' => null,
         ], $data));
+    }
+
+    public function test_it_records_a_late_arrival_with_its_reason(): void
+    {
+        Carbon::setTestNow('2026-06-22'); // Monday
+        [$parent, $child] = $this->parentWithTom();
+        $child->weeklySchedules()->create(['weekday' => 1, 'planned_time' => '16:00', 'method' => DepartureMethod::PickedUp]);
+        $this->fakeIntent([
+            'intent' => 'ankunft', 'kind' => 'Tom', 'datum' => 'heute',
+            'uhrzeit' => '14:00', 'grund' => 'Arzttermin',
+        ]);
+
+        $reply = app(HortAssistant::class)->reply($parent, 'Tom kommt heute erst um 14 Uhr, Arzttermin');
+
+        $this->assertStringContainsString('erst um 14:00 Uhr', $reply);
+        $this->assertStringContainsString('Arzttermin', $reply);
+
+        $day = DailyDeparture::firstWhere('child_id', $child->id);
+        $this->assertSame('14:00', $day->arrivalTime());
+        $this->assertSame('Arzttermin', $day->arrival_note);
+        // The day keeps its pickup — only the arrival is news.
+        $this->assertSame('16:00', substr((string) $day->planned_time, 0, 5));
+    }
+
+    public function test_an_arrival_after_the_pickup_is_refused(): void
+    {
+        Carbon::setTestNow('2026-06-22');
+        [$parent, $child] = $this->parentWithTom();
+        $child->weeklySchedules()->create(['weekday' => 1, 'planned_time' => '14:00', 'method' => DepartureMethod::PickedUp]);
+        $this->fakeIntent(['intent' => 'ankunft', 'kind' => 'Tom', 'datum' => 'heute', 'uhrzeit' => '15:00']);
+
+        $reply = app(HortAssistant::class)->reply($parent, 'Tom kommt heute erst um 15 Uhr');
+
+        $this->assertStringContainsString('davor liegen', $reply);
+        $this->assertDatabaseMissing('daily_departures', ['child_id' => $child->id, 'arrives_at' => '15:00']);
+    }
+
+    public function test_a_reason_is_kept_for_an_absence_and_for_a_pickup(): void
+    {
+        Carbon::setTestNow('2026-06-22');
+        [$parent, $child] = $this->parentWithTom();
+
+        // „krank, Fieber" — the reason belongs on the Absence, as in the app.
+        $this->fakeIntent(['intent' => 'krank', 'kind' => 'Tom', 'datum' => 'heute', 'grund' => 'Fieber']);
+        $reply = app(HortAssistant::class)->reply($parent, 'Tom ist heute krank, Fieber');
+
+        $this->assertStringContainsString('Fieber', $reply);
+        $this->assertDatabaseHas('absences', ['child_id' => $child->id, 'comment' => 'Fieber']);
+
+        // …and a pickup reason lands in the day's Kommentar.
+        $this->fakeIntent([
+            'intent' => 'abholzeit', 'kind' => 'Tom', 'datum' => '2026-06-23',
+            'uhrzeit' => '15:00', 'art' => 'abgeholt', 'grund' => 'Zahnarzt',
+        ]);
+        app(HortAssistant::class)->reply($parent, 'Tom wird morgen um 15 Uhr abgeholt, Zahnarzt');
+
+        $this->assertDatabaseHas('daily_departures', [
+            'child_id' => $child->id, 'date' => '2026-06-23', 'note' => 'Zahnarzt',
+        ]);
+    }
+
+    public function test_a_pickup_change_into_the_homework_slot_says_so(): void
+    {
+        Carbon::setTestNow('2026-06-22');
+        [$parent, $child] = $this->parentWithTom();
+        HomeworkDefault::create(['weekday' => 1, 'start_time' => '14:00', 'end_time' => '15:00']);
+        DailyProgram::factory()->create([
+            'date' => '2026-06-22', 'activity' => 'Fußballtraining',
+            'activity_start' => '15:00', 'activity_end' => '16:00',
+        ]);
+        $this->fakeIntent(['intent' => 'abholzeit', 'kind' => 'Tom', 'datum' => 'heute', 'uhrzeit' => '14:30', 'art' => 'abgeholt']);
+
+        $reply = app(HortAssistant::class)->reply($parent, 'Tom wird heute um 14:30 abgeholt');
+
+        // Saved, and the collision is named rather than left to be discovered.
+        $this->assertSame('14:30', substr((string) DailyDeparture::firstWhere('child_id', $child->id)->planned_time, 0, 5));
+        $this->assertStringContainsString('Hausaufgabenzeit (14:00–15:00)', $reply);
+        $this->assertStringNotContainsString('Fußballtraining', $reply); // 14:30 is before it
+    }
+
+    public function test_joining_a_trip_moves_a_pickup_that_falls_inside_it(): void
+    {
+        Queue::fake();
+        Carbon::setTestNow('2026-06-22');
+        [$parent, $child] = $this->parentWithTom();
+        $child->weeklySchedules()->create(['weekday' => 3, 'planned_time' => '14:00', 'method' => DepartureMethod::SentHome]);
+
+        $excursion = Excursion::factory()->create([
+            'name' => 'Zoo', 'date' => '2026-06-24', 'depart_at' => '13:30', 'return_at' => '17:00',
+            'rsvp_deadline' => '2026-06-23',
+        ]);
+        $excursion->children()->attach($child->id);
+
+        $this->fakeIntent(['intent' => 'ausflug', 'kind' => 'Tom', 'ausflug' => 'Zoo', 'zusage' => true, 'datum' => 'heute']);
+
+        $reply = app(HortAssistant::class)->reply($parent, 'Tom kommt beim Zoo mit');
+
+        $this->assertStringContainsString('17:00', $reply);
+        $this->assertStringContainsString('Stammplan', $reply); // …and that it's only that day
+        $this->assertSame('17:00', substr((string) DailyDeparture::firstWhere('child_id', $child->id)->planned_time, 0, 5));
+    }
+
+    public function test_an_arrival_without_a_time_asks_for_one(): void
+    {
+        Carbon::setTestNow('2026-06-22');
+        [$parent, $child] = $this->parentWithTom();
+        $this->fakeIntent(['intent' => 'ankunft', 'kind' => 'Tom', 'datum' => 'heute']);
+
+        $this->assertStringContainsString('Uhrzeit', app(HortAssistant::class)->reply($parent, 'Tom kommt später'));
+        $this->assertDatabaseMissing('daily_departures', ['child_id' => $child->id]);
     }
 
     public function test_it_reports_a_child_krank(): void
