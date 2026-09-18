@@ -26,6 +26,7 @@ return [
     'excursion_saved' => 'Excursion “:name” saved.',
     'excursion_deleted' => 'Excursion “:name” deleted.',
     'rsvp_saved' => 'Response for :name saved.',
+    'rsvp_saved_pickup_moved' => 'Response for :name saved. The pickup fell inside the trip (:was) and is now at :time – that day only, the standard plan stays as it is.',
 
     'program_saved' => 'Program saved.',
     'homework_defaults_saved' => 'Default homework times saved.',

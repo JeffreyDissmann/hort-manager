@@ -32,6 +32,10 @@ return [
 
     'answer_yes' => 'Kommt mit',
     'answer_no' => 'Nicht dabei',
+    // Abholzeit und Ausflug — beim Zusagen wird eine Abholung im Ausflug ans Ende verschoben.
+    'pickup_clash' => 'Die Abholung um :time liegt mitten im Ausflug – das Kind ist erst um :return zurück.',
+    'pickup_clash_manual' => 'Bitte die Abholzeit für diesen Tag im Wochenplan anpassen.',
+    'pickup_at_return' => 'Abholung am :date: :time Uhr (Ausflugsende) – nur an diesem Tag.',
 
     'status_open' => 'noch offen',
     'status_confirmed' => 'zugesagt',

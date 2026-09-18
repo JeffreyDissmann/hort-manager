@@ -79,6 +79,8 @@ return [
         'registration_deadline' => 'Anmeldeschluss',
         'starts_at' => 'Betreuung von',
         'ends_at' => 'Betreuung bis',
+        'activity_start' => 'Aktivität von',
+        'activity_end' => 'Aktivität bis',
         'arrives_at' => 'Kommt erst um',
         'arrival_note' => 'Grund fürs spätere Kommen',
     ],

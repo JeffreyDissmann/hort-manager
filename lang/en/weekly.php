@@ -45,6 +45,10 @@ return [
     'arrival_note_label' => 'Reason',
     'arrival_note_placeholder' => 'e.g. doctor’s appointment, training',
     'arrival_after_pickup' => 'The arrival has to be before the pickup time.',
+    'pickup_in_excursion' => 'The child is on the trip „:name" until :time – an earlier pickup only works at the trip itself.',
+    'pickup_in_homework' => 'The :time pickup falls inside the homework slot (:from–:to).',
+    'pickup_in_activity' => 'The :time pickup falls inside the activity „:name" (:from–:to).',
+    'activity_conflict' => ':day: :time pickup falls inside the activity „:name"',
     'arrives_later' => 'Arrives at :time',
     'arrives_later_short' => 'only arrives :time',
     'closed' => 'Closed',
@@ -93,6 +97,19 @@ return [
     'report_sick' => 'Report sick',
     'report_away' => 'Not coming',
     'reset_to_standard' => 'Reset to standard',
+
+    // „Abholzeiten prüfen" — the standing summary of pickups that collide with the
+    // homework slot, a timed activity or an excursion (PickupClashBanner).
+    'clashes' => [
+        'title' => 'Check the pickup times',
+        'every_weekday' => 'every :day',
+        'pickup_at' => 'pickup :time –',
+        'in_homework' => 'inside the homework slot (:from–:to).',
+        'in_activity' => 'inside the activity „:name" (:from–:to).',
+        'in_excursion' => 'inside the trip „:name" (:from–:to).',
+        'action' => 'Open the Wochenplan',
+        'action_standard' => 'Change the Stammplan',
+    ],
 
     'weekday' => [
         'mon' => 'Mon',

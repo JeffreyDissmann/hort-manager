@@ -36,6 +36,7 @@ return [
 
     'pickup_during_excursion' => 'Abholung liegt im Ausflug',
     'pickup_during_homework' => 'Abholung liegt in der Hausaufgabenzeit',
+    'pickup_during_activity' => 'Abholung liegt in der Aktivität „:name"',
 
     'homework' => 'Hausaufgaben',
     'no_fixed_time' => 'Ohne feste Zeit',

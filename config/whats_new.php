@@ -16,6 +16,18 @@ declare(strict_types=1);
 
 return [
     [
+        'version' => '2026.09.18',
+        'date' => '2026-09-18',
+        'title' => 'Damit keine Abholung ins Leere läuft 🚌',
+        'items' => [
+            '🕑 Kommt dein Kind später – Arzttermin, Training, Musikschule –, trag das im Wochenplan oder auf „Heute" beim jeweiligen Tag ein („Kommt später an?"). Die Erzieher:innen sehen dann oben auf „Heute", wer noch unterwegs ist, statt zu rätseln.',
+            '🚌 Sagst du einen Ausflug zu und die Abholung liegt mittendrin, verschieben wir sie automatisch ans Ausflugsende – nur für diesen einen Tag, dein Stammplan bleibt. Wir sagen dir jedes Mal, was sich geändert hat.',
+            '⚠️ Ganz oben steht jetzt „Abholzeiten prüfen", wenn eine Abholung in die Hausaufgaben- oder Aktivitätszeit fällt oder in einen Ausflug. Jede Zeile führt direkt dorthin, wo du es änderst – und mit dem × ist der Hinweis weg, bis etwas Neues dazukommt.',
+            '🎨 Aktivitäten können jetzt eine Uhrzeit haben („Waldtag 9–12 Uhr"). Im Wochenplan und auf „Heute" siehst du sie dann als Balken neben den Abholzeiten – so ist auf einen Blick klar, was wann läuft.',
+            '💬 Im Slack-Chat kannst du das alles auch schreiben: „Tom kommt morgen erst um 14 Uhr, Arzttermin" oder „Lena ist krank, Fieber". Der Grund geht jetzt nicht mehr verloren.',
+        ],
+    ],
+    [
         'version' => '2026.09.17.1',
         'date' => '2026-09-17',
         'title' => 'Kommt später? Sag kurz Bescheid 🕑',

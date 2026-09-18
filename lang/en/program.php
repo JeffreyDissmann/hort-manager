@@ -11,6 +11,9 @@ return [
 
     'lunch' => 'Lunch',
     'lunch_placeholder' => 'e.g. pasta with tomato sauce',
+    'time_from' => 'from',
+    'time_to' => 'to',
+    'activity_timed' => 'With a time',
     'activity' => 'Activity',
     'activity_placeholder' => 'e.g. crafts, trip to the park',
     'homework' => 'Homework',

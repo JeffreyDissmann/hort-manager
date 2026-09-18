@@ -6,6 +6,48 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [2026.09.18] — 2026-09-18
+
+### Added
+
+- **Aktivitäten can carry a time.** „Mit Uhrzeit" on the Programm page gives a day's
+  Aktivität a from–to (untimed stays the default, and ticking it starts the window where
+  the day's Hausaufgaben end). It reads as a range wherever the day's program is shown,
+  draws its **own band** in the Wochenplan timeline, and gets the same bar/card treatment
+  on „Heute" that Hausaufgaben have — two lanes when the windows overlap.
+- **„Abholzeiten prüfen".** A standing summary above every page for parents: each of
+  their children's pickups that lands inside the Hausaufgabenzeit, a timed Aktivität or
+  an Ausflug their child joins (today + two weeks), plus the Stammplan colliding with a
+  weekday's Hausaufgaben-Standard, which repeats until the Stammplan changes. Each line
+  leads to its own fix; „×" hides it for the browser session, remembering *which*
+  findings were waved away, so a new clash returns while fixing one doesn't.
+- **Collision warnings while planning.** The DayEditor says it as the time is chosen —
+  for Hausaufgaben, a timed Aktivität and the child's Ausflug alike. The board card and
+  the Wochenplan's week summary now flag the Aktivität case too.
+
+### Changed
+
+- **Joining an Ausflug moves a pickup that falls inside it** to the trip's return time —
+  nobody is at the Hort to hand the child over while the group is away. Same rule from
+  „Ausflüge & Ferien", the Slack buttons and the free-text assistant, each saying plainly
+  what changed: that one day only, the Stammplan untouched, note and „kommt später" kept.
+  Not moved automatically: a „geht mit … mit" pickup (mirrored from another child — it is
+  reported instead), a trip without a return time, an absent child, a past or closed day.
+- **The Slack assistant** learned „kommt erst um …" („ankunft", separated from a pickup
+  in the prompt), keeps a reason for Krank/„Kommt nicht" and for a pickup change (both
+  were silently dropped), applies the Ausflug rule above, and names a collision in its
+  reply instead of leaving it to be discovered.
+
+### Fixed
+
+- A pickup colliding with Hausaufgaben, an Aktivität or an Ausflug was only visible after
+  saving — and never for the Aktivität, which had no window to collide with.
+- `TimeRange`'s two halves couldn't shrink, so four dropdowns pushed past the column they
+  sit in — the Hausaufgaben times were clipped on the Programm page.
+- Two browser tests read the database straight after clicking save and beat the request to
+  it on the slower CI runner (Datenpflege's retention, the Programm week). They now wait
+  for what the server sends back.
+
 ## [2026.09.17.1] — 2026-09-17
 
 ### Added

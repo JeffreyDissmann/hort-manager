@@ -51,7 +51,8 @@ the feed always shows the plan for today (or the next weekday on weekends).
 - `today`: `weekday`, `date`, `closed`, `care`, `present_count`, `next_pickup`, `departures[]`
   (`{ time, children[]: { name, alone, left, excursion, deviation, arrival } }` — `arrival` is
   „kommt erst um 14:30 (Arzttermin)" when the child arrives later than usual, else `null`),
-  `absent[]` (`{ name, reason }`), `program` (`lunch`, `activity`, `homework`, `care_time`).
+  `absent[]` (`{ name, reason }`), `program` (`lunch`, `activity` — carrying its window when it has one, e.g.
+  „Waldtag (09:00–12:00)" —, `homework`, `care_time`).
 - `week[]`: five days, each `{ weekday, date, is_today, closed, care, excursion, departures[]: { time, names[] } }`.
 
 `closed` carries the name of the **Schließzeit** on days the Hort is shut

@@ -11,6 +11,7 @@ use App\Models\DailyDeparture;
 use App\Models\Excursion;
 use App\Models\User;
 use App\Support\CompanionAnswer;
+use App\Support\ExcursionPickup;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Http;
@@ -66,6 +67,21 @@ class SlackInteractionController extends Controller
             ->performedOn($excursion)
             ->event((bool) $answer ? 'rsvp_yes' : 'rsvp_no')
             ->log($child->name.' · '.$excursion->name);
+
+        // Joining moves a pickup that would fall inside the trip to its return time —
+        // the same rule as answering in the app. That one day only; say so in the DM,
+        // since nobody asked for it on this screen.
+        $movedFrom = (bool) $answer
+            ? ExcursionPickup::moveToReturn($excursion, $child, $user)
+            : null;
+
+        if ($movedFrom !== null) {
+            $return = substr((string) $excursion->return_at, 0, 5);
+            $day = $excursion->date->locale('de')->isoFormat('dd, D.M.');
+            $this->reply($responseUrl, "🕒 *{$child->name}:* Die Abholung am {$day} lag im Ausflug ({$movedFrom} Uhr) "
+                ."und steht jetzt auf *{$return} Uhr* – nur für diesen Tag, der Stammplan bleibt unverändert. "
+                .'Ändern: '.route('slack.enter', ['to' => 'weekly-plan']));
+        }
 
         // Re-render every guardian's DM (queued) so Slack gets a fast ack.
         SyncExcursionRsvp::dispatch($excursion, $child);

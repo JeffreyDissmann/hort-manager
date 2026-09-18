@@ -121,12 +121,19 @@ class WeeklyOverviewController extends Controller
 
         $careDays = HolidayCareDay::betweenKeyed($weekStart, $weekEnd);
 
-        $program = $weekDays->values()->map(function (array $day, int $i) use ($programs, $homeworkDefaults, $closedDays, $careDays) {
+        $program = $weekDays->values()->map(function (array $day, int $i) use ($programs, $homeworkDefaults, $closedDays, $careDays, $shortTime) {
             // Closed: no food, no activity — and no homework either. The homework slot
             // comes from a per-weekday default, so without this it would keep drawing
             // its band on days the Hort is shut.
             if (isset($closedDays[$day['date']])) {
-                return ['lunch' => null, 'activity' => null, 'homework_start' => null, 'homework_end' => null];
+                return [
+                    'lunch' => null,
+                    'activity' => null,
+                    'activity_start' => null,
+                    'activity_end' => null,
+                    'homework_start' => null,
+                    'homework_end' => null,
+                ];
             }
 
             $p = $programs->get($day['date']);
@@ -141,7 +148,11 @@ class WeeklyOverviewController extends Controller
 
             return [
                 'lunch' => $p?->lunch,
+                // Name and window separately: a timed Aktivität draws its own band on
+                // the timetable, so the header doesn't have to spell the range out.
                 'activity' => $p?->activity,
+                'activity_start' => $shortTime($p?->activity_start),
+                'activity_end' => $shortTime($p?->activity_end),
                 'homework_start' => $hwStart ? substr((string) $hwStart, 0, 5) : null,
                 'homework_end' => $hwEnd ? substr((string) $hwEnd, 0, 5) : null,
             ];
@@ -524,7 +535,9 @@ class WeeklyOverviewController extends Controller
                     'arrives_at' => $departure?->arrivalTime(),
                     'arrival_note' => $departure?->arrival_note,
                     'adjusted' => $adjusted,
-                    'excursion' => isset($excursionByChildDate[$child->id.'|'.$day['date']]),
+                    // The trip itself (not just „is on one"): the DayEditor opens from
+                    // here too and warns when a pickup would fall inside it.
+                    'excursion' => $excursionByChildDate[$child->id.'|'.$day['date']] ?? null,
                     'date' => $day['date'],
                     'editable' => $day['date'] >= $todayString && ! $departed,
                     'minutes' => $toMinutes($short),
@@ -532,8 +545,8 @@ class WeeklyOverviewController extends Controller
             }
         }
 
-        // Extend the range to cover homework + excursion windows, so their bands
-        // always have slot rows to span even when no child leaves during them.
+        // Extend the range to cover homework, Aktivität and excursion windows, so their
+        // bands always have slot rows to span even when no child leaves during them.
         $starts = collect($dayLists)->flatten(1)->pluck('minutes')->all();
         $ends = $starts;
         for ($i = 0; $i < 5; $i++) {
@@ -541,6 +554,14 @@ class WeeklyOverviewController extends Controller
             if ($hwStart) {
                 $starts[] = $toMinutes($hwStart);
                 $ends[] = $toMinutes($program[$i]['homework_end'] ?? $hwStart) - 1;
+            }
+
+            // A Waldtag at 09:00 is hours before the first pickup — without this the
+            // timeline would start at 15:00 and its band would be pinned to that row.
+            $activityStart = $program[$i]['activity_start'] ?? null;
+            if ($activityStart && ! empty($program[$i]['activity_end'])) {
+                $starts[] = $toMinutes($activityStart);
+                $ends[] = $toMinutes($program[$i]['activity_end']) - 1;
             }
             foreach ($activities[$i] ?? [] as $excursion) {
                 if (! empty($excursion['depart_at'])) {

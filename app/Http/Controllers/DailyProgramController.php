@@ -73,6 +73,8 @@ class DailyProgramController extends Controller
                 ] : null,
                 'lunch' => $program?->lunch,
                 'activity' => $program?->activity,
+                'activity_start' => $this->short($program?->activity_start),
+                'activity_end' => $this->short($program?->activity_end),
                 // Effective homework slot (override, else weekday default, else none).
                 'homework_start' => $this->short($homeworkStart),
                 'homework_end' => $this->short($homeworkEnd),
@@ -120,6 +122,9 @@ class DailyProgramController extends Controller
             'days.*.date' => ['required', 'date'],
             'days.*.lunch' => ['nullable', 'string', 'max:255'],
             'days.*.activity' => ['nullable', 'string', 'max:255'],
+            // Optional window for the Aktivität — both or neither, end after start.
+            'days.*.activity_start' => ['nullable', 'date_format:H:i', 'required_with:days.*.activity_end'],
+            'days.*.activity_end' => ['nullable', 'date_format:H:i', 'required_with:days.*.activity_start', 'after:days.*.activity_start'],
             'days.*.homework_start' => ['nullable', 'date_format:H:i'],
             'days.*.homework_end' => ['nullable', 'date_format:H:i'],
             'days.*.homework_none' => ['boolean'],
@@ -177,6 +182,11 @@ class DailyProgramController extends Controller
                 }
             }
 
+            // A time window belongs to an Aktivität; without one there is nothing to time.
+            $activity = $row['activity'] ?? null;
+            $activityStart = $activity ? ($row['activity_start'] ?? null) : null;
+            $activityEnd = $activity ? ($row['activity_end'] ?? null) : null;
+
             $hasContent = ! empty($row['lunch']) || ! empty($row['activity'])
                 || $homeworkStart !== null || $homeworkEnd !== null || $homeworkNone;
 
@@ -190,7 +200,9 @@ class DailyProgramController extends Controller
                 ['date' => $row['date']],
                 [
                     'lunch' => $row['lunch'] ?? null,
-                    'activity' => $row['activity'] ?? null,
+                    'activity' => $activity,
+                    'activity_start' => $activityStart,
+                    'activity_end' => $activityEnd,
                     'homework_start' => $homeworkStart,
                     'homework_end' => $homeworkEnd,
                     'homework_none' => $homeworkNone,

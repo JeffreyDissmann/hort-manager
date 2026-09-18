@@ -5,6 +5,9 @@ declare(strict_types=1);
 use App\Enums\DepartureMethod;
 use App\Models\Child;
 use App\Models\DailyDeparture;
+use App\Models\DailyProgram;
+use App\Models\Excursion;
+use App\Models\HomeworkDefault;
 use App\Models\User;
 
 // The shared day-editor popup, driven from the board's „Hortfrei" pill.
@@ -80,4 +83,47 @@ it('sets up a companion pickup („geht mit … mit")', function () {
     expect(DailyDeparture::where('child_id', $theo->id)->whereDate('date', today())->first())
         ->planned_method->toBe(DepartureMethod::WithChild)
         ->companion_child_id->toBe($mia->id);
+});
+
+it('warns when the chosen pickup falls into the day\'s homework or activity', function () {
+    $staff = User::factory()->staff()->create();
+    $child = Child::factory()->scheduledOn(boardWeekday(), '17:00')->create(['name' => 'Theo']);
+    HomeworkDefault::create(['weekday' => boardWeekday(), 'start_time' => '14:00', 'end_time' => '15:00']);
+    DailyProgram::factory()->create([
+        'date' => boardDate()->toDateString(), 'activity' => 'Fußballtraining',
+        'activity_start' => '15:30', 'activity_end' => '16:30',
+    ]);
+
+    actAndVisit($staff, '/board')
+        ->click("@edit-row-{$child->id}")
+        ->assertMissing('@homework-clash')       // 17:00 is after both windows
+        ->assertMissing('@activity-clash')
+        ->select('@time-hour', '14')
+        ->assertVisible('@homework-clash')       // 14:00 → homework time
+        ->assertMissing('@activity-clash')
+        ->select('@time-hour', '16')
+        ->assertVisible('@activity-clash')       // 16:00 → mid-Fußballtraining
+        ->assertSee('Fußballtraining')
+        ->assertEnabled('@save')                 // a warning, not a block
+        ->assertNoJavaScriptErrors();
+});
+
+it('warns when the chosen pickup falls inside the child\'s excursion', function () {
+    $staff = User::factory()->staff()->create();
+    $child = Child::factory()->scheduledOn(boardWeekday(), '17:00')->create(['name' => 'Theo']);
+    // A trip Theo joins that day, back at 16:30 — 17:00 is fine, 15:00 is not.
+    $trip = Excursion::factory()->create([
+        'name' => 'Zoo', 'date' => boardDate()->toDateString(),
+        'depart_at' => '13:30', 'return_at' => '16:30',
+    ]);
+    $trip->children()->syncWithoutDetaching([$child->id => ['response' => true]]);
+
+    actAndVisit($staff, '/board')
+        ->click("@edit-row-{$child->id}")
+        ->assertMissing('@excursion-clash')     // 17:00 is after the trip
+        ->select('@time-hour', '15')
+        ->assertVisible('@excursion-clash')     // 15:00 is in the middle of it
+        ->assertSee('bis 16:30')
+        ->assertEnabled('@save')                // still allowed: pickup at the venue
+        ->assertNoJavaScriptErrors();
 });

@@ -302,7 +302,7 @@ class HortDashboardData
 
         return [
             'lunch' => $program?->lunch,
-            'activity' => $program?->activity,
+            'activity' => $program?->activityText(),
             // No school, no homework: the weekday default knows nothing about dates,
             // so a Ferienbetreuung day would otherwise show a band nobody keeps. The
             // Betreuungszeit takes its place, as it does on /program.

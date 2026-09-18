@@ -36,6 +36,7 @@ return [
 
     'pickup_during_excursion' => 'Pickup falls during the excursion',
     'pickup_during_homework' => 'Pickup falls during homework time',
+    'pickup_during_activity' => 'Pickup falls during the activity „:name"',
 
     'homework' => 'Homework',
     'no_fixed_time' => 'No fixed time',

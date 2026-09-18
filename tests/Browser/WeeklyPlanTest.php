@@ -6,6 +6,8 @@ use App\Enums\DepartureMethod;
 use App\Enums\TimeQualifier;
 use App\Models\Child;
 use App\Models\DailyDeparture;
+use App\Models\DailyProgram;
+use App\Models\HomeworkDefault;
 use App\Models\User;
 
 // The Wochenplan is the DayEditor's *other* entry point (the board is the first).
@@ -72,6 +74,56 @@ it('lists a late arrival in the day header, next to the food', function () {
         ->click("@wp-arrival-{$date}-{$child->id}")   // staff can open the day from there
         ->assertVisible('@arrival-section')
         ->assertNoJavaScriptErrors();
+});
+
+it('draws a timed Aktivität as its own band on the timetable', function () {
+    $staff = User::factory()->staff()->create();
+    $date = boardDate()->toDateString();
+    $weekdayIndex = boardWeekday() - 1; // the band's column index (Mo = 0)
+    Child::factory()->scheduledOn(boardWeekday(), '16:00')->create(['name' => 'Emma']);
+    HomeworkDefault::create(['weekday' => boardWeekday(), 'start_time' => '14:00', 'end_time' => '15:00']);
+    DailyProgram::factory()->create([
+        'date' => $date, 'activity' => 'Waldtag',
+        'activity_start' => '15:00', 'activity_end' => '16:30',
+    ]);
+
+    actAndVisit($staff, "/weekly-plan?week={$date}")
+        ->assertVisible("@tt-activity-{$weekdayIndex}")
+        // The band carries the window, so the day header only needs the name.
+        ->assertSee('Waldtag')
+        ->assertDontSee('Waldtag (15:00–16:30)')
+        ->assertNoJavaScriptErrors();
+});
+
+it('flags a pickup inside the Aktivität in the child\'s week', function () {
+    $parent = User::factory()->parent()->create();
+    $date = boardDate()->toDateString();
+    $child = Child::factory()->scheduledOn(boardWeekday(), '15:00')->withGuardian($parent)->create(['name' => 'Nina']);
+    DailyProgram::factory()->create([
+        'date' => $date, 'activity' => 'Fußballtraining',
+        'activity_start' => '14:30', 'activity_end' => '16:00',
+    ]);
+
+    actAndVisit($parent, "/weekly-plan?week={$date}")
+        ->assertVisible("@activity-conflict-{$child->id}-{$date}")
+        ->assertSee('liegt in der Aktivität „Fußballtraining"');
+});
+
+it('keeps the window in the header when the Aktivität overlaps the homework band', function () {
+    $staff = User::factory()->staff()->create();
+    $date = boardDate()->toDateString();
+    $weekdayIndex = boardWeekday() - 1;
+    Child::factory()->scheduledOn(boardWeekday(), '16:00')->create(['name' => 'Emma']);
+    HomeworkDefault::create(['weekday' => boardWeekday(), 'start_time' => '14:00', 'end_time' => '15:00']);
+    // Overlaps homework — both bands share one lane, so the activity gets none.
+    DailyProgram::factory()->create([
+        'date' => $date, 'activity' => 'Waldtag',
+        'activity_start' => '14:30', 'activity_end' => '16:00',
+    ]);
+
+    actAndVisit($staff, "/weekly-plan?week={$date}")
+        ->assertMissing("@tt-activity-{$weekdayIndex}")
+        ->assertSee('Waldtag (14:30–16:00)');
 });
 
 it('links each weekday header to that day\'s board', function () {

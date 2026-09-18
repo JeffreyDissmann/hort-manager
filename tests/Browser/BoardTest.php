@@ -6,7 +6,9 @@ use App\Enums\DepartureStatus;
 use App\Models\Absence;
 use App\Models\Child;
 use App\Models\DailyDeparture;
+use App\Models\DailyProgram;
 use App\Models\Excursion;
+use App\Models\HomeworkDefault;
 use App\Models\User;
 
 /**
@@ -117,4 +119,60 @@ it('shows a confirmed excursion participant on the board', function () {
     actAndVisit($staff, '/board')
         ->assertSee('Frida')
         ->assertSee('Waldtag'); // the excursion overlay badge
+});
+
+it('places a timed Aktivität as a card in the day\'s order', function () {
+    $staff = User::factory()->staff()->create();
+    scheduledChild('Frida'); // leaves at 15:00 (see the helper)
+    DailyProgram::factory()->create([
+        'date' => boardDate()->toDateString(), 'activity' => 'Waldbesuch',
+        'activity_start' => '13:00', 'activity_end' => '14:30',
+    ]);
+
+    actAndVisit($staff, '/board')
+        ->assertVisible('@board-activity-card')
+        ->assertSeeIn('@board-activity-card', '13:00–14:30')
+        ->assertNoJavaScriptErrors();
+});
+
+it('warns on the card when a pickup falls inside the Aktivität', function () {
+    $staff = User::factory()->staff()->create();
+    $child = scheduledChild('Frida'); // leaves at 15:00
+    DailyProgram::factory()->create([
+        'date' => boardDate()->toDateString(), 'activity' => 'Fußballtraining',
+        'activity_start' => '14:30', 'activity_end' => '16:00',
+    ]);
+
+    actAndVisit($staff, '/board')
+        ->assertVisible("@activity-conflict-{$child->id}")
+        ->assertSee('Abholung liegt in der Aktivität „Fußballtraining"');
+});
+
+it('draws the Aktivität as a bar when a pickup falls inside it', function () {
+    $staff = User::factory()->staff()->create();
+    scheduledChild('Frida'); // leaves at 15:00 — inside the window below
+    DailyProgram::factory()->create([
+        'date' => boardDate()->toDateString(), 'activity' => 'Waldbesuch',
+        'activity_start' => '14:30', 'activity_end' => '16:00',
+    ]);
+
+    actAndVisit($staff, '/board')
+        ->assertVisible('@board-activity-bar')   // beside the pickups it covers
+        ->assertMissing('@board-activity-card')
+        ->assertNoJavaScriptErrors();
+});
+
+it('gives Hausaufgaben and Aktivität a lane each when their bars overlap', function () {
+    $staff = User::factory()->staff()->create();
+    scheduledChild('Frida'); // 15:00 — inside both windows
+    HomeworkDefault::create(['weekday' => boardWeekday(), 'start_time' => '14:00', 'end_time' => '16:00']);
+    DailyProgram::factory()->create([
+        'date' => boardDate()->toDateString(), 'activity' => 'Waldbesuch',
+        'activity_start' => '14:30', 'activity_end' => '16:00',
+    ]);
+
+    actAndVisit($staff, '/board')
+        ->assertVisible('@board-homework-bar')
+        ->assertVisible('@board-activity-bar')
+        ->assertNoJavaScriptErrors();
 });

@@ -11,6 +11,9 @@ return [
 
     'lunch' => 'Mittagessen',
     'lunch_placeholder' => 'z. B. Nudeln mit Tomatensoße',
+    'time_from' => 'von',
+    'time_to' => 'bis',
+    'activity_timed' => 'Mit Uhrzeit',
     'activity' => 'Aktivität',
     'activity_placeholder' => 'z. B. Basteln, Ausflug in den Park',
     'homework' => 'Hausaufgaben',
