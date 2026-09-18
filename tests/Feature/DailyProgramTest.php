@@ -183,7 +183,7 @@ class DailyProgramTest extends TestCase
             ->assertSessionHasErrors('days.0.activity_end');
     }
 
-    public function test_the_timed_activity_reads_as_a_range_on_the_board(): void
+    public function test_the_board_gets_the_activity_window_for_its_card(): void
     {
         $this->travelTo(Carbon::parse('2026-06-22'));
         DailyProgram::factory()->create([
@@ -191,9 +191,13 @@ class DailyProgramTest extends TestCase
             'activity_start' => '09:00', 'activity_end' => '12:00',
         ]);
 
+        // Name and window separately — the board places a card in the day's timeline.
         $this->actingAs($this->parent())
             ->get(route('board'))
-            ->assertInertia(fn (Assert $page) => $page->where('program.activity', 'Waldtag (09:00–12:00)'));
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('program.activity', 'Waldtag')
+                ->where('program.activity_start', '09:00')
+                ->where('program.activity_end', '12:00'));
     }
 
     public function test_staff_can_set_default_homework_times(): void

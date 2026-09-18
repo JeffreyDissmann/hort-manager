@@ -381,7 +381,11 @@ class DailyBoardController extends Controller
             'excursions' => $excursionList,
             'program' => $hasProgram ? [
                 'lunch' => $program?->lunch,
-                'activity' => $program?->activityText(),
+                // Name and window separately: a timed Aktivität gets its own card in
+                // the day's timeline, so the header line doesn't repeat the times.
+                'activity' => $program?->activity,
+                'activity_start' => $program?->activity_start ? substr((string) $program->activity_start, 0, 5) : null,
+                'activity_end' => $program?->activity_end ? substr((string) $program->activity_end, 0, 5) : null,
                 'homework_start' => $homeworkStart ? substr((string) $homeworkStart, 0, 5) : null,
                 'homework_end' => $homeworkEnd ? substr((string) $homeworkEnd, 0, 5) : null,
             ] : null,

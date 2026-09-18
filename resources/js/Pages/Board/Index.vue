@@ -114,6 +114,20 @@ function toMinutes(time) {
     return parseInt(time.slice(0, 2), 10) * 60 + parseInt(time.slice(3, 5), 10);
 }
 
+// The header repeats the Aktivität's window only when the timeline below can't carry
+// it — with nobody on the board there are no time slots to place its card in.
+const activityLine = computed(() => {
+    const p = props.program;
+    if (!p?.activity) {
+        return '';
+    }
+    const timed = p.activity_start && p.activity_end;
+
+    return timed && !visibleRows.value.length
+        ? `${p.activity} (${p.activity_start}–${p.activity_end})`
+        : p.activity;
+});
+
 // Pickup falls inside today's homework slot.
 function homeworkConflict(row) {
     const hw = props.program;
@@ -147,51 +161,89 @@ const boardBlocks = computed(() => {
         return a.time < b.time ? -1 : 1;
     });
 
-    // If a pickup overlaps the homework window, a vertical bar covers those rows.
-    // Otherwise show homework as a horizontal card at its start time.
-    const hw = props.program;
-    if (hw?.homework_start && hw?.homework_end) {
-        const overlaps = (b) =>
-            b.rows.length && b.time !== null && b.time >= hw.homework_start && b.time < hw.homework_end;
-        if (!blocks.some(overlaps)) {
-            const card = {
-                time: hw.homework_start,
-                rows: [],
-                homeworkCard: { start: hw.homework_start, end: hw.homework_end },
-            };
-            const at = blocks.findIndex((b) => b.time !== null && b.time >= hw.homework_start);
-            at === -1 ? blocks.push(card) : blocks.splice(at, 0, card);
+    // The day's two windows — Hausaufgaben and a timed Aktivität — are shown the same
+    // way: a vertical bar beside the pickups it covers, or, when no pickup falls inside
+    // it, a horizontal card at its start time so the window still has a place in the day.
+    for (const w of programWindows.value) {
+        const overlaps = (b) => b.rows.length && b.time !== null && b.time >= w.start && b.time < w.end;
+        if (blocks.some(overlaps)) {
+            continue;
         }
+        const card = { time: w.start, rows: [], card: w };
+        const at = blocks.findIndex((b) => b.time !== null && b.time >= w.start);
+        at === -1 ? blocks.push(card) : blocks.splice(at, 0, card);
     }
 
     return blocks;
 });
 
-// The homework bar's grid-row span — only when pickups overlap the window.
-const homeworkSpan = computed(() => {
-    const hw = props.program;
-    if (!hw?.homework_start || !hw?.homework_end) {
-        return null;
+/**
+ * The day's timed windows, in the order they start. Each is drawn either as a bar or
+ * as a card (see boardBlocks); `kind` picks the colour and the label.
+ */
+const programWindows = computed(() => {
+    const p = props.program;
+    const windows = [];
+
+    if (p?.homework_start && p?.homework_end) {
+        windows.push({ kind: 'homework', start: p.homework_start, end: p.homework_end, label: t('board.homework') });
     }
-    const covered = (b) =>
-        b.rows.length && b.time !== null && b.time >= hw.homework_start && b.time < hw.homework_end;
-    const idxs = [];
-    boardBlocks.value.forEach((b, i) => {
-        if (covered(b)) {
-            idxs.push(i);
-        }
-    });
-    if (!idxs.length) {
-        return null;
+    if (p?.activity && p.activity_start && p.activity_end) {
+        windows.push({ kind: 'activity', start: p.activity_start, end: p.activity_end, label: p.activity });
     }
-    return { rowStart: idxs[0] + 1, span: idxs[idxs.length - 1] - idxs[0] + 1 };
+
+    return windows.sort((a, b) => (a.start < b.start ? -1 : 1));
 });
 
-// A block only shifts right (making room for the homework bar) when it's inside
-// the homework window; otherwise it stays flush left across the full width.
-function blockInHomework(i) {
-    const s = homeworkSpan.value;
-    return !!s && i + 1 >= s.rowStart && i + 1 < s.rowStart + s.span;
+/**
+ * The bars to draw beside the pickups: a window covering at least one pickup slot,
+ * with the grid rows it spans and the lane it sits in. Two bars share lane 0 while
+ * their rows don't overlap; otherwise the second one moves into its own lane.
+ */
+const programBars = computed(() => {
+    const bars = [];
+
+    for (const w of programWindows.value) {
+        const idxs = [];
+        boardBlocks.value.forEach((b, i) => {
+            if (b.rows.length && b.time !== null && b.time >= w.start && b.time < w.end) {
+                idxs.push(i);
+            }
+        });
+        if (! idxs.length) {
+            continue;
+        }
+
+        const rowStart = idxs[0] + 1;
+        const span = idxs[idxs.length - 1] - idxs[0] + 1;
+        const clashes = bars.some((b) => b.lane === 0 && rowStart < b.rowStart + b.span && b.rowStart < rowStart + span);
+
+        bars.push({ ...w, rowStart, span, lane: clashes ? 1 : 0 });
+    }
+
+    return bars;
+});
+
+const laneCount = computed(() => programBars.value.reduce((n, b) => Math.max(n, b.lane + 1), 0));
+
+// Lanes first, then the pickups: „auto auto 1fr" while two bars overlap, „auto 1fr"
+// with one lane, and a single full-width column when the day has no window at all.
+const boardGridColumns = computed(() =>
+    laneCount.value ? `repeat(${laneCount.value}, auto) minmax(0, 1fr)` : 'minmax(0, 1fr)',
+);
+
+const barClass = {
+    homework: 'border-amber-300 bg-amber-50 text-amber-700',
+    activity: 'border-hort-purple/40 bg-hort-purple/10 text-hort-purple',
+};
+
+const barIcon = { homework: '📚', activity: '🎨' };
+
+// The homework bar's grid-row span — only when pickups overlap the window.
+// A block only shifts right (making room for the bars) when a bar covers it;
+// otherwise it stays flush left across the full width.
+function blockBesideBar(i) {
+    return programBars.value.some((b) => i + 1 >= b.rowStart && i + 1 < b.rowStart + b.span);
 }
 
 // Pickup falls inside the child's excursion window.
@@ -381,7 +433,7 @@ function editHortfrei(child) {
                     :class="program.lunch ? 'mt-1' : ''"
                 >
                     <span class="font-semibold">{{ $t('board.activity_label') }}</span>
-                    {{ program.activity }}
+                    {{ activityLine }}
                 </p>
             </div>
 
@@ -583,33 +635,39 @@ function editHortfrei(child) {
 
             <div
                 v-if="visibleRows.length"
-                class="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-6"
-                style="grid-auto-rows: max-content"
+                class="grid gap-x-3 gap-y-6"
+                :style="{ gridTemplateColumns: boardGridColumns, gridAutoRows: 'max-content' }"
             >
-                <!-- Homework as a side bar spanning the time slots it covers -->
+                <!-- Hausaufgaben and a timed Aktivität as side bars spanning the slots
+                     they cover — each in its own lane while their rows overlap. -->
                 <div
-                    v-if="homeworkSpan && program"
-                    class="flex flex-col items-center gap-1 rounded-xl border border-dashed border-amber-300 bg-amber-50 px-1.5 py-2 text-amber-700"
-                    :style="{ gridColumn: 1, gridRow: `${homeworkSpan.rowStart} / span ${homeworkSpan.span}` }"
-                    :title="`${$t('board.homework')} ${program.homework_start}–${program.homework_end || ''}`"
+                    v-for="bar in programBars"
+                    :key="bar.kind"
+                    :data-testid="`board-${bar.kind}-bar`"
+                    class="flex flex-col items-center gap-1 rounded-xl border border-dashed px-1.5 py-2"
+                    :class="barClass[bar.kind]"
+                    :style="{ gridColumn: bar.lane + 1, gridRow: `${bar.rowStart} / span ${bar.span}` }"
+                    :title="`${bar.label} ${bar.start}–${bar.end}`"
                 >
-                    <span class="text-base leading-none">📚</span>
+                    <span class="text-base leading-none">{{ barIcon[bar.kind] }}</span>
                     <span class="text-[10px] font-semibold [writing-mode:vertical-rl]">
-                        {{ program.homework_start }}<span v-if="program.homework_end">–{{ program.homework_end }}</span> {{ $t('common.oclock') }}
+                        {{ bar.start }}–{{ bar.end }} {{ $t('common.oclock') }}
                     </span>
                 </div>
 
                 <template v-for="(block, i) in boardBlocks" :key="block.time ?? 'none'">
                     <div
                         class="min-w-0"
-                        :style="{ gridColumn: blockInHomework(i) ? 2 : '1 / -1', gridRow: i + 1 }"
+                        :style="{ gridColumn: blockBesideBar(i) ? laneCount + 1 : '1 / -1', gridRow: i + 1 }"
                     >
-                        <!-- No pickup overlaps the window → homework as a horizontal card -->
+                        <!-- No pickup inside the window → the window as a horizontal card -->
                         <div
-                            v-if="block.homeworkCard"
-                            class="rounded-2xl border border-dashed border-amber-300 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800"
+                            v-if="block.card"
+                            :data-testid="`board-${block.card.kind}-card`"
+                            class="rounded-2xl border border-dashed px-4 py-3 text-sm font-semibold"
+                            :class="barClass[block.card.kind]"
                         >
-                            📚 {{ $t('board.homework') }} · {{ block.homeworkCard.start }}<span v-if="block.homeworkCard.end">–{{ block.homeworkCard.end }}</span> {{ $t('common.oclock') }}
+                            {{ barIcon[block.card.kind] }} {{ block.card.label }} · {{ block.card.start }}–{{ block.card.end }} {{ $t('common.oclock') }}
                         </div>
 
                         <template v-else>
