@@ -141,7 +141,7 @@ class WeeklyOverviewController extends Controller
 
             return [
                 'lunch' => $p?->lunch,
-                'activity' => $p?->activity,
+                'activity' => $p?->activityText(),
                 'homework_start' => $hwStart ? substr((string) $hwStart, 0, 5) : null,
                 'homework_end' => $hwEnd ? substr((string) $hwEnd, 0, 5) : null,
             ];

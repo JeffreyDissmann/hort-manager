@@ -381,7 +381,7 @@ class DailyBoardController extends Controller
             'excursions' => $excursionList,
             'program' => $hasProgram ? [
                 'lunch' => $program?->lunch,
-                'activity' => $program?->activity,
+                'activity' => $program?->activityText(),
                 'homework_start' => $homeworkStart ? substr((string) $homeworkStart, 0, 5) : null,
                 'homework_end' => $homeworkEnd ? substr((string) $homeworkEnd, 0, 5) : null,
             ] : null,

@@ -101,6 +101,82 @@ class DailyProgramTest extends TestCase
             );
     }
 
+    public function test_an_activity_can_carry_a_time_window(): void
+    {
+        $this->actingAs($this->staff())
+            ->patch(route('program.update'), [
+                'days' => [[
+                    'date' => '2026-06-22', 'lunch' => null, 'activity' => 'Waldtag',
+                    'activity_start' => '09:00', 'activity_end' => '12:00',
+                ]],
+            ])
+            ->assertSessionHasNoErrors();
+
+        $program = DailyProgram::firstWhere('date', '2026-06-22');
+        $this->assertSame('09:00', substr((string) $program->activity_start, 0, 5));
+        // Shown as a range wherever the day's program is shown.
+        $this->assertSame('Waldtag (09:00–12:00)', $program->activityText());
+    }
+
+    public function test_an_activity_without_times_stays_untimed(): void
+    {
+        $this->actingAs($this->staff())
+            ->patch(route('program.update'), [
+                'days' => [['date' => '2026-06-22', 'lunch' => null, 'activity' => 'Basteln']],
+            ])
+            ->assertSessionHasNoErrors();
+
+        $program = DailyProgram::firstWhere('date', '2026-06-22');
+        $this->assertNull($program->activity_start);
+        $this->assertSame('Basteln', $program->activityText());
+    }
+
+    public function test_activity_times_need_both_halves_and_an_activity(): void
+    {
+        $this->actingAs($this->staff())
+            ->patch(route('program.update'), [
+                'days' => [['date' => '2026-06-22', 'activity' => 'Waldtag', 'activity_start' => '09:00']],
+            ])
+            ->assertSessionHasErrors('days.0.activity_end');
+
+        // A window without an Aktivität has nothing to time — dropped, not stored.
+        $this->actingAs($this->staff())
+            ->patch(route('program.update'), [
+                'days' => [[
+                    'date' => '2026-06-22', 'lunch' => 'Nudeln', 'activity' => null,
+                    'activity_start' => '09:00', 'activity_end' => '12:00',
+                ]],
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('daily_programs', ['date' => '2026-06-22', 'activity_start' => null]);
+    }
+
+    public function test_an_end_before_the_start_is_rejected(): void
+    {
+        $this->actingAs($this->staff())
+            ->patch(route('program.update'), [
+                'days' => [[
+                    'date' => '2026-06-22', 'activity' => 'Waldtag',
+                    'activity_start' => '12:00', 'activity_end' => '09:00',
+                ]],
+            ])
+            ->assertSessionHasErrors('days.0.activity_end');
+    }
+
+    public function test_the_timed_activity_reads_as_a_range_on_the_board(): void
+    {
+        $this->travelTo(Carbon::parse('2026-06-22'));
+        DailyProgram::factory()->create([
+            'date' => '2026-06-22', 'activity' => 'Waldtag',
+            'activity_start' => '09:00', 'activity_end' => '12:00',
+        ]);
+
+        $this->actingAs($this->parent())
+            ->get(route('board'))
+            ->assertInertia(fn (Assert $page) => $page->where('program.activity', 'Waldtag (09:00–12:00)'));
+    }
+
     public function test_staff_can_set_default_homework_times(): void
     {
         $this->actingAs($this->staff())

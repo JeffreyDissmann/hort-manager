@@ -21,7 +21,7 @@ class DailyProgram extends Model
     /** @return list<string> */
     protected function activityAttributes(): array
     {
-        return ['date', 'lunch', 'activity', 'homework_start', 'homework_end', 'homework_none'];
+        return ['date', 'lunch', 'activity', 'activity_start', 'activity_end', 'homework_start', 'homework_end', 'homework_none'];
     }
 
     protected function activityLabel(): string
@@ -29,10 +29,34 @@ class DailyProgram extends Model
         return $this->date?->format('d.m.Y') ?? '?';
     }
 
+    /**
+     * The Aktivität as one line, with its window when it has one:
+     * „Waldtag (09:00–12:00)" — plain „Waldtag" while untimed, null without one.
+     */
+    public function activityText(): ?string
+    {
+        if (! $this->activity) {
+            return null;
+        }
+
+        $start = self::short($this->activity_start);
+        $end = self::short($this->activity_end);
+
+        return $start && $end ? "{$this->activity} ({$start}–{$end})" : $this->activity;
+    }
+
+    private static function short(mixed $time): ?string
+    {
+        return $time ? substr((string) $time, 0, 5) : null;
+    }
+
     protected $fillable = [
         'date',
         'lunch',
         'activity',
+        // Optional time window for the Aktivität (both null = untimed, the default).
+        'activity_start',
+        'activity_end',
         'homework_start',
         'homework_end',
         'homework_none',

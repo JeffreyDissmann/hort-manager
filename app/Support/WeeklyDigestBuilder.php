@@ -86,7 +86,7 @@ class WeeklyDigestBuilder
             return [
                 'weekday' => $weekdayLabel($day),
                 'lunch' => $p?->lunch,
-                'activity' => $p?->activity,
+                'activity' => $p?->activityText(),
                 'homework' => $homework,
                 'care' => $care ? $care->window() : null,
                 'closed' => null,

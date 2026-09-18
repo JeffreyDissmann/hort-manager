@@ -39,7 +39,9 @@ const savingCareWindow = ref(false);
 
 // `no_homework` drives the "Keine Hausaufgaben" checkbox — on when there's no
 // effective homework for the day (explicit none, or no default/override at all).
-const withHomeworkFlag = (d) => ({ ...d, no_homework: !d.homework_start });
+// `timed_activity` drives the „mit Uhrzeit" checkbox — an Aktivität is untimed by
+// default and only carries a window when someone asked for one.
+const withHomeworkFlag = (d) => ({ ...d, no_homework: !d.homework_start, timed_activity: !!d.activity_start });
 const days = ref(props.days.map(withHomeworkFlag));
 watch(
     () => props.days,
@@ -47,6 +49,34 @@ watch(
         days.value = value.map(withHomeworkFlag);
     },
 );
+
+function toggleTimedActivity(day) {
+    if (!day.timed_activity) {
+        day.activity_start = null;
+        day.activity_end = null;
+        return;
+    }
+
+    // Start where the homework slot ends — that's when the day's activity actually
+    // begins. Without homework, the afternoon block most activities run in.
+    const start = (!day.no_homework && day.homework_end) || '14:00';
+    day.activity_start ??= start;
+    day.activity_end ??= plusHour(start);
+}
+
+// Editing the start pulls the end along (one hour later), like the homework TimeRange.
+function onActivityStartChange(day, value) {
+    if (value) {
+        day.activity_end = plusHour(value);
+    }
+}
+
+/** „15:00" → „16:00" (same minutes, next hour). */
+function plusHour(time) {
+    const [h, m] = time.split(':').map(Number);
+
+    return `${String((h + 1) % 24).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
 
 function toggleNoHomework(day) {
     if (day.no_homework) {
@@ -84,6 +114,8 @@ function save() {
                 date: d.date,
                 lunch: d.lunch || null,
                 activity: d.activity || null,
+                activity_start: d.timed_activity ? d.activity_start || null : null,
+                activity_end: d.timed_activity ? d.activity_end || null : null,
                 homework_start: d.no_homework ? null : d.homework_start || null,
                 homework_end: d.no_homework ? null : d.homework_end || null,
                 homework_none: d.no_homework,
@@ -320,6 +352,43 @@ function onTouchEnd(e) {
                             class="mt-1 block w-full"
                             :placeholder="$t('program.activity_placeholder')"
                         />
+                        <!-- Optional window: „Waldtag 09:00–12:00" instead of just „Waldtag". -->
+                        <label class="mt-1 flex items-center gap-2 text-sm text-ink/70">
+                            <Checkbox
+                                :checked="day.timed_activity"
+                                :data-testid="`activity-timed-${day.date}`"
+                                @update:checked="
+                                    (v) => {
+                                        day.timed_activity = v;
+                                        toggleTimedActivity(day);
+                                    }
+                                "
+                            />
+                            {{ $t('program.activity_timed') }}
+                        </label>
+                        <!-- Stacked von/bis: a from–to pair side by side is four dropdowns,
+                             which this column is too narrow for (they came out clipped). -->
+                        <div v-if="day.timed_activity" class="mt-2 space-y-1.5">
+                            <div class="flex items-center gap-2">
+                                <span class="w-7 shrink-0 text-xs text-ink/50">{{ $t('program.time_from') }}</span>
+                                <TimeSelect
+                                    v-model="day.activity_start"
+                                    from="07:00"
+                                    :test-id="`activity-time-${day.date}-start`"
+                                    class="min-w-0 flex-1"
+                                    @change="onActivityStartChange(day, $event)"
+                                />
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="w-7 shrink-0 text-xs text-ink/50">{{ $t('program.time_to') }}</span>
+                                <TimeSelect
+                                    v-model="day.activity_end"
+                                    from="07:00"
+                                    :test-id="`activity-time-${day.date}-end`"
+                                    class="min-w-0 flex-1"
+                                />
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Ferienbetreuung takes the homework slot: there is no school to
@@ -368,12 +437,13 @@ function onTouchEnd(e) {
                             class="mt-2"
                         />
                     </div>
+
                     </template>
                 </div>
             </div>
 
             <div class="flex justify-end">
-                <PrimaryButton :disabled="saving" @click="save">
+                <PrimaryButton data-testid="save-program" :disabled="saving" @click="save">
                     {{ $t('program.save_week') }}
                 </PrimaryButton>
             </div>
