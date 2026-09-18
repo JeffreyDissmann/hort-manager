@@ -9,6 +9,7 @@ import InstallBanner from '@/Components/InstallBanner.vue';
 import NotifyPrompt from '@/Components/NotifyPrompt.vue';
 import CareReminderBanner from '@/Components/CareReminderBanner.vue';
 import PlanReminderBanner from '@/Components/PlanReminderBanner.vue';
+import PickupClashBanner from '@/Components/PickupClashBanner.vue';
 import PullToRefresh from '@/Components/PullToRefresh.vue';
 import WhatsNewModal from '@/Components/WhatsNewModal.vue';
 import {
@@ -444,6 +445,7 @@ function isActive(item) {
             <PullToRefresh>
                 <PlanReminderBanner class="mb-4" />
                 <CareReminderBanner class="mb-4" />
+                <PickupClashBanner class="mb-4" />
                 <slot />
             </PullToRefresh>
         </main>

@@ -98,6 +98,19 @@ return [
     'report_away' => 'Kommt nicht',
     'reset_to_standard' => 'Auf Standard',
 
+    // „Abholzeiten prüfen" — the standing summary of pickups that collide with the
+    // Hausaufgabenzeit, a timed Aktivität or an Ausflug (PickupClashBanner).
+    'clashes' => [
+        'title' => 'Abholzeiten prüfen',
+        'every_weekday' => 'jeden :day',
+        'pickup_at' => 'Abholung :time –',
+        'in_homework' => 'in der Hausaufgabenzeit (:from–:to).',
+        'in_activity' => 'in der Aktivität „:name" (:from–:to).',
+        'in_excursion' => 'im Ausflug „:name" (:from–:to).',
+        'action' => 'Im Wochenplan ansehen',
+        'action_standard' => 'Stammplan ändern',
+    ],
+
     'weekday' => [
         'mon' => 'Mo',
         'tue' => 'Di',

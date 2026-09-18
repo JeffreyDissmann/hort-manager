@@ -10,6 +10,7 @@ use App\Models\HolidayCareAnswer;
 use App\Models\HolidayPeriod;
 use App\Models\Setting;
 use App\Models\User;
+use App\Support\PickupClashes;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -80,6 +81,9 @@ class HandleInertiaRequests extends Middleware
             'pendingCompanions' => fn () => $this->pendingCompanionCount($request->user()),
             // This parent's children whose Stammplan isn't set up yet (drives a banner).
             'childrenWithoutPlan' => fn () => $this->childrenWithoutPlan($request->user()),
+            // Pickups of this parent's children that land in the Hausaufgabenzeit, a
+            // timed Aktivität or an Ausflug — the standing summary above the page.
+            'pickupClashes' => fn () => PickupClashes::for($request->user()),
             // Ferienbetreuungen still open whose sign-up this parent hasn't answered.
             'pendingCare' => fn () => $this->pendingCare($request->user()),
             // Hort-wide cutoff (H:i) after which same-day changes notify staff — the

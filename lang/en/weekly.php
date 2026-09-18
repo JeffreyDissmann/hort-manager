@@ -98,6 +98,19 @@ return [
     'report_away' => 'Not coming',
     'reset_to_standard' => 'Reset to standard',
 
+    // „Abholzeiten prüfen" — the standing summary of pickups that collide with the
+    // homework slot, a timed activity or an excursion (PickupClashBanner).
+    'clashes' => [
+        'title' => 'Check the pickup times',
+        'every_weekday' => 'every :day',
+        'pickup_at' => 'pickup :time –',
+        'in_homework' => 'inside the homework slot (:from–:to).',
+        'in_activity' => 'inside the activity „:name" (:from–:to).',
+        'in_excursion' => 'inside the trip „:name" (:from–:to).',
+        'action' => 'Open the Wochenplan',
+        'action_standard' => 'Change the Stammplan',
+    ],
+
     'weekday' => [
         'mon' => 'Mon',
         'tue' => 'Tue',
