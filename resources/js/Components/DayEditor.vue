@@ -12,6 +12,7 @@ import TextInput from '@/Components/TextInput.vue';
 import TimeSelect from '@/Components/TimeSelect.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
+import { t } from '@/i18n';
 import { router, usePage } from '@inertiajs/vue3';
 import { computed, reactive, ref } from 'vue';
 
@@ -20,6 +21,9 @@ const props = defineProps({
     children: { type: Array, default: () => [] },
     methodOptions: { type: Array, default: () => [] },
     qualifierOptions: { type: Array, default: () => [] },
+    // What's running on which day, Hort-wide: [{ date, kind: 'homework'|'activity',
+    // label, start, end }]. A pickup inside one of these is worth saying out loud.
+    windows: { type: Array, default: () => [] },
 });
 
 const editing = ref(null); // { childId, childName, date, label, absent }
@@ -64,15 +68,33 @@ function removeArrival() {
     showArrival.value = false;
 }
 
-// The chosen pickup falls between the trip's departure and return — the child is away
-// then. Mirrors ExcursionPickup::state(), which moves the time when joining a trip.
-const pickupInExcursion = computed(() => {
-    const trip = editing.value?.excursion;
-    if (!trip?.return_at || !form.planned_time || goingWithChild.value) {
-        return false;
+/**
+ * Everything the chosen pickup time runs into on that day: the Hausaufgaben slot, a
+ * timed Aktivität, and the child's Ausflug. Warnings only — a family may well collect
+ * their child mid-activity; they just shouldn't find out afterwards.
+ */
+const pickupClashes = computed(() => {
+    const time = form.planned_time;
+    if (!editing.value || !time || goingWithChild.value) {
+        return [];
     }
 
-    return form.planned_time >= (trip.depart_at ?? '00:00') && form.planned_time < trip.return_at;
+    const clashes = props.windows
+        .filter((w) => w.date === editing.value.date && time >= w.start && time < w.end)
+        .map((w) => ({
+            key: w.kind,
+            text: t(`weekly.pickup_in_${w.kind}`, { time, name: w.label, from: w.start, to: w.end }),
+        }));
+
+    const trip = editing.value.excursion;
+    if (trip?.return_at && time >= (trip.depart_at ?? '00:00') && time < trip.return_at) {
+        clashes.push({
+            key: 'excursion',
+            text: t('weekly.pickup_in_excursion', { name: trip.name, time: trip.return_at }),
+        });
+    }
+
+    return clashes;
 });
 
 // Arriving at or after the pickup time can't happen (mirrors AdjustDayRequest). With a
@@ -334,12 +356,15 @@ function cancelAbsence() {
                 <div v-if="!goingWithChild">
                     <InputLabel for="time" :value="$t('weekly.time_label')" />
                     <TimeSelect id="time" v-model="form.planned_time" test-id="time" class="mt-1 block w-full" />
+                    <!-- Everything the chosen time runs into: Hausaufgaben, a timed
+                         Aktivität, the child's Ausflug. Saving stays possible. -->
                     <p
-                        v-if="pickupInExcursion"
-                        data-testid="excursion-clash"
+                        v-for="clash in pickupClashes"
+                        :key="clash.key"
+                        :data-testid="`${clash.key}-clash`"
                         class="mt-1 rounded-lg bg-amber-50 px-2 py-1 text-xs font-medium text-amber-900"
                     >
-                        ⚠️ {{ $t('weekly.pickup_in_excursion', { name: editing.excursion.name, time: editing.excursion.return_at }) }}
+                        ⚠️ {{ clash.text }}
                     </p>
                 </div>
 

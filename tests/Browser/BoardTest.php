@@ -135,6 +135,19 @@ it('places a timed Aktivität as a card in the day\'s order', function () {
         ->assertNoJavaScriptErrors();
 });
 
+it('warns on the card when a pickup falls inside the Aktivität', function () {
+    $staff = User::factory()->staff()->create();
+    $child = scheduledChild('Frida'); // leaves at 15:00
+    DailyProgram::factory()->create([
+        'date' => boardDate()->toDateString(), 'activity' => 'Fußballtraining',
+        'activity_start' => '14:30', 'activity_end' => '16:00',
+    ]);
+
+    actAndVisit($staff, '/board')
+        ->assertVisible("@activity-conflict-{$child->id}")
+        ->assertSee('Abholung liegt in der Aktivität „Fußballtraining"');
+});
+
 it('draws the Aktivität as a bar when a pickup falls inside it', function () {
     $staff = User::factory()->staff()->create();
     scheduledChild('Frida'); // leaves at 15:00 — inside the window below

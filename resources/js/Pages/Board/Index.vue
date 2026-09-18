@@ -138,6 +138,16 @@ function homeworkConflict(row) {
     return pickup >= toMinutes(hw.homework_start) && pickup < toMinutes(hw.homework_end);
 }
 
+// …or inside a timed Aktivität — the same „the child is busy then" warning.
+function activityConflict(row) {
+    const p = props.program;
+    if (!row.planned_time || !p?.activity || !p.activity_start || !p.activity_end) {
+        return false;
+    }
+    const pickup = toMinutes(row.planned_time);
+    return pickup >= toMinutes(p.activity_start) && pickup < toMinutes(p.activity_end);
+}
+
 // The board grouped by time: everything happening at the same time — children
 // leaving, and the homework window (at its start time) — shares one time slot.
 const boardBlocks = computed(() => {
@@ -225,6 +235,11 @@ const programBars = computed(() => {
 });
 
 const laneCount = computed(() => programBars.value.reduce((n, b) => Math.max(n, b.lane + 1), 0));
+
+// The same windows, dated — the DayEditor warns when a pickup is moved into one.
+const editorWindows = computed(() =>
+    programWindows.value.map((w) => ({ ...w, date: props.date.iso })),
+);
 
 // Lanes first, then the pickups: „auto auto 1fr" while two bars overlap, „auto 1fr"
 // with one lane, and a single full-width column when the day has no window at all.
@@ -751,6 +766,13 @@ function editHortfrei(child) {
                             >
                                 {{ $t('board.pickup_during_homework') }}
                             </p>
+                            <p
+                                v-if="row.status === 'present' && activityConflict(row)"
+                                :data-testid="`activity-conflict-${row.child_id}`"
+                                class="mt-1 inline-block rounded-lg bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700"
+                            >
+                                {{ $t('board.pickup_during_activity', { name: program.activity }) }}
+                            </p>
                         </div>
 
                         <!-- Status badge once the child has left -->
@@ -913,6 +935,7 @@ function editHortfrei(child) {
             :children="children"
             :method-options="methodOptions"
             :qualifier-options="qualifierOptions"
+            :windows="editorWindows"
         />
     </AuthenticatedLayout>
 </template>

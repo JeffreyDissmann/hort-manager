@@ -95,6 +95,20 @@ it('draws a timed Aktivität as its own band on the timetable', function () {
         ->assertNoJavaScriptErrors();
 });
 
+it('flags a pickup inside the Aktivität in the child\'s week', function () {
+    $parent = User::factory()->parent()->create();
+    $date = boardDate()->toDateString();
+    $child = Child::factory()->scheduledOn(boardWeekday(), '15:00')->withGuardian($parent)->create(['name' => 'Nina']);
+    DailyProgram::factory()->create([
+        'date' => $date, 'activity' => 'Fußballtraining',
+        'activity_start' => '14:30', 'activity_end' => '16:00',
+    ]);
+
+    actAndVisit($parent, "/weekly-plan?week={$date}")
+        ->assertVisible("@activity-conflict-{$child->id}-{$date}")
+        ->assertSee('liegt in der Aktivität „Fußballtraining"');
+});
+
 it('keeps the window in the header when the Aktivität overlaps the homework band', function () {
     $staff = User::factory()->staff()->create();
     $date = boardDate()->toDateString();

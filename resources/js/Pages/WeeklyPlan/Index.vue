@@ -135,6 +135,17 @@ function homeworkConflict(day, i) {
     return pickup >= toMinutes(hw.homework_start) && pickup < toMinutes(hw.homework_end);
 }
 
+// …and the same for a timed Aktivität: the child is busy then, so a pickup inside it
+// is worth flagging next to the trip and homework ones.
+function activityConflict(day, i) {
+    const p = props.program[i];
+    if (!day.time || !p?.activity || !p.activity_start || !p.activity_end) {
+        return false;
+    }
+    const pickup = toMinutes(day.time);
+    return pickup >= toMinutes(p.activity_start) && pickup < toMinutes(p.activity_end);
+}
+
 // Solid `ink` time; the method reads from the warm/cool tint, and the "goes home
 // alone" case additionally gets a 🚶 icon.
 function planClass(day) {
@@ -247,6 +258,26 @@ const decoratedWeek = computed(() =>
 
 // --- Day editor (shared popup) ---
 const dayEditor = ref(null);
+
+// The week's timed windows per date (Hausaufgaben + a timed Aktivität), so the editor
+// can warn when a pickup is moved into one.
+const editorWindows = computed(() =>
+    props.program.flatMap((p, i) => {
+        const date = props.weekDays[i]?.date;
+        if (!p || !date) {
+            return [];
+        }
+        const windows = [];
+        if (p.homework_start && p.homework_end) {
+            windows.push({ date, kind: 'homework', label: t('board.homework'), start: p.homework_start, end: p.homework_end });
+        }
+        if (p.activity && p.activity_start && p.activity_end) {
+            windows.push({ date, kind: 'activity', label: p.activity, start: p.activity_start, end: p.activity_end });
+        }
+
+        return windows;
+    }),
+);
 
 function openCell(child, day, dayMeta) {
     dayEditor.value?.open(child, day, dayMeta);
@@ -444,7 +475,7 @@ function answerCompanion(id, confirmed) {
 
                         <!-- Birthdays, trips and pickup conflicts this week -->
                         <div
-                            v-if="child.days.some((d, idx) => d.excursion || d.birthday !== null || homeworkConflict(d, idx))"
+                            v-if="child.days.some((d, idx) => d.excursion || d.birthday !== null || homeworkConflict(d, idx) || activityConflict(d, idx))"
                             class="mt-2 space-y-1"
                         >
                             <template v-for="(day, i) in child.days" :key="day.date">
@@ -481,6 +512,13 @@ function answerCompanion(id, confirmed) {
                                     class="rounded-lg bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700"
                                 >
                                     {{ $t('weekly.homework_conflict', { day: weekDays[i].label, time: day.time }) }}
+                                </p>
+                                <p
+                                    v-if="activityConflict(day, i)"
+                                    :data-testid="`activity-conflict-${child.id}-${day.date}`"
+                                    class="rounded-lg bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700"
+                                >
+                                    {{ $t('weekly.activity_conflict', { day: weekDays[i].label, time: day.time, name: program[i].activity }) }}
                                 </p>
                             </template>
                         </div>
@@ -587,6 +625,7 @@ function answerCompanion(id, confirmed) {
             :children="children"
             :method-options="methodOptions"
             :qualifier-options="qualifierOptions"
+            :windows="editorWindows"
         />
     </AuthenticatedLayout>
 </template>
