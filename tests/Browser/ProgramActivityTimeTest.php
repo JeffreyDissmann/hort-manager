@@ -21,6 +21,9 @@ it('gives an activity a time window only when asked', function () {
         ->select("@activity-time-{$date}-end-hour", '12')
         ->select("@activity-time-{$date}-end-minute", '00')
         ->click('@save-program')
+        // Wait for the server's „gespeichert" before reading the row: on a slower
+        // runner the assertion otherwise overtakes the request.
+        ->assertSee('Programm gespeichert.')
         ->assertNoJavaScriptErrors();
 
     $program = DailyProgram::firstWhere('date', $date);
@@ -38,7 +41,8 @@ it('starts a timed activity right after the homework slot', function () {
         // Homework runs until 15:00, so the activity starts there (one hour by default).
         ->assertValue("@activity-time-{$date}-start-hour", '15')
         ->assertValue("@activity-time-{$date}-end-hour", '16')
-        ->click('@save-program');
+        ->click('@save-program')
+        ->assertSee('Programm gespeichert.');
 
     expect(DailyProgram::firstWhere('date', $date)->activityText())->toBe('Basteln (15:00–16:00)');
 });
