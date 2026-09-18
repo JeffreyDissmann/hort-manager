@@ -45,6 +45,7 @@ return [
     'arrival_note_label' => 'Reason',
     'arrival_note_placeholder' => 'e.g. doctor’s appointment, training',
     'arrival_after_pickup' => 'The arrival has to be before the pickup time.',
+    'pickup_in_excursion' => 'The child is on the trip „:name" until :time – an earlier pickup only works at the trip itself.',
     'arrives_later' => 'Arrives at :time',
     'arrives_later_short' => 'only arrives :time',
     'closed' => 'Closed',

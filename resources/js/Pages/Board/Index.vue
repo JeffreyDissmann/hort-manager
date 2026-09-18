@@ -303,6 +303,8 @@ function editRow(row) {
             note: row.note,
             arrives_at: row.arrives_at,
             arrival_note: row.arrival_note,
+            // So the editor can warn when a time would fall inside today's trip.
+            excursion: row.excursion,
         },
         todayMeta(),
     );

@@ -55,6 +55,62 @@ class SlackInteractionTest extends TestCase
         return [$excursion, $child];
     }
 
+    public function test_a_yes_click_moves_a_pickup_that_falls_inside_the_trip(): void
+    {
+        Http::fake();
+        Carbon::setTestNow('2026-06-22 09:00'); // Monday
+        $guardian = User::factory()->create(['slack_id' => 'U1']);
+        $child = Child::factory()->create(['name' => 'Nika']);
+        $child->guardians()->attach($guardian);
+        $child->weeklySchedules()->create(['weekday' => 3, 'planned_time' => '14:00', 'method' => DepartureMethod::SentHome]);
+
+        // Wednesday, 13:30–17:00 — the 14:00 pickup is right in the middle of it.
+        $excursion = Excursion::factory()->create([
+            'date' => '2026-06-24', 'depart_at' => '13:30', 'return_at' => '17:00',
+            'rsvp_deadline' => '2026-06-23',
+        ]);
+        $excursion->children()->attach($child->id);
+
+        $this->postInteraction([
+            'user' => ['id' => 'U1'],
+            'response_url' => 'https://hooks.slack.com/confirm',
+            'actions' => [['value' => "rsvp|{$excursion->id}|{$child->id}|1"]],
+        ])->assertNoContent();
+
+        $departure = DailyDeparture::where('child_id', $child->id)->whereDate('date', '2026-06-24')->first();
+        $this->assertSame('17:00', substr((string) $departure->planned_time, 0, 5));
+        // That day only — the Stammplan is untouched.
+        $this->assertSame('14:00', substr((string) $child->weeklySchedules()->first()->planned_time, 0, 5));
+
+        // The DM says what was changed, rather than moving it silently.
+        Http::assertSent(fn ($request) => $request->url() === 'https://hooks.slack.com/confirm'
+            && str_contains($request['text'], '17:00')
+            && str_contains($request['text'], 'Stammplan'));
+    }
+
+    public function test_a_no_click_leaves_the_pickup_alone(): void
+    {
+        Http::fake();
+        Carbon::setTestNow('2026-06-22 09:00');
+        $guardian = User::factory()->create(['slack_id' => 'U1']);
+        $child = Child::factory()->create();
+        $child->guardians()->attach($guardian);
+        $child->weeklySchedules()->create(['weekday' => 3, 'planned_time' => '14:00', 'method' => DepartureMethod::SentHome]);
+        $excursion = Excursion::factory()->create([
+            'date' => '2026-06-24', 'depart_at' => '13:30', 'return_at' => '17:00',
+            'rsvp_deadline' => '2026-06-23',
+        ]);
+        $excursion->children()->attach($child->id);
+
+        $this->postInteraction([
+            'user' => ['id' => 'U1'],
+            'response_url' => 'https://hooks.slack.com/confirm',
+            'actions' => [['value' => "rsvp|{$excursion->id}|{$child->id}|0"]],
+        ])->assertNoContent();
+
+        $this->assertDatabaseCount('daily_departures', 0);
+    }
+
     public function test_a_signed_yes_click_records_the_rsvp(): void
     {
         Http::fake();

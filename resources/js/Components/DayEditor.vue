@@ -41,6 +41,10 @@ function open(child, day, dayMeta) {
         absent: day.absent ?? null,
         // Ferienbetreuung day: there is no Stammplan behind it (see the reset button).
         care: day.care ?? null,
+        // The trip this child is on that day, if any — a pickup inside it can't happen
+        // at the Hort, so the time field says so (saving stays possible: a family may
+        // collect the child at the venue).
+        excursion: day.excursion ?? null,
     };
     form.planned_time = day.time ?? '';
     form.planned_method = day.method ?? '';
@@ -59,6 +63,17 @@ function removeArrival() {
     form.arrival_note = '';
     showArrival.value = false;
 }
+
+// The chosen pickup falls between the trip's departure and return — the child is away
+// then. Mirrors ExcursionPickup::state(), which moves the time when joining a trip.
+const pickupInExcursion = computed(() => {
+    const trip = editing.value?.excursion;
+    if (!trip?.return_at || !form.planned_time || goingWithChild.value) {
+        return false;
+    }
+
+    return form.planned_time >= (trip.depart_at ?? '00:00') && form.planned_time < trip.return_at;
+});
 
 // Arriving at or after the pickup time can't happen (mirrors AdjustDayRequest). With a
 // companion the pickup is mirrored from them, so that time is the one to beat.
@@ -319,6 +334,13 @@ function cancelAbsence() {
                 <div v-if="!goingWithChild">
                     <InputLabel for="time" :value="$t('weekly.time_label')" />
                     <TimeSelect id="time" v-model="form.planned_time" test-id="time" class="mt-1 block w-full" />
+                    <p
+                        v-if="pickupInExcursion"
+                        data-testid="excursion-clash"
+                        class="mt-1 rounded-lg bg-amber-50 px-2 py-1 text-xs font-medium text-amber-900"
+                    >
+                        ⚠️ {{ $t('weekly.pickup_in_excursion', { name: editing.excursion.name, time: editing.excursion.return_at }) }}
+                    </p>
                 </div>
 
                 <div>

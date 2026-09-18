@@ -524,7 +524,9 @@ class WeeklyOverviewController extends Controller
                     'arrives_at' => $departure?->arrivalTime(),
                     'arrival_note' => $departure?->arrival_note,
                     'adjusted' => $adjusted,
-                    'excursion' => isset($excursionByChildDate[$child->id.'|'.$day['date']]),
+                    // The trip itself (not just „is on one"): the DayEditor opens from
+                    // here too and warns when a pickup would fall inside it.
+                    'excursion' => $excursionByChildDate[$child->id.'|'.$day['date']] ?? null,
                     'date' => $day['date'],
                     'editable' => $day['date'] >= $todayString && ! $departed,
                     'minutes' => $toMinutes($short),

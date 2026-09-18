@@ -85,6 +85,20 @@ function answer(excursion, child, response) {
         { preserveScroll: true },
     );
 }
+
+// Saying „Ja" moves a pickup that falls inside the trip to its return time — that is
+// done server-side. What's left to say here is the leftovers: a clash that can't be
+// moved („geht mit … mit", a past day), or the new time once it has been moved.
+function pickupClashes(excursion, child) {
+    return child.response === true && !!child.plan?.conflict;
+}
+
+function pickupMatchesReturn(excursion, child) {
+    return child.response === true
+        && !child.plan?.conflict
+        && !!excursion.return_at
+        && child.plan?.time === excursion.return_at;
+}
 </script>
 
 <template>
@@ -188,8 +202,9 @@ function answer(excursion, child, response) {
                             <div
                                 v-for="child in excursion.children"
                                 :key="child.id"
-                                class="flex items-center justify-between gap-3 rounded-xl bg-canvas p-3"
+                                class="rounded-xl bg-canvas p-3"
                             >
+                            <div class="flex items-center justify-between gap-3">
                                 <div class="min-w-0">
                                     <span class="font-medium text-ink">
                                         {{ child.name }}
@@ -240,6 +255,26 @@ function answer(excursion, child, response) {
                                         {{ $t('excursions.answer_no') }}
                                     </button>
                                 </div>
+                            </div>
+
+                            <!-- The pickup and the trip: either it was moved to the trip's
+                                 end when joining, or it clashes and has to be sorted by
+                                 hand („geht mit … mit", a day that can't be planned). -->
+                            <p
+                                v-if="pickupClashes(excursion, child)"
+                                :data-testid="`pickup-clash-${excursion.id}-${child.id}`"
+                                class="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900"
+                            >
+                                ⚠️ {{ $t('excursions.pickup_clash', { time: child.plan.time, return: excursion.return_at }) }}
+                                <span class="block text-xs text-amber-900/70">{{ $t('excursions.pickup_clash_manual') }}</span>
+                            </p>
+                            <p
+                                v-else-if="pickupMatchesReturn(excursion, child)"
+                                :data-testid="`pickup-at-return-${excursion.id}-${child.id}`"
+                                class="mt-2 text-xs text-ink/50"
+                            >
+                                🕒 {{ $t('excursions.pickup_at_return', { time: excursion.return_at, date: formatDate(excursion.date) }) }}
+                            </p>
                             </div>
                         </div>
 

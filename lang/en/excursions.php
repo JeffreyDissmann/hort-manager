@@ -32,6 +32,10 @@ return [
 
     'answer_yes' => 'Coming along',
     'answer_no' => 'Not joining',
+    // Pickup vs. trip — joining moves a pickup that falls inside it to the trip's end.
+    'pickup_clash' => 'The :time pickup falls inside the trip – the child is only back at :return.',
+    'pickup_clash_manual' => 'Please adjust the pickup time for that day in the Wochenplan.',
+    'pickup_at_return' => 'Pickup on :date: :time (end of the trip) – that day only.',
 
     'status_open' => 'still open',
     'status_confirmed' => 'confirmed',

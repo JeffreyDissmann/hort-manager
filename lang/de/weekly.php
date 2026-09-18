@@ -45,6 +45,7 @@ return [
     'arrival_note_label' => 'Grund',
     'arrival_note_placeholder' => 'z. B. Arzttermin, Training',
     'arrival_after_pickup' => 'Die Ankunft muss vor der Abholzeit liegen.',
+    'pickup_in_excursion' => 'Das Kind ist bis :time beim Ausflug „:name" – eine Abholung davor geht nur direkt beim Ausflug.',
     'arrives_later' => 'Kommt erst um :time',
     'arrives_later_short' => 'kommt erst :time',
     'closed' => 'Geschlossen',

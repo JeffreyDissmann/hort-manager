@@ -26,6 +26,7 @@ return [
     'excursion_saved' => 'Ausflug „:name“ gespeichert.',
     'excursion_deleted' => 'Ausflug „:name“ gelöscht.',
     'rsvp_saved' => 'Antwort für :name gespeichert.',
+    'rsvp_saved_pickup_moved' => 'Antwort für :name gespeichert. Die Abholung lag im Ausflug (:was Uhr) und steht jetzt auf :time Uhr – nur an diesem Tag, der Stammplan bleibt unverändert.',
 
     'program_saved' => 'Programm gespeichert.',
     'homework_defaults_saved' => 'Standard-Hausaufgabenzeiten gespeichert.',
