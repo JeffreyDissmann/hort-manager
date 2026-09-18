@@ -152,6 +152,25 @@ class DailyProgramTest extends TestCase
         $this->assertDatabaseHas('daily_programs', ['date' => '2026-06-22', 'activity_start' => null]);
     }
 
+    public function test_the_weekly_plan_gets_the_activity_window_for_its_band(): void
+    {
+        $this->travelTo(Carbon::parse('2026-06-22')); // Monday
+        DailyProgram::factory()->create([
+            'date' => '2026-06-22', 'activity' => 'Waldtag',
+            'activity_start' => '09:00', 'activity_end' => '12:00',
+        ]);
+
+        // Name and window separately — the timetable draws the band itself, and the
+        // slot range has to reach 09:00 or the band would be pinned to the first row.
+        $this->actingAs($this->parent())
+            ->get(route('weekly-plan', ['week' => '2026-06-22']))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('program.0.activity', 'Waldtag')
+                ->where('program.0.activity_start', '09:00')
+                ->where('program.0.activity_end', '12:00')
+                ->where('weekTimetable.0.time', '09:00'));
+    }
+
     public function test_an_end_before_the_start_is_rejected(): void
     {
         $this->actingAs($this->staff())

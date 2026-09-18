@@ -63,6 +63,31 @@ function bandSpan(startStr, endStr) {
     return row ? parseInt(row.split('span ')[1], 10) : 0;
 }
 
+/**
+ * The Aktivität's band for day j, or null when it can't have one: untimed, outside the
+ * day's slot range, or overlapping the Hausaufgaben band — both live in the same lane,
+ * so a second band there would simply be drawn on top of the first.
+ */
+function activityBand(j) {
+    const p = props.program[j];
+    if (!p?.activity || !p.activity_start || !p.activity_end) {
+        return null;
+    }
+
+    const hw = p.homework_start
+        && toMin(p.activity_start) < toMin(p.homework_end || p.homework_start)
+        && toMin(p.homework_start) < toMin(p.activity_end);
+
+    return hw ? null : bandRow(p.activity_start, p.activity_end);
+}
+
+/** „Waldtag (09:00–12:00)", or just the name while untimed. */
+function activityTitle(p) {
+    return p.activity_start && p.activity_end
+        ? `${p.activity} (${p.activity_start}–${p.activity_end})`
+        : p.activity;
+}
+
 // „Kommt später" per day, earliest first — lifted into the day header next to the food,
 // since a chip line at the pickup time is easy to miss in a full column.
 const arrivals = computed(() =>
@@ -163,12 +188,14 @@ function chipClass(method) {
                 >
                     🍽 {{ program[j].lunch }}
                 </div>
+                <!-- A timed Aktivität draws its own band below, so the header only
+                     spells the window out when no band could be placed. -->
                 <div
                     v-if="program[j] && program[j].activity"
                     class="truncate text-[11px] text-hort-purple"
-                    :title="program[j].activity"
+                    :title="activityTitle(program[j])"
                 >
-                    🎨 {{ program[j].activity }}
+                    🎨 {{ activityBand(j) ? program[j].activity : activityTitle(program[j]) }}
                 </div>
                 <component
                     :is="editable && kid.editable ? 'button' : 'div'"
@@ -217,6 +244,28 @@ function chipClass(method) {
                         class="min-h-0 flex-1 truncate text-[9px] font-semibold [writing-mode:vertical-rl]"
                     >
                         {{ ex.name }}
+                    </span>
+                </div>
+            </template>
+
+            <!-- Aktivität bands (only when the day's Aktivität carries a window) -->
+            <template v-for="(p, j) in program" :key="'actday' + j">
+                <div
+                    v-if="activityBand(j)"
+                    :data-testid="`tt-activity-${j}`"
+                    class="my-0.5 flex flex-col items-center gap-1 overflow-hidden rounded-md bg-hort-purple/15 px-0.5 py-1 text-hort-purple"
+                    :style="{
+                        gridColumn: `${bandCol(j)} / ${bandCol(j) + 1}`,
+                        gridRow: activityBand(j),
+                    }"
+                    :title="activityTitle(p)"
+                >
+                    <span class="shrink-0 text-xs leading-none">🎨</span>
+                    <span
+                        v-if="bandSpan(p.activity_start, p.activity_end) > 1"
+                        class="min-h-0 flex-1 truncate text-[9px] font-semibold [writing-mode:vertical-rl]"
+                    >
+                        {{ p.activity }}
                     </span>
                 </div>
             </template>
