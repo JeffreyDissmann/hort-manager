@@ -112,22 +112,37 @@ class HandleInertiaRequests extends Middleware
             return [];
         }
 
-        return HolidayPeriod::query()
+        $periods = HolidayPeriod::query()
             ->care()
             ->whereDate('ends_on', '>=', Carbon::today())
             ->orderBy('starts_on')
             ->get()
-            ->filter(fn (HolidayPeriod $period): bool => $period->registrationIsOpen())
-            ->map(function (HolidayPeriod $period) use ($childIds): ?array {
-                $answered = HolidayCareAnswer::query()
-                    ->where('holiday_period_id', $period->id)
-                    ->whereIn('child_id', $childIds)
-                    ->pluck('child_id');
+            ->filter(fn (HolidayPeriod $period): bool => $period->registrationIsOpen());
 
-                $missing = Child::query()
-                    ->whereIn('id', $childIds->diff($answered))
-                    ->activeBetween($period->starts_on, $period->ends_on)
-                    ->orderBy('name')
+        if ($periods->isEmpty()) {
+            return [];
+        }
+
+        // Two queries for all periods instead of two per period: this runs on every
+        // request, and a family with several children and a couple of open
+        // Ferienbetreuungen paid for each of them separately.
+        $answers = HolidayCareAnswer::query()
+            ->whereIn('holiday_period_id', $periods->modelKeys())
+            ->whereIn('child_id', $childIds)
+            ->get(['holiday_period_id', 'child_id'])
+            ->groupBy('holiday_period_id');
+
+        $children = Child::query()->whereIn('id', $childIds)->orderBy('name')->get();
+
+        return $periods
+            ->map(function (HolidayPeriod $period) use ($answers, $children): ?array {
+                $answered = $answers->get($period->id, collect())->pluck('child_id');
+
+                // Enrolment overlap in memory — the same inclusive test as activeBetween.
+                $missing = $children
+                    ->reject(fn (Child $child): bool => $answered->contains($child->id))
+                    ->filter(fn (Child $child): bool => ($child->active_from === null || $child->active_from->lte($period->ends_on))
+                        && ($child->active_until === null || $child->active_until->gte($period->starts_on)))
                     ->pluck('name');
 
                 return $missing->isEmpty() ? null : [

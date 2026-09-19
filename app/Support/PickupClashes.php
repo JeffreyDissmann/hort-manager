@@ -128,6 +128,15 @@ class PickupClashes
         $careDays = HolidayCareDay::betweenKeyed($today, $until);
         $plans = EffectivePlan::forMany($childIds, $dates);
 
+        // „Geht mit … mit" mirrors the companion's time, so those children's plans are
+        // needed too — in one batch. Resolving them per row ran an EffectivePlan::for
+        // (two queries) per companion day, on a prop shared with every request.
+        $companionIds = array_values(array_unique(array_filter(array_map(
+            fn (array $plan): ?int => $plan['method'] === 'with_child' ? $plan['companion_child_id'] : null,
+            $plans,
+        ))));
+        $companionPlans = EffectivePlan::forMany($companionIds, $dates);
+
         $programs = DailyProgram::whereIn('date', $dates)->get()
             ->keyBy(fn (DailyProgram $p): string => $p->date->toDateString());
 
@@ -168,7 +177,7 @@ class PickupClashes
                 }
 
                 $plan = $plans[$key] ?? null;
-                $time = self::effectiveTime($plan, $date);
+                $time = self::effectiveTime($plan, $date, $companionPlans);
 
                 if ($time === null) {
                     continue;
@@ -260,15 +269,16 @@ class PickupClashes
      * companion's time, exactly as the board and the Wochenplan show it.
      *
      * @param  array<string, mixed>|null  $plan
+     * @param  array<string, array<string, mixed>>  $companionPlans  keyed „{childId}|{date}"
      */
-    private static function effectiveTime(?array $plan, string $date): ?string
+    private static function effectiveTime(?array $plan, string $date, array $companionPlans): ?string
     {
         if ($plan === null) {
             return null;
         }
 
         if ($plan['method'] === 'with_child' && $plan['companion_child_id']) {
-            return EffectivePlan::for($plan['companion_child_id'], $date)['time'] ?? null;
+            return $companionPlans[$plan['companion_child_id'].'|'.$date]['time'] ?? null;
         }
 
         return $plan['time'];
