@@ -14,9 +14,11 @@ use App\Models\Child;
 use App\Models\DailyDeparture;
 use App\Models\DailyProgram;
 use App\Models\Excursion;
+use App\Models\HolidayPeriod;
 use App\Models\HomeworkDefault;
 use App\Models\User;
 use App\Notifications\CompanionRequest;
+use App\Notifications\LateChange;
 use App\Services\HortAssistant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -206,6 +208,96 @@ class HortAssistantTest extends TestCase
         $this->assertSame(DepartureMethod::PickedUp, $departure->planned_method);
         $this->assertStringContainsString('Wird abgeholt', $reply);
         $this->assertStringNotContainsString('keine Abholzeit', $reply);
+    }
+
+    public function test_it_refuses_to_plan_a_closed_day(): void
+    {
+        Carbon::setTestNow('2026-06-22'); // Monday
+        [$parent, $child] = $this->parentWithTom();
+        HolidayPeriod::create([
+            'name' => 'Fortbildung', 'type' => 'closed',
+            'starts_on' => '2026-06-24', 'ends_on' => '2026-06-24',
+        ]);
+        $this->fakeIntent([
+            'intent' => 'abholzeit', 'kind' => 'Tom', 'datum' => '2026-06-24', 'uhrzeit' => '16:30',
+        ]);
+
+        $reply = app(HortAssistant::class)->reply($parent, 'Tom wird Mittwoch um 16:30 abgeholt');
+
+        $this->assertStringContainsString('geschlossen', $reply);
+        $this->assertStringContainsString('Fortbildung', $reply);
+        $this->assertDatabaseEmpty('daily_departures');
+    }
+
+    public function test_it_refuses_a_ferienbetreuung_day_the_child_is_not_signed_up_for(): void
+    {
+        Carbon::setTestNow('2026-06-22');
+        [$parent, $child] = $this->parentWithTom();
+        // Writing a plan here would be a sign-up through the back door — past the
+        // Anmeldeschluss and without the sheet that enforces it.
+        $period = HolidayPeriod::factory()->care()->create([
+            'starts_on' => '2026-06-24', 'ends_on' => '2026-06-24',
+            'registration_deadline' => '2026-06-01',
+        ]);
+        $period->generateCareDays();
+        $this->fakeIntent([
+            'intent' => 'abholzeit', 'kind' => 'Tom', 'datum' => '2026-06-24', 'uhrzeit' => '16:30',
+        ]);
+
+        $reply = app(HortAssistant::class)->reply($parent, 'Tom wird Mittwoch um 16:30 abgeholt');
+
+        $this->assertStringContainsString('nicht angemeldet', $reply);
+        $this->assertDatabaseEmpty('daily_departures');
+    }
+
+    public function test_it_refuses_a_day_the_child_has_already_left(): void
+    {
+        Carbon::setTestNow('2026-06-22 15:00');
+        [$parent, $child] = $this->parentWithTom();
+        DailyDeparture::create([
+            'child_id' => $child->id, 'date' => '2026-06-22',
+            'status' => DepartureStatus::PickedUp, 'planned_time' => '14:00',
+            'left_at' => Carbon::parse('2026-06-22 14:05'),
+        ]);
+        $this->fakeIntent(['intent' => 'abholzeit', 'kind' => 'Tom', 'datum' => 'heute', 'uhrzeit' => '16:30']);
+
+        $reply = app(HortAssistant::class)->reply($parent, 'Tom wird heute um 16:30 abgeholt');
+
+        $this->assertStringContainsString('schon abgeholt', $reply);
+        $this->assertStringStartsWith('14:00', (string) DailyDeparture::first()->planned_time);
+    }
+
+    public function test_a_late_change_through_the_assistant_notifies_staff(): void
+    {
+        Notification::fake();
+        Carbon::setTestNow('2026-06-22 14:00'); // Monday, past the 12:00 cutoff
+        [$parent, $child] = $this->parentWithTom();
+        $staff = User::factory()->create(['role' => UserRole::Staff, 'slack_id' => 'U-STAFF']);
+        $this->fakeIntent(['intent' => 'abholzeit', 'kind' => 'Tom', 'datum' => 'heute', 'uhrzeit' => '16:30']);
+
+        app(HortAssistant::class)->reply($parent, 'Tom wird heute um 16:30 abgeholt');
+
+        // Changing today's plan late is news for staff whichever door it comes through.
+        Notification::assertSentTo($staff, LateChange::class,
+            fn (LateChange $n) => str_contains($n->summary, '16:30'));
+    }
+
+    public function test_a_late_arrival_through_the_assistant_notifies_staff(): void
+    {
+        Notification::fake();
+        Carbon::setTestNow('2026-06-22 14:00');
+        [$parent, $child] = $this->parentWithTom();
+        $child->weeklySchedules()->create(['weekday' => 1, 'planned_time' => '16:00', 'method' => DepartureMethod::PickedUp]);
+        $staff = User::factory()->create(['role' => UserRole::Staff, 'slack_id' => 'U-STAFF']);
+        $this->fakeIntent([
+            'intent' => 'ankunft', 'kind' => 'Tom', 'datum' => 'heute',
+            'uhrzeit' => '15:00', 'grund' => 'Arzttermin',
+        ]);
+
+        app(HortAssistant::class)->reply($parent, 'Tom kommt heute erst um 15 Uhr, Arzttermin');
+
+        Notification::assertSentTo($staff, LateChange::class,
+            fn (LateChange $n) => str_contains($n->summary, 'kommt erst um 15:00'));
     }
 
     public function test_changing_a_companion_to_alone_reopens_a_dependent(): void
