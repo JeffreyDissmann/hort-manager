@@ -291,8 +291,16 @@ class HortAssistant
         }
 
         $program = DailyProgram::where('date', $date)->first();
-        $default = HomeworkDefault::where('weekday', Carbon::parse($date)->dayOfWeekIso)->first();
-        [$hwStart, $hwEnd] = DailyProgram::effectiveHomework($program, $default);
+        // In den Ferien gibt es keine Hausaufgaben. The per-weekday default knows
+        // nothing about dates, so it would otherwise warn a family about a slot that
+        // doesn't exist on a Ferienbetreuung day — the same rule every other view
+        // applies, and the only one the assistant had missed.
+        [$hwStart, $hwEnd] = HolidayCareDay::query()->onDate($date)->exists()
+            ? [null, null]
+            : DailyProgram::effectiveHomework(
+                $program,
+                HomeworkDefault::where('weekday', Carbon::parse($date)->dayOfWeekIso)->first(),
+            );
 
         $hits = [];
 
@@ -444,12 +452,20 @@ class HortAssistant
         $lines = array_merge($lines, $this->upcomingDeviations($children, $plans));
 
         $program = DailyProgram::where('date', $today->toDateString())->first();
-        $default = HomeworkDefault::where('weekday', $today->dayOfWeekIso)->first();
-        [$hwStart, $hwEnd] = DailyProgram::effectiveHomework($program, $default);
+        $careDay = HolidayCareDay::query()->onDate($today)->with('period:id,name')->first();
+        [$hwStart, $hwEnd] = $careDay
+            ? [null, null]
+            : DailyProgram::effectiveHomework($program, HomeworkDefault::where('weekday', $today->dayOfWeekIso)->first());
+
         $lines[] = 'Heute: Mittagessen '.($program?->lunch ?: '—')
             // The Aktivität carries its window when it has one („Waldtag (09:00–12:00)").
             .', Aktivität '.($program?->activityText() ?: '—')
-            .', Hausaufgaben '.($hwStart ? substr((string) $hwStart, 0, 5).'–'.substr((string) $hwEnd, 0, 5) : 'keine').'.';
+            // A Ferienbetreuung day has a Betreuungszeit instead of Hausaufgaben, so the
+            // answer to „wann sind heute Hausaufgaben?" is „keine" — and the window the
+            // family actually needs is the one the Hort is open.
+            .($careDay
+                ? ', Ferienbetreuung „'.$careDay->period->name.'“ '.$careDay->window().' Uhr, keine Hausaufgaben'
+                : ', Hausaufgaben '.($hwStart ? substr((string) $hwStart, 0, 5).'–'.substr((string) $hwEnd, 0, 5) : 'keine')).'.';
 
         $excursions = Excursion::whereDate('date', '>=', $today->toDateString())->orderBy('date')->get();
         foreach ($excursions as $e) {

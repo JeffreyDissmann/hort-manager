@@ -14,6 +14,7 @@ use App\Models\Child;
 use App\Models\DailyDeparture;
 use App\Models\DailyProgram;
 use App\Models\Excursion;
+use App\Models\HolidayCareDay;
 use App\Models\HolidayPeriod;
 use App\Models\HomeworkDefault;
 use App\Models\User;
@@ -125,6 +126,36 @@ class HortAssistantTest extends TestCase
         $this->assertSame('14:30', substr((string) DailyDeparture::firstWhere('child_id', $child->id)->planned_time, 0, 5));
         $this->assertStringContainsString('Hausaufgabenzeit (14:00–15:00)', $reply);
         $this->assertStringNotContainsString('Fußballtraining', $reply); // 14:30 is before it
+    }
+
+    public function test_it_does_not_warn_about_homework_in_the_ferienbetreuung(): void
+    {
+        Carbon::setTestNow('2026-06-22'); // Monday
+        [$parent, $child] = $this->parentWithTom();
+        HomeworkDefault::create(['weekday' => 3, 'start_time' => '14:00', 'end_time' => '15:00']);
+
+        $period = HolidayPeriod::factory()->care()->create([
+            'starts_on' => '2026-06-24', 'ends_on' => '2026-06-24',
+        ]);
+        $period->generateCareDays();
+        $careDay = HolidayCareDay::firstWhere('date', '2026-06-24');
+
+        // Tom is signed up, so the assistant may plan his day …
+        DailyDeparture::create([
+            'child_id' => $child->id, 'date' => '2026-06-24',
+            'holiday_care_day_id' => $careDay->id, 'status' => DepartureStatus::Present,
+            'planned_time' => '16:00', 'planned_method' => DepartureMethod::PickedUp,
+        ]);
+
+        $this->fakeIntent([
+            'intent' => 'abholzeit', 'kind' => 'Tom', 'datum' => '2026-06-24', 'uhrzeit' => '14:30',
+        ]);
+
+        $reply = app(HortAssistant::class)->reply($parent, 'Tom wird Mittwoch um 14:30 abgeholt');
+
+        // … and in den Ferien there are no Hausaufgaben the pickup could collide with.
+        $this->assertStringContainsString('14:30', $reply);
+        $this->assertStringNotContainsString('Hausaufgabenzeit', $reply);
     }
 
     public function test_joining_a_trip_moves_a_pickup_that_falls_inside_it(): void

@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\Enums\DepartureMethod;
 use App\Enums\TimeQualifier;
 use App\Models\WeeklySchedule;
+use Illuminate\Support\Carbon;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -32,6 +33,10 @@ class StandardPlanController extends Controller
     {
         $schedules = WeeklySchedule::query()
             ->with('child:id,name')
+            // Only children enrolled today. The Stammplan rows of a child who has left
+            // survive (history stays intact), so without this the timetable keeps
+            // listing them for good — the one date-anchored view that never asked.
+            ->whereHas('child', fn ($query) => $query->activeOn(Carbon::today()))
             ->whereNotNull('planned_time')
             ->get();
 

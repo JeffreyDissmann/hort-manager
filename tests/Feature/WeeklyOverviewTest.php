@@ -129,6 +129,26 @@ class WeeklyOverviewTest extends TestCase
             );
     }
 
+    public function test_the_standard_plan_drops_a_child_who_has_left(): void
+    {
+        $this->travelTo(Carbon::parse('2026-06-22'));
+
+        $emma = Child::factory()->create(['name' => 'Emma']);
+        $emma->weeklySchedules()->create(['weekday' => 1, 'planned_time' => '14:00', 'method' => DepartureMethod::PickedUp]);
+
+        // Leavers keep their Stammplan rows (history stays intact) — but the timetable
+        // is about who comes on a Monday, and Ben doesn't any more.
+        $ben = Child::factory()->create(['name' => 'Ben', 'active_until' => '2026-05-31']);
+        $ben->weeklySchedules()->create(['weekday' => 1, 'planned_time' => '14:00', 'method' => DepartureMethod::PickedUp]);
+
+        $this->actingAs(User::factory()->create(['role' => UserRole::Staff]))
+            ->get(route('standard-plan'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('standard.0.days.0', 1)
+                ->where('standard.0.days.0.0.name', 'Emma')
+            );
+    }
+
     public function test_the_standard_plan_carries_the_time_behind_a_bis_or_ab(): void
     {
         // The row is a half-hour bucket, so „Nora · bis" on its own says nothing —
