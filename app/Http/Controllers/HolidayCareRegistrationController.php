@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\Enums\DepartureMethod;
 use App\Enums\DepartureStatus;
 use App\Models\Child;
 use App\Models\DailyDeparture;
@@ -114,7 +113,7 @@ class HolidayCareRegistrationController extends Controller
         $departure->fill([
             'holiday_care_day_id' => $day->id,
             'planned_time' => $day->ends_at,
-            'planned_method' => $this->defaultMethod($child, $day),
+            'planned_method' => $day->defaultMethodFor($child),
             'status' => DepartureStatus::Present,
         ])->save();
     }
@@ -138,22 +137,5 @@ class HolidayCareRegistrationController extends Controller
             ->where('holiday_care_day_id', $day->id)
             ->whereNull('left_at')
             ->delete();
-    }
-
-    /**
-     * The Stammplan's method for that weekday, else any method the child has, else
-     * „wird abgeholt" — a child with no Stammplan at all has nothing to inherit.
-     */
-    private function defaultMethod(Child $child, HolidayCareDay $day): DepartureMethod
-    {
-        $schedules = $child->weeklySchedules;
-
-        $method = $schedules->firstWhere('weekday', $day->date->dayOfWeekIso)?->method
-            ?? $schedules->firstWhere(fn ($s): bool => $s->method !== null)?->method;
-
-        // „Geht mit … mit" mirrors another child and can't be a default.
-        return $method === null || $method === DepartureMethod::WithChild
-            ? DepartureMethod::PickedUp
-            : $method;
     }
 }

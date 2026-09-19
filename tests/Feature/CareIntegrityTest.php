@@ -8,6 +8,7 @@ use App\Enums\AbsenceReason;
 use App\Enums\DepartureMethod;
 use App\Enums\DepartureStatus;
 use App\Enums\UserRole;
+use App\Models\Absence;
 use App\Models\Child;
 use App\Models\DailyDeparture;
 use App\Models\DailyProgram;
@@ -71,10 +72,15 @@ class CareIntegrityTest extends TestCase
 
     private function signUp(string $date): DailyDeparture
     {
+        return $this->signUpFor($this->child, $date);
+    }
+
+    private function signUpFor(Child $child, string $date): DailyDeparture
+    {
         $day = HolidayCareDay::firstWhere('date', $date);
 
         return DailyDeparture::create([
-            'child_id' => $this->child->id,
+            'child_id' => $child->id,
             'date' => $date,
             'holiday_care_day_id' => $day->id,
             'planned_time' => $day->ends_at,
@@ -463,6 +469,59 @@ class CareIntegrityTest extends TestCase
         ])->assertRedirect();
 
         $this->assertDatabaseMissing('daily_departures', ['date' => '2026-08-12']);
+    }
+
+    public function test_unwinding_a_geht_mit_mit_keeps_the_care_place(): void
+    {
+        // Mia is signed up and goes home with Leo, who is then reported ill. The
+        // arrangement has to go — but Mia's sign-up is the registration itself, and
+        // the Anmeldeschluss is long past.
+        $leo = Child::factory()->create(['name' => 'Leo']);
+        $this->signUpFor($leo, '2026-08-05');
+        $mia = $this->signUp('2026-08-05');
+        $mia->update([
+            'planned_time' => null,
+            'planned_method' => DepartureMethod::WithChild,
+            'companion_child_id' => $leo->id,
+            'companion_confirmed' => true,
+        ]);
+
+        Absence::report($leo, '2026-08-05', AbsenceReason::Sick, $this->parent->id, 'Fieber');
+
+        $mia->refresh();
+        $this->assertNotNull($mia->id);
+        $this->assertDatabaseHas('daily_departures', [
+            'id' => $mia->id,
+            'holiday_care_day_id' => $mia->holiday_care_day_id,
+            'companion_child_id' => null,
+        ]);
+        // Back to how signing up would have planned the day: end of the Betreuungszeit,
+        // the method the child normally uses.
+        $careDay = HolidayCareDay::firstWhere('date', '2026-08-05');
+        $this->assertSame(
+            substr((string) $careDay->ends_at, 0, 5),
+            substr((string) $mia->planned_time, 0, 5),
+        );
+        $this->assertSame(DepartureMethod::PickedUp, $mia->planned_method);
+        $this->assertNull($mia->companion_confirmed);
+    }
+
+    public function test_unwinding_on_a_normal_day_still_falls_back_to_the_stammplan(): void
+    {
+        $leo = Child::factory()->create(['name' => 'Leo']);
+        $dependent = DailyDeparture::create([
+            'child_id' => $this->child->id,
+            'date' => '2026-08-12', // a Wednesday outside the Ferienbetreuung
+            'planned_method' => DepartureMethod::WithChild,
+            'companion_child_id' => $leo->id,
+            'companion_confirmed' => true,
+            'status' => DepartureStatus::Present,
+        ]);
+
+        Absence::report($leo, '2026-08-12', AbsenceReason::Sick, $this->parent->id, 'Fieber');
+
+        // No sign-up to protect here — the row goes and the Stammplan takes over.
+        $this->assertDatabaseMissing('daily_departures', ['id' => $dependent->id]);
     }
 
     public function test_a_late_change_on_a_care_day_notifies_staff(): void

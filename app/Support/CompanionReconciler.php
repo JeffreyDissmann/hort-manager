@@ -115,7 +115,7 @@ class CompanionReconciler
             $shortDate = $dependent->date->format('d.m.');
 
             SlackCompanion::cancelFor($dependent, $child->name, $companion->name);
-            $dependent->delete();
+            self::revert($dependent);
 
             Notification::send($guardians, new CompanionCancelled($child->name, $companion->name, $shortDate));
         }
@@ -137,9 +137,41 @@ class CompanionReconciler
             $guardians = $child->guardians; // eager-loaded before the row is deleted
 
             SlackCompanion::cancelFor($dependent, $child->name, $companion->name);
-            $dependent->delete(); // revert to the child's Stammplan for that day
+            self::revert($dependent);
 
             Notification::send($guardians, new CompanionCancelled($child->name, $companion->name, $shortDate));
         }
+    }
+
+    /**
+     * Drop the arrangement itself. Normally that means deleting the row, which puts the
+     * day back on the child's Stammplan.
+     *
+     * On a **Ferienbetreuung** day the row is not an override but the *sign-up itself*
+     * (there is no separate registration table), and there is no Stammplan behind it —
+     * deleting it would quietly take the child off the roster, possibly long after the
+     * Anmeldeschluss. So the sign-up stays and only the companion part is undone: back
+     * to the end of the Betreuungszeit and the method the child normally uses, exactly
+     * as signing up would have planned the day.
+     */
+    private static function revert(DailyDeparture $dependent): void
+    {
+        $careDay = $dependent->careDay;
+
+        if ($careDay === null) {
+            $dependent->delete();
+
+            return;
+        }
+
+        $dependent->update([
+            'planned_time' => $careDay->ends_at,
+            'planned_method' => $careDay->defaultMethodFor($dependent->child),
+            'time_qualifier' => null,
+            'companion_child_id' => null,
+            'companion_confirmed' => null,
+            'companion_confirmed_by' => null,
+            'companion_confirmed_at' => null,
+        ]);
     }
 }
