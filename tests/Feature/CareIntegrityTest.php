@@ -23,7 +23,9 @@ use App\Notifications\ProgramMissing;
 use App\Notifications\WeeklyDigest;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
+use RuntimeException;
 use Tests\TestCase;
 
 /**
@@ -522,6 +524,36 @@ class CareIntegrityTest extends TestCase
 
         // No sign-up to protect here — the row goes and the Stammplan takes over.
         $this->assertDatabaseMissing('daily_departures', ['id' => $dependent->id]);
+    }
+
+    public function test_a_failed_sign_up_leaves_no_half_registered_week(): void
+    {
+        // Fail on the very last write of the sign-up (the answer record). Without a
+        // transaction the child stays registered for some days of the Ferienbetreuung
+        // with no answer on file — and the reminder keeps chasing a family that did
+        // in fact answer.
+        $failing = true;
+        DB::listen(function ($query) use (&$failing): void {
+            if ($failing && str_contains($query->sql, 'holiday_care_answers')) {
+                throw new RuntimeException('database went away');
+            }
+        });
+
+        $dayIds = $this->period->careDays->pluck('id')->all();
+
+        try {
+            $this->actingAs($this->staff)->patch(route('care.update', $this->period), [
+                'child_id' => $this->child->id,
+                'day_ids' => $dayIds,
+            ]);
+        } catch (RuntimeException) {
+            // The request blows up — what matters is what it leaves behind.
+        }
+
+        $failing = false; // the assertions below query that table too
+
+        $this->assertDatabaseEmpty('daily_departures');
+        $this->assertDatabaseEmpty('holiday_care_answers');
     }
 
     public function test_a_late_change_on_a_care_day_notifies_staff(): void

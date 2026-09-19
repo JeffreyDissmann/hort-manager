@@ -15,6 +15,7 @@ use App\Support\CareSignupData;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Parents sign their children up for individual Ferienbetreuung days; staff may do
@@ -58,17 +59,22 @@ class HolidayCareRegistrationController extends Controller
         // ones it can register anyone for.
         $wanted = $period->careDays()->whereIn('id', $validated['day_ids'])->pluck('id');
 
-        foreach ($period->careDays as $day) {
-            $wanted->contains($day->id)
-                ? $this->attend($day, $child, $user)
-                : $this->withdraw($day, $child);
-        }
+        // One sign-up is one decision: all days of it are written together, or none.
+        // Failing halfway through used to leave a family registered for Monday and
+        // Tuesday but not Wednesday, with no answer recorded and the deadline passing.
+        DB::transaction(function () use ($period, $wanted, $child, $user): void {
+            foreach ($period->careDays as $day) {
+                $wanted->contains($day->id)
+                    ? $this->attend($day, $child, $user)
+                    : $this->withdraw($day, $child);
+            }
 
-        // Picking no days is a real answer, so record it either way.
-        HolidayCareAnswer::updateOrCreate(
-            ['holiday_period_id' => $period->id, 'child_id' => $child->id],
-            ['answered_by' => $user->id, 'answered_at' => now()],
-        );
+            // Picking no days is a real answer, so record it either way.
+            HolidayCareAnswer::updateOrCreate(
+                ['holiday_period_id' => $period->id, 'child_id' => $child->id],
+                ['answered_by' => $user->id, 'answered_at' => now()],
+            );
+        });
 
         return back()->with('status', __('flash.care_registered', ['name' => $child->name]));
     }
