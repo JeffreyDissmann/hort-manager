@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
 
 /**
  * Hort-wide key/value settings. Reads are cached forever and busted on write,
@@ -49,6 +50,14 @@ class Setting extends Model
 
     /** The periods offered on „Datenpflege"; 0 is „alles behalten". */
     public const RetentionOptions = [0, 3, 6, 12, 24, 36];
+
+    /**
+     * Shared secret in the TRMNL feed URL. The signature alone can only be revoked by
+     * rotating APP_KEY (which invalidates every other signed URL too), so the link the
+     * staff-room display polls carries this as well: `hort:trmnl-url --rotate` writes a
+     * new one and every previously issued link stops working.
+     */
+    public const TrmnlToken = 'trmnl_token';
 
     protected $primaryKey = 'key';
 
@@ -95,6 +104,28 @@ class Setting extends Model
     public static function lateChangeCutoff(): string
     {
         return (string) self::get(self::LateChangeCutoff, self::DefaultLateChangeCutoff);
+    }
+
+    /** The current TRMNL feed token, created on first use. */
+    public static function trmnlToken(): string
+    {
+        $token = self::get(self::TrmnlToken);
+
+        if (! is_string($token) || $token === '') {
+            $token = self::rotateTrmnlToken();
+        }
+
+        return $token;
+    }
+
+    /** Issue a new TRMNL feed token, invalidating every link handed out so far. */
+    public static function rotateTrmnlToken(): string
+    {
+        $token = Str::random(40);
+
+        self::set(self::TrmnlToken, $token);
+
+        return $token;
     }
 
     /** How many months of day-to-day records to keep, or 0 for „keep everything". */

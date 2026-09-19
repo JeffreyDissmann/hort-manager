@@ -8,6 +8,7 @@ use App\Enums\UserRole;
 use App\Models\Absence;
 use App\Models\Child;
 use App\Models\DailyDeparture;
+use App\Models\Setting;
 use App\Models\User;
 use App\Notifications\LateChange;
 use App\Support\WeeklyDigestBuilder;
@@ -142,7 +143,7 @@ it('mentions the late arrival in the Wochenüberblick', function () {
 it('carries the late arrival in the TRMNL feed', function () {
     adjustTom();
 
-    $this->getJson(URL::signedRoute('trmnl.dashboard'))
+    $this->getJson(URL::signedRoute('trmnl.dashboard', ['token' => Setting::trmnlToken()]))
         ->assertOk()
         ->assertJsonPath('today.departures.0.children.0.arrival', 'kommt erst um 14:30 (Arzttermin)');
 });
