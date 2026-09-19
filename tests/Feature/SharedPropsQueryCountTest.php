@@ -75,6 +75,31 @@ it('does not grow with the number of companion pickups', function () {
     expect(countQueries(fn () => PickupClashes::for($parent)))->toBe($one);
 });
 
+it('seeds the board in one statement, whatever the group size', function () {
+    $this->travelTo(Carbon::parse('2026-06-22 08:00')); // Monday
+    $staff = User::factory()->create(['role' => UserRole::Staff]);
+
+    $addScheduledChild = function (int $i): void {
+        Child::factory()->create(['name' => "Kind {$i}"])
+            ->weeklySchedules()->create([
+                'weekday' => 1, 'planned_time' => '15:00', 'method' => DepartureMethod::PickedUp,
+            ]);
+    };
+
+    $addScheduledChild(1);
+    $one = queriesFor($staff, 'board');
+
+    DailyDeparture::query()->delete(); // seed from scratch again
+    foreach (range(2, 12) as $i) {
+        $addScheduledChild($i);
+    }
+
+    // Twelve children instead of one, and the board still seeds with a single upsert
+    // rather than a firstOrCreate each — this GET is opened all morning.
+    expect(queriesFor($staff, 'board'))->toBe($one);
+    expect(DailyDeparture::count())->toBe(12);
+});
+
 it('does not grow with the number of open Ferienbetreuungen', function () {
     $this->travelTo(Carbon::parse('2026-06-22 08:00'));
     $parent = User::factory()->create(['role' => UserRole::Parent]);

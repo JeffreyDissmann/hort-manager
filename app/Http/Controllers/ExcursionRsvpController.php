@@ -32,8 +32,10 @@ class ExcursionRsvpController extends Controller
 
         $ownChildren = Child::whereKey($childIds)->get()->keyBy('id');
 
+        $today = now()->toDateString();
+
         $excursions = $excursions
-            ->map(function (Excursion $e) use ($childIds, $ownChildren) {
+            ->map(function (Excursion $e) use ($childIds, $ownChildren, $today) {
                 $toRow = fn (Child $c) => [
                     'id' => $c->id,
                     'name' => $c->name,
@@ -42,9 +44,13 @@ class ExcursionRsvpController extends Controller
 
                 // Own children additionally carry their pickup for that date: joining
                 // moves a clashing pickup by itself, and the page says which it is.
+                // Only for trips still ahead — a past trip's pickup can't be moved, and
+                // resolving it cost several queries per child on every trip ever made.
+                $upcoming = $e->date->toDateString() >= $today;
+
                 $toOwnRow = fn (Child $c) => [
                     ...$toRow($c),
-                    'plan' => ExcursionPickup::state($e, $ownChildren[$c->id] ?? $c),
+                    'plan' => $upcoming ? ExcursionPickup::state($e, $ownChildren[$c->id] ?? $c) : null,
                 ];
 
                 return [

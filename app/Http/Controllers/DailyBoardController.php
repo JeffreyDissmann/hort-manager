@@ -74,6 +74,8 @@ class DailyBoardController extends Controller
             ->get();
 
         $standard = [];
+        $seed = [];
+
         foreach ($scheduled as $child) {
             if (in_array($child->id, $absentChildIds, true)) {
                 continue; // away today → not on the pickup board
@@ -90,16 +92,25 @@ class DailyBoardController extends Controller
             // Only today persists a row (so marking has a real id). Other days are
             // rendered read-only/preview from the Stammplan (see synthesized rows below).
             if ($isToday) {
-                DailyDeparture::firstOrCreate(
-                    ['child_id' => $child->id, 'date' => $date->toDateString()],
-                    [
-                        'planned_time' => $schedule->planned_time,
-                        'planned_method' => $schedule->method,
-                        'time_qualifier' => $schedule->time_qualifier,
-                        'status' => DepartureStatus::Present,
-                    ],
-                );
+                $seed[] = [
+                    'child_id' => $child->id,
+                    'date' => $date->toDateString(),
+                    'planned_time' => $schedule->planned_time,
+                    'planned_method' => $schedule->method?->value,
+                    'time_qualifier' => $schedule->time_qualifier?->value,
+                    'status' => DepartureStatus::Present->value,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
             }
+        }
+
+        // One statement instead of a firstOrCreate per child — this is a GET that every
+        // staff member and parent opens all morning. „Do nothing on conflict" keeps it
+        // idempotent *and* settles the race two simultaneous board loads used to have
+        // (both seeing no row, both inserting, one hitting the unique index).
+        if ($seed !== []) {
+            DailyDeparture::query()->upsert($seed, ['child_id', 'date'], []);
         }
 
         // Excursions today: a group list (with live state) plus a per-child overlay.
