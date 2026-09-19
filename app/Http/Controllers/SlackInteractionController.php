@@ -83,6 +83,13 @@ class SlackInteractionController extends Controller
                 .'Ändern: '.route('slack.enter', ['to' => 'weekly-plan']));
         }
 
+        // A clash we can't move (a „geht mit … mit" pickup, a „kommt später") gets the
+        // same courtesy: on this screen the button is the whole conversation, so saying
+        // nothing would leave the family thinking the day is settled.
+        foreach ((bool) $answer ? ExcursionPickup::warnings($excursion, $child) : [] as $warning) {
+            $this->reply($responseUrl, '⚠️ '.$warning.' '.route('slack.enter', ['to' => 'weekly-plan']));
+        }
+
         // Re-render every guardian's DM (queued) so Slack gets a fast ack.
         SyncExcursionRsvp::dispatch($excursion, $child);
     }

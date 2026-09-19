@@ -118,12 +118,19 @@ class ExcursionRsvpController extends Controller
         // Keep the Slack DMs in sync (buttons → result) for both guardians, queued.
         SyncExcursionRsvp::dispatch($excursion, $child);
 
-        return back()->with('status', $moved === null
+        $status = $moved === null
             ? __('flash.rsvp_saved', ['name' => $child->name])
             : __('flash.rsvp_saved_pickup_moved', [
                 'name' => $child->name,
                 'time' => substr((string) $excursion->return_at, 0, 5),
                 'was' => $moved,
-            ]));
+            ]);
+
+        // What the move couldn't put right (a „geht mit … mit" pickup, a „kommt später")
+        // is said here — otherwise „Antwort gespeichert." would be the family's only sign
+        // that their child is still planned to be somewhere the group isn't.
+        $warnings = $validated['response'] ? ExcursionPickup::warnings($excursion, $child) : [];
+
+        return back()->with('status', implode(' ', [$status, ...$warnings]));
     }
 }

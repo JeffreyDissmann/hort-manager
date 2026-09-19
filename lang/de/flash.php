@@ -27,6 +27,8 @@ return [
     'excursion_deleted' => 'Ausflug „:name“ gelöscht.',
     'rsvp_saved' => 'Antwort für :name gespeichert.',
     'rsvp_saved_pickup_moved' => 'Antwort für :name gespeichert. Die Abholung lag im Ausflug (:was Uhr) und steht jetzt auf :time Uhr – nur an diesem Tag, der Stammplan bleibt unverändert.',
+    'rsvp_clash_pickup' => 'Achtung: :name geht an dem Tag um :time Uhr mit einem anderen Kind mit – das liegt im Ausflug. Das können wir nicht automatisch verschieben, bitte im Wochenplan anpassen.',
+    'rsvp_clash_arrival' => 'Achtung: :name kommt an dem Tag erst um :time Uhr – da ist die Gruppe noch unterwegs (zurück um :return Uhr). Bitte mit dem Hort klären.',
 
     'program_saved' => 'Programm gespeichert.',
     'homework_defaults_saved' => 'Standard-Hausaufgabenzeiten gespeichert.',

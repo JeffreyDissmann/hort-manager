@@ -130,13 +130,53 @@ it('leaves a „geht mit … mit" pickup alone and keeps warning about it', func
 
     $this->actingAs($this->parent)
         ->patch(route('polls.update', $this->excursion), ['child_id' => $this->child->id, 'response' => true])
-        ->assertSessionHas('status', __('flash.rsvp_saved', ['name' => 'Nika']));
+        ->assertSessionHas('status', fn (string $s) => str_starts_with($s, __('flash.rsvp_saved', ['name' => 'Nika'])));
 
     $day = DailyDeparture::firstWhere('child_id', $this->child->id);
     expect($day->planned_time)->toBeNull()
         ->and($day->planned_method)->toBe(DepartureMethod::WithChild);
 
     assertPlan(['conflict' => true, 'movable' => false]);
+});
+
+it('says out loud that a „geht mit … mit" clash was not moved', function () {
+    $mia = Child::factory()->create(['name' => 'Mia']);
+    $mia->weeklySchedules()->create(['weekday' => 3, 'planned_time' => '14:00', 'method' => DepartureMethod::PickedUp]);
+    DailyDeparture::create([
+        'child_id' => $this->child->id, 'date' => '2026-06-24', 'status' => 'present',
+        'planned_method' => DepartureMethod::WithChild, 'companion_child_id' => $mia->id,
+        'companion_confirmed' => true,
+    ]);
+
+    // „Antwort gespeichert." alone would read as „alles geregelt" — it isn't.
+    $this->actingAs($this->parent)
+        ->patch(route('polls.update', $this->excursion), ['child_id' => $this->child->id, 'response' => true])
+        ->assertSessionHas('status', fn (string $s) => str_contains($s, '14:00')
+            && str_contains($s, 'mit einem anderen Kind mit'));
+});
+
+it('flags a „kommt später" that lands inside the trip', function () {
+    $this->actingAs($this->parent)->patch(route('weekly-plan.adjust'), [
+        'child_id' => $this->child->id, 'date' => '2026-06-24',
+        'planned_time' => '16:00', 'planned_method' => 'sent_home',
+        'arrives_at' => '15:00', 'arrival_note' => 'Zahnarzt',
+    ])->assertSessionHasNoErrors();
+
+    // The pickup moves to 17:00 — the arrival can't, so it is said instead.
+    $this->actingAs($this->parent)
+        ->patch(route('polls.update', $this->excursion), ['child_id' => $this->child->id, 'response' => true])
+        ->assertSessionHas('status', fn (string $s) => str_contains($s, 'erst um 15:00')
+            && str_contains($s, 'noch unterwegs'));
+
+    expect(DailyDeparture::firstWhere('child_id', $this->child->id)->arrivalTime())->toBe('15:00');
+});
+
+it('stays quiet when nothing is left to sort out', function () {
+    $this->child->weeklySchedules()->first()->update(['planned_time' => '17:30']);
+
+    $this->actingAs($this->parent)
+        ->patch(route('polls.update', $this->excursion), ['child_id' => $this->child->id, 'response' => true])
+        ->assertSessionHas('status', __('flash.rsvp_saved', ['name' => 'Nika']));
 });
 
 it('tells staff when a parent moves it late in the day', function () {

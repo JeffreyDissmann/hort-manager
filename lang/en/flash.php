@@ -27,6 +27,8 @@ return [
     'excursion_deleted' => 'Excursion “:name” deleted.',
     'rsvp_saved' => 'Response for :name saved.',
     'rsvp_saved_pickup_moved' => 'Response for :name saved. The pickup fell inside the trip (:was) and is now at :time – that day only, the standard plan stays as it is.',
+    'rsvp_clash_pickup' => 'Heads-up: :name goes home with another child at :time that day, which falls inside the trip. We can\'t move that automatically – please adjust it in the weekly plan.',
+    'rsvp_clash_arrival' => 'Heads-up: :name only arrives at :time that day, while the group is still out (back at :return). Please sort this out with the Hort.',
 
     'program_saved' => 'Program saved.',
     'homework_defaults_saved' => 'Default homework times saved.',
