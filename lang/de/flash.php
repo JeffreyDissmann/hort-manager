@@ -21,6 +21,8 @@ return [
     'plan_updated' => 'Plan für :name aktualisiert.',
     'day_reset' => ':name: Tag auf Standard zurückgesetzt.',
     'companion_answered' => 'Antwort für :name gespeichert.',
+    'companion_unwound' => ':name sollte mit :companion mitgehen – das geht jetzt nicht mehr. Die Familie von :name wurde benachrichtigt.',
+    'companion_reconfirm' => ':name geht mit :companion mit – da :companion jetzt allein geht, muss die Familie von :name das noch einmal bestätigen.',
 
     'excursion_created' => 'Ausflug „:name“ angelegt. Die Eltern wurden zur Abstimmung eingeladen.',
     'excursion_saved' => 'Ausflug „:name“ gespeichert.',

@@ -21,6 +21,8 @@ return [
     'plan_updated' => 'Plan for :name updated.',
     'day_reset' => ':name: day reset to the standard.',
     'companion_answered' => 'Answer saved for :name.',
+    'companion_unwound' => ':name was going home with :companion – that no longer works. :name\'s family has been notified.',
+    'companion_reconfirm' => ':name goes home with :companion – as :companion now walks alone, :name\'s family has to confirm this again.',
 
     'excursion_created' => 'Excursion “:name” created. The parents have been invited to respond.',
     'excursion_saved' => 'Excursion “:name” saved.',

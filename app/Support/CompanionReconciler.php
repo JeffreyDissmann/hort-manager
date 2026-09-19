@@ -29,11 +29,20 @@ use Illuminate\Support\Facades\Notification;
  */
 class CompanionReconciler
 {
-    public static function reconcile(int $companionChildId, string $date): void
+    /**
+     * Bring the arrangements that name this child up to date with their new plan.
+     *
+     * Returns one German sentence per arrangement that was actually touched, so the
+     * person who made the change is told what it did to another family — until now the
+     * only sign was a DM to *them*, and the editor's own screen said nothing.
+     *
+     * @return list<string>
+     */
+    public static function reconcile(int $companionChildId, string $date): array
     {
         $companion = Child::find($companionChildId);
         if ($companion === null) {
-            return;
+            return [];
         }
 
         $dependents = $companion->accompaniedDepartures()
@@ -42,7 +51,7 @@ class CompanionReconciler
             ->get();
 
         if ($dependents->isEmpty()) {
-            return;
+            return [];
         }
 
         $plan = EffectivePlan::for($companionChildId, $date);
@@ -55,13 +64,12 @@ class CompanionReconciler
             && in_array($plan['method'], [DepartureMethod::PickedUp->value, DepartureMethod::SentHome->value], true);
 
         if (! $leavesOnOwn) {
-            self::unwind($companion, $dependents, $date);
-
-            return;
+            return self::unwind($companion, $dependents, $date);
         }
 
         $companionAlone = $plan['method'] === DepartureMethod::SentHome->value;
         $guardians = $companion->guardians()->get();
+        $notes = [];
 
         foreach ($dependents as $dependent) {
             $answeredByHuman = $dependent->companion_confirmed_by !== null;
@@ -74,23 +82,32 @@ class CompanionReconciler
                     $dependent->update(['companion_confirmed' => null]);
                     Notification::send($guardians, new CompanionRequest($dependent));
                     AskCompanionConfirmation::dispatch($dependent);
+
+                    $notes[] = __('flash.companion_reconfirm', [
+                        'name' => $dependent->child->name,
+                        'companion' => $companion->name,
+                    ]);
                 }
             } elseif (! $answeredByHuman && $dependent->companion_confirmed === null) {
                 // Companion is picked up again → an adult is there, no gate needed.
                 $dependent->update(['companion_confirmed' => true]);
             }
         }
+
+        return $notes;
     }
 
     /**
      * The companion was reported away, so nobody can go home with them. Same procedure
      * as when the companion can no longer be one (see reconcile): unwind each dependent.
+     *
+     * @return list<string>
      */
-    public static function companionAbsent(int $companionChildId, string $date): void
+    public static function companionAbsent(int $companionChildId, string $date): array
     {
         $companion = Child::find($companionChildId);
         if ($companion === null) {
-            return;
+            return [];
         }
 
         $dependents = $companion->accompaniedDepartures()
@@ -98,7 +115,7 @@ class CompanionReconciler
             ->with('child.guardians')
             ->get();
 
-        self::unwind($companion, $dependents, $date);
+        return self::unwind($companion, $dependents, $date);
     }
 
     /**
@@ -127,10 +144,12 @@ class CompanionReconciler
      * a way home.
      *
      * @param  Collection<int, DailyDeparture>  $dependents
+     * @return list<string>
      */
-    private static function unwind(Child $companion, $dependents, string $date): void
+    private static function unwind(Child $companion, $dependents, string $date): array
     {
         $shortDate = Carbon::parse($date)->format('d.m.');
+        $notes = [];
 
         foreach ($dependents as $dependent) {
             $child = $dependent->child;
@@ -140,7 +159,14 @@ class CompanionReconciler
             self::revert($dependent);
 
             Notification::send($guardians, new CompanionCancelled($child->name, $companion->name, $shortDate));
+
+            $notes[] = __('flash.companion_unwound', [
+                'name' => $child->name,
+                'companion' => $companion->name,
+            ]);
         }
+
+        return $notes;
     }
 
     /**

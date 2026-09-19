@@ -706,6 +706,60 @@ class CompanionDepartureTest extends TestCase
         Notification::assertSentTo($annasParent, CompanionCancelled::class);
     }
 
+    public function test_the_editor_is_told_that_another_arrangement_was_unwound(): void
+    {
+        Notification::fake();
+        $date = $this->wednesday();
+        $anna = Child::factory()->create(['name' => 'Anna']);
+        $bob = Child::factory()->create(['name' => 'Bob']);
+        $cara = Child::factory()->create(['name' => 'Cara']);
+
+        $this->departsAt($cara, $date, DepartureMethod::PickedUp);
+        $this->departsAt($bob, $date, DepartureMethod::SentHome);
+        $this->actingAs($this->staff())->patch(route('weekly-plan.adjust'), [
+            'child_id' => $anna->id, 'date' => $date,
+            'planned_method' => DepartureMethod::WithChild->value,
+            'companion_child_id' => $bob->id,
+        ]);
+
+        // Bob's family pulls the rug from under Anna's plan — and hears about it here,
+        // rather than only Anna's family getting a DM.
+        $this->actingAs($this->staff())->patch(route('weekly-plan.adjust'), [
+            'child_id' => $bob->id, 'date' => $date,
+            'planned_method' => DepartureMethod::WithChild->value,
+            'companion_child_id' => $cara->id,
+        ])->assertSessionHas('status', fn (string $s) => str_contains($s, 'Anna')
+            && str_contains($s, 'geht jetzt nicht mehr'));
+    }
+
+    public function test_resetting_the_companions_day_re_checks_the_arrangement(): void
+    {
+        Notification::fake();
+        $date = $this->wednesday();
+        $anna = Child::factory()->create(['name' => 'Anna']);
+        $bob = Child::factory()->create(['name' => 'Bob']);
+        $annasParent = User::factory()->slackLinked()->create(['role' => UserRole::Parent]);
+        $annasParent->children()->attach($anna);
+
+        // Bob has no Stammplan for that weekday — his override is the only reason he
+        // leaves at all, so resetting it leaves nobody for Anna to walk home with.
+        $this->departsAt($bob, $date, DepartureMethod::SentHome);
+        $this->actingAs($this->staff())->patch(route('weekly-plan.adjust'), [
+            'child_id' => $anna->id, 'date' => $date,
+            'planned_method' => DepartureMethod::WithChild->value,
+            'companion_child_id' => $bob->id,
+        ]);
+
+        $this->actingAs($this->staff())->patch(route('weekly-plan.reset'), [
+            'child_id' => $bob->id, 'date' => $date,
+        ])->assertSessionHas('status', fn (string $s) => str_contains($s, 'Anna'));
+
+        // Until now this path skipped the reconciler entirely: Anna was left pointing
+        // at a day Bob no longer has.
+        $this->assertDatabaseMissing('daily_departures', ['child_id' => $anna->id]);
+        Notification::assertSentTo($annasParent, CompanionCancelled::class);
+    }
+
     public function test_deleting_a_companion_unwinds_dependents(): void
     {
         Notification::fake();

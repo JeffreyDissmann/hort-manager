@@ -105,7 +105,9 @@ class WeeklyAdjustmentController extends Controller
 
         // This child may itself be someone else's companion — re-evaluate those
         // arrangements against the plan we just saved (e.g. picked-up → goes alone).
-        CompanionReconciler::reconcile($child->id, $validated['date']);
+        // What that did to another family is said on this screen too: the other family
+        // gets a DM, but whoever pulled the rug saw nothing at all.
+        $companionNotes = CompanionReconciler::reconcile($child->id, $validated['date']);
 
         // A late same-day change staff need to know about (no-op otherwise). Only
         // when the plan really moved — a re-saved identical plan isn't news.
@@ -118,7 +120,10 @@ class WeeklyAdjustmentController extends Controller
             );
         }
 
-        return back()->with('status', __('flash.plan_updated', ['name' => $child->name]));
+        return back()->with('status', implode(' ', [
+            __('flash.plan_updated', ['name' => $child->name]),
+            ...$companionNotes,
+        ]));
     }
 
     /** Revert one day back to the standard Stammplan. */
@@ -143,6 +148,8 @@ class WeeklyAdjustmentController extends Controller
             'Ein Ferienbetreuungstag wird über die Anmeldung abgemeldet, nicht zurückgesetzt.',
         );
 
+        $companionNotes = [];
+
         // Deleting the override row makes the board fall back to the Stammplan.
         if ($departure->exists) {
             activity()
@@ -153,6 +160,12 @@ class WeeklyAdjustmentController extends Controller
 
             $departure->delete();
 
+            // The Stammplan may say something else entirely (another time, another
+            // method, or nothing at all on a Hortfrei day), so arrangements that named
+            // this child have to be re-checked here as much as after an edit — this
+            // path simply never did.
+            $companionNotes = CompanionReconciler::reconcile($child->id, $validated['date']);
+
             LateChange::notify(
                 $request->user(),
                 $child,
@@ -161,7 +174,10 @@ class WeeklyAdjustmentController extends Controller
             );
         }
 
-        return back()->with('status', __('flash.day_reset', ['name' => $child->name]));
+        return back()->with('status', implode(' ', [
+            __('flash.day_reset', ['name' => $child->name]),
+            ...$companionNotes,
+        ]));
     }
 
     /**
