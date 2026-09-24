@@ -14,6 +14,9 @@ class SyncCompanionConfirmation implements ShouldQueue
 {
     use Queueable;
 
+    /** The day may be reset or deleted before the DM is re-rendered. */
+    public bool $deleteWhenMissingModels = true;
+
     public function __construct(public DailyDeparture $departure) {}
 
     public function handle(SlackCompanion $slack): void
