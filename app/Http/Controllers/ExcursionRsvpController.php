@@ -52,6 +52,9 @@ class ExcursionRsvpController extends Controller
                 $toOwnRow = fn (Child $c) => [
                     ...$toRow($c),
                     'plan' => $upcoming ? ExcursionPickup::state($e, $ownChildren[$c->id] ?? $c) : null,
+                    // Per child, not per trip: after the Anmeldeschluss a family that
+                    // never answered still can, one that did cannot change it.
+                    'can_answer' => $e->parentMayAnswer($toRow($c)['response']),
                 ];
 
                 return [
@@ -97,9 +100,12 @@ class ExcursionRsvpController extends Controller
         // Answering is staff-or-guardian, same as editing the child.
         $this->authorize('update', $child);
 
-        // Parents can only answer while the poll is open; staff may fix it up anytime.
+        // Staff may fix an answer up at any time. For a parent the Anmeldeschluss is
+        // soft while nothing is on file and hard once there is (see parentMayAnswer).
         if (! $user->isStaff()) {
-            abort_unless($excursion->pollIsOpen(), 403);
+            $existing = $excursion->children()->find($child->id)?->pivot->response;
+
+            abort_unless($excursion->parentMayAnswer($existing === null ? null : (bool) $existing), 403);
         }
 
         // The answer and the pickup it moves belong together: a „Ja" that is recorded

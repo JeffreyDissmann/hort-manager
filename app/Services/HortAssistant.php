@@ -359,8 +359,12 @@ class HortAssistant
         if (! $excursion) {
             return 'Zu welchem Ausflug? Ich finde gerade keinen passenden.';
         }
-        if (! $excursion->pollIsOpen()) {
-            return "Die Abstimmung für „{$excursion->name}“ ist bereits geschlossen.";
+        $existing = $excursion->children()->find($child->id)?->pivot->response;
+
+        if (! $excursion->parentMayAnswer($existing === null ? null : (bool) $existing)) {
+            return $existing === null
+                ? "Der Ausflug „{$excursion->name}“ war schon."
+                : "Für „{$excursion->name}“ ist der Anmeldeschluss vorbei – eine Änderung bitte direkt im Hort melden.";
         }
 
         $excursion->children()->syncWithoutDetaching([

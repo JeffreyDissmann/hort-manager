@@ -46,7 +46,12 @@ class SlackInteractionController extends Controller
         $excursion = Excursion::find($excursionId);
         $child = Child::find($childId);
 
-        if (! $user || ! $excursion || ! $child || ! $child->isGuardedBy($user) || ! $excursion->pollIsOpen()) {
+        $existing = $excursion?->children()->find($child?->id)?->pivot->response;
+
+        // Same rule as in the app: a first answer is welcome until the trip, changing
+        // one after the Anmeldeschluss is not.
+        if (! $user || ! $excursion || ! $child || ! $child->isGuardedBy($user)
+            || ! $excursion->parentMayAnswer($existing === null ? null : (bool) $existing)) {
             $this->reply($responseUrl, '⚠️ Diese Abstimmung ist nicht (mehr) möglich.');
 
             return;

@@ -25,6 +25,7 @@ return [
     'time_from' => 'from :time',
 
     'poll_closed' => 'Poll closed',
+    'deadline_passed' => 'Deadline has passed – please still answer',
     'poll_until' => 'Poll until :date',
     'deadline_today' => 'Today is the last day to respond',
     'deadline_tomorrow' => 'Please respond by tomorrow',

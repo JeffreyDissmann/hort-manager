@@ -101,6 +101,26 @@ class Excursion extends Model
     }
 
     /**
+     * May a parent record this answer themselves?
+     *
+     * The Anmeldeschluss is soft for a family that hasn't answered at all: they keep
+     * being reminded until the trip, and a late „ja"/„nein" is still worth more than
+     * silence. It is hard for an answer that already exists — once staff have planned
+     * the group around it, changing it is a conversation with the Hort, not a button.
+     *
+     * @param  bool|null  $existing  the answer on file, null when none was given
+     */
+    public function parentMayAnswer(?bool $existing): bool
+    {
+        // The trip itself is the last possible moment, that day included.
+        if ($this->date->lt(today())) {
+            return false;
+        }
+
+        return $this->pollIsOpen() || $existing === null;
+    }
+
+    /**
      * The invited children ordered for display: joining first, then still-undecided,
      * then not coming — each group alphabetical. Reads the loaded `children` relation.
      *

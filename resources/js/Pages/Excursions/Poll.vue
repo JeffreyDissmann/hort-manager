@@ -89,6 +89,12 @@ function answer(excursion, child, response) {
 // Saying „Ja" moves a pickup that falls inside the trip to its return time — that is
 // done server-side. What's left to say here is the leftovers: a clash that can't be
 // moved („geht mit … mit", a past day), or the new time once it has been moved.
+// Any of this family's children on this trip who may still answer — the deadline is
+// soft for a first answer, hard for changing one.
+function stillAnswerable(excursion) {
+    return excursion.children.some((child) => child.can_answer);
+}
+
 function pickupClashes(excursion, child) {
     return child.response === true && !!child.plan?.conflict;
 }
@@ -191,6 +197,14 @@ function pickupMatchesReturn(excursion, child) {
                         >
                             ⏰ {{ deadlineHint(excursion.rsvp_deadline) }}
                         </p>
+                        <!-- The Anmeldeschluss has passed, but a family that never
+                             answered is still asked (and still reminded daily). -->
+                        <p
+                            v-else-if="stillAnswerable(excursion)"
+                            class="mt-2 text-xs font-semibold text-amber-600"
+                        >
+                            ⏰ {{ $t('excursions.deadline_passed') }}
+                        </p>
                         <p
                             v-else-if="!excursion.poll_open"
                             class="mt-2 text-xs font-medium text-ink/40"
@@ -228,8 +242,10 @@ function pickupMatchesReturn(excursion, child) {
                                         – {{ $t('excursions.status_declined') }}
                                     </span>
                                 </div>
+                                <!-- Per child: after the Anmeldeschluss a family that
+                                     never answered still can, one that did cannot. -->
                                 <div
-                                    v-if="excursion.poll_open"
+                                    v-if="child.can_answer"
                                     class="flex shrink-0 gap-2"
                                 >
                                     <button

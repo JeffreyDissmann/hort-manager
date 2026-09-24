@@ -283,22 +283,62 @@ class ExcursionManagementTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_a_parent_cannot_answer_after_the_deadline_but_staff_can(): void
+    public function test_a_first_answer_is_still_accepted_after_the_deadline(): void
+    {
+        // The Anmeldeschluss is soft for a family that never answered: they keep being
+        // reminded until the trip, so the answer has to be possible until then.
+        $parent = $this->parent();
+        $child = Child::factory()->create();
+        $parent->children()->attach($child);
+        $excursion = Excursion::factory()->create([
+            'date' => Carbon::tomorrow(), 'rsvp_deadline' => Carbon::yesterday(),
+        ]);
+        $excursion->children()->attach($child->id); // response null
+
+        $this->actingAs($parent)
+            ->patch(route('polls.update', $excursion), ['child_id' => $child->id, 'response' => true])
+            ->assertRedirect();
+
+        $this->assertTrue((bool) $excursion->children()->find($child->id)->pivot->response);
+    }
+
+    public function test_an_existing_answer_cannot_be_changed_after_the_deadline(): void
     {
         $parent = $this->parent();
         $child = Child::factory()->create();
         $parent->children()->attach($child);
-        $excursion = Excursion::factory()->create(['rsvp_deadline' => Carbon::yesterday()]);
+        $excursion = Excursion::factory()->create([
+            'date' => Carbon::tomorrow(), 'rsvp_deadline' => Carbon::yesterday(),
+        ]);
+        $excursion->children()->attach($child->id, ['response' => true]);
+
+        // Staff plan the group around the answers, so a late change is a conversation
+        // with the Hort, not a button.
+        $this->actingAs($parent)
+            ->patch(route('polls.update', $excursion), ['child_id' => $child->id, 'response' => false])
+            ->assertForbidden();
+
+        $this->assertTrue((bool) $excursion->children()->find($child->id)->pivot->response);
+
+        // Staff can still fix it up.
+        $this->actingAs($this->staff())
+            ->patch(route('polls.update', $excursion), ['child_id' => $child->id, 'response' => false])
+            ->assertRedirect();
+    }
+
+    public function test_nothing_can_be_answered_once_the_trip_has_happened(): void
+    {
+        $parent = $this->parent();
+        $child = Child::factory()->create();
+        $parent->children()->attach($child);
+        $excursion = Excursion::factory()->create([
+            'date' => Carbon::yesterday(), 'rsvp_deadline' => Carbon::yesterday()->subWeek(),
+        ]);
         $excursion->children()->attach($child->id);
 
         $this->actingAs($parent)
             ->patch(route('polls.update', $excursion), ['child_id' => $child->id, 'response' => true])
             ->assertForbidden();
-
-        // Staff can still fix it up after the deadline.
-        $this->actingAs($this->staff())
-            ->patch(route('polls.update', $excursion), ['child_id' => $child->id, 'response' => true])
-            ->assertRedirect();
     }
 
     public function test_pending_poll_count_is_shared_with_parents(): void

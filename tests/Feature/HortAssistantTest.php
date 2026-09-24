@@ -474,7 +474,7 @@ class HortAssistantTest extends TestCase
         ]);
     }
 
-    public function test_it_refuses_an_rsvp_once_the_poll_is_closed(): void
+    public function test_it_refuses_to_change_an_answer_after_the_deadline(): void
     {
         Queue::fake();
         [$parent, $child] = $this->parentWithTom();
@@ -482,16 +482,34 @@ class HortAssistantTest extends TestCase
             'name' => 'Zoo', 'date' => now()->addWeek()->toDateString(),
             'rsvp_deadline' => now()->subDay()->toDateString(), // deadline passed
         ]);
-        $excursion->children()->attach($child->id);
+        $excursion->children()->attach($child->id, ['response' => false]);
         $this->fakeIntent(['intent' => 'ausflug', 'kind' => 'Tom', 'ausflug' => 'Zoo', 'zusage' => true]);
 
         $reply = app(HortAssistant::class)->reply($parent, 'Tom kommt doch mit zum Zoo');
 
-        $this->assertStringContainsString('geschlossen', $reply);
+        $this->assertStringContainsString('Anmeldeschluss', $reply);
         $this->assertDatabaseHas('child_excursion', [
-            'child_id' => $child->id, 'excursion_id' => $excursion->id, 'response' => null,
+            'child_id' => $child->id, 'excursion_id' => $excursion->id, 'response' => false,
         ]);
         Queue::assertNotPushed(SyncExcursionRsvp::class);
+    }
+
+    public function test_it_still_takes_a_first_answer_after_the_deadline(): void
+    {
+        Queue::fake();
+        [$parent, $child] = $this->parentWithTom();
+        $excursion = Excursion::factory()->create([
+            'name' => 'Zoo', 'date' => now()->addWeek()->toDateString(),
+            'rsvp_deadline' => now()->subDay()->toDateString(),
+        ]);
+        $excursion->children()->attach($child->id); // never answered
+        $this->fakeIntent(['intent' => 'ausflug', 'kind' => 'Tom', 'ausflug' => 'Zoo', 'zusage' => true]);
+
+        app(HortAssistant::class)->reply($parent, 'Tom kommt mit zum Zoo');
+
+        $this->assertDatabaseHas('child_excursion', [
+            'child_id' => $child->id, 'excursion_id' => $excursion->id, 'response' => true,
+        ]);
     }
 
     public function test_it_never_touches_a_child_that_is_not_the_parents(): void
