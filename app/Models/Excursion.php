@@ -36,9 +36,17 @@ class Excursion extends Model
      *
      * @param  Builder<Excursion>  $query
      */
-    public function scopeDueToday(Builder $query): void
+    /**
+     * Trips whose guardians should be chased today: from the Anmeldeschluss onwards,
+     * every day up to and including the trip itself. A family that never answered is
+     * worth asking again — the answer stays possible until the trip (see
+     * {@see self::parentMayAnswer()}), and staff need to know who is coming.
+     */
+    public function scopeRsvpReminderDue(Builder $query): void
     {
-        $query->whereDate('rsvp_deadline', today());
+        $query->whereNotNull('rsvp_deadline')
+            ->whereDate('rsvp_deadline', '<=', today())
+            ->whereDate('date', '>=', today());
     }
 
     protected $fillable = [

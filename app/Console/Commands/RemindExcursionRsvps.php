@@ -14,11 +14,11 @@ class RemindExcursionRsvps extends Command
 {
     protected $signature = 'excursions:remind-rsvps';
 
-    protected $description = 'Remind guardians (Slack and/or push) who still owe an excursion answer due today.';
+    protected $description = 'Remind guardians (Slack and/or push) who still owe an excursion answer, daily from the deadline until the trip.';
 
     public function handle(): int
     {
-        Excursion::dueToday()->get()->each(function (Excursion $excursion) {
+        Excursion::rsvpReminderDue()->get()->each(function (Excursion $excursion) {
             $pendingChildren = $excursion->children()->wherePivotNull('response')->pluck('children.id');
 
             $guardians = User::query()

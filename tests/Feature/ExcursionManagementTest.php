@@ -183,6 +183,69 @@ class ExcursionManagementTest extends TestCase
         Notification::assertNotSentTo($answeredGuardian, ExcursionRsvpReminder::class);
     }
 
+    public function test_rsvp_reminder_repeats_daily_until_the_trip(): void
+    {
+        Notification::fake();
+
+        $excursion = Excursion::factory()->create([
+            'date' => '2026-06-29',
+            'rsvp_deadline' => '2026-06-26',
+        ]);
+
+        $child = Child::factory()->create();
+        $guardian = User::factory()->create(['role' => UserRole::Parent, 'slack_id' => 'U1']);
+        $child->guardians()->attach($guardian);
+        $excursion->children()->syncWithoutDetaching([$child->id]); // never answered
+
+        // Deadline day, the days after it, and the morning of the trip.
+        foreach (['2026-06-26', '2026-06-27', '2026-06-28', '2026-06-29'] as $day) {
+            Carbon::setTestNow(Carbon::parse($day.' 08:00'));
+            $this->artisan('excursions:remind-rsvps')->assertSuccessful();
+        }
+
+        Notification::assertSentToTimes($guardian, ExcursionRsvpReminder::class, 4);
+
+        // The trip is over; there is nothing left to answer.
+        Carbon::setTestNow(Carbon::parse('2026-06-30 08:00'));
+        $this->artisan('excursions:remind-rsvps')->assertSuccessful();
+
+        Notification::assertSentToTimes($guardian, ExcursionRsvpReminder::class, 4);
+    }
+
+    public function test_rsvp_reminder_stops_once_the_family_answers(): void
+    {
+        Notification::fake();
+        Carbon::setTestNow(Carbon::parse('2026-06-27 08:00'));
+
+        $excursion = Excursion::factory()->create(['date' => '2026-06-29', 'rsvp_deadline' => '2026-06-26']);
+        $child = Child::factory()->create();
+        $guardian = User::factory()->create(['role' => UserRole::Parent, 'slack_id' => 'U1']);
+        $child->guardians()->attach($guardian);
+
+        // A late first answer — still allowed after the deadline.
+        $excursion->children()->syncWithoutDetaching([$child->id => ['response' => false]]);
+
+        $this->artisan('excursions:remind-rsvps')->assertSuccessful();
+
+        Notification::assertNotSentTo($guardian, ExcursionRsvpReminder::class);
+    }
+
+    public function test_a_trip_without_a_deadline_is_never_chased(): void
+    {
+        Notification::fake();
+        Carbon::setTestNow(Carbon::parse('2026-06-27 08:00'));
+
+        $excursion = Excursion::factory()->create(['date' => '2026-06-29', 'rsvp_deadline' => null]);
+        $child = Child::factory()->create();
+        $guardian = User::factory()->create(['role' => UserRole::Parent, 'slack_id' => 'U1']);
+        $child->guardians()->attach($guardian);
+        $excursion->children()->syncWithoutDetaching([$child->id]);
+
+        $this->artisan('excursions:remind-rsvps')->assertSuccessful();
+
+        Notification::assertNotSentTo($guardian, ExcursionRsvpReminder::class);
+    }
+
     public function test_rsvp_reminder_reaches_a_push_only_guardian(): void
     {
         Notification::fake();
