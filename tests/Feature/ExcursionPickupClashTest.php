@@ -9,6 +9,7 @@ use App\Models\Absence;
 use App\Models\Child;
 use App\Models\DailyDeparture;
 use App\Models\Excursion;
+use App\Models\HolidayPeriod;
 use App\Models\User;
 use App\Notifications\LateChange;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -76,6 +77,29 @@ it('reports but does not offer to move a „geht mit … mit" pickup', function 
     // The time is mirrored from Mia, so the clash is real but moving it would break
     // the arrangement — the family is pointed at the Wochenplan instead.
     assertPlan(['time' => '14:00', 'conflict' => true, 'movable' => false]);
+});
+
+it('will not move a pickup on a day the child has already left', function () {
+    DailyDeparture::create([
+        'child_id' => $this->child->id, 'date' => '2026-06-24', 'status' => 'picked_up',
+        'planned_time' => '14:00', 'planned_method' => DepartureMethod::SentHome,
+        'left_at' => Carbon::parse('2026-06-24 14:05'),
+    ]);
+
+    // The day is closed; rewriting its plan would contradict what staff recorded.
+    assertPlan(['conflict' => true, 'movable' => false]);
+});
+
+it('will not move a pickup on a Schließtag', function () {
+    HolidayPeriod::create([
+        'name' => 'Fortbildung', 'type' => 'closed',
+        'starts_on' => '2026-06-24', 'ends_on' => '2026-06-24',
+    ]);
+
+    // No Hort that day: the Stammplan doesn't apply, so there is no pickup at all —
+    // nothing to warn about and nothing to move.
+    $this->actingAs($this->parent)->get('/polls')
+        ->assertInertia(fn (AssertableInertia $page) => $page->where('upcoming.0.children.0.plan', null));
 });
 
 it('says nothing for a child reported absent that day', function () {

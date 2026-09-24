@@ -362,6 +362,32 @@ class CompanionDepartureTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_the_requesting_family_cannot_confirm_themselves(): void
+    {
+        $date = $this->wednesday();
+        $anna = Child::factory()->create(['name' => 'Anna']);
+        $tom = Child::factory()->create(['name' => 'Tom']);
+        $departure = DailyDeparture::create([
+            'child_id' => $anna->id,
+            'date' => $date,
+            'planned_method' => DepartureMethod::WithChild,
+            'companion_child_id' => $tom->id,
+            'status' => DepartureStatus::Present,
+        ]);
+
+        // Anna's own guardian asked for this. Letting them answer it would mean a
+        // family signing their child into someone else's care by themselves — the
+        // consent has to come from Tom's side.
+        $annasParent = User::factory()->create(['role' => UserRole::Parent]);
+        $annasParent->children()->attach($anna);
+
+        $this->actingAs($annasParent)
+            ->patch(route('companion.confirm', $departure), ['confirmed' => true])
+            ->assertForbidden();
+
+        $this->assertNull($departure->refresh()->companion_confirmed);
+    }
+
     public function test_confirming_a_normal_pickup_is_not_found(): void
     {
         $date = $this->wednesday();

@@ -281,6 +281,52 @@ class SlackInteractionTest extends TestCase
         $this->assertSame($guardian->id, $departure->fresh()->companion_confirmed_by);
     }
 
+    public function test_a_stale_request_is_rejected_even_with_a_valid_signature(): void
+    {
+        Http::fake();
+        $guardian = User::factory()->create(['slack_id' => 'U1']);
+        [$excursion, $child] = $this->pendingExcursionFor($guardian);
+
+        // A signed payload captured from the wire stays valid forever without the
+        // timestamp window — replaying it would let someone answer for a family.
+        config(['services.slack.signing_secret' => self::SECRET]);
+        $json = json_encode([
+            'user' => ['id' => 'U1'],
+            'actions' => [['value' => "rsvp|{$excursion->id}|{$child->id}|1"]],
+        ]);
+        $body = 'payload='.urlencode($json);
+        $timestamp = (string) (time() - 600); // ten minutes old
+        $signature = 'v0='.hash_hmac('sha256', "v0:{$timestamp}:{$body}", self::SECRET);
+
+        $this->call('POST', '/slack/interactions', ['payload' => $json], [], [], [
+            'CONTENT_TYPE' => 'application/x-www-form-urlencoded',
+            'HTTP_X-Slack-Request-Timestamp' => $timestamp,
+            'HTTP_X-Slack-Signature' => $signature,
+        ], $body)->assertForbidden();
+
+        $this->assertNull($excursion->children()->find($child->id)->pivot->response);
+    }
+
+    public function test_the_tagalongs_own_guardian_cannot_confirm_in_slack(): void
+    {
+        Http::fake();
+        $guardian = User::factory()->create(['slack_id' => 'U1']);
+        $departure = $this->pendingCompanionFor($guardian);
+
+        // The guardian of the child who wants to tag along — the same rule as in the
+        // app: the answer belongs to the companion's family.
+        $requester = User::factory()->create(['slack_id' => 'U7']);
+        $requester->children()->attach($departure->child_id);
+
+        $this->postInteraction([
+            'user' => ['id' => 'U7'],
+            'response_url' => 'https://hooks.slack.test/confirm',
+            'actions' => [['value' => "companion|{$departure->id}|1"]],
+        ])->assertNoContent();
+
+        $this->assertNull($departure->fresh()->companion_confirmed);
+    }
+
     public function test_a_companion_click_from_a_non_guardian_is_ignored(): void
     {
         Http::fake();
