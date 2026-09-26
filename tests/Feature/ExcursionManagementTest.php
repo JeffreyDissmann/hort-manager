@@ -404,6 +404,38 @@ class ExcursionManagementTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_the_pending_poll_count_lasts_until_the_trip(): void
+    {
+        $parent = $this->parent();
+        $child = Child::factory()->create();
+        $parent->children()->attach($child);
+        $excursion = Excursion::factory()->create([
+            'date' => Carbon::tomorrow(), 'rsvp_deadline' => Carbon::yesterday(),
+        ]);
+        $excursion->children()->attach($child->id); // never answered
+
+        // The deadline has passed, but the answer is still possible and still chased
+        // daily — so the badge and the banner have to stay up.
+        $this->actingAs($parent)
+            ->get(route('board'))
+            ->assertInertia(fn (Assert $page) => $page->where('pendingPolls', 1));
+    }
+
+    public function test_the_pending_poll_count_drops_after_the_trip(): void
+    {
+        $parent = $this->parent();
+        $child = Child::factory()->create();
+        $parent->children()->attach($child);
+        $excursion = Excursion::factory()->create([
+            'date' => Carbon::yesterday(), 'rsvp_deadline' => Carbon::yesterday()->subWeek(),
+        ]);
+        $excursion->children()->attach($child->id);
+
+        $this->actingAs($parent)
+            ->get(route('board'))
+            ->assertInertia(fn (Assert $page) => $page->where('pendingPolls', 0));
+    }
+
     public function test_pending_poll_count_is_shared_with_parents(): void
     {
         $parent = $this->parent();
