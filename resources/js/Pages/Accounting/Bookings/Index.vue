@@ -165,7 +165,7 @@ const filters = reactive({
 
 const statusLabel = computed(() => Object.fromEntries(props.filterOptions.statuses.map((s) => [s.value, s.label])));
 
-const confidenceDot = { 0: 'bg-red-500', 1: 'bg-amber-500', 2: 'bg-hort-teal-dark' };
+const confidenceDot = { 0: 'bg-danger', 1: 'bg-warn', 2: 'bg-hort-teal-dark' };
 
 let searchTimer = null;
 const activeFilters = () => Object.fromEntries(Object.entries(filters).filter(([, v]) => v !== '' && v !== null));
@@ -224,6 +224,7 @@ function destroy(booking) {
                                     type="button"
                                     class="flex items-center rounded-r-lg border-l border-ink/10 bg-ink/5 px-2 py-2.5 text-ink transition hover:bg-ink/10"
                                     data-testid="bookings-export-more"
+                                    :aria-label="$t('common.more_options')"
                                 >
                                     <ChevronDownIcon class="h-4 w-4" />
                                 </button>
@@ -244,7 +245,7 @@ function destroy(booking) {
                         <div v-if="reviewCount > 0" class="inline-flex items-center">
                             <Link
                                 :href="bookingsReview().url"
-                                class="flex items-center gap-1 rounded-l-lg bg-amber-100 px-3 py-2 text-sm font-medium text-amber-800 transition hover:bg-amber-200"
+                                class="flex items-center gap-1 rounded-l-lg bg-warn/20 px-3 py-2 text-sm font-medium text-warn-dark transition hover:bg-warn/30"
                                 data-testid="bookings-review"
                             >
                                 <ClipboardDocumentCheckIcon class="h-4 w-4" />
@@ -254,8 +255,9 @@ function destroy(booking) {
                                 <template #trigger>
                                     <button
                                         type="button"
-                                        class="flex items-center rounded-r-lg border-l border-amber-200 bg-amber-100 px-2 py-2 text-amber-800 transition hover:bg-amber-200"
+                                        class="flex items-center rounded-r-lg border-l border-warn/30 bg-warn/20 px-2 py-2 text-warn-dark transition hover:bg-warn/30"
                                         data-testid="bookings-review-more"
+                                        :aria-label="$t('common.more_options')"
                                     >
                                         <ChevronDownIcon class="h-4 w-4" />
                                     </button>
@@ -317,6 +319,7 @@ function destroy(booking) {
                                         type="button"
                                         class="flex items-center rounded-r-md border-l border-white/20 bg-gray-800 px-2 py-2 text-white transition hover:bg-gray-700 dark:border-hort-navy/20 dark:bg-ink dark:text-hort-navy dark:hover:bg-ink/90"
                                         data-testid="bookings-more"
+                                        :aria-label="$t('common.more_options')"
                                     >
                                         <ChevronDownIcon class="h-4 w-4" />
                                     </button>
@@ -345,7 +348,7 @@ function destroy(booking) {
                 <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
                     <div class="relative w-full sm:flex-1">
                         <MagnifyingGlassIcon class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/40" />
-                        <input v-model="filters.search" type="search" :placeholder="$t('accounting.bookings.search')" class="w-full rounded-md border-ink/20 pl-9 text-sm focus:border-hort-teal focus:ring-hort-teal" />
+                        <input v-model="filters.search" type="search" :placeholder="$t('accounting.bookings.search')" :aria-label="$t('accounting.bookings.search')" class="w-full rounded-md border-ink/20 pl-9 text-sm focus:border-hort-teal focus:ring-hort-teal" />
                     </div>
                     <div class="flex items-center gap-2">
                         <input v-model="filters.from" type="date" :aria-label="$t('accounting.bookings.from')" class="w-full flex-1 rounded-md border-ink/20 text-sm focus:border-hort-teal focus:ring-hort-teal sm:w-40 sm:flex-none" />
@@ -356,35 +359,35 @@ function destroy(booking) {
                 <div class="grid grid-cols-2 gap-2 sm:grid-cols-3" :class="paperlessEnabled ? 'lg:grid-cols-5' : 'lg:grid-cols-4'">
                     <div class="relative">
                         <BuildingLibraryIcon class="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/40" />
-                        <select v-model="filters.account" class="w-full rounded-md border-ink/20 pl-8 text-sm focus:border-hort-teal focus:ring-hort-teal">
+                        <select v-model="filters.account" :aria-label="$t('accounting.bookings.all_accounts')" class="w-full rounded-md border-ink/20 pl-8 text-sm focus:border-hort-teal focus:ring-hort-teal">
                             <option value="">{{ $t('accounting.bookings.all_accounts') }}</option>
                             <option v-for="a in filterOptions.accounts" :key="a.id" :value="a.id">{{ a.name }}</option>
                         </select>
                     </div>
                     <div class="relative">
                         <TagIcon class="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/40" />
-                        <select v-model="filters.category" class="w-full rounded-md border-ink/20 pl-8 text-sm focus:border-hort-teal focus:ring-hort-teal">
+                        <select v-model="filters.category" :aria-label="$t('accounting.bookings.all_categories')" class="w-full rounded-md border-ink/20 pl-8 text-sm focus:border-hort-teal focus:ring-hort-teal">
                             <option value="">{{ $t('accounting.bookings.all_categories') }}</option>
                             <option v-for="c in filterOptions.categories" :key="c.id" :value="c.id">{{ c.path }}</option>
                         </select>
                     </div>
                     <div class="relative">
                         <ArrowsUpDownIcon class="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/40" />
-                        <select v-model="filters.kind" class="w-full rounded-md border-ink/20 pl-8 text-sm focus:border-hort-teal focus:ring-hort-teal">
+                        <select v-model="filters.kind" :aria-label="$t('accounting.bookings.all_kinds')" class="w-full rounded-md border-ink/20 pl-8 text-sm focus:border-hort-teal focus:ring-hort-teal">
                             <option value="">{{ $t('accounting.bookings.all_kinds') }}</option>
                             <option v-for="k in filterOptions.kinds" :key="k.value" :value="k.value">{{ k.label }}</option>
                         </select>
                     </div>
                     <div class="relative">
                         <CheckCircleIcon class="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/40" />
-                        <select v-model="filters.status" class="w-full rounded-md border-ink/20 pl-8 text-sm focus:border-hort-teal focus:ring-hort-teal">
+                        <select v-model="filters.status" :aria-label="$t('accounting.bookings.all_statuses')" class="w-full rounded-md border-ink/20 pl-8 text-sm focus:border-hort-teal focus:ring-hort-teal">
                             <option value="">{{ $t('accounting.bookings.all_statuses') }}</option>
                             <option v-for="s in filterOptions.statusFilter" :key="s.value" :value="s.value">{{ s.label }}</option>
                         </select>
                     </div>
                     <div v-if="paperlessEnabled" class="relative">
                         <PaperClipIcon class="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/40" />
-                        <select v-model="filters.paperless" class="w-full rounded-md border-ink/20 pl-8 text-sm focus:border-hort-teal focus:ring-hort-teal">
+                        <select v-model="filters.paperless" :aria-label="$t('accounting.bookings.all_receipts')" class="w-full rounded-md border-ink/20 pl-8 text-sm focus:border-hort-teal focus:ring-hort-teal">
                             <option value="">{{ $t('accounting.bookings.all_receipts') }}</option>
                             <option value="linked">{{ $t('accounting.bookings.with_receipt') }}</option>
                             <option value="unlinked">{{ $t('accounting.bookings.without_receipt') }}</option>
@@ -499,6 +502,7 @@ function destroy(booking) {
                                     :checked="selectAllMatching || selectedIds.has(b.id)"
                                     :disabled="selectAllMatching"
                                     data-testid="booking-select"
+                                    :aria-label="`${$t('accounting.bookings.select')}: ${b.purpose ?? b.date}`"
                                     class="rounded border-ink/20 text-hort-teal-dark focus:ring-hort-teal disabled:opacity-50"
                                     @change="toggleRow(b)"
                                 />
@@ -507,7 +511,7 @@ function destroy(booking) {
                                 {{ b.booking_date }}
                                 <span
                                     v-if="b.status !== 'confirmed'"
-                                    class="ml-1 inline-flex items-center gap-1 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700"
+                                    class="ml-1 inline-flex items-center gap-1 rounded-full bg-warn/20 px-1.5 py-0.5 text-[10px] font-semibold text-warn-dark"
                                 >
                                     <span
                                         v-if="b.confidence != null"
@@ -540,7 +544,7 @@ function destroy(booking) {
                             <td class="hidden px-3 py-2 text-ink/70 md:table-cell">{{ b.account }}</td>
                             <td
                                 class="whitespace-nowrap px-3 py-2 text-right font-semibold tabular-nums"
-                                :class="b.amount_cents < 0 ? 'text-red-600' : 'text-hort-teal-dark'"
+                                :class="b.amount_cents < 0 ? 'text-danger' : 'text-hort-teal-dark'"
                             >
                                 {{ formatEuro(b.amount_cents) }}
                             </td>
@@ -566,7 +570,7 @@ function destroy(booking) {
                                         <Link v-if="!b.is_transfer" :href="bookingsEdit(b.id).url" class="rounded p-1 text-ink/50 hover:bg-ink/10 hover:text-ink" :aria-label="$t('common.edit')">
                                             <PencilSquareIcon class="h-4 w-4" />
                                         </Link>
-                                        <button type="button" class="rounded p-1 text-ink/50 hover:bg-red-50 hover:text-red-600" :aria-label="$t('common.delete')" @click="destroy(b)">
+                                        <button type="button" class="rounded p-1 text-ink/50 hover:bg-danger/10 hover:text-danger" :aria-label="$t('common.delete')" @click="destroy(b)">
                                             <TrashIcon class="h-4 w-4" />
                                         </button>
                                     </template>
@@ -591,7 +595,7 @@ function destroy(booking) {
                 <img
                     :src="receiptThumb(preview.id)"
                     alt=""
-                    class="h-56 w-40 rounded-lg border border-ink/10 bg-surface object-cover object-top shadow-xl ring-1 ring-black/5"
+                    class="h-56 w-40 rounded-lg border border-ink/10 bg-surface object-cover object-top shadow-xl ring-1 ring-ink/10"
                 />
             </div>
         </Teleport>

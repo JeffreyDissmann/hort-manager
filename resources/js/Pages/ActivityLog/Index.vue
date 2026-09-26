@@ -51,9 +51,9 @@ function eventClass(event) {
         return 'bg-hort-teal/15 text-hort-teal-dark';
     }
     if (['deleted', 'reset', 'present', 'rsvp_no', 'companion_no'].includes(event)) {
-        return 'bg-red-100 text-red-700';
+        return 'bg-danger/15 text-danger-dark';
     }
-    return 'bg-amber-100 text-amber-700'; // updated, adjusted, guardians, sent_home
+    return 'bg-warn/20 text-warn-dark'; // updated, adjusted, guardians, sent_home
 }
 </script>
 

@@ -89,6 +89,12 @@ function answer(excursion, child, response) {
 // Saying „Ja" moves a pickup that falls inside the trip to its return time — that is
 // done server-side. What's left to say here is the leftovers: a clash that can't be
 // moved („geht mit … mit", a past day), or the new time once it has been moved.
+// Any of this family's children on this trip who may still answer — the deadline is
+// soft for a first answer, hard for changing one.
+function stillAnswerable(excursion) {
+    return excursion.children.some((child) => child.can_answer);
+}
+
 function pickupClashes(excursion, child) {
     return child.response === true && !!child.plan?.conflict;
 }
@@ -165,13 +171,13 @@ function pickupMatchesReturn(excursion, child) {
                             class="mt-2 flex flex-wrap gap-x-6 gap-y-1 text-sm"
                         >
                             <div v-if="excursion.depart_at" class="flex gap-1.5">
-                                <dt class="text-ink/40">{{ $t('excursions.depart') }}</dt>
+                                <dt class="text-ink/60">{{ $t('excursions.depart') }}</dt>
                                 <dd class="font-semibold text-ink">
                                     {{ excursion.depart_at }} {{ $t('common.oclock') }}
                                 </dd>
                             </div>
                             <div v-if="excursion.return_at" class="flex gap-1.5">
-                                <dt class="text-ink/40">{{ $t('excursions.return') }}</dt>
+                                <dt class="text-ink/60">{{ $t('excursions.return') }}</dt>
                                 <dd class="font-semibold text-ink">
                                     {{ excursion.return_at }} {{ $t('common.oclock') }}
                                 </dd>
@@ -187,9 +193,17 @@ function pickupMatchesReturn(excursion, child) {
 
                         <p
                             v-if="excursion.poll_open && excursion.rsvp_deadline"
-                            class="mt-2 text-xs font-semibold text-amber-600"
+                            class="mt-2 text-xs font-semibold text-warn-dark"
                         >
                             ⏰ {{ deadlineHint(excursion.rsvp_deadline) }}
+                        </p>
+                        <!-- The Anmeldeschluss has passed, but a family that never
+                             answered is still asked (and still reminded daily). -->
+                        <p
+                            v-else-if="stillAnswerable(excursion)"
+                            class="mt-2 text-xs font-semibold text-warn-dark"
+                        >
+                            ⏰ {{ $t('excursions.deadline_passed') }}
                         </p>
                         <p
                             v-else-if="!excursion.poll_open"
@@ -211,7 +225,7 @@ function pickupMatchesReturn(excursion, child) {
                                     </span>
                                     <span
                                         v-if="child.response === null"
-                                        class="ml-1 text-xs font-semibold text-amber-600"
+                                        class="ml-1 text-xs font-semibold text-warn-dark"
                                     >
                                         – {{ $t('excursions.status_open') }}
                                     </span>
@@ -228,8 +242,10 @@ function pickupMatchesReturn(excursion, child) {
                                         – {{ $t('excursions.status_declined') }}
                                     </span>
                                 </div>
+                                <!-- Per child: after the Anmeldeschluss a family that
+                                     never answered still can, one that did cannot. -->
                                 <div
-                                    v-if="excursion.poll_open"
+                                    v-if="child.can_answer"
                                     class="flex shrink-0 gap-2"
                                 >
                                     <button
@@ -263,10 +279,10 @@ function pickupMatchesReturn(excursion, child) {
                             <p
                                 v-if="pickupClashes(excursion, child)"
                                 :data-testid="`pickup-clash-${excursion.id}-${child.id}`"
-                                class="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900"
+                                class="mt-2 rounded-lg bg-warn/10 px-3 py-2 text-sm text-warn-dark"
                             >
                                 ⚠️ {{ $t('excursions.pickup_clash', { time: child.plan.time, return: excursion.return_at }) }}
-                                <span class="block text-xs text-amber-900/70">{{ $t('excursions.pickup_clash_manual') }}</span>
+                                <span class="block text-xs text-warn-dark/80">{{ $t('excursions.pickup_clash_manual') }}</span>
                             </p>
                             <p
                                 v-else-if="pickupMatchesReturn(excursion, child)"

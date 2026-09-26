@@ -56,7 +56,7 @@ defineExpose({ open });
 </script>
 
 <template>
-    <Modal :show="show" max-width="md" @close="close">
+    <Modal :show="show" max-width="md" :label="$t('components.whats_new.title')" @close="close">
         <div v-if="entry" class="p-6">
             <div class="flex items-center justify-between">
                 <h2 class="text-lg font-semibold text-ink">{{ $t('components.whats_new.title') }}</h2>

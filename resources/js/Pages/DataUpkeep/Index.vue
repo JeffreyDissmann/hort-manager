@@ -171,6 +171,7 @@ const headline = computed(() => [
                         <select
                             v-model.number="months"
                             data-testid="retention-months"
+                            :aria-label="$t('data_upkeep.retention_title')"
                             class="rounded-md border-ink/20 text-sm shadow-sm focus:border-hort-teal focus:ring-hort-teal"
                             @change="saveRetention"
                         >

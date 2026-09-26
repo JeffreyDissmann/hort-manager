@@ -110,6 +110,7 @@ function saveNew() {
         <div class="flex items-center gap-2">
             <select
                 :value="modelValue ?? ''"
+                :aria-label="$t('accounting.bookings.category')"
                 class="min-w-0 flex-1 rounded-md border-ink/20 shadow-sm focus:border-hort-teal focus:ring-hort-teal"
                 @change="emit('update:modelValue', $event.target.value ? Number($event.target.value) : null)"
             >
@@ -155,10 +156,10 @@ function saveNew() {
                     class="min-w-0 flex-1 rounded-md border-ink/20 py-1 text-xs focus:border-hort-teal focus:ring-hort-teal"
                     @keyup.esc="editingHint = false"
                 ></textarea>
-                <button type="button" class="rounded p-1 text-hort-teal-dark hover:bg-hort-teal/10" @click="saveHint">
+                <button type="button" :aria-label="$t('common.save')" class="rounded p-1 text-hort-teal-dark hover:bg-hort-teal/10" @click="saveHint">
                     <CheckIcon class="h-4 w-4" />
                 </button>
-                <button type="button" class="rounded p-1 text-ink/40 hover:bg-ink/10" @click="editingHint = false">
+                <button type="button" :aria-label="$t('common.cancel')" class="rounded p-1 text-ink/40 hover:bg-ink/10" @click="editingHint = false">
                     <XMarkIcon class="h-4 w-4" />
                 </button>
             </div>
@@ -171,6 +172,7 @@ function saveNew() {
                 v-model="newName"
                 type="text"
                 :placeholder="$t('accounting.bookings.new_category')"
+                :aria-label="$t('accounting.bookings.new_category')"
                 class="min-w-0 flex-1 rounded-md border-ink/20 py-1 text-sm focus:border-hort-teal focus:ring-hort-teal"
                 @keyup.enter="saveNew"
                 @keyup.esc="adding = false"
@@ -178,15 +180,16 @@ function saveNew() {
             <select
                 v-if="!direction"
                 v-model="newDirection"
+                :aria-label="$t('accounting.categories.direction')"
                 class="rounded-md border-ink/20 py-1 text-sm focus:border-hort-teal focus:ring-hort-teal"
             >
                 <option value="income">{{ $t('accounting.categories.income') }}</option>
                 <option value="expense">{{ $t('accounting.categories.expense') }}</option>
             </select>
-            <button type="button" class="rounded p-1 text-hort-teal-dark hover:bg-hort-teal/10" @click="saveNew">
+            <button type="button" :aria-label="$t('common.save')" class="rounded p-1 text-hort-teal-dark hover:bg-hort-teal/10" @click="saveNew">
                 <CheckIcon class="h-4 w-4" />
             </button>
-            <button type="button" class="rounded p-1 text-ink/40 hover:bg-ink/10" @click="adding = false">
+            <button type="button" :aria-label="$t('common.cancel')" class="rounded p-1 text-ink/40 hover:bg-ink/10" @click="adding = false">
                 <XMarkIcon class="h-4 w-4" />
             </button>
         </div>

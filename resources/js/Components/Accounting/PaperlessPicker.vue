@@ -184,7 +184,7 @@ async function fetchResults(q, { limit, suggestions }) {
                     </a>
                     <button
                         type="button"
-                        class="inline-flex items-center gap-1 text-red-600 hover:underline"
+                        class="inline-flex items-center gap-1 text-danger hover:underline"
                         @click="unlink"
                     >
                         <XMarkIcon class="h-3.5 w-3.5" /> {{ $t('accounting.paperless.remove') }}
@@ -192,10 +192,10 @@ async function fetchResults(q, { limit, suggestions }) {
                 </div>
             </div>
             <div v-if="linkedDoc && linkedDoc.amount_cents != null" class="shrink-0 self-start pl-2 text-right">
-                <span class="text-lg font-semibold tabular-nums" :class="amountMismatch ? 'text-amber-600' : 'text-ink'">
+                <span class="text-lg font-semibold tabular-nums" :class="amountMismatch ? 'text-warn-dark' : 'text-ink'">
                     {{ formatEuro(linkedDoc.amount_cents) }}
                 </span>
-                <span v-if="amountMismatch" class="mt-0.5 flex items-center justify-end gap-1 text-xs font-medium text-amber-600">
+                <span v-if="amountMismatch" class="mt-0.5 flex items-center justify-end gap-1 text-xs font-medium text-warn-dark">
                     <ExclamationTriangleIcon class="h-3.5 w-3.5" /> {{ $t('accounting.paperless.amount_mismatch') }}
                 </span>
             </div>
@@ -208,12 +208,13 @@ async function fetchResults(q, { limit, suggestions }) {
                 type="text"
                 class="block w-full"
                 :placeholder="$t('accounting.paperless.search_placeholder')"
+                :aria-label="$t('accounting.paperless.search_placeholder')"
                 @input="onInput"
             />
 
             <p v-if="status === 'searching'" class="mt-2 text-xs text-ink/50">{{ $t('accounting.paperless.searching') }}</p>
             <p v-else-if="status === 'no_results'" class="mt-2 text-xs text-ink/50">{{ $t('accounting.paperless.no_results') }}</p>
-            <p v-else-if="status === 'not_found'" class="mt-2 text-xs text-red-600">{{ $t('accounting.paperless.not_found') }}</p>
+            <p v-else-if="status === 'not_found'" class="mt-2 text-xs text-danger">{{ $t('accounting.paperless.not_found') }}</p>
 
             <p v-if="showingSuggestions" class="mt-2 text-xs font-medium text-ink/50">{{ $t('accounting.paperless.suggestions') }}</p>
 

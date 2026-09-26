@@ -15,11 +15,15 @@ use App\Models\Child;
 use App\Models\DailyDeparture;
 use App\Models\DailyProgram;
 use App\Models\Excursion;
+use App\Models\HolidayCareDay;
+use App\Models\HolidayPeriod;
 use App\Models\HomeworkDefault;
 use App\Models\User;
 use App\Models\WeeklySchedule;
 use App\Support\CompanionReconciler;
+use App\Support\DayWindows;
 use App\Support\ExcursionPickup;
+use App\Support\LateChange;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Laravel\Ai\Enums\Lab;
@@ -48,8 +52,8 @@ class HortAssistant
         return match ($intent['intent'] ?? 'unbekannt') {
             'krank' => $this->reportAbsence($user, $children, $intent, AbsenceReason::Sick),
             'abwesend' => $this->reportAbsence($user, $children, $intent, AbsenceReason::Away),
-            'abholzeit' => $this->changePickup($children, $intent),
-            'ankunft' => $this->setArrival($children, $intent),
+            'abholzeit' => $this->changePickup($user, $children, $intent),
+            'ankunft' => $this->setArrival($user, $children, $intent),
             'ausflug' => $this->rsvp($user, $children, $intent),
             'frage' => $this->answer($children, $text),
             default => $this->help(),
@@ -106,7 +110,7 @@ class HortAssistant
     }
 
     /** @param Collection<int, Child> $children */
-    private function changePickup(Collection $children, array $intent): string
+    private function changePickup(User $user, Collection $children, array $intent): string
     {
         $child = $this->matchChild($children, $intent['kind'] ?? null);
         if (! $child) {
@@ -135,7 +139,10 @@ class HortAssistant
 
         // Only overwrite what the parent actually specified — a method change
         // („wird abgeholt") must not wipe an existing planned time, and vice versa.
-        $departure = DailyDeparture::firstOrNew(['child_id' => $child->id, 'date' => $date]);
+        $departure = $this->editableDay($child, $date);
+        if (is_string($departure)) {
+            return $departure;
+        }
         if ($time !== null) {
             $departure->planned_time = $time;
         }
@@ -160,6 +167,11 @@ class HortAssistant
         // This child may be another child's companion — re-evaluate those arrangements.
         CompanionReconciler::reconcile($child->id, $date);
 
+        // Same-day and past the cutoff → staff hear about it, exactly as they do when
+        // the parent changes the day in the app. The assistant is a third door to the
+        // same plan, not a quiet one.
+        LateChange::notify($user, $child, $date, LateChange::describePlan($departure));
+
         $how = match (true) {
             $time !== null && $method !== null => "um {$time} Uhr ({$method->label()})",
             $time !== null => "um {$time} Uhr",
@@ -177,7 +189,7 @@ class HortAssistant
      *
      * @param  Collection<int, Child>  $children
      */
-    private function setArrival(Collection $children, array $intent): string
+    private function setArrival(User $user, Collection $children, array $intent): string
     {
         $child = $this->matchChild($children, $intent['kind'] ?? null);
         if (! $child) {
@@ -194,7 +206,10 @@ class HortAssistant
             return "Um wie viel Uhr kommt *{$child->name}* {$this->humanDate($date)}? Bitte eine Uhrzeit angeben.";
         }
 
-        $departure = DailyDeparture::firstOrNew(['child_id' => $child->id, 'date' => $date]);
+        $departure = $this->editableDay($child, $date);
+        if (is_string($departure)) {
+            return $departure;
+        }
 
         // A child can't arrive after they've gone home again — the plan decides.
         $pickup = $this->short($departure->planned_time)
@@ -220,8 +235,49 @@ class HortAssistant
         $departure->arrival_note = $reason;
         $departure->save();
 
+        LateChange::notify($user, $child, $date, LateChange::describePlan($departure));
+
         return "✅ *{$child->name}* kommt {$this->humanDate($date)} erst um {$time} Uhr"
             .($reason ? " ({$reason})" : '').'.';
+    }
+
+    /**
+     * The day's row to write a plan into, or a German sentence saying why not. The
+     * assistant is a third door to the same plan as the Wochenplan and the board, so
+     * it has to honour the same day-type rules — until now it wrote straight past all
+     * of them, planning pickups on closed days, on Ferienbetreuung days the child isn't
+     * registered for (signing them up through the back door, deadline and all), and on
+     * days the child had already been handed over.
+     */
+    private function editableDay(Child $child, string $date): DailyDeparture|string
+    {
+        $day = Carbon::parse($date)->startOfDay();
+
+        if (! $day->isWeekday()) {
+            return 'Am Wochenende ist der Hort zu – da gibt es nichts zu planen.';
+        }
+
+        // The name comes along, so the answer says *which* Schließzeit it is.
+        $closure = HolidayPeriod::closedDaysBetween($day, $day)[$day->toDateString()] ?? null;
+
+        if ($closure !== null) {
+            return ucfirst($this->humanDate($date)).' ist der Hort geschlossen („'.$closure.'“).';
+        }
+
+        $departure = DailyDeparture::firstOrNew(['child_id' => $child->id, 'date' => $date]);
+
+        // A Ferienbetreuung day exists only for the children who signed up — and that
+        // runs through „Ausflüge & Ferien", where the Anmeldeschluss is enforced.
+        if (! $departure->exists && HolidayCareDay::query()->onDate($day)->exists()) {
+            return "Für die Ferienbetreuung {$this->humanDate($date)} ist *{$child->name}* nicht angemeldet. "
+                .'Anmelden geht unter „Ausflüge & Ferien“.';
+        }
+
+        if ($departure->exists && $departure->status !== DepartureStatus::Present) {
+            return "*{$child->name}* wurde {$this->humanDate($date)} schon abgeholt – der Tag ist abgeschlossen.";
+        }
+
+        return $departure;
     }
 
     /**
@@ -235,28 +291,26 @@ class HortAssistant
             return '';
         }
 
-        $program = DailyProgram::where('date', $date)->first();
-        $default = HomeworkDefault::where('weekday', Carbon::parse($date)->dayOfWeekIso)->first();
-        [$hwStart, $hwEnd] = DailyProgram::effectiveHomework($program, $default);
-
-        $hits = [];
-
-        if ($hwStart && $hwEnd && $time >= $this->short($hwStart) && $time < $this->short($hwEnd)) {
-            $hits[] = 'in der Hausaufgabenzeit ('.$this->short($hwStart).'–'.$this->short($hwEnd).')';
-        }
-
-        if ($program?->activity && $program->activity_start && $program->activity_end
-            && $time >= $this->short($program->activity_start) && $time < $this->short($program->activity_end)) {
-            $hits[] = "in der Aktivität „{$program->activity}\" (".$this->short($program->activity_start).'–'.$this->short($program->activity_end).')';
-        }
-
         $trip = Excursion::whereDate('date', $date)
             ->whereHas('participants', fn ($q) => $q->whereKey($child->id))
             ->first();
 
-        if ($trip?->return_at && $time >= ($this->short($trip->depart_at) ?? '00:00') && $time < $this->short($trip->return_at)) {
-            $hits[] = "im Ausflug „{$trip->name}\" (bis ".$this->short($trip->return_at).')';
-        }
+        // The windows of that day, built by the same rules the board and the standing
+        // summary use — including „keine Hausaufgaben in den Ferien".
+        $windows = [
+            ...DayWindows::program(
+                DailyProgram::where('date', $date)->first(),
+                HomeworkDefault::where('weekday', Carbon::parse($date)->dayOfWeekIso)->first(),
+                HolidayCareDay::query()->onDate($date)->exists(),
+            ),
+            ...array_filter([DayWindows::excursion($trip)]),
+        ];
+
+        $hits = array_map(fn (array $window): string => match ($window['kind']) {
+            'activity' => "in der Aktivität „{$window['name']}\" ({$window['from']}–{$window['to']})",
+            'excursion' => "im Ausflug „{$window['name']}\" (bis {$window['to']})",
+            default => "in der Hausaufgabenzeit ({$window['from']}–{$window['to']})",
+        }, DayWindows::hits($time, $windows));
 
         return $hits === [] ? '' : "\n⚠️ Die Abholung liegt ".implode(' und ', $hits).'.';
     }
@@ -296,8 +350,12 @@ class HortAssistant
         if (! $excursion) {
             return 'Zu welchem Ausflug? Ich finde gerade keinen passenden.';
         }
-        if (! $excursion->pollIsOpen()) {
-            return "Die Abstimmung für „{$excursion->name}“ ist bereits geschlossen.";
+        $existing = $excursion->children()->find($child->id)?->pivot->response;
+
+        if (! $excursion->parentMayAnswer($existing === null ? null : (bool) $existing)) {
+            return $existing === null
+                ? "Der Ausflug „{$excursion->name}“ war schon."
+                : "Für „{$excursion->name}“ ist der Anmeldeschluss vorbei – eine Änderung bitte direkt im Hort melden.";
         }
 
         $excursion->children()->syncWithoutDetaching([
@@ -389,12 +447,20 @@ class HortAssistant
         $lines = array_merge($lines, $this->upcomingDeviations($children, $plans));
 
         $program = DailyProgram::where('date', $today->toDateString())->first();
-        $default = HomeworkDefault::where('weekday', $today->dayOfWeekIso)->first();
-        [$hwStart, $hwEnd] = DailyProgram::effectiveHomework($program, $default);
+        $careDay = HolidayCareDay::query()->onDate($today)->with('period:id,name')->first();
+        [$hwStart, $hwEnd] = $careDay
+            ? [null, null]
+            : DailyProgram::effectiveHomework($program, HomeworkDefault::where('weekday', $today->dayOfWeekIso)->first());
+
         $lines[] = 'Heute: Mittagessen '.($program?->lunch ?: '—')
             // The Aktivität carries its window when it has one („Waldtag (09:00–12:00)").
             .', Aktivität '.($program?->activityText() ?: '—')
-            .', Hausaufgaben '.($hwStart ? substr((string) $hwStart, 0, 5).'–'.substr((string) $hwEnd, 0, 5) : 'keine').'.';
+            // A Ferienbetreuung day has a Betreuungszeit instead of Hausaufgaben, so the
+            // answer to „wann sind heute Hausaufgaben?" is „keine" — and the window the
+            // family actually needs is the one the Hort is open.
+            .($careDay
+                ? ', Ferienbetreuung „'.$careDay->period->name.'“ '.$careDay->window().' Uhr, keine Hausaufgaben'
+                : ', Hausaufgaben '.($hwStart ? substr((string) $hwStart, 0, 5).'–'.substr((string) $hwEnd, 0, 5) : 'keine')).'.';
 
         $excursions = Excursion::whereDate('date', '>=', $today->toDateString())->orderBy('date')->get();
         foreach ($excursions as $e) {

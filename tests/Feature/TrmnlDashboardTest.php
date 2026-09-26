@@ -9,6 +9,7 @@ use App\Enums\DepartureStatus;
 use App\Models\Absence;
 use App\Models\Child;
 use App\Models\DailyDeparture;
+use App\Models\Setting;
 use App\Models\WeeklySchedule;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -29,9 +30,33 @@ class TrmnlDashboardTest extends TestCase
         ]);
     }
 
+    /** The link the TRMNL plugin polls: signed *and* carrying the rotatable token. */
+    private function feedUrl(): string
+    {
+        return URL::signedRoute('trmnl.dashboard', ['token' => Setting::trmnlToken()]);
+    }
+
     public function test_an_unsigned_request_is_rejected(): void
     {
         $this->get(route('trmnl.dashboard'))->assertForbidden();
+    }
+
+    public function test_a_signed_request_without_the_token_is_rejected(): void
+    {
+        $this->getJson(URL::signedRoute('trmnl.dashboard'))->assertForbidden();
+    }
+
+    public function test_rotating_the_token_invalidates_the_old_link(): void
+    {
+        $old = $this->feedUrl();
+        $this->getJson($old)->assertOk();
+
+        // A leaked link is revoked here instead of by rotating APP_KEY, which would
+        // invalidate every other signed URL in the app as well.
+        $this->artisan('hort:trmnl-url --rotate')->assertSuccessful();
+
+        $this->getJson($old)->assertForbidden();
+        $this->getJson($this->feedUrl())->assertOk();
     }
 
     public function test_on_the_weekend_it_targets_the_coming_week(): void
@@ -40,7 +65,7 @@ class TrmnlDashboardTest extends TestCase
         $tom = Child::factory()->create(['name' => 'Tom']);
         $this->scheduleFor($tom, 1, '15:00'); // Monday
 
-        $this->getJson(URL::signedRoute('trmnl.dashboard'))
+        $this->getJson($this->feedUrl())
             ->assertOk()
             // "Today" jumps to the coming Monday …
             ->assertJsonPath('today.weekday', 'Montag')
@@ -53,7 +78,7 @@ class TrmnlDashboardTest extends TestCase
     public function test_the_command_prints_a_signed_dashboard_url(): void
     {
         $this->artisan('hort:trmnl-url')
-            ->expectsOutputToContain('/trmnl/dashboard?signature=')
+            ->expectsOutputToContain('/trmnl/dashboard?token=')
             ->assertSuccessful();
     }
 
@@ -81,7 +106,7 @@ class TrmnlDashboardTest extends TestCase
         // Emma is away today → off the pickup list, shown as absent.
         Absence::create(['child_id' => $emma->id, 'date' => '2026-07-06', 'reason' => 'sick']);
 
-        $response = $this->getJson(URL::signedRoute('trmnl.dashboard'))->assertOk();
+        $response = $this->getJson($this->feedUrl())->assertOk();
 
         $response
             ->assertJsonPath('today.weekday', 'Montag')
@@ -118,7 +143,7 @@ class TrmnlDashboardTest extends TestCase
             'status' => DepartureStatus::Present,
         ]);
 
-        $this->getJson(URL::signedRoute('trmnl.dashboard'))
+        $this->getJson($this->feedUrl())
             ->assertOk()
             ->assertJsonPath('today.departures.0.children.0.name', 'Leo')
             ->assertJsonPath('today.departures.0.children.0.alone', true)

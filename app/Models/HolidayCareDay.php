@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\DepartureMethod;
 use App\Models\Concerns\LogsChanges;
 use App\Observers\HolidayCareDayObserver;
 use Database\Factories\HolidayCareDayFactory;
@@ -108,6 +109,27 @@ class HolidayCareDay extends Model
             ])
             ->get()
             ->keyBy(fn (self $day): string => $day->date->toDateString());
+    }
+
+    /**
+     * How this child leaves on this day when nobody said otherwise: the Stammplan's
+     * method for that weekday, else any method the child has, else „wird abgeholt" —
+     * a child with no Stammplan at all has nothing to inherit.
+     *
+     * Used when signing a child up, and again when an arrangement is unwound and the
+     * sign-up has to fall back to a plain pickup.
+     */
+    public function defaultMethodFor(Child $child): DepartureMethod
+    {
+        $schedules = $child->weeklySchedules;
+
+        $method = $schedules->firstWhere('weekday', $this->date->dayOfWeekIso)?->method
+            ?? $schedules->firstWhere(fn ($s): bool => $s->method !== null)?->method;
+
+        // „Geht mit … mit" mirrors another child and can't be a default.
+        return $method === null || $method === DepartureMethod::WithChild
+            ? DepartureMethod::PickedUp
+            : $method;
     }
 
     /** The care window as „08:30–16:30". */

@@ -15,6 +15,9 @@ class SyncExcursionRsvp implements ShouldQueue
 {
     use Queueable;
 
+    /** Trip or child gone before the DMs are re-rendered → nothing left to sync. */
+    public bool $deleteWhenMissingModels = true;
+
     public function __construct(public Excursion $excursion, public Child $child) {}
 
     public function handle(SlackRsvp $slack): void

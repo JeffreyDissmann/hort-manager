@@ -60,7 +60,10 @@ case "$ROLE" in
         ;;
     queue)
         artisan config:cache
-        exec gosu www-data php artisan queue:work --tries=3 --sleep=3 --max-time=3600
+        # Retries wait 10s, then 1min, then 5min: nearly every failure here is a
+        # transient Slack/Paperless hiccup or a rate limit, and three retries within a
+        # second just burn the attempts and drop the DM into failed_jobs.
+        exec gosu www-data php artisan queue:work --tries=3 --backoff=10,60,300 --sleep=3 --max-time=3600
         ;;
     scheduler)
         artisan config:cache

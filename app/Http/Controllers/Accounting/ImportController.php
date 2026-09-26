@@ -22,6 +22,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -117,33 +118,42 @@ class ImportController extends Controller
             ->pluck('import_hash')
             ->flip();
 
-        $seen = [];
-        $skipped = [];
-        $drafts = collect();
+        // Drafts and the import's own bookkeeping are written together: a failure
+        // halfway through a 500-row statement used to leave the bookings behind with
+        // an import that still counted them as pending.
+        $drafts = DB::transaction(function () use ($rows, $account, $import, $existing, $mapping): Collection {
+            $seen = [];
+            $skipped = [];
+            $drafts = collect();
 
-        foreach ($rows as $row) {
-            $hash = $this->hashFor($account->id, $row);
+            foreach ($rows as $row) {
+                $hash = $this->hashFor($account->id, $row);
 
-            // Looks like a repeat — keep the row so the user can decide it's genuine.
-            if (isset($existing[$hash]) || isset($seen[$hash])) {
-                $skipped[] = $row;
+                // Looks like a repeat — keep the row so the user can decide it's genuine.
+                if (isset($existing[$hash]) || isset($seen[$hash])) {
+                    $skipped[] = $row;
 
-                continue;
+                    continue;
+                }
+                $seen[$hash] = true;
+
+                $drafts->push($this->createDraft($account, $import, $row, $hash));
             }
-            $seen[$hash] = true;
 
-            $drafts->push($this->createDraft($account, $import, $row, $hash));
-        }
+            $import->update([
+                'column_mapping' => $mapping,
+                'pending_columns' => null,
+                'row_count' => count($rows),
+                'imported_count' => $drafts->count(),
+                'duplicate_count' => count($skipped),
+                'skipped_rows' => $skipped,
+            ]);
 
-        $import->update([
-            'column_mapping' => $mapping,
-            'pending_columns' => null,
-            'row_count' => count($rows),
-            'imported_count' => $drafts->count(),
-            'duplicate_count' => count($skipped),
-            'skipped_rows' => $skipped,
-        ]);
+            return $drafts;
+        });
 
+        // Outside the transaction: the receipt-linking and category jobs read these
+        // bookings back, so they must not start before the rows are committed.
         $this->enrichDrafts($drafts);
 
         return redirect()->route('accounting.import.show', $import);

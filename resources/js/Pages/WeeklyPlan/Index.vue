@@ -8,6 +8,7 @@ import WeekNav from '@/Components/WeekNav.vue';
 import WeekTimetable from '@/Components/WeekTimetable.vue';
 import CompanionNotes from '@/Components/CompanionNotes.vue';
 import { t } from '@/i18n';
+import { inWindow, programWindows } from '@/windows';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 
@@ -121,36 +122,26 @@ function onTouchEnd(e) {
 const flash = computed(() => usePage().props.flash?.status);
 const isStaff = computed(() => usePage().props.auth?.user?.role === 'staff');
 
-function toMinutes(time) {
-    return parseInt(time.slice(0, 2), 10) * 60 + parseInt(time.slice(3, 5), 10);
-}
-
 // Pickup falls inside that day's homework slot.
 function homeworkConflict(day, i) {
     const hw = props.program[i];
-    if (!day.time || !hw || !hw.homework_start || !hw.homework_end) {
-        return false;
-    }
-    const pickup = toMinutes(day.time);
-    return pickup >= toMinutes(hw.homework_start) && pickup < toMinutes(hw.homework_end);
+
+    return inWindow(day.time, hw?.homework_start, hw?.homework_end);
 }
 
 // …and the same for a timed Aktivität: the child is busy then, so a pickup inside it
 // is worth flagging next to the trip and homework ones.
 function activityConflict(day, i) {
     const p = props.program[i];
-    if (!day.time || !p?.activity || !p.activity_start || !p.activity_end) {
-        return false;
-    }
-    const pickup = toMinutes(day.time);
-    return pickup >= toMinutes(p.activity_start) && pickup < toMinutes(p.activity_end);
+
+    return !!p?.activity && inWindow(day.time, p.activity_start, p.activity_end);
 }
 
 // Solid `ink` time; the method reads from the warm/cool tint, and the "goes home
 // alone" case additionally gets a 🚶 icon.
 function planClass(day) {
     // „Hortfrei" (no Hort that day): a clearly-visible muted slate chip — distinct from
-    // both the coloured pickup days and the amber „reported absent" cells.
+    // both the coloured pickup days and the warn-tinted „reported absent" cells.
     if (!day.time) {
         return 'bg-ink/10 text-ink/60 ring-1 ring-inset ring-ink/10';
     }
@@ -188,7 +179,7 @@ function cellUi(day, hasPlan = true) {
             label: t('weekly.closed_short'),
             labelClass: STATE_LABEL,
             title: day.closed,
-            class: 'bg-ink/10 text-ink/40',
+            class: 'bg-ink/10 text-ink/60',
             time: false,
             extras: false,
         };
@@ -204,7 +195,7 @@ function cellUi(day, hasPlan = true) {
             title: day.care.open
                 ? t('weekly.care_not_registered_title')
                 : t('weekly.care_signup_closed', { date: dayMonth(day.care.deadline) }),
-            class: 'bg-ink/5 text-ink/40 ring-1 ring-inset ring-ink/10',
+            class: 'bg-ink/5 text-ink/60 ring-1 ring-inset ring-ink/10',
             time: false,
             extras: false,
         };
@@ -215,7 +206,7 @@ function cellUi(day, hasPlan = true) {
             label: day.absent.label,
             labelClass: STATE_LABEL,
             title: day.absent.label,
-            class: 'bg-amber-100 text-amber-700',
+            class: 'bg-warn/20 text-warn-dark',
             time: false,
             extras: true,
         };
@@ -228,7 +219,7 @@ function cellUi(day, hasPlan = true) {
             label: t('weekly.no_plan'),
             labelClass: STATE_LABEL,
             title: t('weekly.no_plan_title'),
-            class: 'bg-ink/5 text-ink/40 ring-1 ring-inset ring-ink/10',
+            class: 'bg-ink/5 text-ink/60 ring-1 ring-inset ring-ink/10',
             time: false,
             extras: false,
         };
@@ -242,7 +233,7 @@ function cellUi(day, hasPlan = true) {
             day.comment,
             day.arrives_at ? [t('weekly.arrives_later', { time: day.arrives_at }), day.arrival_note].filter(Boolean).join(' · ') : null,
         ].filter(Boolean).join('\n') || undefined,
-        class: [planClass(day), day.adjusted ? 'ring-2 ring-amber-400' : ''].filter(Boolean).join(' '),
+        class: [planClass(day), day.adjusted ? 'ring-2 ring-warn/60' : ''].filter(Boolean).join(' '),
         time: !!day.time,
         extras: true,
     };
@@ -264,18 +255,8 @@ const dayEditor = ref(null);
 const editorWindows = computed(() =>
     props.program.flatMap((p, i) => {
         const date = props.weekDays[i]?.date;
-        if (!p || !date) {
-            return [];
-        }
-        const windows = [];
-        if (p.homework_start && p.homework_end) {
-            windows.push({ date, kind: 'homework', label: t('board.homework'), start: p.homework_start, end: p.homework_end });
-        }
-        if (p.activity && p.activity_start && p.activity_end) {
-            windows.push({ date, kind: 'activity', label: p.activity, start: p.activity_start, end: p.activity_end });
-        }
 
-        return windows;
+        return date ? programWindows(p, t).map((w) => ({ ...w, date })) : [];
     }),
 );
 
@@ -409,9 +390,13 @@ function answerCompanion(id, confirmed) {
                                 >
                                     {{ weekDays[i].date_label }}
                                 </div>
+                                <!-- A locked day is a plain div: no button semantics, and
+                                     no click either — the editor would refuse the save
+                                     anyway, and the keyboard can't reach it, so offering
+                                     it to the mouse only is worse than not offering it. -->
                                 <component
                                     :is="day.editable ? 'button' : 'div'"
-                                    type="button"
+                                    :type="day.editable ? 'button' : undefined"
                                     :data-testid="`wp-cell-${child.id}-${day.date}`"
                                     class="relative mt-1 flex w-full grow flex-col justify-center overflow-hidden break-words rounded-lg px-0.5 py-1.5"
                                     :class="[
@@ -420,7 +405,7 @@ function answerCompanion(id, confirmed) {
                                         day.editable ? 'cursor-pointer hover:brightness-95 active:scale-[0.97]' : '',
                                     ]"
                                     :title="day.ui.title"
-                                    @click="openCell(child, day, weekDays[i])"
+                                    @click="day.editable ? openCell(child, day, weekDays[i]) : null"
                                 >
                                     <!-- „🚶 ab" on one line, the time under it: the cell is
                                          a flex column, so these have to share a span. -->
@@ -436,7 +421,7 @@ function answerCompanion(id, confirmed) {
                                         class="mt-0.5 block truncate text-[10px] font-normal leading-tight"
                                         :class="[
                                             day.companion.confirmed === true ? 'opacity-70' : 'font-medium',
-                                            day.companion.confirmed === false ? 'text-red-700' : '',
+                                            day.companion.confirmed === false ? 'text-danger-dark' : '',
                                             day.companion.confirmed === null ? 'text-hort-orange-dark' : '',
                                         ]"
                                     >
@@ -481,13 +466,13 @@ function answerCompanion(id, confirmed) {
                             <template v-for="(day, i) in child.days" :key="day.date">
                                 <p
                                     v-if="day.birthday !== null"
-                                    class="rounded-lg bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700"
+                                    class="rounded-lg bg-warn/10 px-2 py-1 text-xs font-medium text-warn-dark"
                                 >
                                     {{ $t('weekly.birthday_flag', { day: weekDays[i].label, age: day.birthday }) }}
                                 </p>
                                 <p
                                     v-if="day.conflict"
-                                    class="rounded-lg bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700"
+                                    class="rounded-lg bg-warn/10 px-2 py-1 text-xs font-medium text-warn-dark"
                                 >
                                     {{ $t('weekly.pickup_conflict', { day: weekDays[i].label, time: day.time, name: day.excursion.name }) }}<span
                                         v-if="day.excursion.return_at"
@@ -509,14 +494,14 @@ function answerCompanion(id, confirmed) {
                                 </p>
                                 <p
                                     v-if="homeworkConflict(day, i)"
-                                    class="rounded-lg bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700"
+                                    class="rounded-lg bg-warn/10 px-2 py-1 text-xs font-medium text-warn-dark"
                                 >
                                     {{ $t('weekly.homework_conflict', { day: weekDays[i].label, time: day.time }) }}
                                 </p>
                                 <p
                                     v-if="activityConflict(day, i)"
                                     :data-testid="`activity-conflict-${child.id}-${day.date}`"
-                                    class="rounded-lg bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700"
+                                    class="rounded-lg bg-warn/10 px-2 py-1 text-xs font-medium text-warn-dark"
                                 >
                                     {{ $t('weekly.activity_conflict', { day: weekDays[i].label, time: day.time, name: program[i].activity }) }}
                                 </p>
@@ -554,7 +539,7 @@ function answerCompanion(id, confirmed) {
                         {{ $t('weekly.empty_week') }}
                     </p>
 
-                    <!-- Not at the Hort this week: reported absences (amber) + regularly
+                    <!-- Not at the Hort this week: reported absences (warn) + regularly
                          „Hortfrei" (muted) — the latter don't appear on the grid above. -->
                     <div
                         v-if="notThereDays.length"
@@ -568,7 +553,7 @@ function answerCompanion(id, confirmed) {
                         >
                             <span class="w-8 shrink-0 pt-0.5 font-semibold text-ink/70">{{ weekColumns[d.i].label }}:</span>
                             <span class="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1">
-                                <span v-if="d.absent.length" class="text-amber-800">{{ absenceLine(d.absent) }}</span>
+                                <span v-if="d.absent.length" class="text-warn-dark">{{ absenceLine(d.absent) }}</span>
                                 <span v-if="d.absent.length && d.hortfrei.length" class="text-ink/30">·</span>
                                 <template v-if="d.hortfrei.length">
                                     <span class="text-ink/50">{{ $t('weekly.free') }}:</span>
@@ -602,7 +587,7 @@ function answerCompanion(id, confirmed) {
                         🚶 {{ $t('weekly.legend_alone') }}
                     </span>
                     <span class="flex items-center gap-1.5">
-                        <span class="h-3 w-3 rounded-full ring-2 ring-amber-400" />
+                        <span class="h-3 w-3 rounded-full ring-2 ring-warn/60" />
                         {{ $t('weekly.legend_changed') }}
                     </span>
                 </div>

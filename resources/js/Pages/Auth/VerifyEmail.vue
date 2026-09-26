@@ -32,7 +32,7 @@ const verificationLinkSent = computed(
         </div>
 
         <div
-            class="mb-4 text-sm font-medium text-green-600"
+            class="mb-4 text-sm font-medium text-hort-teal-dark"
             v-if="verificationLinkSent"
         >
             {{ $t('login.verify_link_sent') }}

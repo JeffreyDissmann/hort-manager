@@ -17,6 +17,7 @@ use App\Models\HolidayCareDay;
 use App\Models\HolidayPeriod;
 use App\Models\HomeworkDefault;
 use App\Support\CompanionNotes;
+use App\Support\DayWindows;
 use App\Support\EffectivePlan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -169,11 +170,11 @@ class WeeklyOverviewController extends Controller
             }
         }
 
-        $currentWeek = $weekChildren->map(function (Child $child) use ($weekDays, $departures, $absences, $todayString, $excursionByChildDate, $toMinutes, $childNames, $companionPlans, $closedDays, $careDays) {
+        $currentWeek = $weekChildren->map(function (Child $child) use ($weekDays, $departures, $absences, $todayString, $excursionByChildDate, $childNames, $companionPlans, $closedDays, $careDays) {
             $byWeekday = $child->weeklySchedules->keyBy('weekday');
             $canManage = true;
 
-            $days = $weekDays->values()->map(function (array $day, int $i) use ($child, $byWeekday, $departures, $absences, $todayString, $canManage, $excursionByChildDate, $toMinutes, $childNames, $companionPlans, $closedDays, $careDays) {
+            $days = $weekDays->values()->map(function (array $day, int $i) use ($child, $byWeekday, $departures, $absences, $todayString, $canManage, $excursionByChildDate, $childNames, $companionPlans, $closedDays, $careDays) {
                 $schedule = $byWeekday->get($i + 1);
                 // Ferienbetreuung: no school, so the Stammplan says nothing about this
                 // day. Only a sign-up (a DailyDeparture) puts the child here at all.
@@ -214,13 +215,12 @@ class WeeklyOverviewController extends Controller
                 $absence = $absences->get($child->id.'|'.$day['date']);
 
                 // Is the child on a trip this day, and does the pickup fall inside it?
+                // Same half-open rule as everywhere else (DayWindows), on the already
+                // shortened H:i strings this array carries.
                 $excursion = $excursionByChildDate[$child->id.'|'.$day['date']] ?? null;
-                $conflict = false;
-                if ($excursion && $time && $excursion['return_at']) {
-                    $pickup = $toMinutes($time);
-                    $departAt = $excursion['depart_at'] ? $toMinutes($excursion['depart_at']) : 0;
-                    $conflict = $pickup >= $departAt && $pickup < $toMinutes($excursion['return_at']);
-                }
+                $conflict = $excursion !== null
+                    && $excursion['return_at'] !== null
+                    && DayWindows::contains($time, $excursion['depart_at'] ?? '00:00', $excursion['return_at']);
 
                 // Age the child turns this day, or null if it's not their birthday.
                 $dob = $child->date_of_birth;

@@ -28,7 +28,7 @@ const badgeClass = computed(() => {
     }
     return props.response === false
         ? 'bg-hort-purple/10 text-hort-purple'
-        : 'bg-ink/5 text-ink/40';
+        : 'bg-ink/5 text-ink/60';
 });
 </script>
 

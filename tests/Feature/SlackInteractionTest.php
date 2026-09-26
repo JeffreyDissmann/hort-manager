@@ -88,6 +88,75 @@ class SlackInteractionTest extends TestCase
             && str_contains($request['text'], 'Stammplan'));
     }
 
+    public function test_a_yes_click_says_so_when_the_clash_cannot_be_moved(): void
+    {
+        Http::fake();
+        Carbon::setTestNow('2026-06-22 09:00'); // Monday
+        $guardian = User::factory()->create(['slack_id' => 'U1']);
+        $child = Child::factory()->create(['name' => 'Nika']);
+        $child->guardians()->attach($guardian);
+
+        $excursion = Excursion::factory()->create([
+            'date' => '2026-06-24', 'depart_at' => '13:30', 'return_at' => '17:00',
+            'rsvp_deadline' => '2026-06-23',
+        ]);
+        $excursion->children()->attach($child->id);
+
+        // Nika goes home with Mia at 14:00 — inside the trip, and not ours to move.
+        $mia = Child::factory()->create(['name' => 'Mia']);
+        $mia->weeklySchedules()->create(['weekday' => 3, 'planned_time' => '14:00', 'method' => DepartureMethod::PickedUp]);
+        DailyDeparture::create([
+            'child_id' => $child->id, 'date' => '2026-06-24', 'status' => DepartureStatus::Present,
+            'planned_method' => DepartureMethod::WithChild, 'companion_child_id' => $mia->id,
+            'companion_confirmed' => true,
+        ]);
+
+        $this->postInteraction([
+            'user' => ['id' => 'U1'],
+            'response_url' => 'https://hooks.slack.com/confirm',
+            'actions' => [['value' => "rsvp|{$excursion->id}|{$child->id}|1"]],
+        ])->assertNoContent();
+
+        // Nothing moved — but the family is told, instead of the button going quiet.
+        Http::assertSent(fn ($request) => $request->url() === 'https://hooks.slack.com/confirm'
+            && str_contains($request['text'], '14:00')
+            && str_contains($request['text'], 'mit einem anderen Kind mit'));
+    }
+
+    public function test_a_yes_click_flags_an_arrival_inside_the_trip(): void
+    {
+        Http::fake();
+        Carbon::setTestNow('2026-06-22 09:00');
+        $guardian = User::factory()->create(['slack_id' => 'U1']);
+        $child = Child::factory()->create(['name' => 'Nika']);
+        $child->guardians()->attach($guardian);
+        $child->weeklySchedules()->create(['weekday' => 3, 'planned_time' => '14:00', 'method' => DepartureMethod::SentHome]);
+
+        $excursion = Excursion::factory()->create([
+            'date' => '2026-06-24', 'depart_at' => '13:30', 'return_at' => '17:00',
+            'rsvp_deadline' => '2026-06-23',
+        ]);
+        $excursion->children()->attach($child->id);
+
+        // „Kommt erst um 15:00" — the pickup moves to 17:00, but the arrival can't:
+        // that's the family's own appointment, and 15:00 is an empty Hort.
+        DailyDeparture::create([
+            'child_id' => $child->id, 'date' => '2026-06-24', 'status' => DepartureStatus::Present,
+            'planned_time' => '14:00', 'planned_method' => DepartureMethod::SentHome,
+            'arrives_at' => '15:00', 'arrival_note' => 'Zahnarzt',
+        ]);
+
+        $this->postInteraction([
+            'user' => ['id' => 'U1'],
+            'response_url' => 'https://hooks.slack.com/confirm',
+            'actions' => [['value' => "rsvp|{$excursion->id}|{$child->id}|1"]],
+        ])->assertNoContent();
+
+        Http::assertSent(fn ($request) => $request->url() === 'https://hooks.slack.com/confirm'
+            && str_contains($request['text'], 'kommt an dem Tag erst um 15:00')
+            && str_contains($request['text'], '17:00'));
+    }
+
     public function test_a_no_click_leaves_the_pickup_alone(): void
     {
         Http::fake();
@@ -210,6 +279,52 @@ class SlackInteractionTest extends TestCase
 
         $this->assertTrue((bool) $departure->fresh()->companion_confirmed);
         $this->assertSame($guardian->id, $departure->fresh()->companion_confirmed_by);
+    }
+
+    public function test_a_stale_request_is_rejected_even_with_a_valid_signature(): void
+    {
+        Http::fake();
+        $guardian = User::factory()->create(['slack_id' => 'U1']);
+        [$excursion, $child] = $this->pendingExcursionFor($guardian);
+
+        // A signed payload captured from the wire stays valid forever without the
+        // timestamp window — replaying it would let someone answer for a family.
+        config(['services.slack.signing_secret' => self::SECRET]);
+        $json = json_encode([
+            'user' => ['id' => 'U1'],
+            'actions' => [['value' => "rsvp|{$excursion->id}|{$child->id}|1"]],
+        ]);
+        $body = 'payload='.urlencode($json);
+        $timestamp = (string) (time() - 600); // ten minutes old
+        $signature = 'v0='.hash_hmac('sha256', "v0:{$timestamp}:{$body}", self::SECRET);
+
+        $this->call('POST', '/slack/interactions', ['payload' => $json], [], [], [
+            'CONTENT_TYPE' => 'application/x-www-form-urlencoded',
+            'HTTP_X-Slack-Request-Timestamp' => $timestamp,
+            'HTTP_X-Slack-Signature' => $signature,
+        ], $body)->assertForbidden();
+
+        $this->assertNull($excursion->children()->find($child->id)->pivot->response);
+    }
+
+    public function test_the_tagalongs_own_guardian_cannot_confirm_in_slack(): void
+    {
+        Http::fake();
+        $guardian = User::factory()->create(['slack_id' => 'U1']);
+        $departure = $this->pendingCompanionFor($guardian);
+
+        // The guardian of the child who wants to tag along — the same rule as in the
+        // app: the answer belongs to the companion's family.
+        $requester = User::factory()->create(['slack_id' => 'U7']);
+        $requester->children()->attach($departure->child_id);
+
+        $this->postInteraction([
+            'user' => ['id' => 'U7'],
+            'response_url' => 'https://hooks.slack.test/confirm',
+            'actions' => [['value' => "companion|{$departure->id}|1"]],
+        ])->assertNoContent();
+
+        $this->assertNull($departure->fresh()->companion_confirmed);
     }
 
     public function test_a_companion_click_from_a_non_guardian_is_ignored(): void

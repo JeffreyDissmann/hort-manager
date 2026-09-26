@@ -107,6 +107,7 @@ return [
         'in_homework' => 'inside the homework slot (:from–:to).',
         'in_activity' => 'inside the activity „:name" (:from–:to).',
         'in_excursion' => 'inside the trip „:name" (:from–:to).',
+        'outside_care' => 'outside the holiday care hours (:from–:to).',
         'action' => 'Open the Wochenplan',
         'action_standard' => 'Change the Stammplan',
     ],

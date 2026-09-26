@@ -90,7 +90,7 @@ function setResponse(childId, response) {
                                 :class="{
                                     'text-hort-teal-dark': child.response === true,
                                     'text-hort-purple': child.response === false,
-                                    'text-amber-600': child.response === null,
+                                    'text-warn-dark': child.response === null,
                                 }"
                             >
                                 {{

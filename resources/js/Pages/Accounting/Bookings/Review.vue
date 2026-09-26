@@ -53,8 +53,8 @@ const selectedCategory = computed(() => props.categories.find((c) => c.id === fo
 const isReversal = computed(() => !!selectedCategory.value && selectedCategory.value.direction !== props.booking.direction);
 
 const confidenceClass = {
-    0: 'bg-red-100 text-red-700',
-    1: 'bg-amber-100 text-amber-700',
+    0: 'bg-danger/15 text-danger-dark',
+    1: 'bg-warn/20 text-warn-dark',
     2: 'bg-hort-teal/15 text-hort-teal-dark',
 };
 
@@ -83,7 +83,7 @@ function send(action) {
                     </Link>
                     <h2 class="truncate text-xl font-semibold text-ink">{{ $t('accounting.review.title') }}</h2>
                 </div>
-                <span class="shrink-0 rounded-full bg-amber-100 px-3 py-1 text-sm font-semibold text-amber-700">
+                <span class="shrink-0 rounded-full bg-warn/20 px-3 py-1 text-sm font-semibold text-warn-dark">
                     {{ $t('accounting.review.remaining', { count: remaining }) }}
                 </span>
             </div>
@@ -99,7 +99,7 @@ function send(action) {
                     </div>
                     <p
                         class="shrink-0 text-xl font-semibold tabular-nums"
-                        :class="booking.amount_cents < 0 ? 'text-red-600' : 'text-hort-teal-dark'"
+                        :class="booking.amount_cents < 0 ? 'text-danger' : 'text-hort-teal-dark'"
                     >
                         {{ formatEuro(booking.amount_cents) }}
                     </p>
@@ -141,7 +141,7 @@ function send(action) {
                         <template #category-note>
                             <p
                                 v-if="isReversal"
-                                class="mt-2 rounded-lg bg-amber-500/10 px-3 py-2 text-xs font-medium text-amber-700 dark:text-amber-500"
+                                class="mt-2 rounded-lg bg-warn/10 px-3 py-2 text-xs font-medium text-warn-dark"
                                 data-testid="review-reversal-note"
                             >
                                 {{ $t('accounting.review.reversal_note') }}
@@ -167,7 +167,7 @@ function send(action) {
                     <div class="flex gap-2">
                         <button
                             type="button"
-                            class="flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-medium text-red-600 transition hover:bg-red-50"
+                            class="flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-medium text-danger transition hover:bg-danger/10"
                             @click="send('discard')"
                         >
                             <TrashIcon class="h-4 w-4" /> {{ $t('accounting.review.discard') }}

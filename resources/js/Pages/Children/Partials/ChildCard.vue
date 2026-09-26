@@ -51,7 +51,7 @@ function formatDate(value) {
                 v-if="child.can_delete"
                 type="button"
                 @click="emit('delete', child)"
-                class="shrink-0 rounded-lg p-2 text-ink/30 transition hover:bg-red-50 hover:text-red-600"
+                class="shrink-0 rounded-lg p-2 text-ink/40 transition hover:bg-danger/10 hover:text-danger"
                 :aria-label="$t('children.delete_child')"
             >
                 <TrashIcon class="h-5 w-5" />

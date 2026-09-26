@@ -69,3 +69,27 @@ it('moves a pickup that falls inside the trip when the family joins', function (
     // That one day only — the Stammplan is untouched.
     expect(substr((string) $child->weeklySchedules()->first()->planned_time, 0, 5))->toBe('14:00');
 });
+
+it('still lets an unanswered family answer after the deadline, but not change it', function () {
+    $parent = User::factory()->parent()->create();
+    $lena = Child::factory()->withGuardian($parent)->create(['name' => 'Lena']);
+    $jonas = Child::factory()->withGuardian($parent)->create(['name' => 'Jonas']);
+
+    $excursion = Excursion::factory()->create([
+        'name' => 'Zoo-Ausflug',
+        'date' => now()->addDays(2)->toDateString(),
+        'rsvp_deadline' => now()->subDay()->toDateString(),
+    ]);
+    $excursion->children()->syncWithoutDetaching([
+        $lena->id => ['response' => null],   // never answered → still asked
+        $jonas->id => ['response' => true],  // answered → no buttons any more
+    ]);
+
+    actAndVisit($parent, '/polls')
+        ->assertSee('Anmeldeschluss vorbei')
+        ->assertMissing("@rsvp-yes-{$jonas->id}")
+        ->click("@rsvp-yes-{$lena->id}")
+        ->assertNoJavaScriptErrors();
+
+    expect((bool) $excursion->children()->find($lena->id)->pivot->response)->toBeTrue();
+});

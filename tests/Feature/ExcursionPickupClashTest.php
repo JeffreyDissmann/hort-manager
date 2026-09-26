@@ -9,6 +9,7 @@ use App\Models\Absence;
 use App\Models\Child;
 use App\Models\DailyDeparture;
 use App\Models\Excursion;
+use App\Models\HolidayPeriod;
 use App\Models\User;
 use App\Notifications\LateChange;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -78,6 +79,29 @@ it('reports but does not offer to move a „geht mit … mit" pickup', function 
     assertPlan(['time' => '14:00', 'conflict' => true, 'movable' => false]);
 });
 
+it('will not move a pickup on a day the child has already left', function () {
+    DailyDeparture::create([
+        'child_id' => $this->child->id, 'date' => '2026-06-24', 'status' => 'picked_up',
+        'planned_time' => '14:00', 'planned_method' => DepartureMethod::SentHome,
+        'left_at' => Carbon::parse('2026-06-24 14:05'),
+    ]);
+
+    // The day is closed; rewriting its plan would contradict what staff recorded.
+    assertPlan(['conflict' => true, 'movable' => false]);
+});
+
+it('will not move a pickup on a Schließtag', function () {
+    HolidayPeriod::create([
+        'name' => 'Fortbildung', 'type' => 'closed',
+        'starts_on' => '2026-06-24', 'ends_on' => '2026-06-24',
+    ]);
+
+    // No Hort that day: the Stammplan doesn't apply, so there is no pickup at all —
+    // nothing to warn about and nothing to move.
+    $this->actingAs($this->parent)->get('/polls')
+        ->assertInertia(fn (AssertableInertia $page) => $page->where('upcoming.0.children.0.plan', null));
+});
+
 it('says nothing for a child reported absent that day', function () {
     Absence::report($this->child, '2026-06-24', AbsenceReason::Sick, $this->parent->id, 'Fieber');
 
@@ -130,13 +154,53 @@ it('leaves a „geht mit … mit" pickup alone and keeps warning about it', func
 
     $this->actingAs($this->parent)
         ->patch(route('polls.update', $this->excursion), ['child_id' => $this->child->id, 'response' => true])
-        ->assertSessionHas('status', __('flash.rsvp_saved', ['name' => 'Nika']));
+        ->assertSessionHas('status', fn (string $s) => str_starts_with($s, __('flash.rsvp_saved', ['name' => 'Nika'])));
 
     $day = DailyDeparture::firstWhere('child_id', $this->child->id);
     expect($day->planned_time)->toBeNull()
         ->and($day->planned_method)->toBe(DepartureMethod::WithChild);
 
     assertPlan(['conflict' => true, 'movable' => false]);
+});
+
+it('says out loud that a „geht mit … mit" clash was not moved', function () {
+    $mia = Child::factory()->create(['name' => 'Mia']);
+    $mia->weeklySchedules()->create(['weekday' => 3, 'planned_time' => '14:00', 'method' => DepartureMethod::PickedUp]);
+    DailyDeparture::create([
+        'child_id' => $this->child->id, 'date' => '2026-06-24', 'status' => 'present',
+        'planned_method' => DepartureMethod::WithChild, 'companion_child_id' => $mia->id,
+        'companion_confirmed' => true,
+    ]);
+
+    // „Antwort gespeichert." alone would read as „alles geregelt" — it isn't.
+    $this->actingAs($this->parent)
+        ->patch(route('polls.update', $this->excursion), ['child_id' => $this->child->id, 'response' => true])
+        ->assertSessionHas('status', fn (string $s) => str_contains($s, '14:00')
+            && str_contains($s, 'mit einem anderen Kind mit'));
+});
+
+it('flags a „kommt später" that lands inside the trip', function () {
+    $this->actingAs($this->parent)->patch(route('weekly-plan.adjust'), [
+        'child_id' => $this->child->id, 'date' => '2026-06-24',
+        'planned_time' => '16:00', 'planned_method' => 'sent_home',
+        'arrives_at' => '15:00', 'arrival_note' => 'Zahnarzt',
+    ])->assertSessionHasNoErrors();
+
+    // The pickup moves to 17:00 — the arrival can't, so it is said instead.
+    $this->actingAs($this->parent)
+        ->patch(route('polls.update', $this->excursion), ['child_id' => $this->child->id, 'response' => true])
+        ->assertSessionHas('status', fn (string $s) => str_contains($s, 'erst um 15:00')
+            && str_contains($s, 'noch unterwegs'));
+
+    expect(DailyDeparture::firstWhere('child_id', $this->child->id)->arrivalTime())->toBe('15:00');
+});
+
+it('stays quiet when nothing is left to sort out', function () {
+    $this->child->weeklySchedules()->first()->update(['planned_time' => '17:30']);
+
+    $this->actingAs($this->parent)
+        ->patch(route('polls.update', $this->excursion), ['child_id' => $this->child->id, 'response' => true])
+        ->assertSessionHas('status', __('flash.rsvp_saved', ['name' => 'Nika']));
 });
 
 it('tells staff when a parent moves it late in the day', function () {

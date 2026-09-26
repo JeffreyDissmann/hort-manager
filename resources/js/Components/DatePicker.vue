@@ -166,6 +166,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown));
                     </button>
                     <select
                         :value="view.getMonth()"
+                        :aria-label="$t('components.day.month')"
                         class="min-w-0 flex-1 rounded-md border-ink/20 py-1 text-sm focus:border-hort-teal focus:ring-hort-teal"
                         @change="setMonth"
                     >
@@ -173,12 +174,13 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown));
                     </select>
                     <select
                         :value="view.getFullYear()"
+                        :aria-label="$t('components.day.year')"
                         class="rounded-md border-ink/20 py-1 text-sm focus:border-hort-teal focus:ring-hort-teal"
                         @change="setYear"
                     >
                         <option v-for="y in years" :key="y" :value="y">{{ y }}</option>
                     </select>
-                    <button type="button" class="rounded-lg p-1 text-ink/60 hover:bg-ink/5" :aria-label="$t('components.day.next')" @click="shiftMonth(1)">
+                    <button type="button" data-testid="date-next-month" class="rounded-lg p-1 text-ink/60 hover:bg-ink/5" :aria-label="$t('components.day.next')" @click="shiftMonth(1)">
                         <ChevronRightIcon class="h-4 w-4" />
                     </button>
                 </div>

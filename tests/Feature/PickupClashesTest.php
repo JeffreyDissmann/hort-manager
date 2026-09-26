@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 use App\Enums\AbsenceReason;
 use App\Enums\DepartureMethod;
+use App\Enums\DepartureStatus;
 use App\Enums\UserRole;
 use App\Models\Absence;
 use App\Models\Child;
+use App\Models\DailyDeparture;
 use App\Models\DailyProgram;
 use App\Models\Excursion;
+use App\Models\HolidayCareDay;
 use App\Models\HolidayPeriod;
 use App\Models\HomeworkDefault;
 use App\Models\User;
@@ -109,6 +112,55 @@ it('reports a pickup inside an Ausflug the child joins', function () {
     expect(PickupClashes::for($this->parent)['dated'][0])->toMatchArray([
         'date' => '2026-06-25', 'kind' => 'excursion', 'name' => 'Zoo',
     ]);
+});
+
+it('reports a pickup outside the Betreuungszeit of a Ferienbetreuung day', function () {
+    $period = HolidayPeriod::factory()->care()->create([
+        'name' => 'Sommerferien', 'starts_on' => '2026-06-24', 'ends_on' => '2026-06-24',
+    ]);
+    $period->generateCareDays();
+    $day = HolidayCareDay::firstWhere('date', '2026-06-24');
+    $day->update(['starts_at' => '08:30', 'ends_at' => '16:00']);
+
+    // Signed up, but the family planned 17:00 — an hour after the Hort is staffed.
+    DailyDeparture::create([
+        'child_id' => $this->child->id, 'date' => '2026-06-24',
+        'holiday_care_day_id' => $day->id, 'status' => DepartureStatus::Present,
+        'planned_time' => '17:00', 'planned_method' => DepartureMethod::PickedUp,
+    ]);
+
+    expect(PickupClashes::for($this->parent)['dated'][0])->toMatchArray([
+        'date' => '2026-06-24', 'time' => '17:00', 'kind' => 'care',
+        'name' => 'Sommerferien', 'from' => '08:30', 'to' => '16:00',
+    ]);
+});
+
+it('says nothing when the care pickup sits inside the Betreuungszeit', function () {
+    $period = HolidayPeriod::factory()->care()->create([
+        'starts_on' => '2026-06-24', 'ends_on' => '2026-06-24',
+    ]);
+    $period->generateCareDays();
+    $day = HolidayCareDay::firstWhere('date', '2026-06-24');
+    $day->update(['starts_at' => '08:30', 'ends_at' => '16:00']);
+
+    // The end of the Betreuungszeit is the normal case — signing up plans exactly that.
+    DailyDeparture::create([
+        'child_id' => $this->child->id, 'date' => '2026-06-24',
+        'holiday_care_day_id' => $day->id, 'status' => DepartureStatus::Present,
+        'planned_time' => '16:00', 'planned_method' => DepartureMethod::PickedUp,
+    ]);
+
+    expect(PickupClashes::for($this->parent)['dated'])->toBe([]);
+});
+
+it('says nothing about a care day the child is not signed up for', function () {
+    $period = HolidayPeriod::factory()->care()->create([
+        'starts_on' => '2026-06-24', 'ends_on' => '2026-06-24',
+    ]);
+    $period->generateCareDays();
+    schedule(3, '17:00'); // the Stammplan doesn't apply in den Ferien
+
+    expect(PickupClashes::for($this->parent)['dated'])->toBe([]);
 });
 
 it('ignores days the child is away, and days the Hort is shut', function () {

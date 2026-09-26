@@ -13,6 +13,7 @@ import { confirm as companionConfirm } from '@/routes/companion';
 import { Head, router, usePage } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
 import { t } from '@/i18n';
+import { inExcursion, inWindow, programWindows } from '@/windows';
 
 const props = defineProps({
     date: { type: Object, required: true },
@@ -110,10 +111,6 @@ function planLabel(row) {
     return `${icon ? icon + ' ' : ''}${time} · ${method}`;
 }
 
-function toMinutes(time) {
-    return parseInt(time.slice(0, 2), 10) * 60 + parseInt(time.slice(3, 5), 10);
-}
-
 // The header repeats the Aktivität's window only when the timeline below can't carry
 // it — with nobody on the board there are no time slots to place its card in.
 const activityLine = computed(() => {
@@ -131,21 +128,15 @@ const activityLine = computed(() => {
 // Pickup falls inside today's homework slot.
 function homeworkConflict(row) {
     const hw = props.program;
-    if (!row.planned_time || !hw || !hw.homework_start || !hw.homework_end) {
-        return false;
-    }
-    const pickup = toMinutes(row.planned_time);
-    return pickup >= toMinutes(hw.homework_start) && pickup < toMinutes(hw.homework_end);
+
+    return inWindow(row.planned_time, hw?.homework_start, hw?.homework_end);
 }
 
 // …or inside a timed Aktivität — the same „the child is busy then" warning.
 function activityConflict(row) {
     const p = props.program;
-    if (!row.planned_time || !p?.activity || !p.activity_start || !p.activity_end) {
-        return false;
-    }
-    const pickup = toMinutes(row.planned_time);
-    return pickup >= toMinutes(p.activity_start) && pickup < toMinutes(p.activity_end);
+
+    return !!p?.activity && inWindow(row.planned_time, p.activity_start, p.activity_end);
 }
 
 // The board grouped by time: everything happening at the same time — children
@@ -174,8 +165,8 @@ const boardBlocks = computed(() => {
     // The day's two windows — Hausaufgaben and a timed Aktivität — are shown the same
     // way: a vertical bar beside the pickups it covers, or, when no pickup falls inside
     // it, a horizontal card at its start time so the window still has a place in the day.
-    for (const w of programWindows.value) {
-        const overlaps = (b) => b.rows.length && b.time !== null && b.time >= w.start && b.time < w.end;
+    for (const w of dayWindows.value) {
+        const overlaps = (b) => b.rows.length && inWindow(b.time, w.start, w.end);
         if (blocks.some(overlaps)) {
             continue;
         }
@@ -191,19 +182,7 @@ const boardBlocks = computed(() => {
  * The day's timed windows, in the order they start. Each is drawn either as a bar or
  * as a card (see boardBlocks); `kind` picks the colour and the label.
  */
-const programWindows = computed(() => {
-    const p = props.program;
-    const windows = [];
-
-    if (p?.homework_start && p?.homework_end) {
-        windows.push({ kind: 'homework', start: p.homework_start, end: p.homework_end, label: t('board.homework') });
-    }
-    if (p?.activity && p.activity_start && p.activity_end) {
-        windows.push({ kind: 'activity', start: p.activity_start, end: p.activity_end, label: p.activity });
-    }
-
-    return windows.sort((a, b) => (a.start < b.start ? -1 : 1));
-});
+const dayWindows = computed(() => programWindows(props.program, t));
 
 /**
  * The bars to draw beside the pickups: a window covering at least one pickup slot,
@@ -213,10 +192,10 @@ const programWindows = computed(() => {
 const programBars = computed(() => {
     const bars = [];
 
-    for (const w of programWindows.value) {
+    for (const w of dayWindows.value) {
         const idxs = [];
         boardBlocks.value.forEach((b, i) => {
-            if (b.rows.length && b.time !== null && b.time >= w.start && b.time < w.end) {
+            if (b.rows.length && inWindow(b.time, w.start, w.end)) {
                 idxs.push(i);
             }
         });
@@ -238,7 +217,7 @@ const laneCount = computed(() => programBars.value.reduce((n, b) => Math.max(n, 
 
 // The same windows, dated — the DayEditor warns when a pickup is moved into one.
 const editorWindows = computed(() =>
-    programWindows.value.map((w) => ({ ...w, date: props.date.iso })),
+    dayWindows.value.map((w) => ({ ...w, date: props.date.iso })),
 );
 
 // Lanes first, then the pickups: „auto auto 1fr" while two bars overlap, „auto 1fr"
@@ -248,7 +227,7 @@ const boardGridColumns = computed(() =>
 );
 
 const barClass = {
-    homework: 'border-amber-300 bg-amber-50 text-amber-700',
+    homework: 'border-warn/40 bg-warn/10 text-warn-dark',
     activity: 'border-hort-purple/40 bg-hort-purple/10 text-hort-purple',
 };
 
@@ -263,13 +242,7 @@ function blockBesideBar(i) {
 
 // Pickup falls inside the child's excursion window.
 function excursionConflict(row) {
-    const ex = row.excursion;
-    if (!ex || !row.planned_time || !ex.return_at) {
-        return false;
-    }
-    const pickup = toMinutes(row.planned_time);
-    const depart = ex.depart_at ? toMinutes(ex.depart_at) : 0;
-    return pickup >= depart && pickup < toMinutes(ex.return_at);
+    return inExcursion(row.planned_time, row.excursion);
 }
 
 // Guards every board mutation so a double-tap on a phone can't fire it twice.
@@ -495,25 +468,25 @@ function editHortfrei(child) {
                 </div>
             </div>
 
-            <!-- Not at the Hort today — one block combining reported absences (amber,
+            <!-- Not at the Hort today — one block combining reported absences (warn,
                  needs attention) and regular „Hortfrei" days (muted, expected). -->
             <div
                 v-if="absent.length || arrivingLater.length || hortfrei.length"
                 class="space-y-2 rounded-2xl bg-ink/5 p-4 text-sm"
             >
                 <div v-if="absent.length">
-                    <p class="mb-1 font-semibold text-amber-800">{{ $t('board.absent_today') }}</p>
+                    <p class="mb-1 font-semibold text-warn-dark">{{ $t('board.absent_today') }}</p>
                     <div class="flex flex-wrap gap-1.5">
                         <span
                             v-for="(a, i) in absent"
                             :key="i"
-                            class="inline-flex items-center gap-1.5 rounded-lg bg-amber-100 px-2 py-1 text-xs font-medium text-amber-800"
+                            class="inline-flex items-center gap-1.5 rounded-lg bg-warn/20 px-2 py-1 text-xs font-medium text-warn-dark"
                         >
                             {{ a.name }} · {{ a.reason_label }}<span v-if="a.comment" class="font-normal opacity-80"> · {{ a.comment }}</span>
                             <button
                                 v-if="a.can_manage"
                                 type="button"
-                                class="text-amber-700/70 underline-offset-2 hover:text-amber-900 hover:underline"
+                                class="text-warn-dark/70 underline-offset-2 hover:text-warn-dark hover:underline"
                                 @click="clearAbsence(a)"
                             >
                                 {{ $t('board.clear_absence') }}
@@ -698,7 +671,7 @@ function editHortfrei(child) {
                                 class="rounded-2xl bg-surface p-4 shadow-sm transition"
                                 :class="[
                                     { 'opacity-60': row.status === 'picked_up' || row.status === 'sent_home' },
-                                    homeworkConflict(row) ? 'ring-1 ring-amber-300' : '',
+                                    homeworkConflict(row) ? 'ring-1 ring-warn/50' : '',
                                 ]"
                             >
                     <div class="flex items-start justify-between gap-3">
@@ -707,7 +680,7 @@ function editHortfrei(child) {
                                 {{ row.name }}
                                 <span
                                     v-if="row.birthday !== null"
-                                    class="ml-1 rounded-md bg-amber-100 px-1.5 py-0.5 text-xs font-semibold text-amber-700"
+                                    class="ml-1 rounded-md bg-warn/20 px-1.5 py-0.5 text-xs font-semibold text-warn-dark"
                                 >
                                     {{ $t('board.turns', { age: row.birthday }) }}
                                 </span>
@@ -719,7 +692,7 @@ function editHortfrei(child) {
                                 </span>
                                 <span
                                     v-if="row.is_overridden"
-                                    class="ml-1 rounded bg-amber-100 px-1.5 py-0.5 text-[11px] font-medium text-amber-700"
+                                    class="ml-1 rounded bg-warn/20 px-1.5 py-0.5 text-[11px] font-medium text-warn-dark"
                                 >
                                     {{ $t('board.changed_today') }}
                                 </span>
@@ -756,20 +729,20 @@ function editHortfrei(child) {
                             </p>
                             <p
                                 v-if="row.status === 'present' && excursionConflict(row)"
-                                class="mt-1 inline-block rounded-lg bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700"
+                                class="mt-1 inline-block rounded-lg bg-warn/10 px-2 py-1 text-xs font-medium text-warn-dark"
                             >
                                 {{ $t('board.pickup_during_excursion') }}
                             </p>
                             <p
                                 v-if="row.status === 'present' && homeworkConflict(row)"
-                                class="mt-1 inline-block rounded-lg bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700"
+                                class="mt-1 inline-block rounded-lg bg-warn/10 px-2 py-1 text-xs font-medium text-warn-dark"
                             >
                                 {{ $t('board.pickup_during_homework') }}
                             </p>
                             <p
                                 v-if="row.status === 'present' && activityConflict(row)"
                                 :data-testid="`activity-conflict-${row.child_id}`"
-                                class="mt-1 inline-block rounded-lg bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700"
+                                class="mt-1 inline-block rounded-lg bg-warn/10 px-2 py-1 text-xs font-medium text-warn-dark"
                             >
                                 {{ $t('board.pickup_during_activity', { name: program.activity }) }}
                             </p>
@@ -843,11 +816,11 @@ function editHortfrei(child) {
                                 class="text-sm"
                             >
                                 <div v-if="absenceRow !== row.child_id" class="flex items-center gap-2">
-                                    <span class="text-ink/40">{{ $t('board.not_here') }}</span>
+                                    <span class="text-ink/60">{{ $t('board.not_here') }}</span>
                                     <button
                                         type="button"
                                         :data-testid="`report-sick-${row.child_id}`"
-                                        class="font-semibold text-amber-700 underline-offset-2 hover:underline"
+                                        class="font-semibold text-warn-dark underline-offset-2 hover:underline"
                                         @click="stageAbsence(row, 'sick')"
                                     >
                                         {{ $t('board.report_sick') }}
@@ -856,7 +829,7 @@ function editHortfrei(child) {
                                     <button
                                         type="button"
                                         :data-testid="`report-away-${row.child_id}`"
-                                        class="font-semibold text-amber-700 underline-offset-2 hover:underline"
+                                        class="font-semibold text-warn-dark underline-offset-2 hover:underline"
                                         @click="stageAbsence(row, 'away')"
                                     >
                                         {{ $t('board.report_away') }}
@@ -864,26 +837,27 @@ function editHortfrei(child) {
                                 </div>
                                 <form
                                     v-else
-                                    class="space-y-2 rounded-xl bg-amber-50 p-3"
+                                    class="space-y-2 rounded-xl bg-warn/10 p-3"
                                     @submit.prevent="submitAbsence(row)"
                                 >
-                                    <label class="block font-medium text-amber-800">
+                                    <label :for="`absence-comment-${row.child_id}`" class="block font-medium text-warn-dark">
                                         {{ absenceReason === 'sick' ? $t('board.report_sick') : $t('board.report_away') }} · {{ $t('weekly.reason_label') }}
                                     </label>
                                     <input
+                                        :id="`absence-comment-${row.child_id}`"
                                         v-model="absenceComment"
                                         type="text"
                                         maxlength="255"
                                         :data-testid="`absence-comment-${row.child_id}`"
                                         :placeholder="$t('weekly.reason_placeholder')"
-                                        class="w-full rounded-lg border-amber-200 bg-surface text-sm text-ink focus:border-amber-400 focus:ring-amber-400"
+                                        class="w-full rounded-lg border-warn/30 bg-surface text-sm text-ink focus:border-warn focus:ring-warn"
                                     />
                                     <div class="flex items-center gap-2">
                                         <button
                                             type="submit"
                                             :data-testid="`absence-submit-${row.child_id}`"
                                             :disabled="!absenceComment.trim() || absenceSaving"
-                                            class="rounded-lg bg-amber-600 px-3 py-1.5 font-semibold text-white transition hover:bg-amber-700 disabled:opacity-40"
+                                            class="rounded-lg bg-warn px-3 py-1.5 font-semibold text-hort-navy transition hover:bg-warn/85 disabled:opacity-40"
                                         >
                                             {{ $t('board.report_button') }}
                                         </button>

@@ -114,7 +114,7 @@ function save() {
                                 v-html="$t('profile.notifications_unsupported')"
                             />
 
-                            <p v-if="error" class="mt-3 text-sm text-red-600">{{ error }}</p>
+                            <p v-if="error" class="mt-3 text-sm text-danger-dark">{{ error }}</p>
 
                             <p class="mt-4 text-xs text-ink/60">
                                 {{ $t('profile.notifications_per_device') }}

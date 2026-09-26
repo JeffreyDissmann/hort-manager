@@ -78,7 +78,7 @@ function destroy(account) {
                         <p class="text-xs text-ink/50">{{ $t('accounting.accounts.balance') }}</p>
                         <p
                             class="font-semibold tabular-nums"
-                            :class="account.balance_cents < 0 ? 'text-red-600' : 'text-ink'"
+                            :class="account.balance_cents < 0 ? 'text-danger' : 'text-ink'"
                         >
                             {{ formatEuro(account.balance_cents) }}
                         </p>
@@ -94,7 +94,7 @@ function destroy(account) {
                         </Link>
                         <button
                             type="button"
-                            class="rounded-lg p-2 text-ink/50 transition hover:bg-red-50 hover:text-red-600"
+                            class="rounded-lg p-2 text-ink/50 transition hover:bg-danger/10 hover:text-danger"
                             :aria-label="$t('common.delete')"
                             @click="destroy(account)"
                         >

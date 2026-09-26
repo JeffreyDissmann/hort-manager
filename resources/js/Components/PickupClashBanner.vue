@@ -62,9 +62,14 @@ function dayLabel(date) {
     return `${t(WEEKDAYS[weekday - 1] ?? WEEKDAYS[0])}, ${String(day).padStart(2, '0')}.${String(month).padStart(2, '0')}.`;
 }
 
-/** What the pickup runs into: the homework slot, a named activity, or a trip. */
+/**
+ * What the pickup runs into: the homework slot, a named activity or a trip — or, on a
+ * Ferienbetreuung day, the Betreuungszeit it falls *outside* of.
+ */
 function what(clash) {
-    return t(`weekly.clashes.in_${clash.kind}`, { name: clash.name ?? '', from: clash.from, to: clash.to });
+    const key = clash.kind === 'care' ? 'outside_care' : `in_${clash.kind}`;
+
+    return t(`weekly.clashes.${key}`, { name: clash.name ?? '', from: clash.from, to: clash.to });
 }
 
 // Each finding is fixed in a different place, so each line links to its own: a single
@@ -91,12 +96,12 @@ const action = computed(() => {
     <div
         v-if="visible"
         data-testid="pickup-clash-banner"
-        class="relative rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 pr-10 text-sm text-amber-800"
+        class="relative rounded-2xl border border-warn/40 bg-warn/10 px-4 py-3 pr-10 text-sm text-warn-dark"
     >
         <button
             type="button"
             data-testid="pickup-clash-dismiss"
-            class="absolute right-2 top-2 rounded-lg p-1 text-amber-700/70 transition hover:bg-amber-100 hover:text-amber-900"
+            class="absolute right-2 top-2 rounded-lg p-1 text-warn-dark/70 transition hover:bg-warn/20 hover:text-warn-dark"
             :aria-label="$t('common.close')"
             @click="dismiss"
         >
@@ -107,7 +112,7 @@ const action = computed(() => {
 
         <!-- The Stammplan itself collides — that repeats every week until it changes,
              so the line leads to the child's Stammplan rather than to a single day. -->
-        <p v-for="(clash, i) in clashes.recurring" :key="`r${i}`" class="mt-0.5 text-amber-900/80">
+        <p v-for="(clash, i) in clashes.recurring" :key="`r${i}`" class="mt-0.5 text-warn-dark/90">
             <Link :href="standardLink(clash.child_id)" class="font-medium underline-offset-2 hover:underline">
                 {{ clash.child }}
             </Link>
@@ -117,7 +122,7 @@ const action = computed(() => {
 
         <!-- One day: its date opens exactly that week, so several findings across
              different weeks are each one click away. -->
-        <p v-for="(clash, i) in clashes.dated" :key="`d${i}`" class="mt-0.5 text-amber-900/80">
+        <p v-for="(clash, i) in clashes.dated" :key="`d${i}`" class="mt-0.5 text-warn-dark/90">
             <span class="font-medium">{{ clash.child }}</span>
             ·
             <Link :href="dayLink(clash.date)" class="font-medium underline-offset-2 hover:underline">
@@ -130,7 +135,7 @@ const action = computed(() => {
             <Link
                 :href="action.href"
                 data-testid="pickup-clash-action"
-                class="inline-block rounded-lg bg-amber-600 px-3 py-1.5 font-semibold text-white transition hover:bg-amber-700"
+                class="inline-block rounded-lg bg-warn px-3 py-1.5 font-semibold text-hort-navy transition hover:bg-warn/85"
             >
                 {{ action.label }}
             </Link>

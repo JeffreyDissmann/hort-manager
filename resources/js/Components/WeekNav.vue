@@ -20,11 +20,11 @@ const relative = computed(() => {
         : t('components.week.weeks_ago', { n: -o });
 });
 
-// Strong colour cue: teal = now, amber = a future week, grey = a past week.
+// Strong colour cue: teal = now, warn = a future week, grey = a past week.
 const tone = computed(() => {
     const o = props.week.offset ?? 0;
     if (o === 0) return 'bg-hort-teal text-hort-navy';
-    return o > 0 ? 'bg-amber-100 text-amber-700' : 'bg-ink/10 text-ink/50';
+    return o > 0 ? 'bg-warn/20 text-warn-dark' : 'bg-ink/10 text-ink/50';
 });
 </script>
 

@@ -14,6 +14,9 @@ class AnnounceExcursionRsvp implements ShouldQueue
 {
     use Queueable;
 
+    /** A trip deleted before the DMs went out has nothing to announce — drop the job. */
+    public bool $deleteWhenMissingModels = true;
+
     public function __construct(public Excursion $excursion) {}
 
     public function handle(SlackRsvp $slack): void

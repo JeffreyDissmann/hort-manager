@@ -6,8 +6,8 @@ leaves when** — today's pickup timeline and a Mo–Fr week overview. The devic
 
 ## 1. Get the feed URL
 
-The feed is a signed URL (no secret to manage — the signature derives from
-`APP_KEY`). Print it:
+The feed is a signed URL carrying a rotatable token (`Setting::TrmnlToken`,
+created on first use). Print it:
 
 ```bash
 # local
@@ -16,8 +16,16 @@ The feed is a signed URL (no secret to manage — the signature derives from
 docker compose -f docker-compose.prod.yml exec app php artisan hort:trmnl-url
 ```
 
-Copy the printed `https://YOUR_DOMAIN/trmnl/dashboard?signature=…` URL. It's
-permanent; it only changes if you rotate `APP_KEY`.
+Copy the printed `https://YOUR_DOMAIN/trmnl/dashboard?token=…&signature=…` URL.
+It does not expire.
+
+The feed contains the whole day (every child's name, pickup time and absence)
+and needs no login, so anyone holding the link can read it. If it leaks, issue a
+new one and paste it into the plugin — the old link stops working immediately:
+
+```bash
+docker compose -f docker-compose.prod.yml exec app php artisan hort:trmnl-url --rotate
+```
 
 ## 2. Create two private plugins
 

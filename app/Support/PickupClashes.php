@@ -22,6 +22,9 @@ use Illuminate\Support\Collection;
  * the Wochenplan flag these per day — this is the standing summary, so a family sees
  * the whole picture without walking the week.
  *
+ * On a Ferienbetreuung day the test is inverted: there the pickup has to sit *inside*
+ * the Betreuungszeit, because that is when the Hort is staffed.
+ *
  * Two kinds of finding:
  *  - **recurring** — the Stammplan itself collides with the weekday's default
  *    Hausaufgabenzeit, so it happens every week until the Stammplan changes;
@@ -88,7 +91,7 @@ class PickupClashes
                 $from = self::short($default->start_time);
                 $to = self::short($default->end_time);
 
-                if ($time >= $from && $time < $to) {
+                if (DayWindows::contains($time, $from, $to)) {
                     $clashes[] = [
                         'child' => $child->name,
                         'child_id' => $child->id,
@@ -128,6 +131,15 @@ class PickupClashes
         $careDays = HolidayCareDay::betweenKeyed($today, $until);
         $plans = EffectivePlan::forMany($childIds, $dates);
 
+        // „Geht mit … mit" mirrors the companion's time, so those children's plans are
+        // needed too — in one batch. Resolving them per row ran an EffectivePlan::for
+        // (two queries) per companion day, on a prop shared with every request.
+        $companionIds = array_values(array_unique(array_filter(array_map(
+            fn (array $plan): ?int => $plan['method'] === 'with_child' ? $plan['companion_child_id'] : null,
+            $plans,
+        ))));
+        $companionPlans = EffectivePlan::forMany($companionIds, $dates);
+
         $programs = DailyProgram::whereIn('date', $dates)->get()
             ->keyBy(fn (DailyProgram $p): string => $p->date->toDateString());
 
@@ -156,9 +168,11 @@ class PickupClashes
                 continue;
             }
 
-            $program = $programs->get($date);
-            $isCareDay = $careDays->has($date);
-            $windows = self::windowsFor($program, $defaults->get(Carbon::parse($date)->dayOfWeekIso), $isCareDay);
+            $windows = DayWindows::program(
+                $programs->get($date),
+                $defaults->get(Carbon::parse($date)->dayOfWeekIso),
+                $careDays->has($date),
+            );
 
             foreach ($children as $child) {
                 $key = $child->id.'|'.$date;
@@ -168,7 +182,7 @@ class PickupClashes
                 }
 
                 $plan = $plans[$key] ?? null;
-                $time = self::effectiveTime($plan, $date);
+                $time = self::effectiveTime($plan, $date, $companionPlans);
 
                 if ($time === null) {
                     continue;
@@ -182,11 +196,12 @@ class PickupClashes
                     ->firstWhere('weekday', Carbon::parse($date)->dayOfWeekIso)?->planned_time);
                 $isOverride = $overrides->has($key) && $time !== $standard;
 
-                foreach ($windows as $window) {
-                    if ($time < $window['from'] || $time >= $window['to']) {
-                        continue;
-                    }
+                $found = DayWindows::hits($time, [
+                    ...$windows,
+                    ...array_filter([DayWindows::excursion($trips[$key] ?? null)]),
+                ]);
 
+                foreach ($found as $window) {
                     // This week's instance of the recurring Stammplan finding.
                     if ($window['kind'] === 'homework' && $window['from_default'] && ! $isOverride) {
                         continue;
@@ -195,21 +210,15 @@ class PickupClashes
                     $clashes[] = [...$window, 'child' => $child->name, 'child_id' => $child->id, 'date' => $date, 'time' => $time];
                 }
 
-                $trip = $trips[$key] ?? null;
-                $from = $trip?->depart_at ? self::short($trip->depart_at) : '00:00';
-                $to = $trip?->return_at ? self::short($trip->return_at) : null;
+                // Ferienbetreuung is the one window a pickup has to sit *inside*: the
+                // Hort is only staffed between starts_at and ends_at, so a 17:00 pickup
+                // on a day that ends at 16:00 means nobody is there to hand the child
+                // over. The end of the window itself is the normal case, so it counts as
+                // inside — hence the explicit `> to` rather than a contains() call.
+                $care = DayWindows::care($careDays->get($date));
 
-                if ($to !== null && $time >= $from && $time < $to) {
-                    $clashes[] = [
-                        'child' => $child->name,
-                        'child_id' => $child->id,
-                        'date' => $date,
-                        'time' => $time,
-                        'kind' => 'excursion',
-                        'name' => $trip->name,
-                        'from' => $from,
-                        'to' => $to,
-                    ];
+                if ($care !== null && ($time < $care['from'] || $time > $care['to'])) {
+                    $clashes[] = [...$care, 'child' => $child->name, 'child_id' => $child->id, 'date' => $date, 'time' => $time];
                 }
             }
         }
@@ -220,55 +229,20 @@ class PickupClashes
     }
 
     /**
-     * A day's timed windows. Homework tracks where it came from, so an unchanged
-     * Stammplan isn't reported twice; a Ferienbetreuung day has no homework at all.
-     *
-     * @return list<array{kind: string, name: ?string, from: string, to: string, from_default: bool}>
-     */
-    private static function windowsFor(?DailyProgram $program, ?HomeworkDefault $default, bool $isCareDay): array
-    {
-        $windows = [];
-
-        if (! $isCareDay) {
-            [$start, $end] = DailyProgram::effectiveHomework($program, $default);
-            if ($start && $end) {
-                $windows[] = [
-                    'kind' => 'homework',
-                    'name' => null,
-                    'from' => self::short($start),
-                    'to' => self::short($end),
-                    'from_default' => ! $program?->homework_start,
-                ];
-            }
-        }
-
-        if ($program?->activity && $program->activity_start && $program->activity_end) {
-            $windows[] = [
-                'kind' => 'activity',
-                'name' => $program->activity,
-                'from' => self::short($program->activity_start),
-                'to' => self::short($program->activity_end),
-                'from_default' => false,
-            ];
-        }
-
-        return $windows;
-    }
-
-    /**
      * The pickup a family would read for that day — „geht mit … mit" mirrors the
      * companion's time, exactly as the board and the Wochenplan show it.
      *
      * @param  array<string, mixed>|null  $plan
+     * @param  array<string, array<string, mixed>>  $companionPlans  keyed „{childId}|{date}"
      */
-    private static function effectiveTime(?array $plan, string $date): ?string
+    private static function effectiveTime(?array $plan, string $date, array $companionPlans): ?string
     {
         if ($plan === null) {
             return null;
         }
 
         if ($plan['method'] === 'with_child' && $plan['companion_child_id']) {
-            return EffectivePlan::for($plan['companion_child_id'], $date)['time'] ?? null;
+            return $companionPlans[$plan['companion_child_id'].'|'.$date]['time'] ?? null;
         }
 
         return $plan['time'];

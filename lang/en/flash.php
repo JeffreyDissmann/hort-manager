@@ -21,12 +21,16 @@ return [
     'plan_updated' => 'Plan for :name updated.',
     'day_reset' => ':name: day reset to the standard.',
     'companion_answered' => 'Answer saved for :name.',
+    'companion_unwound' => ':name was going home with :companion – that no longer works. :name\'s family has been notified.',
+    'companion_reconfirm' => ':name goes home with :companion – as :companion now walks alone, :name\'s family has to confirm this again.',
 
     'excursion_created' => 'Excursion “:name” created. The parents have been invited to respond.',
     'excursion_saved' => 'Excursion “:name” saved.',
     'excursion_deleted' => 'Excursion “:name” deleted.',
     'rsvp_saved' => 'Response for :name saved.',
     'rsvp_saved_pickup_moved' => 'Response for :name saved. The pickup fell inside the trip (:was) and is now at :time – that day only, the standard plan stays as it is.',
+    'rsvp_clash_pickup' => 'Heads-up: :name goes home with another child at :time that day, which falls inside the trip. We can\'t move that automatically – please adjust it in the weekly plan.',
+    'rsvp_clash_arrival' => 'Heads-up: :name only arrives at :time that day, while the group is still out (back at :return). Please sort this out with the Hort.',
 
     'program_saved' => 'Program saved.',
     'homework_defaults_saved' => 'Default homework times saved.',

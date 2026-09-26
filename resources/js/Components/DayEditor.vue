@@ -13,6 +13,7 @@ import TimeSelect from '@/Components/TimeSelect.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import { t } from '@/i18n';
+import { inExcursion, inWindow } from '@/windows';
 import { router, usePage } from '@inertiajs/vue3';
 import { computed, reactive, ref } from 'vue';
 
@@ -80,14 +81,14 @@ const pickupClashes = computed(() => {
     }
 
     const clashes = props.windows
-        .filter((w) => w.date === editing.value.date && time >= w.start && time < w.end)
+        .filter((w) => w.date === editing.value.date && inWindow(time, w.start, w.end))
         .map((w) => ({
             key: w.kind,
             text: t(`weekly.pickup_in_${w.kind}`, { time, name: w.label, from: w.start, to: w.end }),
         }));
 
     const trip = editing.value.excursion;
-    if (trip?.return_at && time >= (trip.depart_at ?? '00:00') && time < trip.return_at) {
+    if (inExcursion(time, trip)) {
         clashes.push({
             key: 'excursion',
             text: t('weekly.pickup_in_excursion', { name: trip.name, time: trip.return_at }),
@@ -246,7 +247,12 @@ function cancelAbsence() {
 </script>
 
 <template>
-    <Modal :show="editing !== null" max-width="sm" @close="close">
+    <Modal
+        :show="editing !== null"
+        max-width="sm"
+        :label="editing ? `${editing.childName} – ${editing.label}` : null"
+        @close="close"
+    >
         <div v-if="editing" class="space-y-5 p-6">
             <div>
                 <h2 class="text-lg font-semibold text-ink">{{ editing.childName }}</h2>
@@ -258,7 +264,7 @@ function cancelAbsence() {
             <!-- Krankmeldung / Abwesenheit — first: it overrides the plan below -->
             <div class="rounded-lg bg-canvas p-3">
                 <template v-if="editing.absent">
-                    <p class="text-sm font-medium text-amber-700">
+                    <p class="text-sm font-medium text-warn-dark">
                         {{ $t('weekly.reported_as', { label: editing.absent.label }) }}
                     </p>
                     <p v-if="editing.absent.comment" class="mt-0.5 text-sm text-ink/60">
@@ -329,7 +335,7 @@ function cancelAbsence() {
                         </button>
                     </div>
                     <TimeSelect id="arrives-at" v-model="form.arrives_at" test-id="arrives-at" class="block w-full" />
-                    <p v-if="arrivalAfterPickup" class="text-xs font-medium text-red-700">
+                    <p v-if="arrivalAfterPickup" class="text-xs font-medium text-danger-dark">
                         {{ $t('weekly.arrival_after_pickup') }}
                     </p>
                     <div>
@@ -362,7 +368,7 @@ function cancelAbsence() {
                         v-for="clash in pickupClashes"
                         :key="clash.key"
                         :data-testid="`${clash.key}-clash`"
-                        class="mt-1 rounded-lg bg-amber-50 px-2 py-1 text-xs font-medium text-amber-900"
+                        class="mt-1 rounded-lg bg-warn/10 px-2 py-1 text-xs font-medium text-warn-dark"
                     >
                         ⚠️ {{ clash.text }}
                     </p>
@@ -404,7 +410,7 @@ function cancelAbsence() {
                         {{ $t('weekly.companion_empty_hint') }}
                     </p>
                     <template v-else>
-                        <p v-if="selectedCompanionUnavailable" class="mt-1 text-xs font-medium text-red-700">
+                        <p v-if="selectedCompanionUnavailable" class="mt-1 text-xs font-medium text-danger-dark">
                             {{ $t('weekly.companion_unavailable') }}
                         </p>
                         <template v-else>
@@ -441,7 +447,7 @@ function cancelAbsence() {
                     class="mt-1 block w-full"
                     :placeholder="stagingAbsence ? $t('weekly.reason_placeholder') : $t('weekly.note_placeholder')"
                 />
-                <!-- No hint while reporting an absence: the amber line above already
+                <!-- No hint while reporting an absence: the warn line above already
                      asks for the reason, and the label says „Pflicht". -->
                 <p v-if="!stagingAbsence" class="mt-1 text-xs text-ink/50">
                     {{ $t('weekly.note_hint') }}
@@ -456,7 +462,7 @@ function cancelAbsence() {
                 {{ $t('weekly.late_change_hint', { time: lateChangeCutoff }) }}
             </p>
 
-            <p v-if="saveError" class="rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
+            <p v-if="saveError" class="rounded-lg bg-danger/10 px-3 py-2 text-sm font-medium text-danger-dark">
                 {{ saveError }}
             </p>
 

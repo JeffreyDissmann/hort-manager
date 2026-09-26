@@ -79,6 +79,8 @@ return [
         'intro' => 'Booking categories as a tree. The direction (income/expense) is set at the top level and inherited by every subcategory. The per-category hint helps the AI categorize.',
         'comment_placeholder' => 'Hint for the AI (optional), e.g. “monthly lunch contribution”',
         'edit_hint' => 'Edit AI hint',
+        // Accessible name for the income/expense picker of a new category.
+        'direction' => 'Income or expense',
         'income' => 'Income',
         'expense' => 'Expenses',
         'new_root' => 'New top-level category',
@@ -147,6 +149,8 @@ return [
         'reanalyse_confirm' => 'Have the AI re-assess all unconfirmed bookings?',
         'relink_receipts' => 'Link receipts',
         'status' => 'Review status',
+        // Accessible name of a row's checkbox — followed by the booking's purpose.
+        'select' => 'Select booking',
         'selected_count' => ':count selected',
         'select_all_matching' => 'Select all :count',
         'all_matching_selected' => 'All :count matching bookings selected',

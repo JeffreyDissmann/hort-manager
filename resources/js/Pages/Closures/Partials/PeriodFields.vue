@@ -67,7 +67,7 @@ function onStartPicked(value) {
                     class="mt-1 block w-full"
                     :placeholder="$t('closures.name_placeholder')"
                 />
-                <p v-if="form.errors.name" class="mt-1 text-xs text-red-600">{{ form.errors.name }}</p>
+                <p v-if="form.errors.name" class="mt-1 text-xs text-danger-dark">{{ form.errors.name }}</p>
             </div>
 
             <div>
@@ -78,13 +78,13 @@ function onStartPicked(value) {
                     class="mt-1"
                     @update:model-value="onStartPicked"
                 />
-                <p v-if="form.errors.starts_on" class="mt-1 text-xs text-red-600">{{ form.errors.starts_on }}</p>
+                <p v-if="form.errors.starts_on" class="mt-1 text-xs text-danger-dark">{{ form.errors.starts_on }}</p>
             </div>
 
             <div>
                 <InputLabel for="closure-to" :value="$t('closures.to')" />
                 <DatePicker id="closure-to" v-model="form.ends_on" :min="form.starts_on" class="mt-1" />
-                <p v-if="form.errors.ends_on" class="mt-1 text-xs text-red-600">{{ form.errors.ends_on }}</p>
+                <p v-if="form.errors.ends_on" class="mt-1 text-xs text-danger-dark">{{ form.errors.ends_on }}</p>
             </div>
 
             <div v-if="isCare">
@@ -96,7 +96,7 @@ function onStartPicked(value) {
                     clearable
                     class="mt-1"
                 />
-                <p v-if="form.errors.registration_deadline" class="mt-1 text-xs text-red-600">
+                <p v-if="form.errors.registration_deadline" class="mt-1 text-xs text-danger-dark">
                     {{ form.errors.registration_deadline }}
                 </p>
             </div>

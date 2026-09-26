@@ -7,6 +7,7 @@ use App\Enums\TimeQualifier;
 use App\Models\Child;
 use App\Models\DailyDeparture;
 use App\Models\DailyProgram;
+use App\Models\HolidayPeriod;
 use App\Models\HomeworkDefault;
 use App\Models\User;
 
@@ -144,4 +145,20 @@ it('does not nudge about a missing Stammplan while a child is being edited', fun
 
     // … but not on the form that answers it.
     actAndVisit($parent, "/children/{$unplanned->id}/edit")->assertDontSee('Stammplan fehlt noch');
+});
+
+it('does not open the editor on a locked day', function () {
+    $parent = User::factory()->parent()->create();
+    $child = Child::factory()->scheduledOn(boardWeekday(), '15:00')->withGuardian($parent)->create(['name' => 'Nina']);
+    $date = boardDate()->toDateString();
+
+    // A Schließtag: the cell is locked, and the server would refuse the save anyway.
+    HolidayPeriod::create(['name' => 'Fortbildung', 'type' => 'closed', 'starts_on' => $date, 'ends_on' => $date]);
+
+    actAndVisit($parent, "/weekly-plan?week={$date}")
+        ->assertSee('Fortbildung')
+        ->click("@wp-cell-{$child->id}-{$date}")
+        // Nothing opens — a mouse must not reach an editor the keyboard can't.
+        ->assertMissing('@save')
+        ->assertNoJavaScriptErrors();
 });

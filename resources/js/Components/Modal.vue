@@ -14,16 +14,27 @@ const props = defineProps({
         type: Boolean,
         default: true,
     },
+    // What the dialog is, for screen readers: a <dialog> with no accessible name is
+    // announced as just „dialog".
+    label: {
+        type: String,
+        default: null,
+    },
 });
 
 const emit = defineEmits(['close']);
 const dialog = ref();
 const showSlot = ref(props.show);
 
+// Where the focus came from, so closing puts it back on the control that opened the
+// dialog instead of dropping the keyboard user at the top of the page.
+const opener = ref(null);
+
 watch(
     () => props.show,
     () => {
         if (props.show) {
+            opener.value = document.activeElement;
             document.body.style.overflow = 'hidden';
             showSlot.value = true;
 
@@ -34,6 +45,9 @@ watch(
             setTimeout(() => {
                 dialog.value?.close();
                 showSlot.value = false;
+                // close() blurs whatever was focused inside the dialog.
+                opener.value?.focus?.();
+                opener.value = null;
             }, 200);
         }
     },
@@ -45,13 +59,13 @@ const close = () => {
     }
 };
 
+// Only swallow Escape while this dialog is actually open — the listener sits on the
+// document, and every mounted Modal used to eat the key, including the ones that are
+// closed, so a DatePicker or a category editor on the same page never saw it.
 const closeOnEscape = (e) => {
-    if (e.key === 'Escape') {
+    if (e.key === 'Escape' && props.show) {
         e.preventDefault();
-
-        if (props.show) {
-            close();
-        }
+        close();
     }
 };
 
@@ -78,6 +92,7 @@ const maxWidthClass = computed(() => {
     <dialog
         class="z-50 m-0 min-h-full min-w-full overflow-y-auto bg-transparent backdrop:bg-transparent"
         ref="dialog"
+        :aria-label="label"
     >
         <div
             class="fixed inset-0 z-50 overflow-y-auto px-4 py-6 sm:px-0"

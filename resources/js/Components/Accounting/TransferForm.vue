@@ -26,7 +26,7 @@ const otherAccounts = computed(() => props.accounts.filter((a) => a.id !== props
 
         <!-- Read-only facts of the line being moved -->
         <div class="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg bg-ink/[0.03] px-3 py-2 text-sm">
-            <span class="font-semibold tabular-nums" :class="amountCents < 0 ? 'text-red-600' : 'text-hort-teal-dark'">
+            <span class="font-semibold tabular-nums" :class="amountCents < 0 ? 'text-danger' : 'text-hort-teal-dark'">
                 {{ formatEuro(amountCents) }}
             </span>
             <span class="text-ink/50">{{ $t('accounting.review.transfer_from') }}</span>

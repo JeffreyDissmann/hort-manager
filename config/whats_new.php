@@ -16,6 +16,18 @@ declare(strict_types=1);
 
 return [
     [
+        'version' => '2026.09.26',
+        'date' => '2026-09-26',
+        'title' => 'Ausflüge: Antworten geht länger 🚌',
+        'items' => [
+            '🚌 Du kannst jetzt auch nach dem Anmeldeschluss noch sagen, ob dein Kind beim Ausflug mitkommt – bis zum Ausflugstag selbst. Nur ändern lässt sich eine schon gegebene Antwort danach nicht mehr: dann bitte kurz im Hort melden, die Gruppe ist ja schon geplant.',
+            '⏰ Solange von dir noch keine Antwort da ist, erinnern wir dich ab dem Anmeldeschluss jeden Tag – am Ausflugstag zum letzten Mal. Hast du geantwortet, ist Ruhe.',
+            '⚠️ In den Ferien prüfen wir die Abholzeit gegen die Betreuungszeit: Steht die Abholung außerhalb (zum Beispiel 17 Uhr, obwohl die Betreuung um 16 Uhr endet), sagen wir es oben unter „Abholzeiten prüfen".',
+            '👀 Wenn dein Kind mit einem anderen Kind mitgeht und bei dem sich der Plan ändert, siehst du direkt, dass die Absprache aufgehoben wurde – vorher stand das nur in der Nachricht an die andere Familie.',
+            '🌙 Der Dunkelmodus liest sich besser: Hinweise und Warnungen haben jetzt überall genug Kontrast, und die grauen Kästchen wie „Geschlossen" oder „nicht angemeldet" sind klarer zu lesen.',
+        ],
+    ],
+    [
         'version' => '2026.09.18',
         'date' => '2026-09-18',
         'title' => 'Damit keine Abholung ins Leere läuft 🚌',

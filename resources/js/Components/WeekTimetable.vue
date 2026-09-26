@@ -274,7 +274,7 @@ function chipClass(method) {
             <template v-for="(p, j) in program" :key="'hwday' + j">
                 <div
                     v-if="p && p.homework_start"
-                    class="my-0.5 flex flex-col items-center gap-1 overflow-hidden rounded-md bg-amber-100 px-0.5 py-1 text-amber-700"
+                    class="my-0.5 flex flex-col items-center gap-1 overflow-hidden rounded-md bg-warn/20 px-0.5 py-1 text-warn-dark"
                     :style="{
                         gridColumn: `${bandCol(j)} / ${bandCol(j) + 1}`,
                         gridRow: bandRow(p.homework_start, p.homework_end) || 'auto',
@@ -282,7 +282,7 @@ function chipClass(method) {
                     :title="$t('components.timetable.homework_range', { start: p.homework_start, end: p.homework_end || '' })"
                 >
                     <span class="shrink-0 text-xs leading-none">📚</span>
-                    <!-- The amber stripe said nothing on its own: its only label was a
+                    <!-- The warn-coloured stripe said nothing on its own: its only label was a
                          `title`, which a phone has no way to show. -->
                     <span
                         v-if="bandSpan(p.homework_start, p.homework_end) > 1"
@@ -309,7 +309,7 @@ function chipClass(method) {
                             class="w-full rounded-md px-1.5 py-1 text-center text-[13px] font-semibold leading-tight"
                             :class="[
                                 chipClass(kid.method),
-                                kid.adjusted ? 'ring-2 ring-amber-400' : '',
+                                kid.adjusted ? 'ring-2 ring-warn/60' : '',
                                 editable && kid.editable
                                     ? 'cursor-pointer hover:brightness-95 active:scale-[0.97]'
                                     : '',

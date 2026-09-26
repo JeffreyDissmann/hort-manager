@@ -25,6 +25,7 @@ return [
     'time_from' => 'ab :time Uhr',
 
     'poll_closed' => 'Abstimmung beendet',
+    'deadline_passed' => 'Anmeldeschluss vorbei – bitte trotzdem noch antworten',
     'poll_until' => 'Abstimmung bis :date',
     'deadline_today' => 'Heute ist der letzte Tag zum Antworten',
     'deadline_tomorrow' => 'Bitte bis morgen antworten',

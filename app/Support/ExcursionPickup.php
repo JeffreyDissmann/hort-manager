@@ -50,8 +50,8 @@ class ExcursionPickup
             return null;
         }
 
+        $window = DayWindows::excursion($excursion);
         $return = self::short($excursion->return_at);
-        $depart = self::short($excursion->depart_at) ?? '00:00';
         $departed = DailyDeparture::query()
             ->where('child_id', $child->id)->where('date', $date)
             ->where('status', '!=', DepartureStatus::Present)->exists();
@@ -59,7 +59,7 @@ class ExcursionPickup
         return [
             'time' => $time,
             'method' => $plan['method'],
-            'conflict' => $time !== null && $return !== null && $time >= $depart && $time < $return,
+            'conflict' => $window !== null && DayWindows::contains($time, $window['from'], $window['to']),
             'movable' => $return !== null
                 && ! $isCompanion
                 && ! $departed
@@ -111,6 +111,52 @@ class ExcursionPickup
         LateChange::notify($actor, $child, $date, "Abholung auf {$return} verschoben (Ausflug „{$excursion->name}\")");
 
         return $before;
+    }
+
+    /**
+     * What the move could *not* put right, as ready-made German sentences. A clash the
+     * app can't fix by itself has to be said out loud — otherwise the family answers
+     * „Ja", sees „Antwort gespeichert." and nobody learns that their child is still
+     * planned to be handed over, or to arrive, while the group is away.
+     *
+     * Two cases, both deliberately left for a human:
+     * - a „geht mit … mit" pickup inside the trip — moving it would break the
+     *   arrangement with the other family;
+     * - a „kommt später" arrival inside the trip — that is the family's own appointment,
+     *   not ours to move.
+     *
+     * @return list<string>
+     */
+    public static function warnings(Excursion $excursion, Child $child): array
+    {
+        $state = self::state($excursion, $child);
+
+        if ($state === null) {
+            return [];
+        }
+
+        $date = $excursion->date->toDateString();
+        $window = DayWindows::excursion($excursion);
+        $warnings = [];
+
+        if ($state['conflict'] && ! $state['movable']) {
+            $warnings[] = __('flash.rsvp_clash_pickup', [
+                'name' => $child->name,
+                'time' => (string) $state['time'],
+            ]);
+        }
+
+        $arrival = EffectivePlan::for($child->id, $date)['arrives_at'] ?? null;
+
+        if ($window !== null && DayWindows::contains($arrival, $window['from'], $window['to'])) {
+            $warnings[] = __('flash.rsvp_clash_arrival', [
+                'name' => $child->name,
+                'time' => (string) $arrival,
+                'return' => $window['to'],
+            ]);
+        }
+
+        return $warnings;
     }
 
     private static function short(mixed $time): ?string

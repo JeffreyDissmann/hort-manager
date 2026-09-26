@@ -29,11 +29,20 @@ use Illuminate\Support\Facades\Notification;
  */
 class CompanionReconciler
 {
-    public static function reconcile(int $companionChildId, string $date): void
+    /**
+     * Bring the arrangements that name this child up to date with their new plan.
+     *
+     * Returns one German sentence per arrangement that was actually touched, so the
+     * person who made the change is told what it did to another family — until now the
+     * only sign was a DM to *them*, and the editor's own screen said nothing.
+     *
+     * @return list<string>
+     */
+    public static function reconcile(int $companionChildId, string $date): array
     {
         $companion = Child::find($companionChildId);
         if ($companion === null) {
-            return;
+            return [];
         }
 
         $dependents = $companion->accompaniedDepartures()
@@ -42,7 +51,7 @@ class CompanionReconciler
             ->get();
 
         if ($dependents->isEmpty()) {
-            return;
+            return [];
         }
 
         $plan = EffectivePlan::for($companionChildId, $date);
@@ -55,13 +64,12 @@ class CompanionReconciler
             && in_array($plan['method'], [DepartureMethod::PickedUp->value, DepartureMethod::SentHome->value], true);
 
         if (! $leavesOnOwn) {
-            self::unwind($companion, $dependents, $date);
-
-            return;
+            return self::unwind($companion, $dependents, $date);
         }
 
         $companionAlone = $plan['method'] === DepartureMethod::SentHome->value;
         $guardians = $companion->guardians()->get();
+        $notes = [];
 
         foreach ($dependents as $dependent) {
             $answeredByHuman = $dependent->companion_confirmed_by !== null;
@@ -74,23 +82,32 @@ class CompanionReconciler
                     $dependent->update(['companion_confirmed' => null]);
                     Notification::send($guardians, new CompanionRequest($dependent));
                     AskCompanionConfirmation::dispatch($dependent);
+
+                    $notes[] = __('flash.companion_reconfirm', [
+                        'name' => $dependent->child->name,
+                        'companion' => $companion->name,
+                    ]);
                 }
             } elseif (! $answeredByHuman && $dependent->companion_confirmed === null) {
                 // Companion is picked up again → an adult is there, no gate needed.
                 $dependent->update(['companion_confirmed' => true]);
             }
         }
+
+        return $notes;
     }
 
     /**
      * The companion was reported away, so nobody can go home with them. Same procedure
      * as when the companion can no longer be one (see reconcile): unwind each dependent.
+     *
+     * @return list<string>
      */
-    public static function companionAbsent(int $companionChildId, string $date): void
+    public static function companionAbsent(int $companionChildId, string $date): array
     {
         $companion = Child::find($companionChildId);
         if ($companion === null) {
-            return;
+            return [];
         }
 
         $dependents = $companion->accompaniedDepartures()
@@ -98,7 +115,7 @@ class CompanionReconciler
             ->with('child.guardians')
             ->get();
 
-        self::unwind($companion, $dependents, $date);
+        return self::unwind($companion, $dependents, $date);
     }
 
     /**
@@ -115,7 +132,7 @@ class CompanionReconciler
             $shortDate = $dependent->date->format('d.m.');
 
             SlackCompanion::cancelFor($dependent, $child->name, $companion->name);
-            $dependent->delete();
+            self::revert($dependent);
 
             Notification::send($guardians, new CompanionCancelled($child->name, $companion->name, $shortDate));
         }
@@ -127,19 +144,60 @@ class CompanionReconciler
      * a way home.
      *
      * @param  Collection<int, DailyDeparture>  $dependents
+     * @return list<string>
      */
-    private static function unwind(Child $companion, $dependents, string $date): void
+    private static function unwind(Child $companion, $dependents, string $date): array
     {
         $shortDate = Carbon::parse($date)->format('d.m.');
+        $notes = [];
 
         foreach ($dependents as $dependent) {
             $child = $dependent->child;
             $guardians = $child->guardians; // eager-loaded before the row is deleted
 
             SlackCompanion::cancelFor($dependent, $child->name, $companion->name);
-            $dependent->delete(); // revert to the child's Stammplan for that day
+            self::revert($dependent);
 
             Notification::send($guardians, new CompanionCancelled($child->name, $companion->name, $shortDate));
+
+            $notes[] = __('flash.companion_unwound', [
+                'name' => $child->name,
+                'companion' => $companion->name,
+            ]);
         }
+
+        return $notes;
+    }
+
+    /**
+     * Drop the arrangement itself. Normally that means deleting the row, which puts the
+     * day back on the child's Stammplan.
+     *
+     * On a **Ferienbetreuung** day the row is not an override but the *sign-up itself*
+     * (there is no separate registration table), and there is no Stammplan behind it —
+     * deleting it would quietly take the child off the roster, possibly long after the
+     * Anmeldeschluss. So the sign-up stays and only the companion part is undone: back
+     * to the end of the Betreuungszeit and the method the child normally uses, exactly
+     * as signing up would have planned the day.
+     */
+    private static function revert(DailyDeparture $dependent): void
+    {
+        $careDay = $dependent->careDay;
+
+        if ($careDay === null) {
+            $dependent->delete();
+
+            return;
+        }
+
+        $dependent->update([
+            'planned_time' => $careDay->ends_at,
+            'planned_method' => $careDay->defaultMethodFor($dependent->child),
+            'time_qualifier' => null,
+            'companion_child_id' => null,
+            'companion_confirmed' => null,
+            'companion_confirmed_by' => null,
+            'companion_confirmed_at' => null,
+        ]);
     }
 }

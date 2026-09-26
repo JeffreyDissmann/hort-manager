@@ -281,6 +281,7 @@ function destroy() {
                                         type="text"
                                         maxlength="255"
                                         :placeholder="$t('children.comment_placeholder')"
+                                        :aria-label="`${weekdayNames[day.weekday]}: ${$t('children.comment_placeholder')}`"
                                         class="block w-full rounded-md border-ink/20 text-sm shadow-sm focus:border-hort-teal focus:ring-hort-teal"
                                     />
                                 </template>
@@ -351,7 +352,7 @@ function destroy() {
                             v-if="canDelete"
                             type="button"
                             @click="destroy"
-                            class="text-sm font-medium text-red-600 transition hover:text-red-700"
+                            class="text-sm font-medium text-danger transition hover:text-danger-dark"
                         >
                             {{ $t('children.delete_child') }}
                         </button>

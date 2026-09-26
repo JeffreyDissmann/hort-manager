@@ -14,9 +14,12 @@ use App\Models\Child;
 use App\Models\DailyDeparture;
 use App\Models\DailyProgram;
 use App\Models\Excursion;
+use App\Models\HolidayCareDay;
+use App\Models\HolidayPeriod;
 use App\Models\HomeworkDefault;
 use App\Models\User;
 use App\Notifications\CompanionRequest;
+use App\Notifications\LateChange;
 use App\Services\HortAssistant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -125,6 +128,36 @@ class HortAssistantTest extends TestCase
         $this->assertStringNotContainsString('Fußballtraining', $reply); // 14:30 is before it
     }
 
+    public function test_it_does_not_warn_about_homework_in_the_ferienbetreuung(): void
+    {
+        Carbon::setTestNow('2026-06-22'); // Monday
+        [$parent, $child] = $this->parentWithTom();
+        HomeworkDefault::create(['weekday' => 3, 'start_time' => '14:00', 'end_time' => '15:00']);
+
+        $period = HolidayPeriod::factory()->care()->create([
+            'starts_on' => '2026-06-24', 'ends_on' => '2026-06-24',
+        ]);
+        $period->generateCareDays();
+        $careDay = HolidayCareDay::firstWhere('date', '2026-06-24');
+
+        // Tom is signed up, so the assistant may plan his day …
+        DailyDeparture::create([
+            'child_id' => $child->id, 'date' => '2026-06-24',
+            'holiday_care_day_id' => $careDay->id, 'status' => DepartureStatus::Present,
+            'planned_time' => '16:00', 'planned_method' => DepartureMethod::PickedUp,
+        ]);
+
+        $this->fakeIntent([
+            'intent' => 'abholzeit', 'kind' => 'Tom', 'datum' => '2026-06-24', 'uhrzeit' => '14:30',
+        ]);
+
+        $reply = app(HortAssistant::class)->reply($parent, 'Tom wird Mittwoch um 14:30 abgeholt');
+
+        // … and in den Ferien there are no Hausaufgaben the pickup could collide with.
+        $this->assertStringContainsString('14:30', $reply);
+        $this->assertStringNotContainsString('Hausaufgabenzeit', $reply);
+    }
+
     public function test_joining_a_trip_moves_a_pickup_that_falls_inside_it(): void
     {
         Queue::fake();
@@ -206,6 +239,96 @@ class HortAssistantTest extends TestCase
         $this->assertSame(DepartureMethod::PickedUp, $departure->planned_method);
         $this->assertStringContainsString('Wird abgeholt', $reply);
         $this->assertStringNotContainsString('keine Abholzeit', $reply);
+    }
+
+    public function test_it_refuses_to_plan_a_closed_day(): void
+    {
+        Carbon::setTestNow('2026-06-22'); // Monday
+        [$parent, $child] = $this->parentWithTom();
+        HolidayPeriod::create([
+            'name' => 'Fortbildung', 'type' => 'closed',
+            'starts_on' => '2026-06-24', 'ends_on' => '2026-06-24',
+        ]);
+        $this->fakeIntent([
+            'intent' => 'abholzeit', 'kind' => 'Tom', 'datum' => '2026-06-24', 'uhrzeit' => '16:30',
+        ]);
+
+        $reply = app(HortAssistant::class)->reply($parent, 'Tom wird Mittwoch um 16:30 abgeholt');
+
+        $this->assertStringContainsString('geschlossen', $reply);
+        $this->assertStringContainsString('Fortbildung', $reply);
+        $this->assertDatabaseEmpty('daily_departures');
+    }
+
+    public function test_it_refuses_a_ferienbetreuung_day_the_child_is_not_signed_up_for(): void
+    {
+        Carbon::setTestNow('2026-06-22');
+        [$parent, $child] = $this->parentWithTom();
+        // Writing a plan here would be a sign-up through the back door — past the
+        // Anmeldeschluss and without the sheet that enforces it.
+        $period = HolidayPeriod::factory()->care()->create([
+            'starts_on' => '2026-06-24', 'ends_on' => '2026-06-24',
+            'registration_deadline' => '2026-06-01',
+        ]);
+        $period->generateCareDays();
+        $this->fakeIntent([
+            'intent' => 'abholzeit', 'kind' => 'Tom', 'datum' => '2026-06-24', 'uhrzeit' => '16:30',
+        ]);
+
+        $reply = app(HortAssistant::class)->reply($parent, 'Tom wird Mittwoch um 16:30 abgeholt');
+
+        $this->assertStringContainsString('nicht angemeldet', $reply);
+        $this->assertDatabaseEmpty('daily_departures');
+    }
+
+    public function test_it_refuses_a_day_the_child_has_already_left(): void
+    {
+        Carbon::setTestNow('2026-06-22 15:00');
+        [$parent, $child] = $this->parentWithTom();
+        DailyDeparture::create([
+            'child_id' => $child->id, 'date' => '2026-06-22',
+            'status' => DepartureStatus::PickedUp, 'planned_time' => '14:00',
+            'left_at' => Carbon::parse('2026-06-22 14:05'),
+        ]);
+        $this->fakeIntent(['intent' => 'abholzeit', 'kind' => 'Tom', 'datum' => 'heute', 'uhrzeit' => '16:30']);
+
+        $reply = app(HortAssistant::class)->reply($parent, 'Tom wird heute um 16:30 abgeholt');
+
+        $this->assertStringContainsString('schon abgeholt', $reply);
+        $this->assertStringStartsWith('14:00', (string) DailyDeparture::first()->planned_time);
+    }
+
+    public function test_a_late_change_through_the_assistant_notifies_staff(): void
+    {
+        Notification::fake();
+        Carbon::setTestNow('2026-06-22 14:00'); // Monday, past the 12:00 cutoff
+        [$parent, $child] = $this->parentWithTom();
+        $staff = User::factory()->create(['role' => UserRole::Staff, 'slack_id' => 'U-STAFF']);
+        $this->fakeIntent(['intent' => 'abholzeit', 'kind' => 'Tom', 'datum' => 'heute', 'uhrzeit' => '16:30']);
+
+        app(HortAssistant::class)->reply($parent, 'Tom wird heute um 16:30 abgeholt');
+
+        // Changing today's plan late is news for staff whichever door it comes through.
+        Notification::assertSentTo($staff, LateChange::class,
+            fn (LateChange $n) => str_contains($n->summary, '16:30'));
+    }
+
+    public function test_a_late_arrival_through_the_assistant_notifies_staff(): void
+    {
+        Notification::fake();
+        Carbon::setTestNow('2026-06-22 14:00');
+        [$parent, $child] = $this->parentWithTom();
+        $child->weeklySchedules()->create(['weekday' => 1, 'planned_time' => '16:00', 'method' => DepartureMethod::PickedUp]);
+        $staff = User::factory()->create(['role' => UserRole::Staff, 'slack_id' => 'U-STAFF']);
+        $this->fakeIntent([
+            'intent' => 'ankunft', 'kind' => 'Tom', 'datum' => 'heute',
+            'uhrzeit' => '15:00', 'grund' => 'Arzttermin',
+        ]);
+
+        app(HortAssistant::class)->reply($parent, 'Tom kommt heute erst um 15 Uhr, Arzttermin');
+
+        Notification::assertSentTo($staff, LateChange::class,
+            fn (LateChange $n) => str_contains($n->summary, 'kommt erst um 15:00'));
     }
 
     public function test_changing_a_companion_to_alone_reopens_a_dependent(): void
@@ -351,7 +474,7 @@ class HortAssistantTest extends TestCase
         ]);
     }
 
-    public function test_it_refuses_an_rsvp_once_the_poll_is_closed(): void
+    public function test_it_refuses_to_change_an_answer_after_the_deadline(): void
     {
         Queue::fake();
         [$parent, $child] = $this->parentWithTom();
@@ -359,16 +482,34 @@ class HortAssistantTest extends TestCase
             'name' => 'Zoo', 'date' => now()->addWeek()->toDateString(),
             'rsvp_deadline' => now()->subDay()->toDateString(), // deadline passed
         ]);
-        $excursion->children()->attach($child->id);
+        $excursion->children()->attach($child->id, ['response' => false]);
         $this->fakeIntent(['intent' => 'ausflug', 'kind' => 'Tom', 'ausflug' => 'Zoo', 'zusage' => true]);
 
         $reply = app(HortAssistant::class)->reply($parent, 'Tom kommt doch mit zum Zoo');
 
-        $this->assertStringContainsString('geschlossen', $reply);
+        $this->assertStringContainsString('Anmeldeschluss', $reply);
         $this->assertDatabaseHas('child_excursion', [
-            'child_id' => $child->id, 'excursion_id' => $excursion->id, 'response' => null,
+            'child_id' => $child->id, 'excursion_id' => $excursion->id, 'response' => false,
         ]);
         Queue::assertNotPushed(SyncExcursionRsvp::class);
+    }
+
+    public function test_it_still_takes_a_first_answer_after_the_deadline(): void
+    {
+        Queue::fake();
+        [$parent, $child] = $this->parentWithTom();
+        $excursion = Excursion::factory()->create([
+            'name' => 'Zoo', 'date' => now()->addWeek()->toDateString(),
+            'rsvp_deadline' => now()->subDay()->toDateString(),
+        ]);
+        $excursion->children()->attach($child->id); // never answered
+        $this->fakeIntent(['intent' => 'ausflug', 'kind' => 'Tom', 'ausflug' => 'Zoo', 'zusage' => true]);
+
+        app(HortAssistant::class)->reply($parent, 'Tom kommt mit zum Zoo');
+
+        $this->assertDatabaseHas('child_excursion', [
+            'child_id' => $child->id, 'excursion_id' => $excursion->id, 'response' => true,
+        ]);
     }
 
     public function test_it_never_touches_a_child_that_is_not_the_parents(): void

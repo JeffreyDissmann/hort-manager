@@ -309,7 +309,7 @@ function onTouchEnd(e) {
                         <p v-if="day.care" class="mt-0.5 text-xs text-ink/50">{{ day.care.name }}</p>
                         <p
                             v-if="day.birthdays && day.birthdays.length"
-                            class="mt-1 rounded-lg bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700"
+                            class="mt-1 rounded-lg bg-warn/10 px-2 py-1 text-xs font-medium text-warn-dark"
                         >
                             🎂
                             <span v-for="(b, j) in day.birthdays" :key="b.name">

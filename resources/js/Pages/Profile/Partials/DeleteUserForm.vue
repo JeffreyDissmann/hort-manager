@@ -53,7 +53,11 @@ const closeModal = () => {
 
         <DangerButton @click="confirmUserDeletion">{{ $t('profile.delete_account') }}</DangerButton>
 
-        <Modal :show="confirmingUserDeletion" @close="closeModal">
+        <Modal
+            :show="confirmingUserDeletion"
+            :label="$t('profile.delete_confirm_title')"
+            @close="closeModal"
+        >
             <div class="p-6">
                 <h2
                     class="text-lg font-medium text-ink"

@@ -44,6 +44,9 @@ return [
         'go_current' => 'Zu heute',
         'prev' => 'Voriger Tag',
         'next' => 'Nächster Tag',
+        // Accessible names for the calendar's month/year pickers.
+        'month' => 'Monat',
+        'year' => 'Jahr',
         'clear' => 'Löschen',
     ],
 

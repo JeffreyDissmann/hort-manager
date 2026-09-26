@@ -11,6 +11,7 @@ use App\Support\CareSignupData;
 use App\Support\ExcursionPickup;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -32,8 +33,10 @@ class ExcursionRsvpController extends Controller
 
         $ownChildren = Child::whereKey($childIds)->get()->keyBy('id');
 
+        $today = now()->toDateString();
+
         $excursions = $excursions
-            ->map(function (Excursion $e) use ($childIds, $ownChildren) {
+            ->map(function (Excursion $e) use ($childIds, $ownChildren, $today) {
                 $toRow = fn (Child $c) => [
                     'id' => $c->id,
                     'name' => $c->name,
@@ -42,9 +45,16 @@ class ExcursionRsvpController extends Controller
 
                 // Own children additionally carry their pickup for that date: joining
                 // moves a clashing pickup by itself, and the page says which it is.
+                // Only for trips still ahead — a past trip's pickup can't be moved, and
+                // resolving it cost several queries per child on every trip ever made.
+                $upcoming = $e->date->toDateString() >= $today;
+
                 $toOwnRow = fn (Child $c) => [
                     ...$toRow($c),
-                    'plan' => ExcursionPickup::state($e, $ownChildren[$c->id] ?? $c),
+                    'plan' => $upcoming ? ExcursionPickup::state($e, $ownChildren[$c->id] ?? $c) : null,
+                    // Per child, not per trip: after the Anmeldeschluss a family that
+                    // never answered still can, one that did cannot change it.
+                    'can_answer' => $e->parentMayAnswer($toRow($c)['response']),
                 ];
 
                 return [
@@ -90,40 +100,56 @@ class ExcursionRsvpController extends Controller
         // Answering is staff-or-guardian, same as editing the child.
         $this->authorize('update', $child);
 
-        // Parents can only answer while the poll is open; staff may fix it up anytime.
+        // Staff may fix an answer up at any time. For a parent the Anmeldeschluss is
+        // soft while nothing is on file and hard once there is (see parentMayAnswer).
         if (! $user->isStaff()) {
-            abort_unless($excursion->pollIsOpen(), 403);
+            $existing = $excursion->children()->find($child->id)?->pivot->response;
+
+            abort_unless($excursion->parentMayAnswer($existing === null ? null : (bool) $existing), 403);
         }
 
-        $excursion->children()->syncWithoutDetaching([
-            $child->id => [
-                'response' => $validated['response'],
-                'answered_by' => $user->id,
-                'answered_at' => now(),
-            ],
-        ]);
+        // The answer and the pickup it moves belong together: a „Ja" that is recorded
+        // while the clashing pickup stays put is the exact situation this rule exists
+        // to prevent.
+        $moved = DB::transaction(function () use ($excursion, $child, $user, $validated): ?string {
+            $excursion->children()->syncWithoutDetaching([
+                $child->id => [
+                    'response' => $validated['response'],
+                    'answered_by' => $user->id,
+                    'answered_at' => now(),
+                ],
+            ]);
 
-        activity()
-            ->causedBy($user)
-            ->performedOn($excursion)
-            ->event($validated['response'] ? 'rsvp_yes' : 'rsvp_no')
-            ->log($child->name.' · '.$excursion->name);
+            activity()
+                ->causedBy($user)
+                ->performedOn($excursion)
+                ->event($validated['response'] ? 'rsvp_yes' : 'rsvp_no')
+                ->log($child->name.' · '.$excursion->name);
 
-        // Joining the trip moves a pickup that would fall inside it — the child can't be
-        // handed over while the group is away. That one day only; the Stammplan stays.
-        $moved = $validated['response']
-            ? ExcursionPickup::moveToReturn($excursion, $child, $user)
-            : null;
+            // Joining the trip moves a pickup that would fall inside it — the child
+            // can't be handed over while the group is away. That one day only; the
+            // Stammplan stays.
+            return $validated['response']
+                ? ExcursionPickup::moveToReturn($excursion, $child, $user)
+                : null;
+        });
 
         // Keep the Slack DMs in sync (buttons → result) for both guardians, queued.
         SyncExcursionRsvp::dispatch($excursion, $child);
 
-        return back()->with('status', $moved === null
+        $status = $moved === null
             ? __('flash.rsvp_saved', ['name' => $child->name])
             : __('flash.rsvp_saved_pickup_moved', [
                 'name' => $child->name,
                 'time' => substr((string) $excursion->return_at, 0, 5),
                 'was' => $moved,
-            ]));
+            ]);
+
+        // What the move couldn't put right (a „geht mit … mit" pickup, a „kommt später")
+        // is said here — otherwise „Antwort gespeichert." would be the family's only sign
+        // that their child is still planned to be somewhere the group isn't.
+        $warnings = $validated['response'] ? ExcursionPickup::warnings($excursion, $child) : [];
+
+        return back()->with('status', implode(' ', [$status, ...$warnings]));
     }
 }
