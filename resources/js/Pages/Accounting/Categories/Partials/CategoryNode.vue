@@ -136,6 +136,7 @@ function confirmMove() {
                         ref="renameInput"
                         v-model="renameValue"
                         type="text"
+                        :aria-label="$t('accounting.categories.name_placeholder')"
                         class="block w-full rounded-md border-ink/20 py-1 text-sm focus:border-hort-teal focus:ring-hort-teal"
                         @keyup.enter="saveRename"
                         @keyup.esc="renaming = false"
@@ -144,13 +145,14 @@ function confirmMove() {
                         v-model="commentValue"
                         rows="2"
                         :placeholder="$t('accounting.categories.comment_placeholder')"
+                        :aria-label="$t('accounting.categories.edit_hint')"
                         class="block w-full rounded-md border-ink/20 py-1 text-xs focus:border-hort-teal focus:ring-hort-teal"
                     ></textarea>
                 </div>
-                <button type="button" class="rounded p-1 text-hort-teal-dark hover:bg-hort-teal/10" @click="saveRename">
+                <button type="button" :aria-label="$t('common.save')" class="rounded p-1 text-hort-teal-dark hover:bg-hort-teal/10" @click="saveRename">
                     <CheckIcon class="h-4 w-4" />
                 </button>
-                <button type="button" class="rounded p-1 text-ink/40 hover:bg-ink/10" @click="renaming = false">
+                <button type="button" :aria-label="$t('common.cancel')" class="rounded p-1 text-ink/40 hover:bg-ink/10" @click="renaming = false">
                     <XMarkIcon class="h-4 w-4" />
                 </button>
             </template>
@@ -210,6 +212,7 @@ function confirmMove() {
             <span class="text-xs text-ink/60">{{ $t('accounting.categories.reassign_prompt', { count: subtreeBookings }) }}</span>
             <select
                 v-model="moveTo"
+                :aria-label="$t('accounting.categories.reassign_placeholder')"
                 class="min-w-0 flex-1 rounded-md border-ink/20 py-1 text-sm focus:border-hort-teal focus:ring-hort-teal"
             >
                 <option value="">{{ $t('accounting.categories.reassign_placeholder') }}</option>
@@ -223,7 +226,7 @@ function confirmMove() {
             >
                 {{ $t('accounting.categories.reassign_confirm') }}
             </button>
-            <button type="button" class="rounded p-1 text-ink/40 hover:bg-ink/10" @click="confirmingDelete = false">
+            <button type="button" :aria-label="$t('common.cancel')" class="rounded p-1 text-ink/40 hover:bg-ink/10" @click="confirmingDelete = false">
                 <XMarkIcon class="h-4 w-4" />
             </button>
         </div>
@@ -235,14 +238,15 @@ function confirmMove() {
                 v-model="childName"
                 type="text"
                 :placeholder="$t('accounting.categories.name_placeholder')"
+                :aria-label="$t('accounting.categories.add_child')"
                 class="min-w-0 flex-1 rounded-md border-ink/20 py-1 text-sm focus:border-hort-teal focus:ring-hort-teal"
                 @keyup.enter="saveChild"
                 @keyup.esc="addingChild = false"
             />
-            <button type="button" class="rounded p-1 text-hort-teal-dark hover:bg-hort-teal/10" @click="saveChild">
+            <button type="button" :aria-label="$t('common.save')" class="rounded p-1 text-hort-teal-dark hover:bg-hort-teal/10" @click="saveChild">
                 <CheckIcon class="h-4 w-4" />
             </button>
-            <button type="button" class="rounded p-1 text-ink/40 hover:bg-ink/10" @click="addingChild = false">
+            <button type="button" :aria-label="$t('common.cancel')" class="rounded p-1 text-ink/40 hover:bg-ink/10" @click="addingChild = false">
                 <XMarkIcon class="h-4 w-4" />
             </button>
         </div>

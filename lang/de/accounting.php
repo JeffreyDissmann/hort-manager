@@ -79,6 +79,8 @@ return [
         'intro' => 'Buchungskategorien als Baum. Die Richtung (Einnahme/Ausgabe) legt die oberste Ebene fest und vererbt sich an alle Unterkategorien. Der Hinweis pro Kategorie hilft der KI beim Zuordnen.',
         'comment_placeholder' => 'Hinweis für die KI (optional), z. B. „monatlicher Beitrag fürs Mittagessen"',
         'edit_hint' => 'KI-Hinweis bearbeiten',
+        // Accessible name for the income/expense picker of a new category.
+        'direction' => 'Einnahme oder Ausgabe',
         'income' => 'Einnahmen',
         'expense' => 'Ausgaben',
         'new_root' => 'Neue Hauptkategorie',
@@ -147,6 +149,8 @@ return [
         'reanalyse_confirm' => 'Alle nicht bestätigten Buchungen von der KI neu bewerten lassen?',
         'relink_receipts' => 'Belege verknüpfen',
         'status' => 'Prüfstatus',
+        // Accessible name of a row's checkbox — followed by the booking's purpose.
+        'select' => 'Buchung auswählen',
         'selected_count' => ':count ausgewählt',
         'select_all_matching' => 'Alle :count auswählen',
         'all_matching_selected' => 'Alle :count passenden Buchungen ausgewählt',

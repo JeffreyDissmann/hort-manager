@@ -26,6 +26,7 @@ function change() {
         <div class="mt-6 max-w-xl">
             <select
                 v-model="selected"
+                :aria-label="$t('profile.language')"
                 class="block w-full rounded-md border-ink/20 text-ink shadow-sm focus:border-hort-teal focus:ring-hort-teal sm:max-w-xs"
                 @change="change"
             >

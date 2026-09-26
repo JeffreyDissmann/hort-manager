@@ -166,6 +166,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown));
                     </button>
                     <select
                         :value="view.getMonth()"
+                        :aria-label="$t('components.day.month')"
                         class="min-w-0 flex-1 rounded-md border-ink/20 py-1 text-sm focus:border-hort-teal focus:ring-hort-teal"
                         @change="setMonth"
                     >
@@ -173,6 +174,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown));
                     </select>
                     <select
                         :value="view.getFullYear()"
+                        :aria-label="$t('components.day.year')"
                         class="rounded-md border-ink/20 py-1 text-sm focus:border-hort-teal focus:ring-hort-teal"
                         @change="setYear"
                     >

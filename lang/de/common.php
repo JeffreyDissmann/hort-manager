@@ -19,6 +19,9 @@ return [
     'no' => 'Nein',
     'undo' => 'Rückgängig',
     'close' => 'Schließen',
+    // Accessible names for icon-only controls (no visible text to read out).
+    'more_options' => 'Weitere Optionen',
+    'expand' => 'Ausklappen',
     'loading' => 'Lädt …',
     'today' => 'Heute',
     'tomorrow' => 'Morgen',

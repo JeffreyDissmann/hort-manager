@@ -208,6 +208,7 @@ async function fetchResults(q, { limit, suggestions }) {
                 type="text"
                 class="block w-full"
                 :placeholder="$t('accounting.paperless.search_placeholder')"
+                :aria-label="$t('accounting.paperless.search_placeholder')"
                 @input="onInput"
             />
 

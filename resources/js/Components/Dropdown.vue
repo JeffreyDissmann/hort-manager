@@ -42,11 +42,20 @@ const alignmentClasses = computed(() => {
 });
 
 const open = ref(false);
+
+// Escape closes the menu, like every other overlay in the app.
+function onKeydown(event) {
+    if (event.key === 'Escape' && open.value) {
+        open.value = false;
+    }
+}
 </script>
 
 <template>
-    <div class="relative">
-        <div @click="open = !open">
+    <div class="relative" @keydown="onKeydown">
+        <!-- The trigger slot always holds a real button, so the wrapper only has to
+             announce that it opens a menu and whether that menu is open. -->
+        <div aria-haspopup="menu" :aria-expanded="open" @click="open = !open">
             <slot name="trigger" />
         </div>
 

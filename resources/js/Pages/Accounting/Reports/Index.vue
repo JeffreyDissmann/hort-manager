@@ -212,6 +212,7 @@ const openCategory = (id) => router.visit(drilldown({ category: id }));
                             <template #trigger>
                                 <button
                                     type="button"
+                                    :aria-label="$t('common.more_options')"
                                     class="flex items-center rounded-r-lg border-l border-ink/10 bg-ink/5 px-2 py-2.5 text-ink transition hover:bg-ink/10"
                                 >
                                     <ChevronDownIcon class="h-4 w-4" />
@@ -286,6 +287,7 @@ const openCategory = (id) => router.visit(drilldown({ category: id }));
                                         <button
                                             v-if="hasChildren(incomeRows, row)"
                                             type="button"
+                                            :aria-label="`${$t('common.expand')}: ${row.name}`"
                                             class="text-ink/40 transition hover:text-ink"
                                             :aria-expanded="!collapsed.has(row.id)"
                                             @click="toggle(row.id)"
@@ -324,6 +326,7 @@ const openCategory = (id) => router.visit(drilldown({ category: id }));
                                         <button
                                             v-if="hasChildren(expenseRows, row)"
                                             type="button"
+                                            :aria-label="`${$t('common.expand')}: ${row.name}`"
                                             class="text-ink/40 transition hover:text-ink"
                                             :aria-expanded="!collapsed.has(row.id)"
                                             @click="toggle(row.id)"

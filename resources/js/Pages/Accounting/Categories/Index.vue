@@ -87,6 +87,7 @@ function addRoot(direction) {
                             v-model="rootName[section.key]"
                             type="text"
                             :placeholder="$t('accounting.categories.new_root')"
+                            :aria-label="$t('accounting.categories.new_root')"
                             class="min-w-0 flex-1 rounded-md border-ink/20 py-1.5 text-sm focus:border-hort-teal focus:ring-hort-teal"
                             @keyup.enter="addRoot(section.key)"
                         />

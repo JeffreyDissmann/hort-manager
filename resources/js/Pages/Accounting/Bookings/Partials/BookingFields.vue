@@ -167,6 +167,7 @@ const availableChildren = computed(() => {
             <select
                 v-if="mode === 'child'"
                 v-model="form.counterparty_child_id"
+                :aria-label="$t('accounting.bookings.pick_child')"
                 class="mt-2 block w-full rounded-md border-ink/20 shadow-sm focus:border-hort-teal focus:ring-hort-teal"
             >
                 <option :value="null">{{ $t('accounting.bookings.pick_child') }}</option>
@@ -175,6 +176,7 @@ const availableChildren = computed(() => {
             <select
                 v-if="mode === 'user'"
                 v-model="form.counterparty_user_id"
+                :aria-label="$t('accounting.bookings.pick_user')"
                 class="mt-2 block w-full rounded-md border-ink/20 shadow-sm focus:border-hort-teal focus:ring-hort-teal"
             >
                 <option :value="null">{{ $t('accounting.bookings.pick_user') }}</option>
