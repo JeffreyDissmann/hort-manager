@@ -390,9 +390,13 @@ function answerCompanion(id, confirmed) {
                                 >
                                     {{ weekDays[i].date_label }}
                                 </div>
+                                <!-- A locked day is a plain div: no button semantics, and
+                                     no click either — the editor would refuse the save
+                                     anyway, and the keyboard can't reach it, so offering
+                                     it to the mouse only is worse than not offering it. -->
                                 <component
                                     :is="day.editable ? 'button' : 'div'"
-                                    type="button"
+                                    :type="day.editable ? 'button' : undefined"
                                     :data-testid="`wp-cell-${child.id}-${day.date}`"
                                     class="relative mt-1 flex w-full grow flex-col justify-center overflow-hidden break-words rounded-lg px-0.5 py-1.5"
                                     :class="[
@@ -401,7 +405,7 @@ function answerCompanion(id, confirmed) {
                                         day.editable ? 'cursor-pointer hover:brightness-95 active:scale-[0.97]' : '',
                                     ]"
                                     :title="day.ui.title"
-                                    @click="openCell(child, day, weekDays[i])"
+                                    @click="day.editable ? openCell(child, day, weekDays[i]) : null"
                                 >
                                     <!-- „🚶 ab" on one line, the time under it: the cell is
                                          a flex column, so these have to share a span. -->

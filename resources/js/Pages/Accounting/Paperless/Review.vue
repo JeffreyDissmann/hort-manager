@@ -225,7 +225,12 @@ function submitCreate() {
         </div>
 
         <!-- Create-booking modal -->
-        <Modal :show="showCreate" max-width="2xl" @close="showCreate = false">
+        <Modal
+            :show="showCreate"
+            max-width="2xl"
+            :label="$t('accounting.paperless_review.create_title')"
+            @close="showCreate = false"
+        >
             <form class="p-6" @submit.prevent="submitCreate">
                 <h3 class="mb-4 text-lg font-semibold text-ink">{{ $t('accounting.paperless_review.create_title') }}</h3>
                 <BookingFields

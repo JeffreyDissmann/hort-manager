@@ -840,10 +840,11 @@ function editHortfrei(child) {
                                     class="space-y-2 rounded-xl bg-warn/10 p-3"
                                     @submit.prevent="submitAbsence(row)"
                                 >
-                                    <label class="block font-medium text-warn-dark">
+                                    <label :for="`absence-comment-${row.child_id}`" class="block font-medium text-warn-dark">
                                         {{ absenceReason === 'sick' ? $t('board.report_sick') : $t('board.report_away') }} · {{ $t('weekly.reason_label') }}
                                     </label>
                                     <input
+                                        :id="`absence-comment-${row.child_id}`"
                                         v-model="absenceComment"
                                         type="text"
                                         maxlength="255"

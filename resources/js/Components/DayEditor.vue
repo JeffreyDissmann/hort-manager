@@ -247,7 +247,12 @@ function cancelAbsence() {
 </script>
 
 <template>
-    <Modal :show="editing !== null" max-width="sm" @close="close">
+    <Modal
+        :show="editing !== null"
+        max-width="sm"
+        :label="editing ? `${editing.childName} – ${editing.label}` : null"
+        @close="close"
+    >
         <div v-if="editing" class="space-y-5 p-6">
             <div>
                 <h2 class="text-lg font-semibold text-ink">{{ editing.childName }}</h2>

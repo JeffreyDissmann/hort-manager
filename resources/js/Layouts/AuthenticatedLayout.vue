@@ -194,8 +194,10 @@ function isActive(item) {
                     <Link :href="dashboard().url" class="flex items-center gap-2">
                         <ApplicationLogo class="h-9 w-9" />
                         <!-- Only when the wordmark isn't already the world switcher —
-                             otherwise the bar reads „Hort-Manager Verwaltung". -->
-                        <span v-if="!hasWorlds" class="font-display text-2xl text-ink">{{ appName }}</span>
+                             otherwise the bar reads „Hort-Manager Verwaltung". With the
+                             switcher present the link is icon-only, so the name stays
+                             for screen readers. -->
+                        <span :class="hasWorlds ? 'sr-only' : 'font-display text-2xl text-ink'">{{ appName }}</span>
                     </Link>
 
                     <!-- The wordmark is the world switcher: Hort ↔ Buchhaltung ↔ Verwaltung,
