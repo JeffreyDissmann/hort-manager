@@ -119,6 +119,26 @@ return [
             'On “Today” and in the weekly plan you see a <strong>“Going home together”</strong> summary – with the state of each request, and a way to confirm when a child wants to go with yours.',
         ],
 
+        'arrival_title' => 'Is your child arriving later?',
+        'arrival_text' => 'Doctor, training, music school – if your child arrives at the Hort <strong>later</strong> on a day, tap that day (in the weekly plan or on “Today”) and choose <strong>“Arriving later?”</strong>. Enter the time, add a short reason, done.',
+        'arrival_points' => [
+            'The staff see it right away: “Today” shows <strong>“Arriving later today”</strong> at the top with time and reason, and the weekly plan shows it on that day.',
+            'It applies to <strong>that one day only</strong> – your standard plan stays as it is. “Reset to standard plan” removes it again.',
+            'The arrival has to be <strong>before</strong> the pickup time – otherwise Hort-Manager rejects it.',
+        ],
+
+        'clash_title' => '“Check pickup times”',
+        'clash_text' => 'Some pickup times land in the middle of something: in <strong>homework time</strong>, in a <strong>timed activity</strong>, in your child’s <strong>excursion</strong> – or, during the holidays, <em>outside</em> the care hours. A yellow <strong>“Check pickup times”</strong> notice then sits at the top of the page.',
+        'clash_points' => [
+            'Every line names the child, the day and what gets in the way – and leads straight to where you change it.',
+            'If your <strong>standard plan</strong> itself collides with the usual homework time, the line says “every Monday” – that repeats until the standard plan changes.',
+            'The notice is not a veto: maybe that is exactly how you want it. The <strong>×</strong> hides it for this visit – if something new comes up, it returns.',
+            'When you change a day, Hort-Manager says it as soon as you pick the time.',
+        ],
+
+        'program_title' => 'What else the day holds',
+        'program_text' => 'Besides the pickup times, “Today” and the weekly plan show what runs at the Hort: <strong>lunch</strong>, <strong>homework time</strong> and the <strong>activity</strong>. If an activity has a time (“Forest day 9–12”), you see it as a bar next to the pickups – so it’s clear at a glance who is where.',
+
         'late_title' => 'Short-notice changes',
         'late_text' => 'Changes for <strong>today</strong> are always possible. If they happen after the agreed time (usually 12:00), the staff get a short message so the change really reaches them. The hint appears before you save – it isn’t an error.',
     ],
@@ -155,6 +175,7 @@ return [
             'Tick the days your child is coming and save. Picking <strong>no day at all</strong> is just as valid an answer as picking every day.',
             'Watch the <strong>registration deadline</strong>. After it you can’t change anything yourself; ask the staff, they can still sign your child up.',
             'You get a message when holiday care opens, and a reminder on the deadline day if you haven’t answered yet.',
+            'The <strong>care hours</strong> are listed per day – in the holidays they take the place of homework time. If a pickup time lies outside them (say 17:00 when care ends at 16:00), the “Check pickup times” notice at the top says so.',
         ],
 
         'care_day_title' => 'Such a day runs like any other',
@@ -172,9 +193,24 @@ return [
         'intro' => 'When an excursion is coming up you’re asked whether your child is joining. Excursions are planned by the staff.',
         'points' => [
             'You get a message with all the details – destination, date, departure and return – and two buttons: <strong>yes</strong> or <strong>no</strong>.',
-            'You can answer <strong>right in Slack</strong> or in the app under <strong>Excursions</strong>. Both are the same thing; both parents see the answer.',
-            'Until the <strong>deadline</strong> you can change your answer at any time. If you haven’t answered, Hort-Manager reminds you.',
+            'You can answer <strong>right in Slack</strong> or in the app under <strong>Excursions &amp; holidays</strong>. Both are the same thing; both parents see the answer.',
             'On the day of the trip your child appears on the pickup list with a 🚌 – they’re picked up as normal afterwards.',
+        ],
+
+        'deadline_title' => 'The deadline: what applies when?',
+        'deadline_points' => [
+            'Until the <strong>deadline</strong> you can change your answer at any time.',
+            'If you <strong>haven’t answered</strong>, you still can afterwards – right up to the day of the trip. The staff do need to know who is coming.',
+            'An answer that is <strong>already on file</strong> can’t be changed by you after the deadline: the group is planned by then. Tell the staff and they can still change it.',
+            'While no answer from you is on file, Hort-Manager reminds you <strong>every day from the deadline on</strong> – for the last time on the day of the trip. Once you answer, it stops.',
+        ],
+
+        'pickup_title' => 'When the pickup time falls inside the trip',
+        'pickup_text' => 'While the group is out, nobody is at the Hort to hand your child over. So if you say <strong>yes</strong> and the pickup time lies between departure and return, Hort-Manager moves it itself – <strong>to the end of the trip, on that one day only</strong>. Your standard plan stays, and so do the note and any “arriving later”. You are told each time what changed.',
+        'pickup_points' => [
+            'If your child <strong>goes home with another child</strong> that day, we move nothing – that would tear up the other family’s arrangement. We tell you so you can sort it out in the weekly plan.',
+            'If your child <strong>arrives later</strong> that day and that falls inside the trip, we say so too: the group isn’t back yet. Please sort that out with the Hort directly.',
+            'If the trip has no <strong>return time</strong>, we check nothing – nobody knows when the group is back.',
         ],
     ],
 
@@ -192,19 +228,20 @@ return [
         'assistant_title' => 'Just write to it',
         'assistant_text' => '<strong>Write to Hort-Manager directly in Slack.</strong> It understands ordinary sentences – for example:',
         'assistant_examples' => [
-            'My child is ill today.',
+            'My child is ill today, fever.',
             'Lena will only be picked up at 16:30 tomorrow.',
-            'Tom walks home alone from Monday.',
+            'Tom is only arriving at 14:00 tomorrow, doctor’s appointment.',
             'Is Lena coming to the zoo trip? Yes.',
             'When does Tom leave today?',
         ],
+        'assistant_reason' => 'Just add the <strong>reason</strong> (“…, doctor’s appointment”) – it is kept as the day’s note. If the new pickup time falls into homework, an activity or an excursion, Hort-Manager says so right in its reply. On closed days, on holiday-care days your child isn’t signed up for, and once your child has been picked up, it changes nothing – and tells you why.',
         'assistant_note' => 'This works as a direct message to “Hort-Manager” in Slack or with “/hort …”. It only handles your own children and confirms briefly what it entered. Check the reply – if something was misunderstood, just write the correct detail after it.',
 
         'notifications_title' => 'Which notifications do I get?',
         'notifications_intro' => 'Hort-Manager gets in touch when something important happens – as a <strong>push notification</strong> on your device and, if your account is linked to Slack, as a <strong>Slack message</strong> too. Both say the same; one channel is enough.',
         'notifications_points' => [
             '<strong>Child picked up / walked home:</strong> as soon as the staff mark your child off, you hear about it.',
-            '<strong>New excursion:</strong> you’re invited to answer – with a reminder if you haven’t yet.',
+            '<strong>New excursion:</strong> you’re invited to answer – and reminded every day from the deadline on while no answer from you is on file.',
             '<strong>Holiday care:</strong> you hear when registration opens, and are reminded on the deadline.',
             '<strong>A child wants to go with yours:</strong> if your child walks home alone and another is to come along, their family asks you – with “yes/no” in Slack or in the app.',
             '<strong>Answer about going along:</strong> if you asked whether your child may go with another, you hear as soon as the other family has answered.',
@@ -315,6 +352,14 @@ return [
             'care' => [
                 'term' => 'Holiday care (Ferienbetreuung)',
                 'def' => 'Care during the holidays that parents sign their child up for day by day. Only registered children are there.',
+            ],
+            'arrival' => [
+                'term' => 'Arriving later',
+                'def' => 'Records for a single day when a child only gets to the Hort – with a reason, so nobody has to guess.',
+            ],
+            'clash' => [
+                'term' => 'Check pickup times',
+                'def' => 'The notice at the top of the page when a pickup falls into homework, an activity or an excursion – or outside the care hours in the holidays.',
             ],
         ],
 

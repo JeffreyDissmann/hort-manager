@@ -119,6 +119,26 @@ return [
             'Oben auf „Heute“ und im Wochenplan siehst du eine Übersicht <strong>„Mit anderen nach Hause“</strong> – mit dem Stand der Zusage, und zum Bestätigen, wenn ein Kind mit deinem mitgehen möchte.',
         ],
 
+        'arrival_title' => 'Kommt dein Kind später?',
+        'arrival_text' => 'Arzttermin, Training, Musikschule – kommt dein Kind an einem Tag <strong>später</strong> in den Hort, tippe den Tag an (im Wochenplan oder auf „Heute“) und wähle <strong>„Kommt später an?“</strong>. Uhrzeit rein, kurzer Grund dazu, fertig.',
+        'arrival_points' => [
+            'Das Hort-Team sieht es sofort: auf „Heute“ steht oben <strong>„Kommt heute später“</strong> mit Zeit und Grund, im Wochenplan steht es beim jeweiligen Tag.',
+            'Die Angabe gilt <strong>nur für diesen einen Tag</strong> – der Stammplan bleibt, wie er ist. „Auf Stammplan zurücksetzen“ nimmt sie wieder weg.',
+            'Die Ankunft muss <strong>vor</strong> der Abholzeit liegen – sonst weist der Hort-Manager sie zurück.',
+        ],
+
+        'clash_title' => '„Abholzeiten prüfen“',
+        'clash_text' => 'Manche Abholzeiten fallen mitten in etwas hinein: in die <strong>Hausaufgabenzeit</strong>, in eine <strong>Aktivität mit Uhrzeit</strong>, in einen <strong>Ausflug</strong> deines Kindes – oder in den Ferien <em>außerhalb</em> der Betreuungszeit. Dann steht ganz oben ein gelber Hinweis <strong>„Abholzeiten prüfen“</strong>.',
+        'clash_points' => [
+            'Jede Zeile nennt Kind, Tag und was dazwischenkommt – und führt direkt dorthin, wo du es änderst.',
+            'Kollidiert schon dein <strong>Stammplan</strong> mit der üblichen Hausaufgabenzeit, steht dort „jeden Montag“ – das wiederholt sich, bis der Stammplan geändert ist.',
+            'Der Hinweis ist kein Verbot: vielleicht ist genau so gewollt. Mit dem <strong>×</strong> ist er für diesen Besuch weg – kommt etwas Neues dazu, meldet er sich wieder.',
+            'Beim Ändern eines Tages sagt der Hort-Manager es auch direkt, sobald du die Uhrzeit auswählst.',
+        ],
+
+        'program_title' => 'Was sonst noch im Tag steht',
+        'program_text' => 'Neben den Abholzeiten zeigen „Heute“ und der Wochenplan, was im Hort läuft: <strong>Essen</strong>, die <strong>Hausaufgabenzeit</strong> und die <strong>Aktivität</strong>. Hat eine Aktivität eine Uhrzeit („Waldtag 9–12 Uhr“), siehst du sie als Balken neben den Abholzeiten – so ist auf einen Blick klar, wer gerade wo ist.',
+
         'late_title' => 'Kurzfristige Änderungen',
         'late_text' => 'Änderungen für <strong>heute</strong> sind jederzeit möglich. Liegen sie nach der vereinbarten Uhrzeit (meist 12:00), bekommt das Hort-Team eine kurze Nachricht, damit es die Änderung auch wirklich mitbekommt. Der Hinweis erscheint vor dem Speichern – erschrick nicht, es ist keine Fehlermeldung.',
     ],
@@ -155,6 +175,7 @@ return [
             'Setz bei deinem Kind einen Haken bei den Tagen, an denen es kommt – und speichere. <strong>Keinen Tag</strong> auszuwählen ist eine genauso gültige Antwort wie alle.',
             'Achte auf den <strong>Anmeldeschluss</strong>. Danach kannst du selbst nichts mehr ändern; sprich das Hort-Team an, es kann dich noch eintragen.',
             'Du bekommst eine Nachricht, sobald eine Ferienbetreuung geöffnet ist, und eine Erinnerung am Tag des Anmeldeschlusses, falls du noch nicht geantwortet hast.',
+            'Die <strong>Betreuungszeit</strong> steht pro Tag dabei – sie ersetzt in den Ferien die Hausaufgabenzeit. Liegt eine Abholzeit außerhalb (zum Beispiel 17 Uhr, obwohl um 16 Uhr Schluss ist), sagt es der Hinweis „Abholzeiten prüfen“ ganz oben.',
         ],
 
         'care_day_title' => 'So ein Ferientag läuft wie jeder andere',
@@ -172,9 +193,24 @@ return [
         'intro' => 'Steht ein Ausflug an, wirst du gefragt, ob dein Kind mitkommt. Geplant werden Ausflüge vom Hort-Team.',
         'points' => [
             'Du bekommst eine Nachricht mit allen Infos – Ziel, Datum, Abfahrt und Rückkehr – und zwei Knöpfen: <strong>Ja</strong> oder <strong>Nein</strong>.',
-            'Antworten kannst du <strong>direkt in Slack</strong> oder in der App unter <strong>Ausflüge</strong>. Beides ist dasselbe; ihr beide Elternteile seht die Antwort.',
-            'Bis zum <strong>Antwortschluss</strong> kannst du deine Antwort jederzeit ändern. Hast du noch nicht geantwortet, erinnert dich der Hort-Manager.',
+            'Antworten kannst du <strong>direkt in Slack</strong> oder in der App unter <strong>Ausflüge &amp; Ferien</strong>. Beides ist dasselbe; ihr beide Elternteile seht die Antwort.',
             'Am Ausflugstag steht dein Kind mit einem 🚌 auf der Abholliste – abgeholt wird es danach ganz normal.',
+        ],
+
+        'deadline_title' => 'Antwortschluss: was gilt wann?',
+        'deadline_points' => [
+            'Bis zum <strong>Antwortschluss</strong> kannst du deine Antwort jederzeit ändern.',
+            'Hast du <strong>noch nicht geantwortet</strong>, geht es auch danach noch – bis zum Ausflugstag selbst. Das Hort-Team muss ja wissen, wer mitfährt.',
+            'Eine <strong>schon gegebene Antwort</strong> lässt sich nach dem Antwortschluss nicht mehr selbst ändern: die Gruppe ist dann geplant. Sag dem Hort-Team kurz Bescheid, es kann es noch eintragen.',
+            'Solange von dir keine Antwort da ist, erinnert dich der Hort-Manager <strong>ab dem Antwortschluss jeden Tag</strong> – am Ausflugstag zum letzten Mal. Sobald du geantwortet hast, ist Ruhe.',
+        ],
+
+        'pickup_title' => 'Wenn die Abholzeit im Ausflug liegt',
+        'pickup_text' => 'Während der Gruppe unterwegs ist, ist niemand im Hort, der dein Kind übergeben könnte. Sagst du <strong>Ja</strong> und die Abholzeit liegt zwischen Abfahrt und Rückkehr, verschiebt der Hort-Manager sie deshalb selbst – <strong>auf das Ende des Ausflugs, nur an diesem einen Tag</strong>. Dein Stammplan bleibt, Notiz und „kommt später“ bleiben auch. Du erfährst jedes Mal, was sich geändert hat.',
+        'pickup_points' => [
+            'Geht dein Kind an dem Tag <strong>mit einem anderen Kind mit</strong>, verschieben wir nichts – das würde die Absprache der anderen Familie zerreißen. Wir sagen es dir, damit du es im Wochenplan selbst regeln kannst.',
+            'Kommt dein Kind an dem Tag <strong>später</strong> und das fällt in den Ausflug, sagen wir es ebenfalls: die Gruppe ist dann noch nicht zurück. Das klär bitte direkt mit dem Hort.',
+            'Ist am Ausflug keine <strong>Rückkehrzeit</strong> hinterlegt, prüfen wir nichts – dann weiß niemand, wann die Gruppe wieder da ist.',
         ],
     ],
 
@@ -192,19 +228,20 @@ return [
         'assistant_title' => 'Einfach hinschreiben',
         'assistant_text' => '<strong>Schreib dem Hort-Manager direkt in Slack.</strong> Er versteht ganz normale Sätze – zum Beispiel:',
         'assistant_examples' => [
-            'Mein Kind ist heute krank.',
+            'Mein Kind ist heute krank, Fieber.',
             'Lena wird morgen erst um 16:30 abgeholt.',
-            'Tom geht ab Montag allein nach Hause.',
+            'Tom kommt morgen erst um 14 Uhr, Arzttermin.',
             'Kommt Lena beim Zoo-Ausflug mit? Ja.',
             'Wann geht Tom heute?',
         ],
+        'assistant_reason' => 'Schreib den <strong>Grund</strong> einfach dazu („…, Arzttermin“) – er landet als Notiz am Tag. Fällt die neue Abholzeit in die Hausaufgaben, eine Aktivität oder einen Ausflug, sagt der Hort-Manager es gleich in seiner Antwort. An Schließtagen, an Ferientagen ohne Anmeldung und wenn dein Kind schon abgeholt wurde, ändert er nichts – er sagt dir, warum.',
         'assistant_note' => 'Das geht per Direktnachricht an den „Hort-Manager“ in Slack oder mit „/hort …“. Er kümmert sich nur um deine eigenen Kinder und bestätigt dir kurz, was er eingetragen hat. Prüf die Antwort – bei einem Missverständnis schreib einfach die richtige Angabe nach.',
 
         'notifications_title' => 'Welche Benachrichtigungen bekomme ich?',
         'notifications_intro' => 'Der Hort-Manager meldet sich bei dir, wenn etwas Wichtiges passiert – als <strong>Push-Nachricht</strong> auf deinem Gerät und, wenn dein Konto mit Slack verbunden ist, zusätzlich als <strong>Slack-Nachricht</strong>. Beide zeigen dasselbe; ein Kanal genügt.',
         'notifications_points' => [
             '<strong>Kind abgeholt / allein gegangen:</strong> Sobald das Hort-Team dein Kind abhakt, bekommst du Bescheid.',
-            '<strong>Neuer Ausflug:</strong> Du wirst zur Abstimmung eingeladen – mit einer Erinnerung, falls du noch nicht geantwortet hast.',
+            '<strong>Neuer Ausflug:</strong> Du wirst zur Abstimmung eingeladen – und ab dem Antwortschluss täglich erinnert, solange von dir keine Antwort da ist.',
             '<strong>Ferienbetreuung:</strong> Du erfährst, wenn die Anmeldung offen ist, und wirst am Anmeldeschluss erinnert.',
             '<strong>Ein Kind möchte mit deinem mitgehen:</strong> Geht dein Kind allein und ein anderes soll mitkommen, fragt dich dessen Familie um Erlaubnis – direkt mit „Ja/Nein“ in Slack oder in der App.',
             '<strong>Antwort aufs Mitgehen:</strong> Hast du gefragt, ob dein Kind mit einem anderen mitgehen darf, erfährst du, sobald die andere Familie zu- oder abgesagt hat.',
@@ -315,6 +352,14 @@ return [
             'care' => [
                 'term' => 'Ferienbetreuung',
                 'def' => 'Betreuung in den Ferien, für die Eltern ihr Kind Tag für Tag anmelden. Nur angemeldete Kinder sind da.',
+            ],
+            'arrival' => [
+                'term' => 'Kommt später',
+                'def' => 'Für einen einzelnen Tag hinterlegt, wann ein Kind erst in den Hort kommt – mit Grund, damit niemand rätselt.',
+            ],
+            'clash' => [
+                'term' => 'Abholzeiten prüfen',
+                'def' => 'Der Hinweis oben auf der Seite, wenn eine Abholzeit in Hausaufgaben, Aktivität oder Ausflug fällt – oder in den Ferien außerhalb der Betreuungszeit liegt.',
             ],
         ],
 

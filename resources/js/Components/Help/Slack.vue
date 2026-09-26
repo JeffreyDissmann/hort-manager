@@ -27,6 +27,7 @@ const examples = computed(() => tList('help.slack.assistant_examples'));
                     „{{ ex }}“
                 </li>
             </ul>
+            <p class="text-ink/70" v-html="$t('help.slack.assistant_reason')" />
             <p class="text-sm text-ink/60">{{ $t('help.slack.assistant_note') }}</p>
         </HelpSection>
 

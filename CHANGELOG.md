@@ -43,6 +43,11 @@ Ausflug changes that came out of it.
 - **One home for the collision rule.** „Does this pickup fall inside that window?" lived
   in eleven places (and had drifted); it is now `App\Support\DayWindows` plus one
   documented mirror in `resources/js/windows.js`.
+- **The „Ausflüge & Ferien" badge counts until the trip**, not until the Anmeldeschluss —
+  it used to disappear exactly when the daily reminders started.
+- **The help page** documents „Kommt später", „Abholzeiten prüfen" and timed Aktivitäten
+  (all shipped earlier without a word), and the Ausflug chapter now explains what the
+  Antwortschluss still allows. Both locales.
 
 ### Fixed
 
