@@ -50,8 +50,8 @@ class ExcursionPickup
             return null;
         }
 
+        $window = DayWindows::excursion($excursion);
         $return = self::short($excursion->return_at);
-        $depart = self::short($excursion->depart_at) ?? '00:00';
         $departed = DailyDeparture::query()
             ->where('child_id', $child->id)->where('date', $date)
             ->where('status', '!=', DepartureStatus::Present)->exists();
@@ -59,7 +59,7 @@ class ExcursionPickup
         return [
             'time' => $time,
             'method' => $plan['method'],
-            'conflict' => $time !== null && $return !== null && $time >= $depart && $time < $return,
+            'conflict' => $window !== null && DayWindows::contains($time, $window['from'], $window['to']),
             'movable' => $return !== null
                 && ! $isCompanion
                 && ! $departed
@@ -136,8 +136,7 @@ class ExcursionPickup
         }
 
         $date = $excursion->date->toDateString();
-        $return = self::short($excursion->return_at);
-        $depart = self::short($excursion->depart_at) ?? '00:00';
+        $window = DayWindows::excursion($excursion);
         $warnings = [];
 
         if ($state['conflict'] && ! $state['movable']) {
@@ -149,11 +148,11 @@ class ExcursionPickup
 
         $arrival = EffectivePlan::for($child->id, $date)['arrives_at'] ?? null;
 
-        if ($return !== null && $arrival !== null && $arrival >= $depart && $arrival < $return) {
+        if ($window !== null && DayWindows::contains($arrival, $window['from'], $window['to'])) {
             $warnings[] = __('flash.rsvp_clash_arrival', [
                 'name' => $child->name,
-                'time' => $arrival,
-                'return' => $return,
+                'time' => (string) $arrival,
+                'return' => $window['to'],
             ]);
         }
 
