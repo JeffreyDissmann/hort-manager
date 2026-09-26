@@ -27,6 +27,20 @@ import HelpSection from '@/Components/Help/HelpSection.vue';
             <HelpBullets items-key="help.pickups.companion_points" />
         </HelpSection>
 
+        <HelpSection :title="$t('help.pickups.arrival_title')">
+            <p class="text-ink/70" v-html="$t('help.pickups.arrival_text')" />
+            <HelpBullets items-key="help.pickups.arrival_points" />
+        </HelpSection>
+
+        <HelpSection :title="$t('help.pickups.program_title')">
+            <p class="text-ink/70" v-html="$t('help.pickups.program_text')" />
+        </HelpSection>
+
+        <HelpSection :title="$t('help.pickups.clash_title')">
+            <p class="text-ink/70" v-html="$t('help.pickups.clash_text')" />
+            <HelpBullets items-key="help.pickups.clash_points" />
+        </HelpSection>
+
         <HelpSection :title="$t('help.pickups.late_title')">
             <p class="text-ink/70" v-html="$t('help.pickups.late_text')" />
         </HelpSection>

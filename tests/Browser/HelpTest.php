@@ -37,3 +37,19 @@ it('is readable without signing in', function () {
     $page->click('@help-topic-getting-started');
     $page->assertSee('Wie melde ich mich an?')->assertPathIs('/help/getting-started');
 });
+
+it('explains the later arrival and the pickup-clash notice', function () {
+    actAndVisit(User::factory()->parent()->create(), '/help/pickups')
+        ->assertSee('Kommt dein Kind später?')
+        ->assertSee('Abholzeiten prüfen')
+        // The timed Aktivität and its band next to the pickups.
+        ->assertSee('Waldtag 9–12 Uhr');
+});
+
+it('explains what the Ausflug deadline still allows', function () {
+    actAndVisit(User::factory()->parent()->create(), '/help/excursions')
+        ->assertSee('Antwortschluss: was gilt wann?')
+        // A first answer stays possible; only changing one is closed off.
+        ->assertSee('bis zum Ausflugstag selbst')
+        ->assertSee('Wenn die Abholzeit im Ausflug liegt');
+});
