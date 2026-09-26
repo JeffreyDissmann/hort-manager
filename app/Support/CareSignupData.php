@@ -94,7 +94,6 @@ class CareSignupData
                     'date' => $day->date->toDateString(),
                     'starts_at' => HolidayCareDay::short($day->starts_at),
                     'ends_at' => HolidayCareDay::short($day->ends_at),
-                    'activity' => $day->activity,
                     // Which of the listed children are signed up for this day.
                     'children' => $children->pluck('id')
                         ->filter(fn (int $id): bool => $registered->has($day->date->toDateString().'|'.$id))

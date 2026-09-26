@@ -22,6 +22,9 @@ use Illuminate\Support\Collection;
  * the Wochenplan flag these per day — this is the standing summary, so a family sees
  * the whole picture without walking the week.
  *
+ * On a Ferienbetreuung day the test is inverted: there the pickup has to sit *inside*
+ * the Betreuungszeit, because that is when the Hort is staffed.
+ *
  * Two kinds of finding:
  *  - **recurring** — the Stammplan itself collides with the weekday's default
  *    Hausaufgabenzeit, so it happens every week until the Stammplan changes;
@@ -202,6 +205,27 @@ class PickupClashes
                     }
 
                     $clashes[] = [...$window, 'child' => $child->name, 'child_id' => $child->id, 'date' => $date, 'time' => $time];
+                }
+
+                // Ferienbetreuung is the one window a pickup has to sit *inside*: the
+                // Hort is only staffed between starts_at and ends_at, so a 17:00 pickup
+                // on a day that ends at 16:00 means nobody is there to hand the child
+                // over (and nobody warned about it before this).
+                $careDay = $careDays->get($date);
+                $careFrom = self::short($careDay?->starts_at);
+                $careTo = self::short($careDay?->ends_at);
+
+                if ($careFrom !== null && $careTo !== null && ($time < $careFrom || $time > $careTo)) {
+                    $clashes[] = [
+                        'child' => $child->name,
+                        'child_id' => $child->id,
+                        'date' => $date,
+                        'time' => $time,
+                        'kind' => 'care',
+                        'name' => $careDay->period?->name,
+                        'from' => $careFrom,
+                        'to' => $careTo,
+                    ];
                 }
 
                 $trip = $trips[$key] ?? null;

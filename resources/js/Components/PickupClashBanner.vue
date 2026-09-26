@@ -62,9 +62,14 @@ function dayLabel(date) {
     return `${t(WEEKDAYS[weekday - 1] ?? WEEKDAYS[0])}, ${String(day).padStart(2, '0')}.${String(month).padStart(2, '0')}.`;
 }
 
-/** What the pickup runs into: the homework slot, a named activity, or a trip. */
+/**
+ * What the pickup runs into: the homework slot, a named activity or a trip — or, on a
+ * Ferienbetreuung day, the Betreuungszeit it falls *outside* of.
+ */
 function what(clash) {
-    return t(`weekly.clashes.in_${clash.kind}`, { name: clash.name ?? '', from: clash.from, to: clash.to });
+    const key = clash.kind === 'care' ? 'outside_care' : `in_${clash.kind}`;
+
+    return t(`weekly.clashes.${key}`, { name: clash.name ?? '', from: clash.from, to: clash.to });
 }
 
 // Each finding is fixed in a different place, so each line links to its own: a single

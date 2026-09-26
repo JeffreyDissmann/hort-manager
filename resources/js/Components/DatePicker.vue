@@ -178,7 +178,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown));
                     >
                         <option v-for="y in years" :key="y" :value="y">{{ y }}</option>
                     </select>
-                    <button type="button" class="rounded-lg p-1 text-ink/60 hover:bg-ink/5" :aria-label="$t('components.day.next')" @click="shiftMonth(1)">
+                    <button type="button" data-testid="date-next-month" class="rounded-lg p-1 text-ink/60 hover:bg-ink/5" :aria-label="$t('components.day.next')" @click="shiftMonth(1)">
                         <ChevronRightIcon class="h-4 w-4" />
                     </button>
                 </div>

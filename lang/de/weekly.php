@@ -107,6 +107,7 @@ return [
         'in_homework' => 'in der Hausaufgabenzeit (:from–:to).',
         'in_activity' => 'in der Aktivität „:name" (:from–:to).',
         'in_excursion' => 'im Ausflug „:name" (:from–:to).',
+        'outside_care' => 'außerhalb der Betreuungszeit (:from–:to Uhr).',
         'action' => 'Im Wochenplan ansehen',
         'action_standard' => 'Stammplan ändern',
     ],

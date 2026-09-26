@@ -32,18 +32,25 @@ function carePeriod(?string $deadline = null): HolidayPeriod
 it('lets staff set up a Ferienbetreuung with its days', function () {
     $staff = User::factory()->staff()->create();
 
-    // A Wednesday in the visible month, so one calendar click gives exactly one
-    // offered weekday — a weekend date would assert nothing.
-    $day = now()->startOfMonth()->addDays(20);
+    // The next Wednesday that is still ahead: one calendar click then gives exactly one
+    // offered weekday (a weekend date would assert nothing), and the picker offers no
+    // past days at all — a fixed day-of-month broke every time the month ran out.
+    $day = now()->addDay();
     while (! $day->isWednesday()) {
         $day->addDay();
     }
 
-    actAndVisit($staff, '/closures')
+    $page = actAndVisit($staff, '/closures')
         ->click('@type-care')                 // Geschlossen → Ferienbetreuung
         ->type('@closure-name', 'Herbst-Ferienbetreuung')
-        ->click('#closure-from')
-        ->click('@date-pick-'.$day->toDateString())
+        ->click('#closure-from');
+
+    // The picker opens on the current month; that Wednesday may be in the next one.
+    if ($day->month !== now()->month) {
+        $page = $page->click('@date-next-month');
+    }
+
+    $page->click('@date-pick-'.$day->toDateString())
         ->click('@closure-save')
         ->assertSee('Herbst-Ferienbetreuung');
 
