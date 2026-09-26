@@ -6,6 +6,78 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [2026.09.26] — 2026-09-26
+
+A review pass over the whole app (Laravel practice, security, consistency), plus two
+Ausflug changes that came out of it.
+
+### Added
+
+- **The Anmeldeschluss is soft for a first answer.** A family that never answered can
+  still say ja/nein until the trip day itself; once an answer is on file, only staff may
+  change it (they plan the group around it). Same rule in the app, the Slack buttons and
+  the assistant; the poll page gates the buttons per child and says „Anmeldeschluss
+  vorbei – bitte trotzdem noch antworten".
+- **The RSVP reminder repeats.** Instead of a single DM on the deadline, guardians of a
+  child with no answer are reminded every day up to and including the trip day, with the
+  wording following the stage (letzte Chance → noch keine Rückmeldung → heute ist der
+  Ausflug). It stops the moment the family answers; a trip without a deadline is never
+  chased.
+- **Pickups outside the Betreuungszeit are flagged.** On a Ferienbetreuung day the Hort
+  is only staffed between the day's start and end, so „Abholzeiten prüfen" now reports a
+  pickup that falls outside it — the one window a pickup has to sit *inside*.
+- **`warn` / `danger` colour tokens.** Status colours join the theme system, so warnings
+  and errors keep their contrast in dark mode instead of showing near-white blocks.
+
+### Changed
+
+- **A plan change says what it did to another family.** Unwinding a „geht mit … mit"
+  DMs the other family; now the person who caused it is told on screen too. „Auf Standard
+  zurücksetzen" re-checks those arrangements as well — it never did.
+- **The TRMNL feed link is revocable.** The staff-room URL carries a rotatable token
+  (`hort:trmnl-url --rotate`), so a leaked link can be killed without rotating `APP_KEY`.
+  **The link in the TRMNL plugin has to be replaced after this deploy.**
+- **The free-text assistant follows the same day rules as the app:** it refuses a
+  Schließtag, a Ferienbetreuung day the child isn't signed up for and a day the child has
+  already been handed over, and it fires the „späte Änderung" DM like every other path.
+- **One home for the collision rule.** „Does this pickup fall inside that window?" lived
+  in eleven places (and had drifted); it is now `App\Support\DayWindows` plus one
+  documented mirror in `resources/js/windows.js`.
+
+### Fixed
+
+- **A Ferienbetreuung place survives an unwound „geht mit … mit".** The sign-up *is* the
+  `DailyDeparture`, so deleting the row took the child off the roster — usually long past
+  the Anmeldeschluss, with nobody told.
+- **Joining a trip says what it could not fix:** a „geht mit … mit" pickup inside the
+  trip, or a „kommt später" that lands while the group is away. Both were silent, and the
+  Slack button said nothing at all.
+- **No Hausaufgaben warning during the Ferien** (the assistant was the only view still
+  applying the per-weekday default there), and children who have left no longer appear in
+  the `/standard-plan` timetable.
+- **Atomic saves.** A Ferienbetreuung sign-up, an Ausflug RSVP and an import's drafts are
+  each written in one transaction; a failure halfway no longer leaves a half-registered
+  week, a „Ja" whose pickup stayed put, or uncounted drafts.
+- **Queued Slack DMs** whose subject is gone (a deleted trip, an unwound arrangement) are
+  dropped instead of piling up in `failed_jobs`, and retries wait 10 s / 1 min / 5 min so
+  a rate limit doesn't burn all three attempts at once.
+- **Accessibility:** a locked Wochenplan cell no longer opens the editor for the mouse
+  only, dialogs have names and return focus, `Modal` stops swallowing Escape while
+  closed, and every icon-only control and unlabelled field has an accessible name.
+- **Contrast:** meaning-carrying labels („Geschlossen", „nicht angemeldet", „Kein
+  Stammplan", Abfahrt/Rückkehr) moved from `ink/40` to `ink/60`, and the nav badge no
+  longer puts white on amber (~2.1:1).
+- A date-dependent browser test (`CareTest`) that failed in the last week of every month.
+
+### Performance
+
+- `GET /board` seeds the day in one upsert instead of a `firstOrCreate` per child, which
+  also closes a race between two simultaneous loads.
+- The shared Inertia props no longer scale with the data: companion pickups resolve in
+  one batch, and `pendingCare` runs two queries instead of two per open Ferienbetreuung.
+- „Ausflüge & Ferien" resolves the pickup state only for trips still ahead, not for every
+  excursion ever recorded.
+
 ## [2026.09.18] — 2026-09-18
 
 ### Added
