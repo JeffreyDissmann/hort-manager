@@ -214,13 +214,16 @@ class HandleInertiaRequests extends Middleware
 
         // Pivot constraints inside Eloquent count-subqueries are unreliable for the
         // pivot-less Child::excursions relation, so count the join directly.
+        //
+        // „Still owes" runs until the trip, not until the Anmeldeschluss: a family that
+        // never answered may answer right up to the trip day (Excursion::parentMayAnswer)
+        // and is reminded daily, so the badge and the banner have to stay up as well.
         return DB::table('child_excursion')
             ->join('excursions', 'excursions.id', '=', 'child_excursion.excursion_id')
             ->join('child_user', 'child_user.child_id', '=', 'child_excursion.child_id')
             ->where('child_user.user_id', $user->id)
             ->whereNull('child_excursion.response')
-            ->where(fn ($q) => $q->whereNull('excursions.rsvp_deadline')
-                ->orWhereDate('excursions.rsvp_deadline', '>=', now()->toDateString()))
+            ->whereDate('excursions.date', '>=', now()->toDateString())
             ->count();
     }
 

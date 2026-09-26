@@ -25,6 +25,7 @@ return [
             '⚠️ In den Ferien prüfen wir die Abholzeit gegen die Betreuungszeit: Steht die Abholung außerhalb (zum Beispiel 17 Uhr, obwohl die Betreuung um 16 Uhr endet), sagen wir es oben unter „Abholzeiten prüfen".',
             '👀 Wenn dein Kind mit einem anderen Kind mitgeht und bei dem sich der Plan ändert, siehst du direkt, dass die Absprache aufgehoben wurde – vorher stand das nur in der Nachricht an die andere Familie.',
             '🌙 Der Dunkelmodus liest sich besser: Hinweise und Warnungen haben jetzt überall genug Kontrast, und die grauen Kästchen wie „Geschlossen" oder „nicht angemeldet" sind klarer zu lesen.',
+            '📖 Die Hilfe ist auf dem Stand: „Kommt später", der Hinweis „Abholzeiten prüfen", Aktivitäten mit Uhrzeit und die Ausflug-Regeln stehen jetzt dort erklärt – im Menü unter „Hilfe".',
         ],
     ],
     [
