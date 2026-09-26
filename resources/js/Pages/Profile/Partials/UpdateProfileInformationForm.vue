@@ -86,7 +86,7 @@ const form = useForm({
 
                 <div
                     v-show="status === 'verification-link-sent'"
-                    class="mt-2 text-sm font-medium text-green-600"
+                    class="mt-2 text-sm font-medium text-hort-teal-dark"
                 >
                     {{ $t('profile.email_verification_sent') }}
                 </div>

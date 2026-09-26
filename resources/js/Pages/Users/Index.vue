@@ -159,7 +159,7 @@ function save(user, changes) {
                             v-if="!user.is_self"
                             type="button"
                             @click="destroy(user)"
-                            class="shrink-0 rounded-lg p-2 text-ink/30 transition hover:bg-red-50 hover:text-red-600"
+                            class="shrink-0 rounded-lg p-2 text-ink/40 transition hover:bg-danger/10 hover:text-danger"
                             :aria-label="$t('users.delete_aria')"
                         >
                             <TrashIcon class="h-5 w-5" />

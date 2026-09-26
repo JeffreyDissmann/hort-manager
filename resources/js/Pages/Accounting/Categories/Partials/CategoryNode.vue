@@ -195,7 +195,7 @@ function confirmMove() {
                     </button>
                     <button
                         type="button"
-                        class="rounded p-1 text-ink/50 hover:bg-red-50 hover:text-red-600"
+                        class="rounded p-1 text-ink/50 hover:bg-danger/10 hover:text-danger"
                         :title="$t('common.delete')"
                         @click="destroy"
                     >
@@ -217,7 +217,7 @@ function confirmMove() {
             </select>
             <button
                 type="button"
-                class="rounded-lg bg-red-50 px-2.5 py-1 text-xs font-medium text-red-600 transition hover:bg-red-100 disabled:opacity-40"
+                class="rounded-lg bg-danger/10 px-2.5 py-1 text-xs font-medium text-danger transition hover:bg-danger/20 disabled:opacity-40"
                 :disabled="!moveTo"
                 @click="confirmMove"
             >

@@ -64,13 +64,13 @@ const submit = () => {
     <GuestLayout>
         <Head :title="$t('login.title')" />
 
-        <div v-if="status" class="mb-4 text-sm font-medium text-green-600">
+        <div v-if="status" class="mb-4 text-sm font-medium text-hort-teal-dark">
             {{ status }}
         </div>
 
         <div
             v-if="slackError"
-            class="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-600"
+            class="mb-4 rounded-lg bg-danger/10 px-3 py-2 text-sm font-medium text-danger-dark"
         >
             {{ slackError }}
         </div>

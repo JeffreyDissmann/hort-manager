@@ -42,7 +42,7 @@ const unassignedLink = computed(() => {
 const isMissing = (cents, monthIndex) => cents === 0 && monthIndex + 1 <= props.pastMonths;
 const cell = (cents) => (cents === 0 ? '—' : formatEuro(cents));
 const valueClass = (cents) => (cents === 0 ? 'text-ink/25' : 'text-hort-teal-dark');
-const missingClass = 'bg-red-500/10 text-red-600';
+const missingClass = 'bg-danger/10 text-danger';
 </script>
 
 <template>
@@ -85,7 +85,7 @@ const missingClass = 'bg-red-500/10 text-red-600';
         <div class="space-y-4">
             <p class="text-sm text-ink/50">
                 {{ $t('accounting.contributions.intro') }}
-                <span class="text-red-600/70">{{ $t('accounting.contributions.missing_hint') }}</span>
+                <span class="text-danger/80">{{ $t('accounting.contributions.missing_hint') }}</span>
             </p>
 
             <div class="overflow-hidden rounded-2xl bg-surface shadow-sm">
@@ -140,20 +140,20 @@ const missingClass = 'bg-red-500/10 text-red-600';
                             <!-- Contributions attributed to a child NOT enrolled this year — flagged. -->
                             <template v-if="inactiveRows.length">
                                 <tr>
-                                    <td :colspan="monthLabels.length + 2" class="px-3 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-500">
+                                    <td :colspan="monthLabels.length + 2" class="px-3 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-warn-dark">
                                         {{ $t('accounting.contributions.inactive_section') }}
                                     </td>
                                 </tr>
                                 <template v-for="row in inactiveRows" :key="'x' + row.id">
                                     <tr class="hover:bg-ink/5">
-                                        <td class="sticky left-0 z-10 bg-surface px-3 py-1.5 font-medium text-amber-700 dark:text-amber-500">{{ row.name }}</td>
-                                        <td v-for="(c, i) in row.months" :key="i" class="px-3 py-1.5 text-right" :class="c === 0 ? 'text-ink/25' : 'text-amber-700 dark:text-amber-500'">{{ cell(c) }}</td>
-                                        <td class="px-3 py-1.5 text-right font-semibold text-amber-700 dark:text-amber-500">{{ cell(row.total) }}</td>
+                                        <td class="sticky left-0 z-10 bg-surface px-3 py-1.5 font-medium text-warn-dark">{{ row.name }}</td>
+                                        <td v-for="(c, i) in row.months" :key="i" class="px-3 py-1.5 text-right" :class="c === 0 ? 'text-ink/25' : 'text-warn-dark'">{{ cell(c) }}</td>
+                                        <td class="px-3 py-1.5 text-right font-semibold text-warn-dark">{{ cell(row.total) }}</td>
                                     </tr>
                                     <tr v-for="b in row.breakdown" :key="'x' + row.id + '-' + b.id" class="bg-ink/[0.02]">
                                         <td class="sticky left-0 z-10 bg-surface px-3 py-1 text-ink/50"><span class="block pl-[22px]">{{ b.name }}</span></td>
-                                        <td v-for="(c, i) in b.months" :key="i" class="px-3 py-1 text-right" :class="c === 0 ? 'text-ink/25' : 'text-amber-700/80 dark:text-amber-500/80'">{{ cell(c) }}</td>
-                                        <td class="px-3 py-1 text-right text-amber-700/80 dark:text-amber-500/80">{{ cell(b.total) }}</td>
+                                        <td v-for="(c, i) in b.months" :key="i" class="px-3 py-1 text-right" :class="c === 0 ? 'text-ink/25' : 'text-warn-dark/80'">{{ cell(c) }}</td>
+                                        <td class="px-3 py-1 text-right text-warn-dark/80">{{ cell(b.total) }}</td>
                                     </tr>
                                 </template>
                             </template>
@@ -167,17 +167,17 @@ const missingClass = 'bg-red-500/10 text-red-600';
                             </tr>
 
                             <!-- Contributions not linked to a real child — flagged, links to the fix list. -->
-                            <tr v-if="unassignedTotal !== 0" class="bg-amber-500/10">
-                                <td class="sticky left-0 z-10 bg-amber-50 px-3 py-2 dark:bg-amber-500/10">
-                                    <Link :href="unassignedLink" class="inline-flex items-center gap-1.5 font-medium text-amber-700 hover:underline dark:text-amber-500" data-testid="contributions-unassigned">
+                            <tr v-if="unassignedTotal !== 0" class="bg-warn/10">
+                                <td class="sticky left-0 z-10 bg-warn/10 px-3 py-2">
+                                    <Link :href="unassignedLink" class="inline-flex items-center gap-1.5 font-medium text-warn-dark hover:underline" data-testid="contributions-unassigned">
                                         <ExclamationTriangleIcon class="h-4 w-4 shrink-0" />
                                         {{ $t('accounting.contributions.unassigned') }}
                                     </Link>
                                 </td>
-                                <td v-for="(c, i) in unassignedMonths" :key="i" class="px-3 py-2 text-right" :class="c === 0 ? 'text-ink/25' : 'text-amber-700 dark:text-amber-500'">
+                                <td v-for="(c, i) in unassignedMonths" :key="i" class="px-3 py-2 text-right" :class="c === 0 ? 'text-ink/25' : 'text-warn-dark'">
                                     {{ cell(c) }}
                                 </td>
-                                <td class="px-3 py-2 text-right font-semibold text-amber-700 dark:text-amber-500">{{ cell(unassignedTotal) }}</td>
+                                <td class="px-3 py-2 text-right font-semibold text-warn-dark">{{ cell(unassignedTotal) }}</td>
                             </tr>
                         </tbody>
                     </table>

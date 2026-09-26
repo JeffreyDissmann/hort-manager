@@ -351,7 +351,7 @@ function destroy() {
                             v-if="canDelete"
                             type="button"
                             @click="destroy"
-                            class="text-sm font-medium text-red-600 transition hover:text-red-700"
+                            class="text-sm font-medium text-danger transition hover:text-danger-dark"
                         >
                             {{ $t('children.delete_child') }}
                         </button>

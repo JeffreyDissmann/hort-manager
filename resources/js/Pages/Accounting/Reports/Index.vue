@@ -111,7 +111,7 @@ const visibleExpense = computed(() => visible(props.expenseRows));
 // Zero cells read as noise in a wide grid — show a muted dash instead.
 const cell = (cents) => (cents === 0 ? '—' : formatEuro(cents));
 const cellClass = (cents) =>
-    cents === 0 ? 'text-ink/25' : cents < 0 ? 'text-red-600' : 'text-hort-teal-dark';
+    cents === 0 ? 'text-ink/40' : cents < 0 ? 'text-danger' : 'text-hort-teal-dark';
 
 // Drill down to the bookings that make up a cell's total: same category subtree, or
 // income/expense/transfer kind (optionally scoped to one account), confirmed, within

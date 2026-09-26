@@ -36,7 +36,7 @@ const chartData = computed(() => {
         labels: props.points.map((_, index) => index),
         datasets: [{
             data: props.points,
-            borderColor: trendUp.value ? themeColor('--color-teal-dark') : '#ef4444',
+            borderColor: themeColor(trendUp.value ? '--color-teal-dark' : '--color-danger'),
             borderWidth: 1.5,
             pointRadius: 0,
             tension: 0.3,

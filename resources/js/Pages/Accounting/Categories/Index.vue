@@ -29,7 +29,7 @@ const options = computed(() => ({
 
 const sections = [
     { key: 'income', accent: 'text-hort-teal-dark' },
-    { key: 'expense', accent: 'text-red-600' },
+    { key: 'expense', accent: 'text-danger' },
 ];
 
 const rootName = reactive({ income: '', expense: '' });

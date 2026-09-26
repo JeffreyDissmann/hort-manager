@@ -69,9 +69,9 @@ const percent = computed(() =>
                         <dt class="text-xs text-ink/50">{{ $t('accounting.import.duplicates_label') }}</dt>
                         <dd class="text-2xl font-semibold text-ink/70">{{ batch.duplicate_count }}</dd>
                     </div>
-                    <div class="rounded-xl bg-amber-100 p-3">
+                    <div class="rounded-xl bg-warn/20 p-3">
                         <dt class="text-xs text-ink/50">{{ $t('accounting.import.to_review') }}</dt>
-                        <dd class="text-2xl font-semibold text-amber-700">{{ draftTotal }}</dd>
+                        <dd class="text-2xl font-semibold text-warn-dark">{{ draftTotal }}</dd>
                     </div>
                 </dl>
 
@@ -108,7 +108,7 @@ const percent = computed(() =>
                         <label :for="'skip-' + row.index" class="flex min-w-0 flex-1 items-center gap-3">
                             <span class="whitespace-nowrap tabular-nums text-ink/60">{{ row.booking_date }}</span>
                             <span class="min-w-0 flex-1 truncate text-ink/80">{{ row.purpose }}</span>
-                            <span class="whitespace-nowrap font-semibold tabular-nums" :class="row.amount_cents < 0 ? 'text-red-600' : 'text-hort-teal-dark'">
+                            <span class="whitespace-nowrap font-semibold tabular-nums" :class="row.amount_cents < 0 ? 'text-danger' : 'text-hort-teal-dark'">
                                 {{ formatEuro(row.amount_cents) }}
                             </span>
                         </label>

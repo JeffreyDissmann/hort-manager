@@ -61,7 +61,7 @@ function submit() {
                     <div v-for="field in fields" :key="field">
                         <label :for="'map-' + field" class="flex items-center gap-1.5 text-sm font-medium text-ink">
                             {{ $t(`accounting.import.field_${field}`) }}
-                            <span v-if="isRequired(field)" class="text-red-500">*</span>
+                            <span v-if="isRequired(field)" class="text-danger">*</span>
                         </label>
                         <select
                             :id="'map-' + field"

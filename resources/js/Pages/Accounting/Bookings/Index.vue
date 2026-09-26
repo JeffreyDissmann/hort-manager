@@ -165,7 +165,7 @@ const filters = reactive({
 
 const statusLabel = computed(() => Object.fromEntries(props.filterOptions.statuses.map((s) => [s.value, s.label])));
 
-const confidenceDot = { 0: 'bg-red-500', 1: 'bg-amber-500', 2: 'bg-hort-teal-dark' };
+const confidenceDot = { 0: 'bg-danger', 1: 'bg-warn', 2: 'bg-hort-teal-dark' };
 
 let searchTimer = null;
 const activeFilters = () => Object.fromEntries(Object.entries(filters).filter(([, v]) => v !== '' && v !== null));
@@ -244,7 +244,7 @@ function destroy(booking) {
                         <div v-if="reviewCount > 0" class="inline-flex items-center">
                             <Link
                                 :href="bookingsReview().url"
-                                class="flex items-center gap-1 rounded-l-lg bg-amber-100 px-3 py-2 text-sm font-medium text-amber-800 transition hover:bg-amber-200"
+                                class="flex items-center gap-1 rounded-l-lg bg-warn/20 px-3 py-2 text-sm font-medium text-warn-dark transition hover:bg-warn/30"
                                 data-testid="bookings-review"
                             >
                                 <ClipboardDocumentCheckIcon class="h-4 w-4" />
@@ -254,7 +254,7 @@ function destroy(booking) {
                                 <template #trigger>
                                     <button
                                         type="button"
-                                        class="flex items-center rounded-r-lg border-l border-amber-200 bg-amber-100 px-2 py-2 text-amber-800 transition hover:bg-amber-200"
+                                        class="flex items-center rounded-r-lg border-l border-warn/30 bg-warn/20 px-2 py-2 text-warn-dark transition hover:bg-warn/30"
                                         data-testid="bookings-review-more"
                                     >
                                         <ChevronDownIcon class="h-4 w-4" />
@@ -507,7 +507,7 @@ function destroy(booking) {
                                 {{ b.booking_date }}
                                 <span
                                     v-if="b.status !== 'confirmed'"
-                                    class="ml-1 inline-flex items-center gap-1 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700"
+                                    class="ml-1 inline-flex items-center gap-1 rounded-full bg-warn/20 px-1.5 py-0.5 text-[10px] font-semibold text-warn-dark"
                                 >
                                     <span
                                         v-if="b.confidence != null"
@@ -540,7 +540,7 @@ function destroy(booking) {
                             <td class="hidden px-3 py-2 text-ink/70 md:table-cell">{{ b.account }}</td>
                             <td
                                 class="whitespace-nowrap px-3 py-2 text-right font-semibold tabular-nums"
-                                :class="b.amount_cents < 0 ? 'text-red-600' : 'text-hort-teal-dark'"
+                                :class="b.amount_cents < 0 ? 'text-danger' : 'text-hort-teal-dark'"
                             >
                                 {{ formatEuro(b.amount_cents) }}
                             </td>
@@ -566,7 +566,7 @@ function destroy(booking) {
                                         <Link v-if="!b.is_transfer" :href="bookingsEdit(b.id).url" class="rounded p-1 text-ink/50 hover:bg-ink/10 hover:text-ink" :aria-label="$t('common.edit')">
                                             <PencilSquareIcon class="h-4 w-4" />
                                         </Link>
-                                        <button type="button" class="rounded p-1 text-ink/50 hover:bg-red-50 hover:text-red-600" :aria-label="$t('common.delete')" @click="destroy(b)">
+                                        <button type="button" class="rounded p-1 text-ink/50 hover:bg-danger/10 hover:text-danger" :aria-label="$t('common.delete')" @click="destroy(b)">
                                             <TrashIcon class="h-4 w-4" />
                                         </button>
                                     </template>
@@ -591,7 +591,7 @@ function destroy(booking) {
                 <img
                     :src="receiptThumb(preview.id)"
                     alt=""
-                    class="h-56 w-40 rounded-lg border border-ink/10 bg-surface object-cover object-top shadow-xl ring-1 ring-black/5"
+                    class="h-56 w-40 rounded-lg border border-ink/10 bg-surface object-cover object-top shadow-xl ring-1 ring-ink/10"
                 />
             </div>
         </Teleport>

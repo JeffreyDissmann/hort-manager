@@ -25,7 +25,7 @@ const asOfLabel = computed(() =>
         : null,
 );
 const shortDate = (iso) => new Date(iso).toLocaleDateString(locale(), { day: '2-digit', month: '2-digit', year: 'numeric' });
-const balanceClass = (cents) => (cents < 0 ? 'text-red-600' : 'text-hort-teal-dark');
+const balanceClass = (cents) => (cents < 0 ? 'text-danger' : 'text-hort-teal-dark');
 </script>
 
 <template>
@@ -55,12 +55,12 @@ const balanceClass = (cents) => (cents < 0 ? 'text-red-600' : 'text-hort-teal-da
                 <Link
                     :href="reviewCount > 0 ? bookingsIndex({ query: { status: 'review' } }).url : bookingsIndex().url"
                     class="flex items-center gap-3 rounded-2xl p-4 shadow-sm transition hover:shadow"
-                    :class="reviewCount > 0 ? 'bg-amber-500/10' : 'bg-surface'"
+                    :class="reviewCount > 0 ? 'bg-warn/10' : 'bg-surface'"
                 >
                     <component
                         :is="reviewCount > 0 ? ClipboardDocumentCheckIcon : CheckCircleIcon"
                         class="h-8 w-8 shrink-0"
-                        :class="reviewCount > 0 ? 'text-amber-600' : 'text-hort-teal-dark'"
+                        :class="reviewCount > 0 ? 'text-warn-dark' : 'text-hort-teal-dark'"
                     />
                     <div>
                         <p class="text-sm font-semibold text-ink">{{ $t('accounting.dashboard.review') }}</p>
@@ -68,7 +68,7 @@ const balanceClass = (cents) => (cents < 0 ? 'text-red-600' : 'text-hort-teal-da
                             {{ reviewCount > 0 ? $t('accounting.dashboard.review_hint', { count: reviewCount }) : $t('accounting.dashboard.all_clear') }}
                         </p>
                     </div>
-                    <span v-if="reviewCount > 0" class="ml-auto text-2xl font-bold tabular-nums text-amber-600">{{ reviewCount }}</span>
+                    <span v-if="reviewCount > 0" class="ml-auto text-2xl font-bold tabular-nums text-warn-dark">{{ reviewCount }}</span>
                 </Link>
             </div>
 

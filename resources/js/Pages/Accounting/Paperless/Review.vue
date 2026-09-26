@@ -116,10 +116,10 @@ function submitCreate() {
 
         <div class="mx-auto max-w-3xl">
             <!-- Gate: finish the review first -->
-            <div v-if="gate" class="rounded-2xl bg-amber-500/10 p-6 text-center">
-                <ClipboardDocumentCheckIcon class="mx-auto h-8 w-8 text-amber-600" />
+            <div v-if="gate" class="rounded-2xl bg-warn/10 p-6 text-center">
+                <ClipboardDocumentCheckIcon class="mx-auto h-8 w-8 text-warn-dark" />
                 <p class="mt-2 text-sm text-ink/80">{{ $t('accounting.paperless_review.gate', { count: gate.count }) }}</p>
-                <Link :href="bookingsReview().url" class="mt-4 inline-flex items-center gap-1 rounded-lg bg-amber-100 px-4 py-2 text-sm font-medium text-amber-800 transition hover:bg-amber-200">
+                <Link :href="bookingsReview().url" class="mt-4 inline-flex items-center gap-1 rounded-lg bg-warn/20 px-4 py-2 text-sm font-medium text-warn-dark transition hover:bg-warn/30">
                     {{ $t('accounting.paperless_review.gate_action') }}
                 </Link>
             </div>
@@ -197,7 +197,7 @@ function submitCreate() {
                                         <p class="truncate text-sm text-ink">{{ c.category ?? '—' }}</p>
                                         <p class="truncate text-xs text-ink/50">{{ c.booking_date }} · {{ c.account }}<template v-if="c.counterparty"> · {{ c.counterparty }}</template></p>
                                     </div>
-                                    <span class="shrink-0 text-sm font-semibold tabular-nums" :class="c.amount_cents < 0 ? 'text-red-600' : 'text-hort-teal-dark'">{{ formatEuro(c.amount_cents) }}</span>
+                                    <span class="shrink-0 text-sm font-semibold tabular-nums" :class="c.amount_cents < 0 ? 'text-danger' : 'text-hort-teal-dark'">{{ formatEuro(c.amount_cents) }}</span>
                                     <button type="button" class="shrink-0 rounded-md bg-hort-teal/15 px-3 py-1 text-sm font-medium text-hort-teal-dark transition hover:bg-hort-teal/25" @click="attach(c.id)">
                                         {{ $t('accounting.paperless_review.attach') }}
                                     </button>
@@ -216,7 +216,7 @@ function submitCreate() {
                         <button type="button" class="inline-flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-medium text-ink/60 transition hover:bg-ink/5" @click="skip">
                             <ForwardIcon class="h-4 w-4" /> {{ $t('accounting.paperless_review.skip') }}
                         </button>
-                        <button type="button" class="inline-flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-medium text-red-600 transition hover:bg-red-50" @click="ignore">
+                        <button type="button" class="inline-flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-medium text-danger transition hover:bg-danger/10" @click="ignore">
                             <XMarkIcon class="h-4 w-4" /> {{ $t('accounting.paperless_review.ignore') }}
                         </button>
                     </div>
