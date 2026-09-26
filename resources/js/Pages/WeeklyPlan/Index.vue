@@ -8,6 +8,7 @@ import WeekNav from '@/Components/WeekNav.vue';
 import WeekTimetable from '@/Components/WeekTimetable.vue';
 import CompanionNotes from '@/Components/CompanionNotes.vue';
 import { t } from '@/i18n';
+import { inWindow, programWindows } from '@/windows';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 
@@ -121,29 +122,19 @@ function onTouchEnd(e) {
 const flash = computed(() => usePage().props.flash?.status);
 const isStaff = computed(() => usePage().props.auth?.user?.role === 'staff');
 
-function toMinutes(time) {
-    return parseInt(time.slice(0, 2), 10) * 60 + parseInt(time.slice(3, 5), 10);
-}
-
 // Pickup falls inside that day's homework slot.
 function homeworkConflict(day, i) {
     const hw = props.program[i];
-    if (!day.time || !hw || !hw.homework_start || !hw.homework_end) {
-        return false;
-    }
-    const pickup = toMinutes(day.time);
-    return pickup >= toMinutes(hw.homework_start) && pickup < toMinutes(hw.homework_end);
+
+    return inWindow(day.time, hw?.homework_start, hw?.homework_end);
 }
 
 // …and the same for a timed Aktivität: the child is busy then, so a pickup inside it
 // is worth flagging next to the trip and homework ones.
 function activityConflict(day, i) {
     const p = props.program[i];
-    if (!day.time || !p?.activity || !p.activity_start || !p.activity_end) {
-        return false;
-    }
-    const pickup = toMinutes(day.time);
-    return pickup >= toMinutes(p.activity_start) && pickup < toMinutes(p.activity_end);
+
+    return !!p?.activity && inWindow(day.time, p.activity_start, p.activity_end);
 }
 
 // Solid `ink` time; the method reads from the warm/cool tint, and the "goes home
@@ -264,18 +255,8 @@ const dayEditor = ref(null);
 const editorWindows = computed(() =>
     props.program.flatMap((p, i) => {
         const date = props.weekDays[i]?.date;
-        if (!p || !date) {
-            return [];
-        }
-        const windows = [];
-        if (p.homework_start && p.homework_end) {
-            windows.push({ date, kind: 'homework', label: t('board.homework'), start: p.homework_start, end: p.homework_end });
-        }
-        if (p.activity && p.activity_start && p.activity_end) {
-            windows.push({ date, kind: 'activity', label: p.activity, start: p.activity_start, end: p.activity_end });
-        }
 
-        return windows;
+        return date ? programWindows(p, t).map((w) => ({ ...w, date })) : [];
     }),
 );
 

@@ -13,6 +13,7 @@ import TimeSelect from '@/Components/TimeSelect.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import { t } from '@/i18n';
+import { inExcursion, inWindow } from '@/windows';
 import { router, usePage } from '@inertiajs/vue3';
 import { computed, reactive, ref } from 'vue';
 
@@ -80,14 +81,14 @@ const pickupClashes = computed(() => {
     }
 
     const clashes = props.windows
-        .filter((w) => w.date === editing.value.date && time >= w.start && time < w.end)
+        .filter((w) => w.date === editing.value.date && inWindow(time, w.start, w.end))
         .map((w) => ({
             key: w.kind,
             text: t(`weekly.pickup_in_${w.kind}`, { time, name: w.label, from: w.start, to: w.end }),
         }));
 
     const trip = editing.value.excursion;
-    if (trip?.return_at && time >= (trip.depart_at ?? '00:00') && time < trip.return_at) {
+    if (inExcursion(time, trip)) {
         clashes.push({
             key: 'excursion',
             text: t('weekly.pickup_in_excursion', { name: trip.name, time: trip.return_at }),

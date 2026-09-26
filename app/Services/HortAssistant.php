@@ -21,6 +21,7 @@ use App\Models\HomeworkDefault;
 use App\Models\User;
 use App\Models\WeeklySchedule;
 use App\Support\CompanionReconciler;
+use App\Support\DayWindows;
 use App\Support\ExcursionPickup;
 use App\Support\LateChange;
 use Illuminate\Support\Carbon;
@@ -290,36 +291,26 @@ class HortAssistant
             return '';
         }
 
-        $program = DailyProgram::where('date', $date)->first();
-        // In den Ferien gibt es keine Hausaufgaben. The per-weekday default knows
-        // nothing about dates, so it would otherwise warn a family about a slot that
-        // doesn't exist on a Ferienbetreuung day — the same rule every other view
-        // applies, and the only one the assistant had missed.
-        [$hwStart, $hwEnd] = HolidayCareDay::query()->onDate($date)->exists()
-            ? [null, null]
-            : DailyProgram::effectiveHomework(
-                $program,
-                HomeworkDefault::where('weekday', Carbon::parse($date)->dayOfWeekIso)->first(),
-            );
-
-        $hits = [];
-
-        if ($hwStart && $hwEnd && $time >= $this->short($hwStart) && $time < $this->short($hwEnd)) {
-            $hits[] = 'in der Hausaufgabenzeit ('.$this->short($hwStart).'–'.$this->short($hwEnd).')';
-        }
-
-        if ($program?->activity && $program->activity_start && $program->activity_end
-            && $time >= $this->short($program->activity_start) && $time < $this->short($program->activity_end)) {
-            $hits[] = "in der Aktivität „{$program->activity}\" (".$this->short($program->activity_start).'–'.$this->short($program->activity_end).')';
-        }
-
         $trip = Excursion::whereDate('date', $date)
             ->whereHas('participants', fn ($q) => $q->whereKey($child->id))
             ->first();
 
-        if ($trip?->return_at && $time >= ($this->short($trip->depart_at) ?? '00:00') && $time < $this->short($trip->return_at)) {
-            $hits[] = "im Ausflug „{$trip->name}\" (bis ".$this->short($trip->return_at).')';
-        }
+        // The windows of that day, built by the same rules the board and the standing
+        // summary use — including „keine Hausaufgaben in den Ferien".
+        $windows = [
+            ...DayWindows::program(
+                DailyProgram::where('date', $date)->first(),
+                HomeworkDefault::where('weekday', Carbon::parse($date)->dayOfWeekIso)->first(),
+                HolidayCareDay::query()->onDate($date)->exists(),
+            ),
+            ...array_filter([DayWindows::excursion($trip)]),
+        ];
+
+        $hits = array_map(fn (array $window): string => match ($window['kind']) {
+            'activity' => "in der Aktivität „{$window['name']}\" ({$window['from']}–{$window['to']})",
+            'excursion' => "im Ausflug „{$window['name']}\" (bis {$window['to']})",
+            default => "in der Hausaufgabenzeit ({$window['from']}–{$window['to']})",
+        }, DayWindows::hits($time, $windows));
 
         return $hits === [] ? '' : "\n⚠️ Die Abholung liegt ".implode(' und ', $hits).'.';
     }

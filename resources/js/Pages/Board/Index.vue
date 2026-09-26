@@ -13,6 +13,7 @@ import { confirm as companionConfirm } from '@/routes/companion';
 import { Head, router, usePage } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
 import { t } from '@/i18n';
+import { inExcursion, inWindow, programWindows } from '@/windows';
 
 const props = defineProps({
     date: { type: Object, required: true },
@@ -110,10 +111,6 @@ function planLabel(row) {
     return `${icon ? icon + ' ' : ''}${time} · ${method}`;
 }
 
-function toMinutes(time) {
-    return parseInt(time.slice(0, 2), 10) * 60 + parseInt(time.slice(3, 5), 10);
-}
-
 // The header repeats the Aktivität's window only when the timeline below can't carry
 // it — with nobody on the board there are no time slots to place its card in.
 const activityLine = computed(() => {
@@ -131,21 +128,15 @@ const activityLine = computed(() => {
 // Pickup falls inside today's homework slot.
 function homeworkConflict(row) {
     const hw = props.program;
-    if (!row.planned_time || !hw || !hw.homework_start || !hw.homework_end) {
-        return false;
-    }
-    const pickup = toMinutes(row.planned_time);
-    return pickup >= toMinutes(hw.homework_start) && pickup < toMinutes(hw.homework_end);
+
+    return inWindow(row.planned_time, hw?.homework_start, hw?.homework_end);
 }
 
 // …or inside a timed Aktivität — the same „the child is busy then" warning.
 function activityConflict(row) {
     const p = props.program;
-    if (!row.planned_time || !p?.activity || !p.activity_start || !p.activity_end) {
-        return false;
-    }
-    const pickup = toMinutes(row.planned_time);
-    return pickup >= toMinutes(p.activity_start) && pickup < toMinutes(p.activity_end);
+
+    return !!p?.activity && inWindow(row.planned_time, p.activity_start, p.activity_end);
 }
 
 // The board grouped by time: everything happening at the same time — children
@@ -174,8 +165,8 @@ const boardBlocks = computed(() => {
     // The day's two windows — Hausaufgaben and a timed Aktivität — are shown the same
     // way: a vertical bar beside the pickups it covers, or, when no pickup falls inside
     // it, a horizontal card at its start time so the window still has a place in the day.
-    for (const w of programWindows.value) {
-        const overlaps = (b) => b.rows.length && b.time !== null && b.time >= w.start && b.time < w.end;
+    for (const w of dayWindows.value) {
+        const overlaps = (b) => b.rows.length && inWindow(b.time, w.start, w.end);
         if (blocks.some(overlaps)) {
             continue;
         }
@@ -191,19 +182,7 @@ const boardBlocks = computed(() => {
  * The day's timed windows, in the order they start. Each is drawn either as a bar or
  * as a card (see boardBlocks); `kind` picks the colour and the label.
  */
-const programWindows = computed(() => {
-    const p = props.program;
-    const windows = [];
-
-    if (p?.homework_start && p?.homework_end) {
-        windows.push({ kind: 'homework', start: p.homework_start, end: p.homework_end, label: t('board.homework') });
-    }
-    if (p?.activity && p.activity_start && p.activity_end) {
-        windows.push({ kind: 'activity', start: p.activity_start, end: p.activity_end, label: p.activity });
-    }
-
-    return windows.sort((a, b) => (a.start < b.start ? -1 : 1));
-});
+const dayWindows = computed(() => programWindows(props.program, t));
 
 /**
  * The bars to draw beside the pickups: a window covering at least one pickup slot,
@@ -213,10 +192,10 @@ const programWindows = computed(() => {
 const programBars = computed(() => {
     const bars = [];
 
-    for (const w of programWindows.value) {
+    for (const w of dayWindows.value) {
         const idxs = [];
         boardBlocks.value.forEach((b, i) => {
-            if (b.rows.length && b.time !== null && b.time >= w.start && b.time < w.end) {
+            if (b.rows.length && inWindow(b.time, w.start, w.end)) {
                 idxs.push(i);
             }
         });
@@ -238,7 +217,7 @@ const laneCount = computed(() => programBars.value.reduce((n, b) => Math.max(n, 
 
 // The same windows, dated — the DayEditor warns when a pickup is moved into one.
 const editorWindows = computed(() =>
-    programWindows.value.map((w) => ({ ...w, date: props.date.iso })),
+    dayWindows.value.map((w) => ({ ...w, date: props.date.iso })),
 );
 
 // Lanes first, then the pickups: „auto auto 1fr" while two bars overlap, „auto 1fr"
@@ -263,13 +242,7 @@ function blockBesideBar(i) {
 
 // Pickup falls inside the child's excursion window.
 function excursionConflict(row) {
-    const ex = row.excursion;
-    if (!ex || !row.planned_time || !ex.return_at) {
-        return false;
-    }
-    const pickup = toMinutes(row.planned_time);
-    const depart = ex.depart_at ? toMinutes(ex.depart_at) : 0;
-    return pickup >= depart && pickup < toMinutes(ex.return_at);
+    return inExcursion(row.planned_time, row.excursion);
 }
 
 // Guards every board mutation so a double-tap on a phone can't fire it twice.
