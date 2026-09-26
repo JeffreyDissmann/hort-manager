@@ -55,7 +55,7 @@ function destroy() {
             <button
                 type="button"
                 @click="destroy"
-                class="shrink-0 rounded-lg p-2 text-ink/30 transition hover:bg-red-50 hover:text-red-600"
+                class="shrink-0 rounded-lg p-2 text-ink/40 transition hover:bg-danger/10 hover:text-danger"
                 :aria-label="$t('excursions.delete_aria')"
             >
                 <TrashIcon class="h-5 w-5" />
@@ -69,7 +69,7 @@ function destroy() {
                     ? $t('excursions.joining_count_past', { count: excursion.joining_count })
                     : $t('excursions.joining_count', { count: excursion.joining_count }) }}
             </span>
-            <span v-if="!past" class="text-amber-600">
+            <span v-if="!past" class="text-warn-dark">
                 {{ $t('excursions.pending_count', { count: excursion.pending_count }) }}
             </span>
             <span v-if="excursion.declined_count" class="text-hort-purple">

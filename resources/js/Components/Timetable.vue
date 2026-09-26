@@ -64,7 +64,7 @@ function chipClass(method) {
                     </div>
                     <div
                         v-if="p && p.homework_start"
-                        class="text-[11px] font-medium leading-tight text-amber-700"
+                        class="text-[11px] font-medium leading-tight text-warn-dark"
                     >
                         📚 {{ p.homework_start }}<span v-if="p.homework_end">–{{ p.homework_end }}</span>
                     </div>
@@ -96,7 +96,7 @@ function chipClass(method) {
                         v-for="kid in kids"
                         :key="kid.id"
                         class="rounded-md px-1.5 py-1 text-center text-[13px] font-semibold leading-tight"
-                        :class="[chipClass(kid.method), kid.adjusted ? 'ring-2 ring-amber-400' : '']"
+                        :class="[chipClass(kid.method), kid.adjusted ? 'ring-2 ring-warn/60' : '']"
                         :title="kid.comment || undefined"
                     >
                         <span class="block truncate">

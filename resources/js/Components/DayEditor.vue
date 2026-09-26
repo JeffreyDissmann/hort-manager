@@ -442,7 +442,7 @@ function cancelAbsence() {
                     class="mt-1 block w-full"
                     :placeholder="stagingAbsence ? $t('weekly.reason_placeholder') : $t('weekly.note_placeholder')"
                 />
-                <!-- No hint while reporting an absence: the amber line above already
+                <!-- No hint while reporting an absence: the warn line above already
                      asks for the reason, and the label says „Pflicht". -->
                 <p v-if="!stagingAbsence" class="mt-1 text-xs text-ink/50">
                     {{ $t('weekly.note_hint') }}

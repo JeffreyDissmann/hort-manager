@@ -260,7 +260,7 @@ function isActive(item) {
                         <span
                             v-if="item.badge"
                             :data-testid="`nav-badge-${item.icon}`"
-                            class="flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-bold text-white"
+                            class="flex h-4 min-w-4 items-center justify-center rounded-full bg-warn px-1 text-[10px] font-bold text-hort-navy"
                         >
                             {{ item.badge }}
                         </span>
@@ -390,7 +390,7 @@ function isActive(item) {
         <Link
             v-if="!isStaff && pendingPolls > 0"
             :href="pollsIndex().url"
-            class="block bg-amber-400 text-hort-navy"
+            class="block bg-warn text-hort-navy"
         >
             <div
                 :class="contentMax"
@@ -470,7 +470,7 @@ function isActive(item) {
                         <component :is="icons[item.icon]" class="h-6 w-6" />
                         <span
                             v-if="item.badge"
-                            class="absolute -right-2 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-bold text-white"
+                            class="absolute -right-2 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-warn px-1 text-[10px] font-bold text-hort-navy"
                         >
                             {{ item.badge }}
                         </span>
