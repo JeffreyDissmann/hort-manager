@@ -34,6 +34,18 @@
         --color-orange: 227 138 59; /* #E38A3B — departure "geht allein" */
         --color-orange-dark: 180 83 9; /* #B45309 — orange accent text */
 
+        /*
+         | Status hues. `warn` is „schau hier hin" (Abholzeit prüfen, krank gemeldet,
+         | Anmeldeschluss), `danger` is „das ist ein Fehler" (validation, löschen).
+         | Use the base for solid fills, borders and icons (text on top is hort-navy or
+         | white), the -dark variant for text on a neutral or tinted surface, and an
+         | alpha modifier for the tint itself: `bg-warn/10 text-warn-dark`.
+         */
+        --color-warn: 217 119 6; /* amber-600 */
+        --color-warn-dark: 146 64 14; /* amber-800 — readable on a light tint */
+        --color-danger: 220 38 38; /* red-600 */
+        --color-danger-dark: 153 27 27; /* red-800 */
+
         color-scheme: light;
     }
 
@@ -50,6 +62,12 @@
         --color-purple: 137 91 158; /* constant — protects white-on-purple */
         --color-orange: 234 158 84; /* brighter warm accent on dark */
         --color-orange-dark: 234 158 84; /* brighter so orange text stays legible */
+
+        /* Both hues lift on dark: the tint (`/10`) stays subtle, the text stays legible. */
+        --color-warn: 251 191 36; /* amber-400 */
+        --color-warn-dark: 252 211 77; /* amber-300 — text on a dark tint */
+        --color-danger: 248 113 113; /* red-400 */
+        --color-danger-dark: 252 165 165; /* red-300 */
 
         color-scheme: dark;
     }

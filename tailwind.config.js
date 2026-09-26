@@ -38,6 +38,15 @@ export default {
                 canvas: 'rgb(var(--color-canvas) / <alpha-value>)',
                 surface: 'rgb(var(--color-surface) / <alpha-value>)',
                 ink: 'rgb(var(--color-ink) / <alpha-value>)',
+                // Status hues, same two layers as the neutrals: the base for fills,
+                // borders and icons (text on top is hort-navy/white), `-dark` for text
+                // on a neutral or tinted surface, an alpha modifier for the tint —
+                // `border-warn/40 bg-warn/10 text-warn-dark`. Fixed Tailwind palette
+                // colours (amber-*, red-*) don't follow the theme and are not used.
+                warn: 'rgb(var(--color-warn) / <alpha-value>)',
+                'warn-dark': 'rgb(var(--color-warn-dark) / <alpha-value>)',
+                danger: 'rgb(var(--color-danger) / <alpha-value>)',
+                'danger-dark': 'rgb(var(--color-danger-dark) / <alpha-value>)',
                 hort: {
                     navy: 'rgb(var(--color-navy) / <alpha-value>)',
                     'navy-dark': 'rgb(var(--color-navy-dark) / <alpha-value>)',

@@ -259,7 +259,7 @@ function cancelAbsence() {
             <!-- Krankmeldung / Abwesenheit — first: it overrides the plan below -->
             <div class="rounded-lg bg-canvas p-3">
                 <template v-if="editing.absent">
-                    <p class="text-sm font-medium text-amber-700">
+                    <p class="text-sm font-medium text-warn-dark">
                         {{ $t('weekly.reported_as', { label: editing.absent.label }) }}
                     </p>
                     <p v-if="editing.absent.comment" class="mt-0.5 text-sm text-ink/60">
@@ -330,7 +330,7 @@ function cancelAbsence() {
                         </button>
                     </div>
                     <TimeSelect id="arrives-at" v-model="form.arrives_at" test-id="arrives-at" class="block w-full" />
-                    <p v-if="arrivalAfterPickup" class="text-xs font-medium text-red-700">
+                    <p v-if="arrivalAfterPickup" class="text-xs font-medium text-danger-dark">
                         {{ $t('weekly.arrival_after_pickup') }}
                     </p>
                     <div>
@@ -363,7 +363,7 @@ function cancelAbsence() {
                         v-for="clash in pickupClashes"
                         :key="clash.key"
                         :data-testid="`${clash.key}-clash`"
-                        class="mt-1 rounded-lg bg-amber-50 px-2 py-1 text-xs font-medium text-amber-900"
+                        class="mt-1 rounded-lg bg-warn/10 px-2 py-1 text-xs font-medium text-warn-dark"
                     >
                         ⚠️ {{ clash.text }}
                     </p>
@@ -405,7 +405,7 @@ function cancelAbsence() {
                         {{ $t('weekly.companion_empty_hint') }}
                     </p>
                     <template v-else>
-                        <p v-if="selectedCompanionUnavailable" class="mt-1 text-xs font-medium text-red-700">
+                        <p v-if="selectedCompanionUnavailable" class="mt-1 text-xs font-medium text-danger-dark">
                             {{ $t('weekly.companion_unavailable') }}
                         </p>
                         <template v-else>
@@ -457,7 +457,7 @@ function cancelAbsence() {
                 {{ $t('weekly.late_change_hint', { time: lateChangeCutoff }) }}
             </p>
 
-            <p v-if="saveError" class="rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
+            <p v-if="saveError" class="rounded-lg bg-danger/10 px-3 py-2 text-sm font-medium text-danger-dark">
                 {{ saveError }}
             </p>
 

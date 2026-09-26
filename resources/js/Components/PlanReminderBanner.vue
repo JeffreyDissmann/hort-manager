@@ -18,7 +18,7 @@ const children = computed(() =>
 <template>
     <div
         v-if="children.length"
-        class="rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800"
+        class="rounded-2xl border border-warn/40 bg-warn/10 px-4 py-3 text-sm text-warn-dark"
     >
         <p class="font-semibold">⚠️ {{ $t('plan_reminder.title') }}</p>
         <!-- One child is the usual case; „Für diese Kinder" for a single name reads
@@ -31,7 +31,7 @@ const children = computed(() =>
                 v-for="child in children"
                 :key="child.id"
                 :href="childrenEdit(child.id).url"
-                class="rounded-lg bg-amber-600 px-3 py-1.5 font-semibold text-white transition hover:bg-amber-700"
+                class="rounded-lg bg-warn px-3 py-1.5 font-semibold text-hort-navy transition hover:bg-warn/85"
             >
                 {{ $t('plan_reminder.set_for', { name: child.name }) }}
             </Link>

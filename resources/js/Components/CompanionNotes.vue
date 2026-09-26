@@ -19,7 +19,7 @@ const statusClasses = {
     pickup: 'bg-hort-teal/20 text-hort-teal-dark',
     pending: 'bg-hort-orange/15 text-hort-orange-dark',
     confirmed: 'bg-hort-teal/20 text-hort-teal-dark',
-    declined: 'bg-red-100 text-red-700',
+    declined: 'bg-danger/15 text-danger-dark',
 };
 </script>
 
