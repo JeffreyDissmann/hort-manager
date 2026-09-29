@@ -40,8 +40,8 @@ class PaperlessController extends Controller
         $near = (string) $request->query('near', '');
 
         $results = ($amount !== null || $near !== '')
-            ? $this->paperless->candidatesFor($query, $amount, $near ?: null, limit: $limit, withCorrespondent: true)
-            : $this->paperless->search($query, limit: $limit, withCorrespondent: true);
+            ? $this->paperless->candidatesFor($query, $amount, $near ?: null, limit: $limit, withLabels: true)
+            : $this->paperless->search($query, limit: $limit, withLabels: true);
 
         return response()->json(['results' => $results]);
     }
