@@ -179,7 +179,7 @@ return [
 
     'paperless_review' => [
         'title' => 'Belege zuordnen',
-        'nav' => 'Aus Paperless importieren',
+        'nav' => 'Paperless zuordnen',
         'gate' => 'Es gibt noch :count Buchungen zu prüfen. Bitte zuerst abschließen.',
         'gate_action' => 'Entwürfe prüfen',
         'intro' => 'Nicht verknüpfte Belege im Zeitraum durchgehen und Buchungen zuordnen oder anlegen.',
@@ -195,6 +195,7 @@ return [
         'candidates' => 'Passende Buchungen',
         'no_candidates' => 'Keine passende Buchung gefunden – erstelle eine neue.',
         'attach' => 'Zuordnen',
+        'open_booking' => 'Buchung in neuem Tab öffnen',
         'create' => 'Buchung erstellen',
         'create_title' => 'Buchung aus Beleg erstellen',
         'skip' => 'Überspringen',

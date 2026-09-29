@@ -117,7 +117,7 @@ class PaperlessReviewController extends Controller
      * whose amount equals the document total (either sign), ranked by date proximity. One
      * grouped query, matched in PHP — no per-document query.
      *
-     * @param  list<array{id:int, title:string, created:?string, correspondent?:?string, amount_cents?:?int}>  $documents
+     * @param  list<array{id:int, title:string, created:?string, correspondent?:?string, document_type?:?string, tags?:list<string>, amount_cents?:?int}>  $documents
      * @return list<array<string, mixed>>
      */
     private function withCandidates(array $documents): array

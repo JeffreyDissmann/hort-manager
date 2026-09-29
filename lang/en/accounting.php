@@ -179,7 +179,7 @@ return [
 
     'paperless_review' => [
         'title' => 'Assign receipts',
-        'nav' => 'Import from Paperless',
+        'nav' => 'Assign from Paperless',
         'gate' => 'There are still :count bookings to review. Please finish that first.',
         'gate_action' => 'Review drafts',
         'intro' => 'Walk the unlinked receipts in the period and attach or create bookings.',
@@ -195,6 +195,7 @@ return [
         'candidates' => 'Matching bookings',
         'no_candidates' => 'No matching booking found — create a new one.',
         'attach' => 'Attach',
+        'open_booking' => 'Open booking in a new tab',
         'create' => 'Create booking',
         'create_title' => 'Create a booking from the receipt',
         'skip' => 'Skip',

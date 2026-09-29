@@ -30,8 +30,10 @@ function fakeReviewDocuments(): void
 {
     Http::fake([
         'paperless.test/api/correspondents*' => Http::response(['results' => []]),
+        'paperless.test/api/document_types*' => Http::response(['results' => [['id' => 4, 'name' => 'Rechnung']]]),
+        'paperless.test/api/tags*' => Http::response(['results' => [['id' => 1, 'name' => 'Lebensmittel']]]),
         'paperless.test/api/documents*' => Http::response(['results' => [
-            ['id' => 8, 'title' => 'Kassenbon', 'created' => '2026-01-07', 'custom_fields' => [['field' => 1, 'value' => 'EUR12.00']]],
+            ['id' => 8, 'title' => 'Kassenbon', 'created' => '2026-01-07', 'document_type' => 4, 'tags' => [1], 'custom_fields' => [['field' => 1, 'value' => 'EUR12.00']]],
         ]]),
     ]);
 }
@@ -58,6 +60,8 @@ it('lists unlinked documents with matching-booking candidates', function () {
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->where('gate', null)
             ->where('documents.0.id', 8)
+            ->where('documents.0.document_type', 'Rechnung')
+            ->where('documents.0.tags', ['Lebensmittel'])
             ->where('documents.0.candidates.0.id', $booking->id));
 });
 

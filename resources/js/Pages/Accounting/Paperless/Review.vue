@@ -7,11 +7,11 @@ import PrimaryButton from '@/Components/PrimaryButton.vue';
 import BookingFields from '@/Pages/Accounting/Bookings/Partials/BookingFields.vue';
 import { formatEuro } from '@/money';
 import { t } from '@/i18n';
-import { ArrowTopRightOnSquareIcon, ForwardIcon, XMarkIcon, PlusIcon, ClipboardDocumentCheckIcon, CheckCircleIcon } from '@heroicons/vue/24/outline';
+import { ArrowTopRightOnSquareIcon, ForwardIcon, XMarkIcon, PlusIcon, ClipboardDocumentCheckIcon, CheckCircleIcon, CheckIcon, TagIcon } from '@heroicons/vue/24/outline';
 import { review as paperlessReview, attach as paperlessAttach, ignore as paperlessIgnore } from '@/routes/accounting/paperless';
 import { store as paperlessBookingsStore } from '@/routes/accounting/paperless/bookings';
 import { thumb as paperlessThumb } from '@/routes/accounting/paperless/documents';
-import { review as bookingsReview, index as bookingsIndex } from '@/routes/accounting/bookings';
+import { review as bookingsReview, index as bookingsIndex, edit as bookingsEdit } from '@/routes/accounting/bookings';
 
 const props = defineProps({
     gate: { type: Object, default: null },
@@ -181,7 +181,14 @@ function submitCreate() {
                                 <p v-if="current.correspondent" class="text-sm text-ink/70">{{ current.correspondent }}</p>
                                 <p v-if="current.created" class="text-xs text-ink/50">{{ current.created }}</p>
                                 <p v-if="current.amount_cents != null" class="mt-1 text-xl font-semibold tabular-nums text-ink">{{ formatEuro(current.amount_cents) }}</p>
-                                <span v-if="current.payment" class="mt-2 inline-block rounded-full bg-ink/10 px-2.5 py-0.5 text-xs font-medium text-ink/70">{{ current.payment }}</span>
+                                <!-- Paperless metadata: document type, payment type, tags. -->
+                                <div class="mt-2 flex flex-wrap items-center gap-1.5">
+                                    <span v-if="current.document_type" class="inline-block rounded-full bg-hort-teal/20 px-2.5 py-0.5 text-xs font-semibold text-hort-teal-dark">{{ current.document_type }}</span>
+                                    <span v-if="current.payment" class="inline-block rounded-full bg-ink/10 px-2.5 py-0.5 text-xs font-medium text-ink/70">{{ current.payment }}</span>
+                                    <span v-for="tag in current.tags ?? []" :key="tag" class="inline-flex items-center gap-1 rounded-full border border-ink/15 px-2.5 py-0.5 text-xs text-ink/60">
+                                        <TagIcon class="h-3 w-3 text-ink/40" />{{ tag }}
+                                    </span>
+                                </div>
                                 <a v-if="openUrl(current.id)" :href="openUrl(current.id)" target="_blank" rel="noopener" class="mt-2 flex items-center gap-1 text-xs text-hort-teal-dark hover:underline">
                                     <ArrowTopRightOnSquareIcon class="h-3.5 w-3.5" /> {{ $t('accounting.paperless.open') }}
                                 </a>
@@ -192,14 +199,29 @@ function submitCreate() {
                         <div class="min-w-0">
                             <h3 class="text-sm font-semibold text-ink">{{ $t('accounting.paperless_review.candidates') }}</h3>
                             <ul v-if="current.candidates.length" class="mt-2 divide-y divide-ink/5 overflow-hidden rounded-lg border border-ink/10">
-                                <li v-for="c in current.candidates" :key="c.id" class="flex items-center gap-3 p-2">
-                                    <div class="min-w-0 flex-1">
-                                        <p class="truncate text-sm text-ink">{{ c.category ?? '—' }}</p>
+                                <li v-for="c in current.candidates" :key="c.id" class="flex items-center gap-3 p-2.5">
+                                    <!-- The booking itself opens in a new tab, so the wizard keeps its place in the queue. -->
+                                    <a
+                                        :href="bookingsEdit(c.id).url"
+                                        target="_blank"
+                                        rel="noopener"
+                                        class="min-w-0 flex-1 rounded-md px-1 py-0.5 transition hover:bg-ink/5"
+                                        :title="$t('accounting.paperless_review.open_booking')"
+                                    >
+                                        <p class="flex items-center gap-1 truncate text-sm text-ink">
+                                            {{ c.category ?? '—' }}
+                                            <ArrowTopRightOnSquareIcon class="h-3.5 w-3.5 shrink-0 text-ink/40" />
+                                        </p>
                                         <p class="truncate text-xs text-ink/50">{{ c.booking_date }} · {{ c.account }}<template v-if="c.counterparty"> · {{ c.counterparty }}</template></p>
-                                    </div>
+                                    </a>
                                     <span class="shrink-0 text-sm font-semibold tabular-nums" :class="c.amount_cents < 0 ? 'text-danger' : 'text-hort-teal-dark'">{{ formatEuro(c.amount_cents) }}</span>
-                                    <button type="button" class="shrink-0 rounded-md bg-hort-teal/15 px-3 py-1 text-sm font-medium text-hort-teal-dark transition hover:bg-hort-teal/25" @click="attach(c.id)">
-                                        {{ $t('accounting.paperless_review.attach') }}
+                                    <!-- Attaching is the expected outcome — same weight as „Buchung erstellen". -->
+                                    <button
+                                        type="button"
+                                        class="inline-flex shrink-0 items-center gap-1 rounded-lg bg-hort-teal-dark px-4 py-2 text-sm font-semibold text-white transition hover:brightness-110"
+                                        @click="attach(c.id)"
+                                    >
+                                        <CheckIcon class="h-4 w-4" /> {{ $t('accounting.paperless_review.attach') }}
                                     </button>
                                 </li>
                             </ul>

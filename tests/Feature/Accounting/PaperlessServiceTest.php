@@ -83,19 +83,27 @@ it('omits the custom-field filter when no booking field is configured', function
     Http::assertSent(fn ($request) => ! isset($request['custom_field_query']));
 });
 
-it('resolves the correspondent name when requested', function () {
+it('resolves the correspondent, document type and tag names when requested', function () {
     Http::fake([
         'paperless.test/api/correspondents*' => Http::response(['results' => [['id' => 23, 'name' => 'REWE Markt']]]),
+        'paperless.test/api/document_types*' => Http::response(['results' => [['id' => 4, 'name' => 'Rechnung']]]),
+        'paperless.test/api/tags*' => Http::response(['results' => [['id' => 1, 'name' => 'Lebensmittel'], ['id' => 2, 'name' => 'Erstattung']]]),
         'paperless.test/api/documents*' => Http::response(['results' => [
-            ['id' => 12, 'title' => 'Kassenbon', 'created' => '2026-03-31', 'correspondent' => 23],
-            ['id' => 13, 'title' => 'Ohne', 'created' => '2026-03-30', 'correspondent' => null],
+            ['id' => 12, 'title' => 'Kassenbon', 'created' => '2026-03-31', 'correspondent' => 23, 'document_type' => 4, 'tags' => [1, 2, 99]],
+            ['id' => 13, 'title' => 'Ohne', 'created' => '2026-03-30', 'correspondent' => null, 'document_type' => null, 'tags' => []],
         ]]),
     ]);
+    Http::preventStrayRequests();
 
-    $results = (new PaperlessService)->search('rewe', withCorrespondent: true);
+    $results = (new PaperlessService)->search('rewe', withLabels: true);
 
+    // An unknown tag id (99 — not visible to the token) is dropped rather than rendered blank.
     expect($results[0]['correspondent'])->toBe('REWE Markt')
-        ->and($results[1]['correspondent'])->toBeNull();
+        ->and($results[0]['document_type'])->toBe('Rechnung')
+        ->and($results[0]['tags'])->toBe(['Lebensmittel', 'Erstattung'])
+        ->and($results[1]['correspondent'])->toBeNull()
+        ->and($results[1]['document_type'])->toBeNull()
+        ->and($results[1]['tags'])->toBe([]);
 });
 
 it('omits the correspondent field when not requested', function () {

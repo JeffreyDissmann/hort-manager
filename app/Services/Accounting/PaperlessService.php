@@ -23,8 +23,8 @@ class PaperlessService
     /** How many days around the reference (valuta) date a receipt may be dated. */
     private const NEAR_WINDOW_DAYS = 7;
 
-    /** Memoised id → name map of Paperless correspondents (resolved once per instance). */
-    private ?array $correspondentNames = null;
+    /** Memoised id → name maps per Paperless endpoint (correspondents, tags, document types). */
+    private array $names = [];
 
     /** Memoised payment-type select options (resolved once per instance). */
     private ?array $paymentOptions = null;
@@ -39,12 +39,12 @@ class PaperlessService
      * Full-text search. Returns a lean list of hits for the picker; pass
      * $withContent to also include an OCR snippet (used by the AI matcher to check
      * vendor/amount/date — Paperless already returns it, so this costs no extra call).
-     * $withCorrespondent resolves the correspondent name for display in the picker.
+     * $withLabels resolves the correspondent name for display in the picker.
      * Already-linked documents are dropped (see request()).
      *
      * @return list<array{id:int, title:string, created:?string, correspondent?:?string, content?:string}>
      */
-    public function search(string $query, int $limit = 8, bool $withContent = false, bool $withCorrespondent = false): array
+    public function search(string $query, int $limit = 8, bool $withContent = false, bool $withLabels = false): array
     {
         $query = trim($query);
 
@@ -52,7 +52,7 @@ class PaperlessService
             return [];
         }
 
-        return $this->request($this->unlinkedParams(['query' => $query]), $limit, $withContent, $withCorrespondent);
+        return $this->request($this->unlinkedParams(['query' => $query]), $limit, $withContent, $withLabels);
     }
 
     /**
@@ -62,7 +62,7 @@ class PaperlessService
      *
      * @return list<array{id:int, title:string, created:?string, correspondent?:?string, content?:string}>
      */
-    public function candidatesFor(string $text, ?float $amount, ?string $nearDate, int $limit = 5, bool $withContent = false, bool $withCorrespondent = false): array
+    public function candidatesFor(string $text, ?float $amount, ?string $nearDate, int $limit = 5, bool $withContent = false, bool $withLabels = false): array
     {
         if (! $this->enabled()) {
             return [];
@@ -71,7 +71,7 @@ class PaperlessService
         // 1. Exact amount match on the configured monetary field — the strongest signal.
         $results = [];
         if ($amount !== null && $amount > 0 && ($amountQuery = $this->amountUnlinkedQuery($amount)) !== null) {
-            $results = $this->request(['custom_field_query' => $amountQuery], $limit, $withContent, $withCorrespondent);
+            $results = $this->request(['custom_field_query' => $amountQuery], $limit, $withContent, $withLabels);
         }
 
         // 2. Full-text query within a date window around the reference date — the fallback.
@@ -80,7 +80,7 @@ class PaperlessService
             $params = $this->unlinkedParams(['query' => $text]) + $this->dateWindow($nearDate);
 
             $seen = array_flip(array_column($results, 'id'));
-            foreach ($this->request($params, $limit, $withContent, $withCorrespondent) as $document) {
+            foreach ($this->request($params, $limit, $withContent, $withLabels) as $document) {
                 if (! isset($seen[$document['id']])) {
                     $results[] = $document;
                 }
@@ -97,7 +97,7 @@ class PaperlessService
      * amount (the monetary field is set), created within the given range and optionally of
      * a given payment type. Requires the booking + amount fields; returns [] otherwise.
      *
-     * @return list<array{id:int, title:string, created:?string, correspondent?:?string, amount_cents?:?int, payment?:?string}>
+     * @return list<array{id:int, title:string, created:?string, correspondent?:?string, document_type?:?string, tags?:list<string>, amount_cents?:?int, payment?:?string}>
      */
     public function reviewCandidates(?string $from = null, ?string $to = null, ?string $payment = null, int $limit = 200): array
     {
@@ -191,7 +191,7 @@ class PaperlessService
      * @param  array<string, mixed>  $params
      * @return list<array<string, mixed>>
      */
-    private function request(array $params, int $limit, bool $withContent, bool $withCorrespondent): array
+    private function request(array $params, int $limit, bool $withContent, bool $withLabels): array
     {
         try {
             // Over-fetch a little so documents filtered out below (linked in the write-back
@@ -203,8 +203,7 @@ class PaperlessService
                 return [];
             }
 
-            $correspondents = $withCorrespondent ? $this->correspondentNames() : null;
-            $documents = array_map(fn (array $d): array => $this->mapDocument($d, $withContent, $correspondents), $response->json('results', []));
+            $documents = array_map(fn (array $d): array => $this->mapDocument($d, $withContent, $withLabels), $response->json('results', []));
 
             // Drop any already linked in our DB — a bounded check scoped to just this page's
             // ids (never loads the full linked set), a safety net for the brief window before
@@ -292,7 +291,7 @@ class PaperlessService
                 return null;
             }
 
-            return $this->mapDocument($response->json(), correspondents: $this->correspondentNames());
+            return $this->mapDocument($response->json(), withLabels: true);
         } catch (Throwable $e) {
             Log::warning("Paperless lookup failed for #{$id}: ".$e->getMessage());
 
@@ -430,10 +429,10 @@ class PaperlessService
 
     /**
      * @param  array<string, mixed>  $document
-     * @param  array<int, string>|null  $correspondents  id → name map, or null to skip resolving
-     * @return array{id:int, title:string, created:?string, correspondent?:?string, amount_cents?:?int, content?:string}
+     * @param  bool  $withLabels  resolve correspondent, document type and tag names for display
+     * @return array{id:int, title:string, created:?string, correspondent?:?string, document_type?:?string, tags?:list<string>, amount_cents?:?int, content?:string}
      */
-    private function mapDocument(array $document, bool $withContent = false, ?array $correspondents = null): array
+    private function mapDocument(array $document, bool $withContent = false, bool $withLabels = false): array
     {
         $mapped = [
             'id' => (int) ($document['id'] ?? 0),
@@ -441,8 +440,15 @@ class PaperlessService
             'created' => $document['created'] ?? null,
         ];
 
-        if ($correspondents !== null) {
-            $mapped['correspondent'] = $correspondents[$document['correspondent'] ?? null] ?? null;
+        if ($withLabels) {
+            $mapped['correspondent'] = $this->names('correspondents')[$document['correspondent'] ?? null] ?? null;
+            $mapped['document_type'] = $this->names('document_types')[$document['document_type'] ?? null] ?? null;
+
+            $tags = $this->names('tags');
+            $mapped['tags'] = array_values(array_filter(array_map(
+                fn ($id): ?string => $tags[$id] ?? null,
+                (array) ($document['tags'] ?? []),
+            )));
         }
 
         // The document total from the monetary custom field (e.g. „EUR85.76" → 8576 cents).
@@ -508,27 +514,28 @@ class PaperlessService
     }
 
     /**
-     * Best-effort id → name map of correspondents (for display). Empty when the API
-     * token can't see them; resolved once and reused.
+     * Best-effort id → name map of one Paperless taxonomy („correspondents", „tags",
+     * „document_types") for display. Empty when the API token can't see it (object
+     * permissions); resolved once per endpoint and reused.
      *
      * @return array<int, string>
      */
-    private function correspondentNames(): array
+    private function names(string $endpoint): array
     {
-        if ($this->correspondentNames !== null) {
-            return $this->correspondentNames;
+        if (isset($this->names[$endpoint])) {
+            return $this->names[$endpoint];
         }
 
         try {
-            $response = Http::paperless()->get('correspondents/', ['page_size' => 500]);
+            $response = Http::paperless()->get("{$endpoint}/", ['page_size' => 500]);
 
-            return $this->correspondentNames = $response->successful()
+            return $this->names[$endpoint] = $response->successful()
                 ? collect($response->json('results', []))->pluck('name', 'id')->map(fn ($n): string => (string) $n)->all()
                 : [];
         } catch (Throwable $e) {
-            Log::warning('Paperless correspondents fetch failed: '.$e->getMessage());
+            Log::warning("Paperless {$endpoint} fetch failed: ".$e->getMessage());
 
-            return $this->correspondentNames = [];
+            return $this->names[$endpoint] = [];
         }
     }
 }
