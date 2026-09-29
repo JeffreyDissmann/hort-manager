@@ -6,6 +6,34 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [2026.09.29] — 2026-09-29
+
+Belegzuordnung in der Buchhaltung (admin-only, daher kein „Was ist neu?"-Eintrag) und
+ein Ausflug-Fehler, der Familien nach ausgetretenen Kindern fragte.
+
+### Fixed
+
+- **A child who leaves the Hort is withdrawn from upcoming trips.** Invitations are pivot
+  rows and were filtered by enrolment only when they were made, so a family with one child
+  still enrolled and one who had left kept being asked to answer for the one who was gone —
+  on the poll page, in the tab badge and in the daily Slack reminder. `ChildObserver::updated()`
+  now moves the invitations with the enrolment period (upcoming trips only; a past trip
+  records who was there), answering is refused for a child not enrolled on the trip date in
+  both the app and the Slack buttons, and a migration clears the rows that predate this.
+- **The bookings page shows its flash messages.** „Belege verknüpfen" and „Neu analysieren"
+  only queue work, so the flash is their only feedback — and this page never rendered one,
+  which made both buttons look broken.
+
+### Changed
+
+- **The receipt wizard is findable.** It sat in the IMPORT dropdown as „Aus Paperless
+  importieren", which reads like a statement import; it is now „Paperless zuordnen".
+  „Zuordnen" carries the same weight as „Buchung erstellen" instead of looking secondary,
+  and a candidate booking opens in a new tab so the queue keeps its place.
+- **Paperless document type and tags** are resolved and shown in the wizard. The memoised
+  correspondent lookup became a generic `names($endpoint)` covering `document_types` and
+  `tags`; the display flag is `withLabels` accordingly.
+
 ## [2026.09.26] — 2026-09-26
 
 A review pass over the whole app (Laravel practice, security, consistency), plus two
