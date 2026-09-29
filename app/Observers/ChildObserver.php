@@ -24,11 +24,39 @@ class ChildObserver
      */
     public function created(Child $child): void
     {
+        $this->syncExcursionInvites($child);
+    }
+
+    /**
+     * The enrolment period is what decides who is invited, so moving it has to move the
+     * invitations with it — the mirror of created(). A child who leaves is withdrawn
+     * from the trips ahead of them (they can't come, and their family kept being asked
+     * to answer), one whose leaving date moves out again is invited back.
+     *
+     * Only trips from today on: a past trip is a record of who was there, and a child
+     * enrolled at the time stays on it whatever happens to their period afterwards.
+     */
+    public function updated(Child $child): void
+    {
+        if ($child->wasChanged(['active_from', 'active_until'])) {
+            $this->syncExcursionInvites($child);
+        }
+    }
+
+    /**
+     * Invite this child to every upcoming trip they are enrolled for, and withdraw them
+     * from the ones they are not.
+     */
+    private function syncExcursionInvites(Child $child): void
+    {
         Excursion::query()
             ->whereDate('date', '>=', Carbon::today())
             ->get()
-            ->filter(fn (Excursion $excursion): bool => $child->isActiveOn($excursion->date))
-            ->each(fn (Excursion $excursion) => $excursion->children()->syncWithoutDetaching([$child->id]));
+            ->each(function (Excursion $excursion) use ($child): void {
+                $child->isActiveOn($excursion->date)
+                    ? $excursion->children()->syncWithoutDetaching([$child->id])
+                    : $excursion->children()->detach($child->id);
+            });
     }
 
     /**

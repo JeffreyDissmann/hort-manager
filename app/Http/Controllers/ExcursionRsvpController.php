@@ -100,6 +100,10 @@ class ExcursionRsvpController extends Controller
         // Answering is staff-or-guardian, same as editing the child.
         $this->authorize('update', $child);
 
+        // A child who isn't enrolled on the trip date can't join it — the invitation is
+        // withdrawn when they leave, but a Slack DM sent beforehand still has its buttons.
+        abort_unless($child->isActiveOn($excursion->date), 403);
+
         // Staff may fix an answer up at any time. For a parent the Anmeldeschluss is
         // soft while nothing is on file and hard once there is (see parentMayAnswer).
         if (! $user->isStaff()) {

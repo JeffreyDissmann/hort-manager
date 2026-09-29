@@ -73,6 +73,51 @@ it('invites a child who joins after the excursion was created', function () {
         ->and($past->children()->count())->toBe(0);
 });
 
+it('withdraws a child from upcoming trips once they leave the Hort', function () {
+    // The mirror of the „joins later" case: the invitation was right when it was made
+    // and wrong afterwards. A family with one child still at the Hort and one who has
+    // left kept being asked to answer for the one who is gone.
+    $parent = User::factory()->parent()->create();
+    $staying = Child::factory()->withGuardian($parent)->create(['name' => 'Bleibt']);
+    $leaving = Child::factory()->withGuardian($parent)->create(['name' => 'Geht']);
+
+    $zoo = Excursion::factory()->create(['name' => 'Zoo', 'date' => today()->addMonth()->toDateString()]);
+    $past = Excursion::factory()->create(['name' => 'Waldtag', 'date' => today()->subWeek()->toDateString()]);
+    $zoo->children()->attach([$staying->id, $leaving->id]);
+    $past->children()->attach([$staying->id, $leaving->id]);
+
+    expect($zoo->children()->count())->toBe(2);
+
+    $leaving->update(['active_until' => today()->toDateString()]);
+
+    expect($zoo->children()->pluck('children.id')->all())->toBe([$staying->id])
+        // A trip they were actually there for stays on the record.
+        ->and($past->children()->pluck('children.id')->sort()->values()->all())
+        ->toBe(collect([$staying->id, $leaving->id])->sort()->values()->all());
+
+    // …and the poll page offers the family only the child who is still enrolled.
+    $this->actingAs($parent)
+        ->get(route('polls.index'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('upcoming.0.children', fn ($children) => collect($children)->pluck('name')->all() === ['Bleibt']));
+});
+
+it('refuses a poll answer for a child who has left', function () {
+    $parent = User::factory()->parent()->create();
+    $child = Child::factory()->withGuardian($parent)->create();
+    $excursion = Excursion::factory()->create(['date' => today()->addMonth()->toDateString()]);
+
+    $child->update(['active_until' => today()->toDateString()]);
+
+    // A Slack DM sent before they left still carries its buttons — answering must not
+    // quietly re-invite them.
+    $this->actingAs($parent)
+        ->patch(route('polls.update', $excursion), ['child_id' => $child->id, 'response' => true])
+        ->assertForbidden();
+
+    expect($excursion->children()->count())->toBe(0);
+});
+
 it('puts a child who joins later on an open Ferienbetreuung sheet by itself', function () {
     // No counterpart to the Ausflug fix is needed: a trip stores its invitations in a
     // pivot (a snapshot of who existed), a Ferienbetreuung derives its sheet from who

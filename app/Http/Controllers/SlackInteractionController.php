@@ -51,6 +51,7 @@ class SlackInteractionController extends Controller
         // Same rule as in the app: a first answer is welcome until the trip, changing
         // one after the Anmeldeschluss is not.
         if (! $user || ! $excursion || ! $child || ! $child->isGuardedBy($user)
+            || ! $child->isActiveOn($excursion->date)
             || ! $excursion->parentMayAnswer($existing === null ? null : (bool) $existing)) {
             $this->reply($responseUrl, '⚠️ Diese Abstimmung ist nicht (mehr) möglich.');
 
