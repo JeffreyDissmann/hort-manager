@@ -1,6 +1,6 @@
 <script setup>
 import { reactive, ref, computed, watch } from 'vue';
-import { Head, Link, router, usePoll } from '@inertiajs/vue3';
+import { Head, Link, router, usePage, usePoll } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import Pagination from '@/Components/Pagination.vue';
@@ -145,6 +145,10 @@ function reanalyse() {
 function relinkReceipts() {
     router.post(bookingsRelinkReceipts().url, {}, { preserveScroll: true });
 }
+
+// Server feedback for the actions that only dispatch work (relink, reanalyse, bulk edits).
+const flash = computed(() => usePage().props.flash?.status);
+const flashError = computed(() => usePage().props.flash?.error);
 
 // The Auswertung drill-down may pass several accounts; the single-select reflects one
 // (results are already scoped server-side), otherwise „Alle".
@@ -343,6 +347,13 @@ function destroy(booking) {
         </template>
 
         <div class="space-y-4">
+            <div v-if="flash" class="rounded-2xl bg-hort-teal/20 px-4 py-3 text-sm font-medium text-ink">
+                {{ flash }}
+            </div>
+            <div v-if="flashError" class="rounded-2xl bg-danger/10 px-4 py-3 text-sm font-medium text-danger-dark">
+                {{ flashError }}
+            </div>
+
             <!-- Filters: search leads (with date range); filters read as an iconed toolbar below -->
             <div class="space-y-2 rounded-2xl bg-surface p-4 shadow-sm">
                 <div class="flex flex-col gap-2 sm:flex-row sm:items-center">

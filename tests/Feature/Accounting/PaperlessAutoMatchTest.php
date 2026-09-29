@@ -99,9 +99,12 @@ it('the relink button queues a receipt job per unconfirmed unlinked booking', fu
     Booking::factory()->create(); // confirmed — excluded
     Booking::factory()->draft()->create(['paperless_document_id' => 9]); // already linked — excluded
 
+    // The work happens on the queue, so the flash message is the only feedback the
+    // page can give — the bookings list renders it.
     $this->actingAs($admin)
         ->post('/accounting/bookings/relink-receipts')
-        ->assertRedirect();
+        ->assertRedirect()
+        ->assertSessionHas('status', __('flash.receipts_relinking', ['count' => 2]));
 
     Queue::assertPushed(LinkBookingReceipt::class, 2);
     Queue::assertPushed(LinkBookingReceipt::class, fn ($job) => $job->bookingId === $draft->id);
