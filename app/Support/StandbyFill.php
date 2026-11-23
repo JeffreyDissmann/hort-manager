@@ -53,11 +53,18 @@ class StandbyFill
         $existing = StandbyDuty::query()
             ->between(array_key_first($context), array_key_last($context))
             ->whereNotNull('child_id')
+            ->with('child:id,active_from,active_until')
             ->get(['date', 'slot', 'child_id']);
 
         $taken = [];
         foreach ($existing as $duty) {
             $date = $duty->date->toDateString();
+
+            // Held by a child who has left by then: the slot is open again.
+            if (! $duty->child?->isActiveOn($date)) {
+                continue;
+            }
+
             $this->byDate[$date][] = $duty->child_id;
             $taken[$date][$duty->slot] = true;
         }

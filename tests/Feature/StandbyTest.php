@@ -72,6 +72,20 @@ describe('page', function () {
                 ->has('days', 23));
     });
 
+    it('shows a date held by a child who has left as open, naming them', function () {
+        $left = Child::factory()->former('2027-03-01')->withGuardian(User::factory()->create())->create(['name' => 'Emma']);
+        StandbyDuty::factory()->for($left)->onDay('2027-03-01')->create(); // still enrolled that day
+        StandbyDuty::factory()->for($left)->onDay('2027-03-02')->create(); // left by then
+
+        $this->actingAs(User::factory()->create())
+            ->get('/standby?month=2027-03')
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('days.0.slots.0.child.id', $left->id)
+                ->where('days.0.slots.0.former', null)
+                ->where('days.1.slots.0.child', null)
+                ->where('days.1.slots.0.former', 'Emma'));
+    });
+
     it('does not propose to a parent', function () {
         standbyChild();
 
@@ -159,6 +173,16 @@ describe('fair fill', function () {
 
         expect(collect($proposal)->pluck('date')->all())->toBe(['2027-03-01', '2027-03-03', '2027-03-04', '2027-03-05'])
             ->and(StandbyDuty::count())->toBe(1);
+    });
+
+    it('refills a date held by a child who has left', function () {
+        $left = Child::factory()->former('2027-03-01')->withGuardian(User::factory()->create())->create();
+        StandbyDuty::factory()->for($left)->onDay('2027-03-02')->create();
+        $stays = standbyChild();
+
+        $proposal = app(StandbyFill::class)->propose(Carbon::parse('2027-03-02'), Carbon::parse('2027-03-02'));
+
+        expect($proposal)->toBe([['date' => '2027-03-02', 'slot' => 1, 'child_id' => $stays->id]]);
     });
 
     it('spreads the days evenly, starting with whoever was on least', function () {

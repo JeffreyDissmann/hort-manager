@@ -76,7 +76,7 @@ class StandbyRoster
      * The list for a range, one entry per date that needs a Springer, each slot with
      * its holder (or null = „offen"). `own` marks the viewer's own children.
      *
-     * @return list<array{date: string, care: bool, past: bool, slots: list<array{slot: int, child: array{id: int, name: string}|null, own: bool, note: ?string}>}>
+     * @return list<array{date: string, care: bool, past: bool, slots: list<array{slot: int, child: array{id: int, name: string}|null, former: ?string, own: bool, note: ?string}>}>
      */
     public static function forRange(Carbon $from, Carbon $to, User $viewer): array
     {
@@ -84,7 +84,7 @@ class StandbyRoster
 
         $duties = StandbyDuty::query()
             ->between($from, $to)
-            ->with('child:id,name')
+            ->with('child:id,name,active_from,active_until')
             ->get()
             ->keyBy(fn (StandbyDuty $duty): string => $duty->date->toDateString().'#'.$duty->slot);
 
@@ -95,11 +95,15 @@ class StandbyRoster
 
             for ($slot = 1; $slot <= $count; $slot++) {
                 $duty = $duties->get("{$date}#{$slot}");
-                $child = $duty?->child;
+                $holder = $duty?->child;
+                // A child who has left by then holds nothing — the slot is open again,
+                // with the old name kept so the coordinator sees whose date it was.
+                $child = $holder?->isActiveOn($date) ? $holder : null;
 
                 $slots[] = [
                     'slot' => $slot,
                     'child' => $child ? ['id' => $child->id, 'name' => $child->name] : null,
+                    'former' => $holder !== null && $child === null ? $holder->name : null,
                     'own' => $child !== null && in_array($child->id, $ownChildIds, true),
                     'note' => $duty?->note,
                 ];

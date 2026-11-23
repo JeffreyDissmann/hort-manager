@@ -191,10 +191,6 @@ const openFillableCount = computed(
                                         @change="(e) => choose(day, slot, e.target.value)"
                                     >
                                         <option value="">{{ $t('standby.pick_child') }}</option>
-                                        <!-- A holder who has since left stays selectable so the row doesn't go blank. -->
-                                        <option v-if="slot.child && !children.some((c) => c.id === slot.child.id)" :value="slot.child.id">
-                                            {{ slot.child.name }}
-                                        </option>
                                         <option v-for="c in children" :key="c.id" :value="c.id">
                                             {{ c.name }} · {{ $t('standby.count_suffix', { count: countFor(c.id) }) }}
                                         </option>
@@ -204,6 +200,9 @@ const openFillableCount = computed(
                                         class="shrink-0 text-[10px] font-semibold uppercase text-warn-dark"
                                     >
                                         {{ $t('standby.proposed') }}
+                                    </span>
+                                    <span v-else-if="slot.former" class="shrink-0 text-xs text-ink/50">
+                                        {{ $t('standby.former', { name: slot.former }) }}
                                     </span>
                                 </label>
 
@@ -221,6 +220,7 @@ const openFillableCount = computed(
                                     :data-testid="`standby-slot-${day.date}-${slot.slot}`"
                                 >
                                     {{ slot.child?.name ?? $t('standby.open') }}
+                                    <span v-if="slot.former" class="text-xs opacity-70">({{ $t('standby.former', { name: slot.former }) }})</span>
                                     <span v-if="slot.own" class="text-[10px] font-medium uppercase opacity-80">· {{ $t('standby.yours') }}</span>
                                 </span>
                             </template>

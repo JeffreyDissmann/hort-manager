@@ -6,6 +6,7 @@ return [
     'title' => 'Standby duty',
     'intro' => 'Who steps in when Erzieher:innen are ill. Calls still happen by phone – this only shows who is on which day.',
     'open' => 'open',
+    'former' => 'was :name, has left',
     'care' => 'Holiday care',
     'yours' => 'Your turn',
     'no_days' => 'The Hort is not open on any day this month.',

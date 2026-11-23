@@ -6,6 +6,7 @@ return [
     'title' => 'Springerdienst',
     'intro' => 'Wer einspringt, wenn Erzieher:innen krank sind. Angerufen wird wie bisher per Telefon – hier steht nur, wer an welchem Tag dran ist.',
     'open' => 'offen',
+    'former' => 'war :name, ausgetreten',
     'care' => 'Ferienbetreuung',
     'yours' => 'Du bist dran',
     'no_days' => 'In diesem Monat ist der Hort an keinem Tag geöffnet.',
