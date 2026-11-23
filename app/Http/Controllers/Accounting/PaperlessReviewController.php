@@ -16,6 +16,7 @@ use App\Support\Accounting\CategoryOptions;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\Response as HttpResponse;
@@ -112,10 +113,24 @@ class PaperlessReviewController extends Controller
         return back()->with('status', __('flash.receipt_ignored'));
     }
 
+    /** How far (days) from the document date a booking may lie to count as an alternative. */
+    private const ALTERNATIVE_WINDOW_DAYS = 14;
+
+    /** How many bookings each list (exact matches, alternatives) offers at most. */
+    private const MAX_OPTIONS = 5;
+
     /**
-     * Attach matching-booking candidates to each document: unlinked, non-transfer bookings
-     * whose amount equals the document total (either sign), ranked by date proximity. One
-     * grouped query, matched in PHP — no per-document query.
+     * Attach booking options to each document, from unlinked, non-transfer bookings:
+     *
+     * - `candidates` — the amount equals the document total (either sign), ranked by date
+     *   proximity;
+     * - `alternatives` — the rest of the bookings within ±{@see ALTERNATIVE_WINDOW_DAYS}
+     *   days of the document date, for receipts whose booking differs in amount (a tip,
+     *   a partial refund, a typo in the amount field), ranked by amount closeness with a
+     *   counterparty that names the correspondent first.
+     *
+     * Documents with an exact candidate come first, so the confident work is done before
+     * the guesswork. Two grouped queries, matched in PHP — no per-document query.
      *
      * @param  list<array{id:int, title:string, created:?string, correspondent?:?string, document_type?:?string, tags?:list<string>, amount_cents?:?int}>  $documents
      * @return list<array<string, mixed>>
@@ -123,6 +138,7 @@ class PaperlessReviewController extends Controller
     private function withCandidates(array $documents): array
     {
         $paths = collect(CategoryOptions::flat(onlyActive: false))->keyBy('id');
+        $relations = ['account:id,name', 'counterparty:id,name', 'counterpartyChild:id,name'];
 
         // Only load bookings whose amount can actually match a document (both signs), so
         // this stays bounded (≤ 2× the page) instead of loading the whole ledger.
@@ -139,31 +155,101 @@ class PaperlessReviewController extends Controller
                 ->whereNull('paperless_document_id')
                 ->where('kind', '!=', BookingKind::Transfer)
                 ->whereIn('amount_cents', $amounts)
-                ->with(['account:id,name', 'counterparty:id,name', 'counterpartyChild:id,name'])
+                ->with($relations)
                 ->get()
                 ->groupBy(fn (Booking $b): int => abs($b->amount_cents));
 
-        return array_map(function (array $document) use ($byAmount, $paths): array {
-            $amount = (int) ($document['amount_cents'] ?? 0);
+        $nearby = $this->bookingsAround($documents, $relations);
+
+        $shape = fn (Booking $b): array => [
+            'id' => $b->id,
+            'booking_date' => $b->booking_date?->format('Y-m-d'),
+            'category' => $paths->get($b->category_id)['path'] ?? null,
+            'counterparty' => $b->counterpartyLabel(),
+            'account' => $b->account?->name,
+            'amount_cents' => $b->amount_cents,
+        ];
+
+        $withOptions = array_map(function (array $document) use ($byAmount, $nearby, $shape): array {
+            $amount = abs((int) ($document['amount_cents'] ?? 0));
             $reference = $document['created'] ? Carbon::parse($document['created']) : null;
+            $daysOff = fn (Booking $b): float => $reference
+                ? abs($reference->diffInDays($b->valuta_date ?? $b->booking_date))
+                : 0.0;
 
-            $candidates = ($byAmount[$amount] ?? collect())
-                ->sortBy(fn (Booking $b): float => $reference
-                    ? abs($reference->diffInDays($b->valuta_date ?? $b->booking_date))
-                    : 0.0)
-                ->take(5)
-                ->map(fn (Booking $b): array => [
-                    'id' => $b->id,
-                    'booking_date' => $b->booking_date?->format('Y-m-d'),
-                    'category' => $paths->get($b->category_id)['path'] ?? null,
-                    'counterparty' => $b->counterpartyLabel(),
-                    'account' => $b->account?->name,
-                    'amount_cents' => $b->amount_cents,
-                ])
-                ->values()
-                ->all();
+            $exact = ($byAmount[$amount] ?? collect())->sortBy($daysOff)->take(self::MAX_OPTIONS);
 
-            return [...$document, 'candidates' => $candidates];
+            $alternatives = $reference === null
+                ? collect()
+                : $nearby
+                    ->reject(fn (Booking $b): bool => abs($b->amount_cents) === $amount)
+                    ->filter(fn (Booking $b): bool => $daysOff($b) <= self::ALTERNATIVE_WINDOW_DAYS)
+                    ->sortBy([
+                        fn (Booking $a, Booking $b): int => $this->namesCorrespondent($b, $document) <=> $this->namesCorrespondent($a, $document),
+                        fn (Booking $a, Booking $b): int => abs(abs($a->amount_cents) - $amount) <=> abs(abs($b->amount_cents) - $amount),
+                        fn (Booking $a, Booking $b): int => $daysOff($a) <=> $daysOff($b),
+                    ])
+                    ->take(self::MAX_OPTIONS);
+
+            return [
+                ...$document,
+                'candidates' => $exact->map($shape)->values()->all(),
+                'alternatives' => $alternatives->map($shape)->values()->all(),
+            ];
         }, $documents);
+
+        // Stable: within each group the documents keep Paperless' date order.
+        usort($withOptions, fn (array $a, array $b): int => ($b['candidates'] !== []) <=> ($a['candidates'] !== []));
+
+        return $withOptions;
+    }
+
+    /**
+     * Unlinked, non-transfer bookings dated within the alternative window of any document.
+     * Filtered on the booking date with a margin, since the ranking measures from the
+     * valuta date, which can lie a few days off.
+     *
+     * @param  list<array<string, mixed>>  $documents
+     * @param  list<string>  $relations
+     * @return Collection<int, Booking>
+     */
+    private function bookingsAround(array $documents, array $relations): Collection
+    {
+        $dates = collect($documents)->pluck('created')->filter()->map(fn (string $d): Carbon => Carbon::parse($d));
+
+        if ($dates->isEmpty()) {
+            return collect();
+        }
+
+        $margin = self::ALTERNATIVE_WINDOW_DAYS + 7;
+
+        return Booking::query()
+            ->whereNull('paperless_document_id')
+            ->where('kind', '!=', BookingKind::Transfer)
+            ->whereBetween('booking_date', [
+                $dates->min()->copy()->subDays($margin)->toDateString(),
+                $dates->max()->copy()->addDays($margin)->toDateString(),
+            ])
+            ->with($relations)
+            ->get();
+    }
+
+    /**
+     * Whether the booking's counterparty or purpose mentions the document's correspondent —
+     * the strongest hint that a booking with a different amount still belongs to it.
+     *
+     * @param  array<string, mixed>  $document
+     */
+    private function namesCorrespondent(Booking $booking, array $document): bool
+    {
+        $correspondent = mb_strtolower(trim((string) ($document['correspondent'] ?? '')));
+
+        if ($correspondent === '') {
+            return false;
+        }
+
+        $haystack = mb_strtolower(($booking->counterpartyLabel() ?? '').' '.($booking->purpose ?? ''));
+
+        return str_contains($haystack, $correspondent);
     }
 }

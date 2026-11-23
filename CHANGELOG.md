@@ -6,6 +6,29 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [2026.11.23] — 2026-11-23
+
+Belegzuordnung in der Buchhaltung (admin-only, daher kein „Was ist neu?"-Eintrag).
+
+### Added
+
+- **„Belege zuordnen" offers alternatives.** Besides the bookings with exactly the
+  receipt's amount, each document lists up to five „Weitere Möglichkeiten": unlinked,
+  non-transfer bookings within ±14 days of the document date with a different amount
+  (a tip, a partial refund, a wrong amount in Paperless). A counterparty or purpose naming
+  the correspondent ranks first, then amount closeness, then date; each row shows its
+  difference to the receipt total.
+
+### Changed
+
+- **Receipts with an exact match come first** in the wizard, date order kept within each
+  group, and the range step says how many there are.
+
+### Fixed
+
+- **A booking attached earlier in a wizard run is no longer offered again.** The queue is a
+  snapshot, so it still showed up for later documents and attaching it failed with a 422.
+
 ## [2026.09.29] — 2026-09-29
 
 Belegzuordnung in der Buchhaltung (admin-only, daher kein „Was ist neu?"-Eintrag) und
