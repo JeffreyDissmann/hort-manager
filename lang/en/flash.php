@@ -71,4 +71,5 @@ return [
     'import_saved' => 'Saved. There are still drafts to review.',
     'import_complete' => 'All imported bookings confirmed.',
     'import_skipped_added' => ':count booking(s) imported afterwards.',
+    'standby_saved' => 'Standby duty saved.|:count standby duties saved.',
 ];

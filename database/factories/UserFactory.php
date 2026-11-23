@@ -82,4 +82,10 @@ class UserFactory extends Factory
     {
         return $this->state(['accounting_access' => AccountingAccess::Write]);
     }
+
+    /** Fills the Springerdienst list („Springer-Koordination"). */
+    public function standbyCoordinator(): static
+    {
+        return $this->state(['manages_standby' => true]);
+    }
 }

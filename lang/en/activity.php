@@ -43,6 +43,7 @@ return [
         'user' => 'User',
         'holiday_period' => 'Holiday period',
         'holiday_care_day' => 'Holiday care day',
+        'standby_duty' => 'Standby duty',
     ],
 
     // Changed-field names (shown in the diff).
@@ -51,6 +52,9 @@ return [
         'email' => 'Email',
         'role' => 'Role',
         'is_admin' => 'Admin',
+        'manages_standby' => 'Standby coordination',
+        'child_id' => 'Child',
+        'slot' => 'Slot',
         'note' => 'Note',
         'date_of_birth' => 'Date of birth',
         'date' => 'Date',

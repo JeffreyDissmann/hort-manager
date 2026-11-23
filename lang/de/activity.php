@@ -43,6 +43,7 @@ return [
         'user' => 'Benutzer',
         'holiday_period' => 'Ferien-Zeitraum',
         'holiday_care_day' => 'Ferienbetreuungstag',
+        'standby_duty' => 'Springerdienst',
     ],
 
     // Changed-field names (shown in the diff).
@@ -51,6 +52,9 @@ return [
         'email' => 'E-Mail',
         'role' => 'Rolle',
         'is_admin' => 'Admin',
+        'manages_standby' => 'Springer-Koordination',
+        'child_id' => 'Kind',
+        'slot' => 'Platz',
         'note' => 'Notiz',
         'date_of_birth' => 'Geburtsdatum',
         'date' => 'Datum',

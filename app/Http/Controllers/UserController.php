@@ -24,7 +24,7 @@ class UserController extends Controller
         return Inertia::render('Users/Index', [
             'users' => User::with('children:id,name')
                 ->orderBy('name')
-                ->get(['id', 'name', 'email', 'avatar', 'role', 'is_admin', 'accounting_access'])
+                ->get(['id', 'name', 'email', 'avatar', 'role', 'is_admin', 'accounting_access', 'manages_standby'])
                 ->map(fn (User $user) => [
                     'id' => $user->id,
                     'name' => $user->name,
@@ -33,6 +33,7 @@ class UserController extends Controller
                     'role' => $user->role->value,
                     'is_admin' => $user->is_admin,
                     'accounting_access' => $user->accounting_access->value,
+                    'manages_standby' => $user->manages_standby,
                     'is_self' => $user->is($request->user()),
                     // The children this user is a guardian of (shown on the card).
                     'children' => $user->children->sortBy('name')->pluck('name')->values(),
@@ -55,6 +56,7 @@ class UserController extends Controller
             'role' => ['required', Rule::enum(UserRole::class)],
             'is_admin' => ['required', 'boolean'],
             'accounting_access' => ['required', Rule::enum(AccountingAccess::class)],
+            'manages_standby' => ['sometimes', 'boolean'],
         ]);
 
         $role = UserRole::from($validated['role']);
@@ -71,6 +73,7 @@ class UserController extends Controller
             'role' => $role,
             'is_admin' => $isAdmin,
             'accounting_access' => AccountingAccess::from($validated['accounting_access']),
+            'manages_standby' => $validated['manages_standby'] ?? $user->manages_standby,
         ])->save();
 
         return back()->with('status', __('flash.user_updated', ['name' => $user->name]));

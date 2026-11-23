@@ -52,6 +52,7 @@ function save(user, changes) {
             role: changes.role ?? user.role,
             is_admin: changes.is_admin ?? user.is_admin,
             accounting_access: changes.accounting_access ?? user.accounting_access,
+            manages_standby: changes.manages_standby ?? user.manages_standby,
         },
         { preserveScroll: true },
     );
@@ -140,6 +141,24 @@ function save(user, changes) {
                                 class="rounded border-ink/20 text-hort-teal-dark focus:ring-hort-teal"
                             />
                             {{ $t('users.admin') }}
+                        </label>
+
+                        <!-- Fills the Springerdienst list — usually a parent holding that Amt.
+                             Admins always may (StandbyDutyPolicy), so theirs is shown ticked and locked. -->
+                        <label
+                            class="flex shrink-0 items-center gap-2 rounded-lg bg-ink/5 px-3 py-2 text-sm font-medium text-ink"
+                            :class="user.is_admin ? 'opacity-60' : 'cursor-pointer'"
+                            :title="user.is_admin ? $t('users.standby_admin_hint') : $t('users.standby_hint')"
+                        >
+                            <input
+                                type="checkbox"
+                                :checked="user.manages_standby || user.is_admin"
+                                :disabled="user.is_admin"
+                                :data-testid="`user-standby-${user.id}`"
+                                @change="(e) => save(user, { manages_standby: e.target.checked })"
+                                class="rounded border-ink/20 text-hort-teal-dark focus:ring-hort-teal"
+                            />
+                            {{ $t('users.standby') }}
                         </label>
 
                         <label class="flex min-w-0 flex-1 flex-col gap-1 sm:w-auto sm:flex-none">

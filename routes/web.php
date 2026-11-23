@@ -32,6 +32,7 @@ use App\Http\Controllers\SlackCommandController;
 use App\Http\Controllers\SlackEventController;
 use App\Http\Controllers\SlackInteractionController;
 use App\Http\Controllers\StandardPlanController;
+use App\Http\Controllers\StandbyDutyController;
 use App\Http\Controllers\StatisticsController;
 use App\Http\Controllers\SwitchRoleController;
 use App\Http\Controllers\TrmnlDashboardController;
@@ -191,6 +192,10 @@ Route::middleware('auth')->group(function () {
     // Re-offering a removed day needs the tombstone resolved, hence withTrashed().
     Route::patch('/care-days/{careDay}/restore', [HolidayPeriodController::class, 'restoreCareDay'])
         ->withTrashed()->name('care-days.restore');
+
+    // Springerdienst — readable by everyone, filled by the coordinator (policy-gated).
+    Route::get('/standby', [StandbyDutyController::class, 'index'])->name('standby.index');
+    Route::put('/standby', [StandbyDutyController::class, 'update'])->name('standby.update');
 
     // Ferienbetreuung sign-ups — parents for their own children, staff for anyone.
     Route::get('/care', [HolidayCareRegistrationController::class, 'index'])->name('care.index');

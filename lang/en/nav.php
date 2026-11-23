@@ -16,6 +16,7 @@ return [
 
     'care' => 'Holiday care',
     'closures' => 'Holidays & closures',
+    'standby' => 'Standby duty',
     'program' => 'Program',
     'children' => 'Children',
     'users' => 'Users',

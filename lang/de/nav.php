@@ -18,6 +18,7 @@ return [
     'care' => 'Ferienbetreuung',
     // One entry for both kinds of Ferien-Zeitraum — the page shows both.
     'closures' => 'Ferien & Schließzeiten',
+    'standby' => 'Springerdienst',
     'program' => 'Programm',
     'children' => 'Kinder',
     'users' => 'Benutzer',

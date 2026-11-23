@@ -71,4 +71,5 @@ return [
     'import_saved' => 'Gespeichert. Es sind noch Entwürfe zu prüfen.',
     'import_complete' => 'Alle importierten Buchungen bestätigt.',
     'import_skipped_added' => ':count Buchung(en) nachträglich importiert.',
+    'standby_saved' => 'Springerdienst gespeichert.|:count Springerdienste gespeichert.',
 ];

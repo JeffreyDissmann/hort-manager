@@ -32,6 +32,7 @@ import { update as switchRoleRoute } from '@/routes/role';
 import { index as childrenIndex } from '@/routes/children';
 import { index as excursionsIndex } from '@/routes/excursions';
 import { index as closuresIndex } from '@/routes/closures';
+import { index as standbyIndex } from '@/routes/standby';
 import { index as usersIndex } from '@/routes/users';
 import { index as bookingsIndex } from '@/routes/accounting/bookings';
 import { index as accountsIndex } from '@/routes/accounting/accounts';
@@ -354,6 +355,9 @@ function isActive(item) {
                             >
                                 {{ pendingCare.length }}
                             </span>
+                        </DropdownLink>
+                        <DropdownLink :href="standbyIndex().url" data-testid="nav-standby">
+                            {{ $t('nav.standby') }}
                         </DropdownLink>
 
                         <hr class="my-1 border-ink/10" />

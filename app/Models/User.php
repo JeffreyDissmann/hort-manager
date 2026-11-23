@@ -32,7 +32,7 @@ class User extends Authenticatable implements HasLocalePreference
     /** @return list<string> */
     protected function activityAttributes(): array
     {
-        return ['name', 'email', 'role', 'is_admin'];
+        return ['name', 'email', 'role', 'is_admin', 'manages_standby'];
     }
 
     protected function activityLabel(): string
@@ -49,6 +49,7 @@ class User extends Authenticatable implements HasLocalePreference
         'role' => UserRole::Parent->value,
         'is_admin' => false,
         'accounting_access' => AccountingAccess::None->value,
+        'manages_standby' => false,
     ];
 
     /**
@@ -64,6 +65,7 @@ class User extends Authenticatable implements HasLocalePreference
             'role' => UserRole::class,
             'is_admin' => 'boolean',
             'accounting_access' => AccountingAccess::class,
+            'manages_standby' => 'boolean',
             'notification_preferences' => 'array',
         ];
     }
@@ -106,7 +108,6 @@ class User extends Authenticatable implements HasLocalePreference
     {
         return $this->accounting_access->canWrite();
     }
-
     /**
      * The children (Kinder) this user is a parent of.
      *
