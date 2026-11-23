@@ -50,11 +50,38 @@ function start() {
 const advance = () => index.value++;
 const skip = advance;
 
+const matchedCount = computed(() => props.documents.filter((d) => d.candidates.length).length);
+
+// Bookings attached during this run — the queue is a snapshot, so later documents would
+// still offer them (one document per booking; the server would refuse with a 422).
+const usedBookingIds = ref(new Set());
+
+// The two option lists for the current document: exact amount matches, then alternatives
+// (other amounts around the document date). Empty lists are dropped.
+const optionSections = computed(() => {
+    if (!current.value) return [];
+    const unused = (list) => (list ?? []).filter((c) => !usedBookingIds.value.has(c.id));
+    return [
+        { key: 'exact', title: t('accounting.paperless_review.candidates'), hint: null, options: unused(current.value.candidates) },
+        { key: 'alternatives', title: t('accounting.paperless_review.alternatives'), hint: t('accounting.paperless_review.alternatives_hint'), options: unused(current.value.alternatives) },
+    ].filter((s) => s.options.length);
+});
+
+// Signed difference between the booking and the receipt total, shown on alternatives.
+const amountDifference = (c) => Math.abs(c.amount_cents) - Math.abs(current.value.amount_cents ?? 0);
+
 function attach(bookingId) {
     router.post(
         paperlessAttach().url,
         { document_id: current.value.id, document_title: current.value.title, booking_id: bookingId },
-        { preserveScroll: true, preserveState: true, onSuccess: advance },
+        {
+            preserveScroll: true,
+            preserveState: true,
+            onSuccess: () => {
+                usedBookingIds.value = new Set([...usedBookingIds.value, bookingId]);
+                advance();
+            },
+        },
     );
 }
 
@@ -149,7 +176,10 @@ function submitCreate() {
                         </select>
                     </label>
                 </div>
-                <p class="mt-4 text-sm font-medium text-ink/70">{{ $t('accounting.paperless_review.count', { count: documents.length }) }}</p>
+                <p class="mt-4 text-sm font-medium text-ink/70">
+                    {{ $t('accounting.paperless_review.count', { count: documents.length }) }}
+                    <span v-if="matchedCount" class="font-normal text-ink/50" data-testid="review-matched-count">· {{ $t('accounting.paperless_review.count_matched', { count: matchedCount }) }}</span>
+                </p>
                 <div class="mt-4">
                     <PrimaryButton :disabled="documents.length === 0" @click="start">{{ $t('accounting.paperless_review.start') }}</PrimaryButton>
                     <span v-if="documents.length === 0" class="ml-3 text-sm text-ink/50">{{ $t('accounting.paperless_review.no_documents') }}</span>
@@ -197,37 +227,45 @@ function submitCreate() {
 
                         <!-- Candidates + actions -->
                         <div class="min-w-0">
-                            <h3 class="text-sm font-semibold text-ink">{{ $t('accounting.paperless_review.candidates') }}</h3>
-                            <ul v-if="current.candidates.length" class="mt-2 divide-y divide-ink/5 overflow-hidden rounded-lg border border-ink/10">
-                                <li v-for="c in current.candidates" :key="c.id" class="flex items-center gap-3 p-2.5">
-                                    <!-- The booking itself opens in a new tab, so the wizard keeps its place in the queue. -->
-                                    <a
-                                        :href="bookingsEdit(c.id).url"
-                                        target="_blank"
-                                        rel="noopener"
-                                        class="min-w-0 flex-1 rounded-md px-1 py-0.5 transition hover:bg-ink/5"
-                                        :title="$t('accounting.paperless_review.open_booking')"
-                                    >
-                                        <p class="flex items-center gap-1 truncate text-sm text-ink">
-                                            {{ c.category ?? '—' }}
-                                            <ArrowTopRightOnSquareIcon class="h-3.5 w-3.5 shrink-0 text-ink/40" />
-                                        </p>
-                                        <p class="truncate text-xs text-ink/50">{{ c.booking_date }} · {{ c.account }}<template v-if="c.counterparty"> · {{ c.counterparty }}</template></p>
-                                    </a>
-                                    <span class="shrink-0 text-sm font-semibold tabular-nums" :class="c.amount_cents < 0 ? 'text-danger' : 'text-hort-teal-dark'">{{ formatEuro(c.amount_cents) }}</span>
-                                    <!-- Attaching is the expected outcome — same weight as „Buchung erstellen". -->
-                                    <button
-                                        type="button"
-                                        class="inline-flex shrink-0 items-center gap-1 rounded-lg bg-hort-teal-dark px-4 py-2 text-sm font-semibold text-white transition hover:brightness-110"
-                                        @click="attach(c.id)"
-                                    >
-                                        <CheckIcon class="h-4 w-4" /> {{ $t('accounting.paperless_review.attach') }}
-                                    </button>
-                                </li>
-                            </ul>
-                            <p v-else class="mt-2 text-sm text-ink/50">{{ $t('accounting.paperless_review.no_candidates') }}</p>
+                            <section v-for="section in optionSections" :key="section.key" class="mb-4" :data-testid="`review-${section.key}`">
+                                <h3 class="text-sm font-semibold text-ink">{{ section.title }}</h3>
+                                <p v-if="section.hint" class="text-xs text-ink/50">{{ section.hint }}</p>
+                                <ul class="mt-2 divide-y divide-ink/5 overflow-hidden rounded-lg border border-ink/10">
+                                    <li v-for="c in section.options" :key="c.id" class="flex items-center gap-3 p-2.5">
+                                        <!-- The booking itself opens in a new tab, so the wizard keeps its place in the queue. -->
+                                        <a
+                                            :href="bookingsEdit(c.id).url"
+                                            target="_blank"
+                                            rel="noopener"
+                                            class="min-w-0 flex-1 rounded-md px-1 py-0.5 transition hover:bg-ink/5"
+                                            :title="$t('accounting.paperless_review.open_booking')"
+                                        >
+                                            <p class="flex items-center gap-1 truncate text-sm text-ink">
+                                                {{ c.category ?? '—' }}
+                                                <ArrowTopRightOnSquareIcon class="h-3.5 w-3.5 shrink-0 text-ink/40" />
+                                            </p>
+                                            <p class="truncate text-xs text-ink/50">{{ c.booking_date }} · {{ c.account }}<template v-if="c.counterparty"> · {{ c.counterparty }}</template></p>
+                                        </a>
+                                        <span class="shrink-0 text-right">
+                                            <span class="block text-sm font-semibold tabular-nums" :class="c.amount_cents < 0 ? 'text-danger' : 'text-hort-teal-dark'">{{ formatEuro(c.amount_cents) }}</span>
+                                            <span v-if="section.key === 'alternatives' && current.amount_cents != null" class="block text-xs tabular-nums text-warn-dark">
+                                                {{ amountDifference(c) > 0 ? '+' : '−' }}{{ formatEuro(Math.abs(amountDifference(c))) }}
+                                            </span>
+                                        </span>
+                                        <!-- Attaching is the expected outcome — same weight as „Buchung erstellen". -->
+                                        <button
+                                            type="button"
+                                            class="inline-flex shrink-0 items-center gap-1 rounded-lg bg-hort-teal-dark px-4 py-2 text-sm font-semibold text-white transition hover:brightness-110"
+                                            @click="attach(c.id)"
+                                        >
+                                            <CheckIcon class="h-4 w-4" /> {{ $t('accounting.paperless_review.attach') }}
+                                        </button>
+                                    </li>
+                                </ul>
+                            </section>
+                            <p v-if="!optionSections.length" class="mb-4 text-sm text-ink/50">{{ $t('accounting.paperless_review.no_candidates') }}</p>
 
-                            <button type="button" class="mt-3 inline-flex items-center gap-1 rounded-lg bg-gray-800 px-4 py-2 text-sm font-semibold text-white transition hover:bg-gray-700 dark:bg-ink dark:text-hort-navy dark:hover:bg-ink/90" @click="openCreate">
+                            <button type="button" class="inline-flex items-center gap-1 rounded-lg bg-gray-800 px-4 py-2 text-sm font-semibold text-white transition hover:bg-gray-700 dark:bg-ink dark:text-hort-navy dark:hover:bg-ink/90" @click="openCreate">
                                 <PlusIcon class="h-4 w-4" /> {{ $t('accounting.paperless_review.create') }}
                             </button>
                         </div>

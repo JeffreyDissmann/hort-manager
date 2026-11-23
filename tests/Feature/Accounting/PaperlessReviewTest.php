@@ -75,6 +75,70 @@ it('does not offer transfers or already-linked bookings as candidates', function
         ->assertInertia(fn (AssertableInertia $page) => $page->where('documents.0.candidates', []));
 });
 
+/**
+ * Fake reviewable documents from [id, created, euros, correspondent id] rows; correspondent
+ * 3 is „Bäckerei Huber".
+ *
+ * @param  list<array{0:int, 1:string, 2:string, 3?:int}>  $rows
+ */
+function fakeReviewDocumentRows(array $rows): void
+{
+    Http::fake([
+        'paperless.test/api/correspondents*' => Http::response(['results' => [['id' => 3, 'name' => 'Bäckerei Huber']]]),
+        'paperless.test/api/document_types*' => Http::response(['results' => []]),
+        'paperless.test/api/tags*' => Http::response(['results' => []]),
+        'paperless.test/api/documents*' => Http::response(['results' => array_map(fn (array $row): array => [
+            'id' => $row[0],
+            'title' => "Beleg {$row[0]}",
+            'created' => $row[1],
+            'correspondent' => $row[3] ?? null,
+            'tags' => [],
+            'custom_fields' => [['field' => 1, 'value' => "EUR{$row[2]}"]],
+        ], $rows)]),
+    ]);
+}
+
+it('offers bookings with a different amount around the document date as alternatives', function () {
+    fakeReviewDocumentRows([[8, '2026-01-07', '12.00']]);
+    $exact = Booking::factory()->create(['amount_cents' => -1200, 'booking_date' => '2026-01-08', 'valuta_date' => null]);
+    $near = Booking::factory()->create(['amount_cents' => -1250, 'booking_date' => '2026-01-10', 'valuta_date' => null]);
+    Booking::factory()->create(['amount_cents' => -1250, 'booking_date' => '2026-03-01', 'valuta_date' => null]); // too far off
+    Booking::factory()->create(['amount_cents' => -1300, 'booking_date' => '2026-01-09', 'kind' => BookingKind::Transfer]);
+
+    $this->actingAs($this->admin)
+        ->get('/accounting/paperless/review')
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('documents.0.candidates.0.id', $exact->id)
+            ->has('documents.0.candidates', 1)
+            ->where('documents.0.alternatives.0.id', $near->id)
+            ->has('documents.0.alternatives', 1));
+});
+
+it('ranks an alternative naming the correspondent above a closer amount', function () {
+    fakeReviewDocumentRows([[8, '2026-01-07', '12.00', 3]]);
+    $closer = Booking::factory()->create(['amount_cents' => -1210, 'booking_date' => '2026-01-07', 'valuta_date' => null, 'counterparty_name' => 'Drogerie']);
+    $named = Booking::factory()->create(['amount_cents' => -1500, 'booking_date' => '2026-01-12', 'valuta_date' => null, 'counterparty_name' => 'BÄCKEREI HUBER GmbH']);
+
+    $this->actingAs($this->admin)
+        ->get('/accounting/paperless/review')
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('documents.0.alternatives.0.id', $named->id)
+            ->where('documents.0.alternatives.1.id', $closer->id));
+});
+
+it('puts documents with an exact match first, keeping the date order within each group', function () {
+    fakeReviewDocumentRows([[1, '2026-01-02', '5.00'], [2, '2026-01-03', '7.00'], [3, '2026-01-04', '9.00']]);
+    Booking::factory()->create(['amount_cents' => -700, 'booking_date' => '2026-01-03']);
+    Booking::factory()->create(['amount_cents' => -900, 'booking_date' => '2026-01-04']);
+
+    $this->actingAs($this->admin)
+        ->get('/accounting/paperless/review')
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('documents.0.id', 2)
+            ->where('documents.1.id', 3)
+            ->where('documents.2.id', 1));
+});
+
 it('attaches a document to a chosen booking', function () {
     Queue::fake();
     $booking = Booking::factory()->create(['paperless_document_id' => null]);
