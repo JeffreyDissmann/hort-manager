@@ -247,6 +247,40 @@ describe('fair fill', function () {
     });
 });
 
+describe('board and Wochenplan', function () {
+    it('names the day\'s Springer on the board, own child marked', function () {
+        $parent = User::factory()->create();
+        $own = standbyChild($parent);
+        $own->update(['name' => 'Emma']);
+        StandbyDuty::factory()->for($own)->onDay('2027-02-26')->create(); // today
+
+        $this->actingAs($parent)
+            ->get('/board')
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('standby', [['name' => 'Emma', 'own' => true]]));
+    });
+
+    it('lists the week\'s Springer per day on the Wochenplan, open days as null', function () {
+        $child = standbyChild();
+        $child->update(['name' => 'Paul']);
+        StandbyDuty::factory()->for($child)->onDay('2027-03-02')->create();
+        HolidayPeriod::factory()->onDay('2027-03-04')->create();
+
+        $this->actingAs(User::factory()->create())
+            ->get('/weekly-plan?week=2027-03-01')
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('standby.2027-03-01', [['name' => null, 'own' => false]])
+                ->where('standby.2027-03-02', [['name' => 'Paul', 'own' => false]])
+                ->missing('standby.2027-03-04'));
+    });
+
+    it('stays silent while the Hort does not use the list', function () {
+        $this->actingAs(User::factory()->create())
+            ->get('/board')
+            ->assertInertia(fn (AssertableInertia $page) => $page->where('standby', []));
+    });
+});
+
 it('lets an admin grant the coordinator flag without touching the other axes', function () {
     $user = User::factory()->create();
 

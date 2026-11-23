@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'title' => 'Springerdienst',
-    'intro' => 'Wer einspringt, wenn Erzieher:innen krank sind. Angerufen wird wie bisher per Telefon – hier steht nur, wer an welchem Tag dran ist.',
+    'intro' => 'Wer einspringt, wenn Erzieher:innen krank sind. Fällt jemand aus, meldet sich das Team bei dir über Slack – nicht über den Hort-Manager. Hier steht nur, wer an welchem Tag eingeteilt ist.',
     'open' => 'offen',
     'former' => 'war :name, ausgetreten',
     'care' => 'Ferienbetreuung',
@@ -14,9 +14,9 @@ return [
     'next_month' => 'Nächster Monat',
     'this_month' => 'Zum aktuellen Monat',
     'pick_child' => '– offen –',
-    'count_suffix' => ':count× dieses Schuljahr',
+    'count_suffix' => 'dieses Schuljahr :count× eingeteilt',
     'fill' => 'Fair zufällig auffüllen',
-    'fill_hint' => 'Füllt die offenen Tage ab heute mit den Kindern, die dieses Schuljahr am seltensten dran waren. Wird erst gespeichert, wenn du speicherst.',
+    'fill_hint' => 'Füllt die offenen Tage ab heute mit den Kindern, die dieses Schuljahr am seltensten für den Springerdienst eingeteilt waren – gezählt wird die Einteilung, nicht ob tatsächlich eingesprungen werden musste. Wird erst gespeichert, wenn du speicherst.',
     'fill_empty' => 'Keine offenen Tage zum Auffüllen.',
     'proposed' => 'Vorschlag',
     'pending' => 'Ungespeicherte Änderungen: :count',

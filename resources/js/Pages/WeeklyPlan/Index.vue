@@ -7,6 +7,7 @@ import DayEditor from '@/Components/DayEditor.vue';
 import WeekNav from '@/Components/WeekNav.vue';
 import WeekTimetable from '@/Components/WeekTimetable.vue';
 import CompanionNotes from '@/Components/CompanionNotes.vue';
+import StandbyStrip from '@/Components/StandbyStrip.vue';
 import { t } from '@/i18n';
 import { inWindow, programWindows } from '@/windows';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
@@ -19,6 +20,8 @@ const props = defineProps({
     closedDays: { type: Object, default: () => ({}) },
     // { 'YYYY-MM-DD': 'Ferienbetreuung' } — days only signed-up children attend.
     careDays: { type: Object, default: () => ({}) },
+    // date => [{ name, own }] — the Springerdienst per Hort day.
+    standby: { type: [Object, Array], default: () => ({}) },
     currentWeek: { type: Array, default: () => [] },
     activities: { type: Array, default: () => [] },
     program: { type: Array, default: () => [] },
@@ -76,6 +79,13 @@ const weekColumns = computed(() =>
 const weekClosures = computed(() => [
     ...new Set(props.weekDays.map((d) => props.closedDays[d.date]).filter(Boolean)),
 ]);
+
+// The week's Springerdienst, weekday by weekday; days without a slot drop out.
+const standbyDays = computed(() =>
+    props.weekDays
+        .filter((d) => props.standby?.[d.date]?.length)
+        .map((d) => ({ label: d.label, names: props.standby[d.date] })),
+);
 
 // The week's Ferienbetreuungen, named once above the grid.
 const weekCare = computed(() => [
@@ -592,6 +602,9 @@ function answerCompanion(id, confirmed) {
                     </span>
                 </div>
             </section>
+
+            <!-- The week's Springerdienst, per weekday — reference, so it sits at the bottom. -->
+            <StandbyStrip v-if="standbyDays.length" :days="standbyDays" />
 
             <!-- Pointer to the standard plan (edit the regular weekly times there) -->
             <p class="border-t border-ink/5 pt-4 text-center text-sm text-ink/50">

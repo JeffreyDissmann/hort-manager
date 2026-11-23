@@ -8,6 +8,7 @@ import CollapsibleChips from '@/Components/CollapsibleChips.vue';
 import CompanionNotes from '@/Components/CompanionNotes.vue';
 import DayEditor from '@/Components/DayEditor.vue';
 import DayNav from '@/Components/DayNav.vue';
+import StandbyStrip from '@/Components/StandbyStrip.vue';
 import { PencilSquareIcon } from '@heroicons/vue/24/outline';
 import { confirm as companionConfirm } from '@/routes/companion';
 import { Head, router, usePage } from '@inertiajs/vue3';
@@ -23,6 +24,7 @@ const props = defineProps({
     hortfrei: { type: Array, default: () => [] },
     excursions: { type: Array, default: () => [] },
     program: { type: Object, default: null },
+    standby: { type: Array, default: () => [] },
     canMark: { type: Boolean, default: false },
     // Set when the Hort is closed on the selected day — then nothing else is rendered.
     closure: { type: Object, default: null },
@@ -901,6 +903,10 @@ function editHortfrei(child) {
                     {{ $t('board.empty_all') }}
                 </template>
             </p>
+
+            <!-- Who stands by if Erzieher are ill (two on a Ferienbetreuung day) —
+                 reference, not the day's business, so it sits below everything. -->
+            <StandbyStrip v-if="standby.length" :days="[{ names: standby }]" />
             </template>
         </div>
 

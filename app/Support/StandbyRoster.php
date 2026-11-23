@@ -121,6 +121,32 @@ class StandbyRoster
     }
 
     /**
+     * One date's Springerdienst as `Y-m-d` => names, for the board and the Wochenplan:
+     * each slot's holder (null = „offen"), own children marked. Dates without a slot
+     * (weekend, Schließzeit) are left out.
+     *
+     * Empty while the Hort doesn't use the list yet — otherwise every board and
+     * Wochenplan would announce „Springerdienst: offen" before anyone entered one.
+     *
+     * @return array<string, list<array{name: ?string, own: bool}>>
+     */
+    public static function namesBetween(Carbon|string $from, Carbon|string $to, User $viewer): array
+    {
+        if (! StandbyDuty::query()->exists()) {
+            return [];
+        }
+
+        return collect(self::forRange(Carbon::parse($from), Carbon::parse($to), $viewer))
+            ->mapWithKeys(fn (array $day): array => [
+                $day['date'] => array_map(
+                    fn (array $slot): array => ['name' => $slot['child']['name'] ?? null, 'own' => $slot['own']],
+                    $day['slots'],
+                ),
+            ])
+            ->all();
+    }
+
+    /**
      * Children who can hold a Springerdienst in the range: enrolled at some point in
      * it and with at least one guardian — a child nobody is linked to has nobody to
      * stand by.
