@@ -25,6 +25,7 @@ return [
     'audiences' => [
         'guardian' => 'Als Elternteil',
         'staff' => 'Als Erzieher:in',
+        'standby_coordinator' => 'Als Springer-Koordination',
     ],
 
     'late_change_cutoff_link' => 'Aktuell ab :time Uhr – im Programm ändern',
@@ -62,6 +63,14 @@ return [
         'program_missing' => [
             'label' => 'Wochenprogramm fehlt',
             'help' => 'Montags, kurz bevor der Wochenüberblick an die Eltern geht: wenn noch ein Mittagessen fehlt.',
+        ],
+        'standby' => [
+            'label' => 'Springerdienst',
+            'help' => 'Tauschanfragen anderer Familien an euch und die Antworten auf eure eigenen Anfragen.',
+        ],
+        'standby_swaps' => [
+            'label' => 'Springerdienst-Tausch',
+            'help' => 'Wenn zwei Familien einen Springerdienst-Tag getauscht haben.',
         ],
     ],
 ];

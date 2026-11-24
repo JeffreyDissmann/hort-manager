@@ -8,6 +8,7 @@ use App\Models\Child;
 use App\Models\StandbyDuty;
 use App\Support\StandbyFill;
 use App\Support\StandbyRoster;
+use App\Support\StandbySwaps;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -53,6 +54,10 @@ class StandbyDutyController extends Controller
             'children' => $canManage ? StandbyRoster::eligibleChildren($from, $to) : [],
             'counts' => $canManage ? $this->schoolYearCounts($from) : [],
             'proposal' => $proposal,
+            // Swaps: the viewer's own dates they could offer, and their open requests.
+            'ownUpcoming' => StandbyRoster::upcomingFor($user),
+            'swaps' => app(StandbySwaps::class)->openFor($user),
+            'today' => Carbon::today()->toDateString(),
         ]);
     }
 

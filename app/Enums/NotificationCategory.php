@@ -17,12 +17,15 @@ enum NotificationCategory: string
     case CareRegistration = 'care_registration';
     case LateChange = 'late_change';
     case ProgramMissing = 'program_missing';
+    case Standby = 'standby';
+    case StandbySwaps = 'standby_swaps';
 
     /** Who this category is sent to. */
     public function audience(): NotificationAudience
     {
         return match ($this) {
             self::LateChange, self::ProgramMissing => NotificationAudience::Staff,
+            self::StandbySwaps => NotificationAudience::StandbyCoordinator,
             default => NotificationAudience::Guardian,
         };
     }

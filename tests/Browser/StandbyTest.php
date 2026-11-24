@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Models\Child;
 use App\Models\StandbyDuty;
+use App\Models\StandbySwap;
 use App\Models\User;
 use App\Support\StandbyRoster;
 
@@ -52,6 +53,32 @@ it('fills the month from the fair proposal once saved', function () {
     expect(StandbyDuty::count())->toBe(count(StandbyRoster::slotsBetween($start, $start->copy()->endOfMonth())));
 });
 
+it('lets one family ask for a swap and the other accept it', function () {
+    $month = now()->addMonthNoOverflow()->startOfMonth();
+    $days = array_keys(StandbyRoster::slotsBetween($month, $month->copy()->endOfMonth()));
+    [$parentA, $parentB] = [User::factory()->parent()->create(), User::factory()->parent()->create()];
+    $emma = Child::factory()->withGuardian($parentA)->create(['name' => 'Emma']);
+    $paul = Child::factory()->withGuardian($parentB)->create(['name' => 'Paul']);
+    $dutyA = StandbyDuty::factory()->for($emma)->onDay($days[0])->create();
+    $dutyB = StandbyDuty::factory()->for($paul)->onDay($days[1])->create();
+
+    actAndVisit($parentA, "/standby?month={$month->format('Y-m')}")
+        ->click("@standby-swap-{$days[1]}-1")
+        ->click("@swap-offer-{$dutyA->id}")
+        ->click('@swap-send')
+        ->assertVisible('@standby-swaps-outgoing');
+
+    $swapId = StandbySwap::sole()->id;
+
+    actAndVisit($parentB, "/standby?month={$month->format('Y-m')}")
+        ->assertSeeIn('@standby-swaps-incoming', 'Emma')
+        ->click("@swap-accept-{$swapId}")
+        ->assertMissing('@standby-swaps-incoming')
+        ->assertSeeIn("@standby-slot-{$days[0]}-1", 'Paul');
+
+    expect($dutyB->refresh()->child_id)->toBe($emma->id);
+});
+
 it('shows a parent the list read-only with their own day marked', function () {
     [$month, $firstDay] = standbyNextMonth();
     $parent = User::factory()->parent()->create();
@@ -60,6 +87,6 @@ it('shows a parent the list read-only with their own day marked', function () {
 
     actAndVisit($parent, "/standby?month={$month}")
         ->assertSeeIn("@standby-slot-{$firstDay}-1", 'Emma')
-        ->assertSeeIn("@standby-slot-{$firstDay}-1", 'Du bist dran')
+        ->assertSeeIn("@standby-slot-{$firstDay}-1", 'Ihr seid eingeteilt')
         ->assertMissing('@standby-fill');
 });

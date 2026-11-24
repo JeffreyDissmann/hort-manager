@@ -76,7 +76,7 @@ class StandbyRoster
      * The list for a range, one entry per date that needs a Springer, each slot with
      * its holder (or null = „offen"). `own` marks the viewer's own children.
      *
-     * @return list<array{date: string, care: bool, past: bool, slots: list<array{slot: int, child: array{id: int, name: string}|null, former: ?string, own: bool, note: ?string}>}>
+     * @return list<array{date: string, care: bool, past: bool, slots: list<array{slot: int, duty_id: ?int, child: array{id: int, name: string}|null, former: ?string, own: bool, note: ?string}>}>
      */
     public static function forRange(Carbon $from, Carbon $to, User $viewer): array
     {
@@ -102,6 +102,8 @@ class StandbyRoster
 
                 $slots[] = [
                     'slot' => $slot,
+                    // Only a held slot can be swapped, so only a held slot names its duty.
+                    'duty_id' => $child ? $duty->id : null,
                     'child' => $child ? ['id' => $child->id, 'name' => $child->name] : null,
                     'former' => $holder !== null && $child === null ? $holder->name : null,
                     'own' => $child !== null && in_array($child->id, $ownChildIds, true),
@@ -143,6 +145,36 @@ class StandbyRoster
                     $day['slots'],
                 ),
             ])
+            ->all();
+    }
+
+    /**
+     * The viewer's own Springerdienst dates from tomorrow on — what they can offer in
+     * a swap — each with its duty and child.
+     *
+     * @return list<array{duty_id: int, date: string, child: string}>
+     */
+    public static function upcomingFor(User $viewer): array
+    {
+        $ownChildIds = $viewer->children()->pluck('children.id')->all();
+
+        if ($ownChildIds === []) {
+            return [];
+        }
+
+        return StandbyDuty::query()
+            ->whereIn('child_id', $ownChildIds)
+            ->whereDate('date', '>', Carbon::today())
+            ->with('child:id,name,active_from,active_until')
+            ->orderBy('date')
+            ->get()
+            ->filter(fn (StandbyDuty $duty): bool => $duty->child->isActiveOn($duty->date))
+            ->map(fn (StandbyDuty $duty): array => [
+                'duty_id' => $duty->id,
+                'date' => $duty->date->toDateString(),
+                'child' => $duty->child->name,
+            ])
+            ->values()
             ->all();
     }
 

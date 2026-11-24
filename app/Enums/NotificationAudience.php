@@ -16,6 +16,13 @@ enum NotificationAudience: string
     case Staff = 'staff';
 
     /**
+     * Whoever fills the Springerdienst list („Springer-Koordination" flag). Admins are
+     * not included: they may edit the list, but the Amt — and its mail — sits with
+     * the flagged person.
+     */
+    case StandbyCoordinator = 'standby_coordinator';
+
+    /**
      * Whether this audience applies to the given user.
      *
      * Guardian categories stay visible for every non-staff user even before a child
@@ -26,6 +33,7 @@ enum NotificationAudience: string
         return match ($this) {
             self::Guardian => ! $user->isStaff() || $user->children()->exists(),
             self::Staff => $user->isStaff(),
+            self::StandbyCoordinator => (bool) $user->manages_standby,
         };
     }
 }
