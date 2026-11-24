@@ -5,7 +5,7 @@ import { t } from '@/i18n';
 import { computed } from 'vue';
 
 const terms = computed(() =>
-    ['stammplan', 'pickup_plan', 'departure', 'companion', 'absence', 'hortfrei', 'closure', 'care'].map((key) => ({
+    ['stammplan', 'pickup_plan', 'departure', 'companion', 'absence', 'hortfrei', 'closure', 'care', 'standby'].map((key) => ({
         term: t(`help.glossary.terms.${key}.term`),
         def: t(`help.glossary.terms.${key}.def`),
     })),

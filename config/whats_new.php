@@ -16,6 +16,17 @@ declare(strict_types=1);
 
 return [
     [
+        'version' => '2026.11.24',
+        'date' => '2026-11-24',
+        'title' => 'Neu: der Springerdienst 🦺',
+        'items' => [
+            '🦺 Fallen Erzieher:innen aus, springt eine Familie ein. Welche Familie an welchem Tag eingeteilt ist, steht jetzt im Hort-Manager: im Menü oben rechts unter „Springerdienst". Eure eigenen Tage sind markiert, und auf „Heute" und im Wochenplan steht ganz unten, wer an dem Tag dran ist.',
+            '⏰ Am Nachmittag vor eurem Tag bekommt ihr eine Erinnerung. Im Ernstfall meldet sich das Team wie gewohnt über Slack bei euch.',
+            '🔄 Passt euch ein Tag nicht, könnt ihr ihn mit einer anderen Familie tauschen: bei deren Tag auf „Tauschen" tippen und einen eurer Tage anbieten. Die andere Familie nimmt in Slack oder in der App an oder lehnt ab – getauscht wird erst, wenn sie zustimmt.',
+            '📖 Alles dazu steht in der Hilfe unter „Springerdienst".',
+        ],
+    ],
+    [
         'version' => '2026.09.26',
         'date' => '2026-09-26',
         'title' => 'Ausflüge: Antworten geht länger 🚌',

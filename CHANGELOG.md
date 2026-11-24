@@ -6,6 +6,23 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **Springerdienst** (`/standby`): which family stands by on each Hort day in case
+  Erzieher:innen are ill — one per day, two on a Ferienbetreuung day. Filled by the
+  Springer-Koordination (new per-user flag `manages_standby`, admins always) by hand or
+  with „Fair zufällig auffüllen" (fewest duties this school year first, never one family
+  twice a day, avoiding neighbouring days). Everyone reads the list with their own days
+  marked; the day's Springer is shown at the bottom of „Heute" and the Wochenplan.
+- **Swapping a Springerdienst date**: a family offers one of its days for another
+  family's; the other family accepts or declines in the app or with Slack buttons, and
+  every copy of the DM shows the outcome. A request whose dates changed hands in the
+  meantime expires instead of moving a third family. The coordinator is told about
+  completed swaps (new notification category „Springerdienst-Tausch").
+- **`standby:remind`**, weekdays at 16:00: reminds the families on Springerdienst the
+  next weekday (Friday covers Monday), by Slack and/or push.
+- Help chapter „Springerdienst" (de + en) and a glossary entry.
+
 ## [2026.11.23] — 2026-11-23
 
 Belegzuordnung in der Buchhaltung (admin-only, daher kein „Was ist neu?"-Eintrag).

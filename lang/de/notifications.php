@@ -66,7 +66,7 @@ return [
         ],
         'standby' => [
             'label' => 'Springerdienst',
-            'help' => 'Tauschanfragen anderer Familien an euch und die Antworten auf eure eigenen Anfragen.',
+            'help' => 'Die Erinnerung am Nachmittag vor eurem Springerdienst-Tag, Tauschanfragen anderer Familien an euch und die Antworten auf eure eigenen Anfragen.',
         ],
         'standby_swaps' => [
             'label' => 'Springerdienst-Tausch',

@@ -13,15 +13,19 @@ use App\Notifications\StandbySwapCompleted;
 use App\Notifications\StandbySwapRequested;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
+use NotificationChannels\WebPush\WebPushChannel;
 use Inertia\Testing\AssertableInertia;
 
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
     Notification::fake();
-    // Slack-linked users with a bot token, so the notifications have a channel to go to.
+    // Slack-linked users with a bot token, so the notifications have a channel to go to;
+    // the interactive request DM goes straight to the Slack API.
     config(['services.slack.notifications.bot_user_oauth_token' => 'xoxb-test']);
+    Http::fake(['slack.com/api/*' => Http::response(['ok' => true, 'channel' => 'D1', 'ts' => '1.1'])]);
     $this->travelTo(Carbon::parse('2027-02-26 09:00')); // Friday
 
     // Family A (Emma) holds Tue 2 March, family B (Paul) holds Fri 5 March.
@@ -43,9 +47,40 @@ it('lets a family ask another to swap and tells the other family', function () {
 
     $swap = StandbySwap::sole();
     expect($swap->status)->toBe(StandbySwapStatus::Pending)
-        ->and($swap->wanted_child_id)->toBe($this->paul->id);
-    Notification::assertSentTo($this->parentB, StandbySwapRequested::class);
+        ->and($swap->wanted_child_id)->toBe($this->paul->id)
+        ->and($swap->slackMessages()->sole()->user_id)->toBe($this->parentB->id);
+    Http::assertSent(fn ($request) => $request->url() === 'https://slack.com/api/chat.postMessage'
+        && $request['channel'] === $this->parentB->slack_id
+        && str_contains(json_encode($request['blocks']), "standby_swap|{$swap->id}|1"));
+    Http::assertSentCount(1);
+});
+
+it('asks by web push too, and leaves Slack to the button DM', function () {
+    $this->parentB->updatePushSubscription('https://push.example/b', 'k', 'a');
+
+    askSwap($this->parentA, $this->dutyA, $this->dutyB);
+
+    Notification::assertSentTo($this->parentB, StandbySwapRequested::class, fn ($n, array $channels) => $channels === [WebPushChannel::class]);
     Notification::assertNotSentTo($this->parentA, StandbySwapRequested::class);
+});
+
+it('replaces the buttons in the DM once the request is answered', function () {
+    askSwap($this->parentA, $this->dutyA, $this->dutyB);
+
+    $this->actingAs($this->parentB)->patch('/standby/swaps/'.StandbySwap::sole()->id.'/decline');
+
+    Http::assertSent(fn ($request) => $request->url() === 'https://slack.com/api/chat.update'
+        && $request['ts'] === '1.1'
+        && str_contains($request['text'], 'Abgelehnt'));
+});
+
+it('tells the DM when the asking family withdraws', function () {
+    askSwap($this->parentA, $this->dutyA, $this->dutyB);
+
+    $this->actingAs($this->parentA)->delete('/standby/swaps/'.StandbySwap::sole()->id);
+
+    Http::assertSent(fn ($request) => $request->url() === 'https://slack.com/api/chat.update'
+        && str_contains($request['text'], 'zurückgezogen'));
 });
 
 it('exchanges the two dates when the other family accepts', function () {

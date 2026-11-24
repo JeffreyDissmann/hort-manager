@@ -8,6 +8,7 @@ use App\Enums\StandbySwapStatus;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 
 /**
@@ -68,6 +69,18 @@ class StandbySwap extends Model
     public function requester(): BelongsTo
     {
         return $this->belongsTo(User::class, 'requested_by');
+    }
+
+    /** @return BelongsTo<User, $this> */
+    public function answerer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'answered_by');
+    }
+
+    /** @return HasMany<StandbySwapSlackMessage, $this> */
+    public function slackMessages(): HasMany
+    {
+        return $this->hasMany(StandbySwapSlackMessage::class);
     }
 
     /**

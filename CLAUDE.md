@@ -144,6 +144,13 @@ A `HolidayPeriod` with `type = care` is **not** a „not there" at all: the Hort
 
 A Schließzeit on the same date **wins** over a care day — the Hort being shut is the stronger statement.
 
+### Springerdienst (`/standby`)
+Which family stands by on a Hort day in case Erzieher:innen are ill. The app only keeps the **name list** — the team contacts the family via Slack outside the app. `StandbyDuty` = date + slot + child (nullable, nullOnDelete), unique (date, slot). **Slots come from the calendar** (`StandbyRoster::slotsBetween`): weekday 1, `HolidayCareDay` 2, weekend/Schließzeit/non-offered care day 0. A duty held by a child no longer enrolled reads as open.
+- **Who edits:** `StandbyDutyPolicy` — users with `manages_standby` („Springer-Koordination", set on the users page) **or** admins. Reads are open; own days are marked. `StandbyFill::propose()` is the „Fair zufällig auffüllen" draft (fewest duties in the school year 1 Sept–31 Aug, random ties, never one family twice a day, avoids neighbouring Hort days); nothing is stored until the page saves.
+- **Swaps** (`StandbySwap`, `App\Support\StandbySwaps`): a family offers one of its future dates for another family's; any guardian of the other child accepts/declines, the requester can withdraw. The swap **stores the child on each date at request time** — `isStillValid()` checks both dates are still held by those children, so a stale request expires instead of moving a third family; accepting expires every other open request on either date. Families = children sharing a guardian.
+- **Slack:** the request is an interactive DM (`SlackStandbySwap`, remembered in `standby_swap_slack_messages`, value `standby_swap|{id}|{1|0}`) re-rendered with the outcome on every status change via `SyncStandbySwap`; `StandbySwapRequested` is therefore **push-only**. Categories: `standby` (guardian — request, answer, reminder) and `standby_swaps` (audience `standby_coordinator`, flag holders only — completed swaps).
+- **`standby:remind`** weekdays 16:00: guardians of children on duty the **next weekday** (Friday → Monday; a closed next weekday sends nothing, the weekday before the next open day covers it). `--dry-run` lists recipients.
+
 ### Tagesboard mechanics
 `DailyBoardController` targets **today, or the next weekday on weekends**. It lazily `firstOrCreate`s a `DailyDeparture` per scheduled child from the Stammplan (carrying `time_qualifier`). A row is "overridden" when its plan differs from the Stammplan (shown as „heute geändert"). Excursions are an **overlay** (`rows[].excursion`), not a status swap — a child on a trip still gets marked picked up after returning.
 

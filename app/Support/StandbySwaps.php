@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Support;
 
 use App\Enums\StandbySwapStatus;
+use App\Jobs\AskStandbySwap;
+use App\Jobs\SyncStandbySwap;
 use App\Models\Child;
 use App\Models\StandbyDuty;
 use App\Models\StandbySwap;
@@ -53,6 +55,7 @@ class StandbySwaps
         ]);
 
         Notification::send($wantedChild->guardians, new StandbySwapRequested($swap));
+        AskStandbySwap::dispatch($swap);
 
         return $swap;
     }
@@ -67,7 +70,7 @@ class StandbySwaps
             $this->expire($swap);
         }
 
-        DB::transaction(function () use ($user, $swap): void {
+        $lapsed = DB::transaction(function () use ($user, $swap) {
             $swap->refresh()->load(['offeredDuty', 'wantedDuty']);
 
             $this->refuseIf(! $swap->isStillValid(), 'swap_expired');
@@ -77,11 +80,17 @@ class StandbySwaps
             $swap->update(['status' => StandbySwapStatus::Accepted, 'answered_by' => $user->id, 'answered_at' => now()]);
 
             // Every other open request on either date no longer describes the list.
-            StandbySwap::query()->pending()
+            $lapsed = StandbySwap::query()->pending()
                 ->whereKeyNot($swap->id)
                 ->where(fn ($q) => $q->touching($swap->offered_duty_id)->orWhere(fn ($q) => $q->touching($swap->wanted_duty_id)))
-                ->update(['status' => StandbySwapStatus::Expired]);
+                ->get();
+            $lapsed->each->update(['status' => StandbySwapStatus::Expired]);
+
+            return $lapsed;
         });
+
+        SyncStandbySwap::dispatch($swap);
+        $lapsed->each(fn (StandbySwap $other) => SyncStandbySwap::dispatch($other));
 
         Notification::send($swap->offeredChild->guardians, new StandbySwapAnswered($swap, accepted: true));
         Notification::send(User::query()->where('manages_standby', true)->get(), new StandbySwapCompleted($swap));
@@ -93,6 +102,7 @@ class StandbySwaps
         $this->refuseIf($swap->status !== StandbySwapStatus::Pending, 'swap_expired');
 
         $swap->update(['status' => StandbySwapStatus::Declined, 'answered_by' => $user->id, 'answered_at' => now()]);
+        SyncStandbySwap::dispatch($swap);
 
         Notification::send($swap->offeredChild->guardians, new StandbySwapAnswered($swap, accepted: false));
     }
@@ -103,6 +113,7 @@ class StandbySwaps
         $this->refuseIf($swap->status !== StandbySwapStatus::Pending, 'swap_expired');
 
         $swap->update(['status' => StandbySwapStatus::Cancelled, 'answered_by' => $user->id, 'answered_at' => now()]);
+        SyncStandbySwap::dispatch($swap);
     }
 
     /**
@@ -166,6 +177,7 @@ class StandbySwaps
     private function expire(StandbySwap $swap): void
     {
         $swap->update(['status' => StandbySwapStatus::Expired]);
+        SyncStandbySwap::dispatch($swap);
     }
 
     private function refuseIf(bool $condition, string $reason): void

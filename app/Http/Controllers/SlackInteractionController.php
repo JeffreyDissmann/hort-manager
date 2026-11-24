@@ -9,18 +9,22 @@ use App\Jobs\SyncExcursionRsvp;
 use App\Models\Child;
 use App\Models\DailyDeparture;
 use App\Models\Excursion;
+use App\Models\StandbySwap;
 use App\Models\User;
 use App\Support\CompanionAnswer;
 use App\Support\ExcursionPickup;
+use App\Support\StandbySwaps;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Validation\ValidationException;
 
 class SlackInteractionController extends Controller
 {
     /**
      * Handle a Slack interactive button click. Buttons carry a pipe-delimited value:
-     * "rsvp|{excursionId}|{childId}|{1|0}" or "companion|{departureId}|{1|0}". The
+     * "rsvp|{excursionId}|{childId}|{1|0}", "companion|{departureId}|{1|0}" or
+     * "standby_swap|{swapId}|{1|0}". The
      * request is already signature-verified by middleware.
      */
     public function handle(Request $request): Response
@@ -33,6 +37,7 @@ class SlackInteractionController extends Controller
         match (strtok($value, '|')) {
             'rsvp' => $this->answerRsvp($value, $user, $responseUrl),
             'companion' => $this->answerCompanion($value, $user, $responseUrl),
+            'standby_swap' => $this->answerStandbySwap($value, $user, $responseUrl),
             default => null,
         };
 
@@ -120,6 +125,32 @@ class SlackInteractionController extends Controller
         }
 
         CompanionAnswer::record($departure, (bool) (int) $answer, $user->id);
+    }
+
+    /**
+     * Annehmen/Ablehnen on a Springerdienst swap DM. Runs the same rules as the page;
+     * a refusal (date changed hands, already answered) is posted back into the DM.
+     * On success the queued sync re-renders every copy, so nothing is replied here.
+     */
+    private function answerStandbySwap(string $value, ?User $user, ?string $responseUrl): void
+    {
+        [, $swapId, $answer] = array_pad(explode('|', $value), 3, null);
+
+        $swap = StandbySwap::find($swapId);
+
+        if (! $user || ! $swap || ! ($swap->wantedChild?->isGuardedBy($user) ?? false)) {
+            $this->reply($responseUrl, '⚠️ Diese Anfrage ist nicht (mehr) möglich.');
+
+            return;
+        }
+
+        try {
+            (bool) (int) $answer
+                ? app(StandbySwaps::class)->accept($user, $swap)
+                : app(StandbySwaps::class)->decline($user, $swap);
+        } catch (ValidationException $e) {
+            $this->reply($responseUrl, '⚠️ '.collect($e->errors())->flatten()->first());
+        }
     }
 
     /** Post a confirmation back into the same Slack DM via the interaction's response_url. */

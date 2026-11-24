@@ -97,7 +97,7 @@ Route::get('/auth/slack/callback', [SlackController::class, 'callback'])->name('
 Route::get('/help/{topic?}', fn (?string $topic = null) => Inertia::render('Help', ['topic' => $topic]))
     ->whereIn('topic', [
         'getting-started', 'pickups', 'absences', 'holidays',
-        'excursions', 'slack', 'staff', 'glossary',
+        'excursions', 'standby', 'slack', 'staff', 'glossary',
     ])
     ->name('help');
 

@@ -66,7 +66,7 @@ return [
         ],
         'standby' => [
             'label' => 'Standby duty',
-            'help' => 'Swap requests from other families to you, and the answers to your own requests.',
+            'help' => 'The reminder the afternoon before your standby day, swap requests from other families to you, and the answers to your own requests.',
         ],
         'standby_swaps' => [
             'label' => 'Standby swaps',
