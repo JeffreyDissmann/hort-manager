@@ -173,7 +173,8 @@ const boardBlocks = computed(() => {
             continue;
         }
         const card = { time: w.start, rows: [], card: w };
-        const at = blocks.findIndex((b) => b.time !== null && b.time >= w.start);
+        // After the pickups at its start time: those children leave before it begins.
+        const at = blocks.findIndex((b) => b.time !== null && b.time > w.start);
         at === -1 ? blocks.push(card) : blocks.splice(at, 0, card);
     }
 

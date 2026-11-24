@@ -59,6 +59,24 @@ it('does not flag a pickup after the trip is back', function () {
     assertPlan(['time' => '17:30', 'conflict' => false]);
 });
 
+it('lets a pickup right at the departure stand — handed over as the group leaves', function () {
+    $this->child->weeklySchedules()->first()->update(['planned_time' => '13:30']);
+
+    assertPlan(['time' => '13:30', 'conflict' => false]);
+});
+
+it('flags a „kommt später" right at the departure — the group is gone', function () {
+    $this->actingAs($this->parent)->patch(route('weekly-plan.adjust'), [
+        'child_id' => $this->child->id, 'date' => '2026-06-24',
+        'planned_time' => '17:30', 'planned_method' => 'sent_home',
+        'arrives_at' => '13:30', 'arrival_note' => 'Zahnarzt',
+    ])->assertSessionHasNoErrors();
+
+    $this->actingAs($this->parent)
+        ->patch(route('polls.update', $this->excursion), ['child_id' => $this->child->id, 'response' => true])
+        ->assertSessionHas('status', fn (string $s) => str_contains($s, 'erst um 13:30'));
+});
+
 it('cannot judge a trip without a return time', function () {
     $this->excursion->update(['return_at' => null]);
 

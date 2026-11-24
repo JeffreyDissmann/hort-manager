@@ -27,6 +27,16 @@ return [
         ],
     ],
     [
+        'version' => '2026.11.24',
+        'date' => '2026-11-24',
+        'title' => 'Abholzeiten prüfen: genauer 🐞',
+        'items' => [
+            '🐞 Wird dein Kind genau dann abgeholt, wenn eine Aktivität oder die Hausaufgaben beginnen (z. B. 15:30 bei „15:30–16:30"), meldet „Abholzeiten prüfen" das nicht mehr als Überschneidung – dein Kind geht ja, bevor es losgeht. Auf „Heute" steht die Aktivität dann auch erst nach dieser Abholung.',
+            '🚌 Dasselbe beim Ausflug: Abholen, während die Gruppe gerade losfährt, ist in Ordnung. Kommt dein Kind aber erst genau zur Abfahrtszeit in den Hort, sagen wir weiterhin Bescheid – dann ist die Gruppe schon weg.',
+            '🙏 Danke an Markus fürs Finden!',
+        ],
+    ],
+    [
         'version' => '2026.09.26',
         'date' => '2026-09-26',
         'title' => 'Ausflüge: Antworten geht länger 🚌',

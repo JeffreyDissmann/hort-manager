@@ -216,8 +216,8 @@ class WeeklyOverviewController extends Controller
                 $absence = $absences->get($child->id.'|'.$day['date']);
 
                 // Is the child on a trip this day, and does the pickup fall inside it?
-                // Same half-open rule as everywhere else (DayWindows), on the already
-                // shortened H:i strings this array carries.
+                // Same rule as everywhere else (DayWindows), on the already shortened
+                // H:i strings this array carries.
                 $excursion = $excursionByChildDate[$child->id.'|'.$day['date']] ?? null;
                 $conflict = $excursion !== null
                     && $excursion['return_at'] !== null
