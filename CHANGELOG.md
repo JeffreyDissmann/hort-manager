@@ -6,6 +6,8 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [2026.11.24] — 2026-11-24
+
 ### Added
 
 - **Springerdienst** (`/standby`): which family stands by on each Hort day in case
