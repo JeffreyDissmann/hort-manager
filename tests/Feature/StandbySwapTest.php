@@ -15,8 +15,8 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
-use NotificationChannels\WebPush\WebPushChannel;
 use Inertia\Testing\AssertableInertia;
+use NotificationChannels\WebPush\WebPushChannel;
 
 uses(RefreshDatabase::class);
 

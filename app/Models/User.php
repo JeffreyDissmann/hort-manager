@@ -108,6 +108,7 @@ class User extends Authenticatable implements HasLocalePreference
     {
         return $this->accounting_access->canWrite();
     }
+
     /**
      * The children (Kinder) this user is a parent of.
      *

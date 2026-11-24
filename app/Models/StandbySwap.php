@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Enums\StandbySwapStatus;
+use App\Support\StandbySwaps;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -14,7 +15,7 @@ use Illuminate\Support\Carbon;
 /**
  * A request to exchange two Springerdienst dates: the family of `offeredChild` gives
  * `offeredDuty` and takes `wantedDuty` from the family of `wantedChild`. The rules
- * (who may ask, answer, when it is still valid) live in {@see \App\Support\StandbySwaps}.
+ * (who may ask, answer, when it is still valid) live in {@see StandbySwaps}.
  */
 class StandbySwap extends Model
 {
