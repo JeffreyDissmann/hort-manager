@@ -88,7 +88,8 @@ it('sets up a companion pickup („geht mit … mit")', function () {
 it('warns when the chosen pickup falls into the day\'s homework or activity', function () {
     $staff = User::factory()->staff()->create();
     $child = Child::factory()->scheduledOn(boardWeekday(), '17:00')->create(['name' => 'Theo']);
-    HomeworkDefault::create(['weekday' => boardWeekday(), 'start_time' => '14:00', 'end_time' => '15:00']);
+    // 13:30, so the 14:00 picked below lies inside it (a pickup right at the start is fine).
+    HomeworkDefault::create(['weekday' => boardWeekday(), 'start_time' => '13:30', 'end_time' => '15:00']);
     DailyProgram::factory()->create([
         'date' => boardDate()->toDateString(), 'activity' => 'Fußballtraining',
         'activity_start' => '15:30', 'activity_end' => '16:30',

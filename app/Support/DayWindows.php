@@ -14,7 +14,7 @@ use App\Models\HomeworkDefault;
  * Betreuungszeit of a Ferienbetreuung — and the one test everything asks of them: does
  * a pickup fall inside?
  *
- * The rule itself (half-open `[from, to)`, so a pickup at the very end of the
+ * The rule itself (open `(from, to)`, so a pickup at the very start or end of the
  * Hausaufgaben is fine) was written out eleven times across the app, and it drifted:
  * the Ferien-Hausaufgaben leak existed in exactly one copy. This class holds the test
  * and the window shapes; the callers keep their own loading, because the board and the
@@ -26,14 +26,18 @@ use App\Models\HomeworkDefault;
  */
 class DayWindows
 {
-    /** Half-open containment: `$from <= $time < $to`. `H:i` strings compare directly. */
+    /**
+     * Strictly inside: `$from < $time < $to`. Touching either edge is fine — leaving
+     * as an Aktivität starts is as harmless as leaving as the Hausaufgaben end.
+     * `H:i` strings compare directly.
+     */
     public static function contains(?string $time, ?string $from, ?string $to): bool
     {
         if ($time === null || $from === null || $to === null) {
             return false;
         }
 
-        return $time >= self::short($from) && $time < self::short($to);
+        return $time > self::short($from) && $time < self::short($to);
     }
 
     /**

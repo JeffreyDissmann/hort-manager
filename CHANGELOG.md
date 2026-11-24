@@ -6,6 +6,13 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- **A pickup exactly when an Aktivität (or the Hausaufgaben, or an Ausflug) starts no
+  longer counts as inside it.** Windows are now open at both ends, `(from, to)`, in
+  `DayWindows` and `resources/js/windows.js` alike — „Abholzeiten prüfen" flagged a
+  15:30 pickup against an Aktivität 15:30–16:30.
+
 ## [2026.11.23] — 2026-11-23
 
 Belegzuordnung in der Buchhaltung (admin-only, daher kein „Was ist neu?"-Eintrag).

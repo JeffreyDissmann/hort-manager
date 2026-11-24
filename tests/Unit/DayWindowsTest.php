@@ -9,11 +9,13 @@ use App\Models\HomeworkDefault;
 use App\Support\DayWindows;
 
 // The one containment rule the whole app asks about a pickup, and the window shapes it
-// is asked with. Half-open: the end of a window is already free.
+// is asked with. Open at both ends: the start and the end of a window are still free.
 
-it('treats a window as half-open', function () {
-    expect(DayWindows::contains('14:00', '14:00', '15:00'))->toBeTrue()
+it('only counts a pickup strictly inside the window', function () {
+    expect(DayWindows::contains('14:01', '14:00', '15:00'))->toBeTrue()
         ->and(DayWindows::contains('14:59', '14:00', '15:00'))->toBeTrue()
+        // Leaving exactly as an Aktivität starts is fine: the child goes before it begins.
+        ->and(DayWindows::contains('14:00', '14:00', '15:00'))->toBeFalse()
         // Leaving exactly when the Hausaufgaben end is fine — that's the normal case.
         ->and(DayWindows::contains('15:00', '14:00', '15:00'))->toBeFalse()
         ->and(DayWindows::contains('13:59', '14:00', '15:00'))->toBeFalse();

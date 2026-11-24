@@ -2,19 +2,20 @@
  * The day's timed windows on the client side — Hausaufgaben, a timed Aktivität, an
  * Ausflug — and the one question asked of them: does a pickup fall inside?
  *
- * Mirrors `App\Support\DayWindows` on the server, down to the half-open interval
- * `[from, to)`: leaving exactly when the Hausaufgaben end is fine. Times are „HH:MM"
+ * Mirrors `App\Support\DayWindows` on the server, down to the open interval
+ * `(from, to)`: leaving exactly when an Aktivität starts or the Hausaufgaben end is
+ * fine. Times are „HH:MM"
  * strings, which compare correctly as strings — `toMinutes` exists only for the layout
  * maths (row spans, band offsets), not for this test.
  */
 
-/** Half-open containment: `from <= time < to`. False if anything is missing. */
+/** Strictly inside: `from < time < to`. False if anything is missing. */
 export function inWindow(time, from, to) {
     if (!time || !from || !to) {
         return false;
     }
 
-    return time >= from && time < to;
+    return time > from && time < to;
 }
 
 /**
