@@ -89,6 +89,9 @@ it('still lets an unanswered family answer after the deadline, but not change it
         ->assertSee('Anmeldeschluss vorbei')
         ->assertMissing("@rsvp-yes-{$jonas->id}")
         ->click("@rsvp-yes-{$lena->id}")
+        // Past the deadline an answer can't be changed, so the buttons go once it is
+        // saved — waiting for that keeps the DB check from racing the request.
+        ->assertMissing("@rsvp-yes-{$lena->id}")
         ->assertNoJavaScriptErrors();
 
     expect((bool) $excursion->children()->find($lena->id)->pivot->response)->toBeTrue();

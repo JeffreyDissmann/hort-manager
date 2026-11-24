@@ -135,6 +135,28 @@ it('places a timed Aktivität as a card in the day\'s order', function () {
         ->assertNoJavaScriptErrors();
 });
 
+it('puts the Aktivität card after a pickup at its start time', function () {
+    // Leaving at 15:00 when the Aktivität starts at 15:00 is leaving before it — the
+    // card above the pickup read as „collected mid-Aktivität" (Markus' report).
+    $staff = User::factory()->staff()->create();
+    scheduledChild('Emily'); // leaves at 15:00
+    DailyProgram::factory()->create([
+        'date' => boardDate()->toDateString(), 'activity' => 'Weihnachtsbazar basteln',
+        'activity_start' => '15:00', 'activity_end' => '16:00',
+    ]);
+
+    $page = actAndVisit($staff, '/board')->assertVisible('@board-activity-card');
+    $cardFirst = $page->script(<<<'JS'
+        () => {
+            const card = document.querySelector('[data-testid="board-activity-card"]');
+            const name = [...document.querySelectorAll('*')].find((el) => el.children.length === 0 && el.textContent.trim() === 'Emily');
+            return !!(card.compareDocumentPosition(name) & Node.DOCUMENT_POSITION_FOLLOWING);
+        }
+        JS);
+
+    expect($cardFirst)->toBeFalse();
+});
+
 it('warns on the card when a pickup falls inside the Aktivität', function () {
     $staff = User::factory()->staff()->create();
     $child = scheduledChild('Frida'); // leaves at 15:00
