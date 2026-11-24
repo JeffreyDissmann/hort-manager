@@ -71,4 +71,9 @@ return [
     'import_saved' => 'Saved. There are still drafts to review.',
     'import_complete' => 'All imported bookings confirmed.',
     'import_skipped_added' => ':count booking(s) imported afterwards.',
+    'standby_swap_requested' => 'Swap request sent. Nothing is swapped until the other family agrees.',
+    'standby_swap_accepted' => 'Swapped – the standby list is updated.',
+    'standby_swap_declined' => 'Swap request declined – the standby list stays as it is.',
+    'standby_swap_cancelled' => 'Swap request withdrawn.',
+    'standby_saved' => 'Standby duty saved.|:count standby duties saved.',
 ];

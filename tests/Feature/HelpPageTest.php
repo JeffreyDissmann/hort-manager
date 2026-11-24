@@ -19,7 +19,7 @@ class HelpPageTest extends TestCase
     {
         return array_map(
             fn (string $topic): array => [$topic],
-            ['getting-started', 'pickups', 'absences', 'holidays', 'excursions', 'slack', 'staff', 'glossary'],
+            ['getting-started', 'pickups', 'absences', 'holidays', 'excursions', 'standby', 'slack', 'staff', 'glossary'],
         );
     }
 

@@ -57,6 +57,11 @@ return [
             'teaser' => 'Die Abstimmung: Kommt dein Kind mit? Ein Klick genügt.',
             'audience' => 'all',
         ],
+        'standby' => [
+            'title' => 'Springerdienst',
+            'teaser' => 'Welche Familie einspringt, wenn Erzieher:innen krank sind – und wie ihr einen Tag tauscht.',
+            'audience' => 'all',
+        ],
         'slack' => [
             'title' => 'Slack & Benachrichtigungen',
             'teaser' => 'Was der Hort-Manager dir schickt, und wie du ihm einfach schreiben kannst.',
@@ -214,6 +219,34 @@ return [
         ],
     ],
 
+    // ---------------------------------------------------------------- Springerdienst
+    'standby' => [
+        'intro' => 'Fallen Erzieher:innen aus, springt eine Familie ein. Welche Familie an welchem Tag eingeteilt ist, steht unter <strong>Springerdienst</strong> im Menü oben rechts. Im Ernstfall meldet sich das Team über Slack bei euch – nicht über den Hort-Manager.',
+        'points' => [
+            'An einem normalen Hort-Tag ist eine Familie eingeteilt, an einem Tag der Ferienbetreuung zwei.',
+            'Eure eigenen Tage sind markiert („Ihr seid eingeteilt“). Am Nachmittag vor eurem Tag bekommt ihr eine Erinnerung.',
+            'Auf „Heute“ und im Wochenplan steht ganz unten, wer an dem Tag Springerdienst hat.',
+        ],
+
+        'swap_title' => 'Einen Tag tauschen',
+        'swap_points' => [
+            'Passt euch ein Tag nicht, tippt bei einem Tag einer anderen Familie auf <strong>Tauschen</strong> und wählt, welchen eurer eigenen Tage ihr dafür anbietet.',
+            'Die andere Familie bekommt eine Anfrage – in Slack mit <strong>Annehmen</strong> und <strong>Ablehnen</strong>, in der App oben auf der Springerdienst-Seite. <strong>Getauscht wird erst, wenn sie zustimmt.</strong>',
+            'Ihr erfahrt, wie sie geantwortet hat. Bis dahin könnt ihr eure Anfrage zurückziehen.',
+            'Wird einer der beiden Tage inzwischen anders vergeben, gilt die Anfrage nicht mehr – dann wird nichts getauscht.',
+            'Getauscht werden können nur Tage, die noch kommen.',
+        ],
+
+        'coordinator_title' => 'Für die Springer-Koordination',
+        'coordinator_text' => 'Die Liste füllt die <strong>Springer-Koordination</strong>; Admins dürfen das immer. Wer die Springer-Koordination macht, legt ein Admin unter <strong>Benutzer</strong> fest.',
+        'coordinator_points' => [
+            'Pro Tag wählt ihr ein Kind aus. Daneben steht, wie oft es dieses Schuljahr schon eingeteilt war – gezählt wird die Einteilung, nicht ob die Familie tatsächlich einspringen musste.',
+            '<strong>Fair zufällig auffüllen</strong> schlägt für die offenen Tage ab heute die Kinder vor, die am seltensten eingeteilt waren: nie eine Familie zweimal am selben Tag und möglichst nicht an zwei Hort-Tagen hintereinander. Gespeichert wird erst mit <strong>Speichern</strong>.',
+            'Haben zwei Familien getauscht, bekommt ihr Bescheid (unter <strong>Profil → Benachrichtigungen</strong>: „Springerdienst-Tausch“).',
+            'Verlässt ein Kind den Hort, sind seine künftigen Tage wieder offen.',
+        ],
+    ],
+
     // ---------------------------------------------------------------- Slack
     'slack' => [
         'slack_title' => 'Was passiert in Slack?',
@@ -246,6 +279,7 @@ return [
             '<strong>Ein Kind möchte mit deinem mitgehen:</strong> Geht dein Kind allein und ein anderes soll mitkommen, fragt dich dessen Familie um Erlaubnis – direkt mit „Ja/Nein“ in Slack oder in der App.',
             '<strong>Antwort aufs Mitgehen:</strong> Hast du gefragt, ob dein Kind mit einem anderen mitgehen darf, erfährst du, sobald die andere Familie zu- oder abgesagt hat.',
             '<strong>Wochenüberblick:</strong> Montags bekommst du die kommende Woche auf einen Blick – Programm, Ausflüge und der Plan deiner Kinder.',
+            '<strong>Springerdienst:</strong> eine Erinnerung am Nachmittag vor eurem Tag, Tauschanfragen anderer Familien (in Slack mit Annehmen/Ablehnen) und die Antwort auf eure eigenen Anfragen.',
         ],
         'notifications_settings' => 'Was du bekommen möchtest, stellst du unter <strong>Profil → Benachrichtigungen</strong> ein – getrennt für Slack und Push. Antworten kannst du überall; beide Seiten bleiben automatisch auf demselben Stand.',
     ],
@@ -352,6 +386,10 @@ return [
             'care' => [
                 'term' => 'Ferienbetreuung',
                 'def' => 'Betreuung in den Ferien, für die Eltern ihr Kind Tag für Tag anmelden. Nur angemeldete Kinder sind da.',
+            ],
+            'standby' => [
+                'term' => 'Springerdienst',
+                'def' => 'Die Familie, die an einem Tag einspringt, wenn Erzieher:innen krank sind. Die Springer-Koordination teilt ein; Familien können Tage untereinander tauschen.',
             ],
             'arrival' => [
                 'term' => 'Kommt später',

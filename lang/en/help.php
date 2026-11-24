@@ -57,6 +57,11 @@ return [
             'teaser' => 'The poll: is your child coming along? One tap is enough.',
             'audience' => 'all',
         ],
+        'standby' => [
+            'title' => 'Standby duty',
+            'teaser' => 'Which family steps in when Erzieher:innen are ill – and how to swap a day.',
+            'audience' => 'all',
+        ],
         'slack' => [
             'title' => 'Slack & notifications',
             'teaser' => 'What Hort-Manager sends you, and how to simply write to it.',
@@ -188,6 +193,34 @@ return [
         ],
     ],
 
+    // ---------------------------------------------------------------- Standby duty
+    'standby' => [
+        'intro' => 'When Erzieher:innen are out, a family steps in. Which family is on which day is listed under <strong>Standby duty</strong> in the menu at the top right. If you’re needed, the team contacts you on Slack – not through Hort-Manager.',
+        'points' => [
+            'On a normal Hort day one family is on standby, on a holiday care day two.',
+            'Your own days are marked (“You are on standby”). The afternoon before your day you get a reminder.',
+            'At the bottom of “Today” and the weekly plan you can see who is on standby that day.',
+        ],
+
+        'swap_title' => 'Swapping a day',
+        'swap_points' => [
+            'If a day doesn’t suit you, tap <strong>Swap</strong> on a day of another family and pick which of your own days you offer in return.',
+            'The other family gets a request – in Slack with <strong>Accept</strong> and <strong>Decline</strong>, in the app at the top of the standby page. <strong>Nothing is swapped until they agree.</strong>',
+            'You’re told how they answered. Until then you can withdraw your request.',
+            'If one of the two days is given to someone else in the meantime, the request no longer applies – nothing is swapped.',
+            'Only days still ahead can be swapped.',
+        ],
+
+        'coordinator_title' => 'For the standby coordinator',
+        'coordinator_text' => 'The list is filled by the <strong>standby coordinator</strong>; admins can always do it too. An admin picks the coordinator under <strong>Users</strong>.',
+        'coordinator_points' => [
+            'Pick a child for each day. Next to it you see how often it has been on the list this school year – it counts being on the list, not whether the family actually had to step in.',
+            '<strong>Fill fairly at random</strong> proposes, for the open days from today, the children who were on the list least often: never one family twice on the same day, and if possible not on two Hort days in a row. Nothing is stored until you <strong>Save</strong>.',
+            'When two families have swapped, you’re told (under <strong>Profile → Notifications</strong>: “Standby swaps”).',
+            'When a child leaves the Hort, its future days show as open again.',
+        ],
+    ],
+
     // ---------------------------------------------------------------- Excursions
     'excursions' => [
         'intro' => 'When an excursion is coming up you’re asked whether your child is joining. Excursions are planned by the staff.',
@@ -246,6 +279,7 @@ return [
             '<strong>A child wants to go with yours:</strong> if your child walks home alone and another is to come along, their family asks you – with “yes/no” in Slack or in the app.',
             '<strong>Answer about going along:</strong> if you asked whether your child may go with another, you hear as soon as the other family has answered.',
             '<strong>Weekly overview:</strong> on Mondays you get the coming week at a glance – programme, excursions and your children’s plan.',
+            '<strong>Standby duty:</strong> a reminder the afternoon before your day, swap requests from other families (with Accept/Decline in Slack) and the answer to your own requests.',
         ],
         'notifications_settings' => 'What you want to receive is set under <strong>Profile → Notifications</strong> – separately for Slack and push. You can answer anywhere; both sides stay in sync automatically.',
     ],
@@ -352,6 +386,10 @@ return [
             'care' => [
                 'term' => 'Holiday care (Ferienbetreuung)',
                 'def' => 'Care during the holidays that parents sign their child up for day by day. Only registered children are there.',
+            ],
+            'standby' => [
+                'term' => 'Standby duty (Springerdienst)',
+                'def' => 'The family that steps in on a given day when Erzieher:innen are ill. The standby coordinator draws up the list; families can swap days among themselves.',
             ],
             'arrival' => [
                 'term' => 'Arriving later',

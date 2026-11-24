@@ -17,6 +17,9 @@ Schedule::command('excursions:remind-rsvps')->dailyAt('08:00');
 // …and those who still owe a Ferienbetreuung answer due today (same shape).
 Schedule::command('care:remind-open')->dailyAt('08:05');
 
+// Weekday afternoons: remind the families on Springerdienst the next weekday (Friday → Monday).
+Schedule::command('standby:remind')->weekdays()->at('16:00');
+
 // Monday: the weekly overview (food, activities and each child's week) to parents, at
 // the Hort-wide configured time — and a fixed lead earlier, a nudge to whoever still
 // has to fill the week's Tagesprogramm in. Both read the setting on every schedule:run,

@@ -22,6 +22,7 @@ class SlackController extends Controller
         'weekly-plan' => 'weekly-plan',
         'program' => 'program',
         'care' => 'care.index',
+        'standby' => 'standby.index',
     ];
 
     /**

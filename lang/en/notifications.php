@@ -25,6 +25,7 @@ return [
     'audiences' => [
         'guardian' => 'As a parent',
         'staff' => 'As staff',
+        'standby_coordinator' => 'As standby coordinator',
     ],
 
     'late_change_cutoff_link' => 'Currently from :time – change it under Programm',
@@ -62,6 +63,14 @@ return [
         'program_missing' => [
             'label' => 'Week program missing',
             'help' => 'Mondays, shortly before the weekly overview goes to parents: when a lunch is still missing.',
+        ],
+        'standby' => [
+            'label' => 'Standby duty',
+            'help' => 'The reminder the afternoon before your standby day, swap requests from other families to you, and the answers to your own requests.',
+        ],
+        'standby_swaps' => [
+            'label' => 'Standby swaps',
+            'help' => 'When two families have swapped a standby day.',
         ],
     ],
 ];

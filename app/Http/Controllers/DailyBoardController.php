@@ -22,6 +22,7 @@ use App\Support\CompanionNotes;
 use App\Support\CompanionReconciler;
 use App\Support\EffectivePlan;
 use App\Support\LateChange;
+use App\Support\StandbyRoster;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -390,6 +391,8 @@ class DailyBoardController extends Controller
                 'can_manage' => $user->isStaff() || ($myChildIds?->contains($a->child_id) ?? false),
             ])->values(),
             'excursions' => $excursionList,
+            // Who stands by if Erzieher are ill — one name, two on a Ferienbetreuung day.
+            'standby' => StandbyRoster::namesBetween($date, $date, $user)[$date->toDateString()] ?? [],
             'program' => $hasProgram ? [
                 'lunch' => $program?->lunch,
                 // Name and window separately: a timed Aktivität gets its own card in

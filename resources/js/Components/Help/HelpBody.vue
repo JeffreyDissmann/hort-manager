@@ -9,6 +9,7 @@ import Glossary from '@/Components/Help/Glossary.vue';
 import Holidays from '@/Components/Help/Holidays.vue';
 import Pickups from '@/Components/Help/Pickups.vue';
 import Slack from '@/Components/Help/Slack.vue';
+import Standby from '@/Components/Help/Standby.vue';
 import Staff from '@/Components/Help/Staff.vue';
 import { help } from '@/routes';
 import { t, tList } from '@/i18n';
@@ -28,6 +29,7 @@ const chapters = {
     absences: { icon: '🤒', component: Absences },
     holidays: { icon: '🏖️', component: Holidays },
     excursions: { icon: '🚌', component: Excursions },
+    standby: { icon: '🦺', component: Standby },
     slack: { icon: '💬', component: Slack },
     staff: { icon: '🧑‍🏫', component: Staff },
     glossary: { icon: '📖', component: Glossary },

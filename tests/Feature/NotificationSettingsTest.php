@@ -44,7 +44,7 @@ class NotificationSettingsTest extends TestCase
         $user = User::factory()->create(['role' => UserRole::Parent, 'slack_id' => 'U1']);
 
         $preferences = [];
-        foreach (['departures', 'excursions', 'companion', 'missing_plan', 'care_registration', 'weekly_digest'] as $category) {
+        foreach (['departures', 'excursions', 'companion', 'missing_plan', 'care_registration', 'weekly_digest', 'standby'] as $category) {
             $preferences[$category] = ['slack' => true, 'push' => true];
         }
         $preferences['departures']['slack'] = false;

@@ -71,4 +71,9 @@ return [
     'import_saved' => 'Gespeichert. Es sind noch Entwürfe zu prüfen.',
     'import_complete' => 'Alle importierten Buchungen bestätigt.',
     'import_skipped_added' => ':count Buchung(en) nachträglich importiert.',
+    'standby_swap_requested' => 'Tauschanfrage gesendet. Getauscht wird erst, wenn die andere Familie zustimmt.',
+    'standby_swap_accepted' => 'Getauscht – der Springerdienst ist aktualisiert.',
+    'standby_swap_declined' => 'Tauschanfrage abgelehnt – der Springerdienst bleibt, wie er ist.',
+    'standby_swap_cancelled' => 'Tauschanfrage zurückgezogen.',
+    'standby_saved' => 'Springerdienst gespeichert.|:count Springerdienste gespeichert.',
 ];

@@ -32,6 +32,8 @@ use App\Http\Controllers\SlackCommandController;
 use App\Http\Controllers\SlackEventController;
 use App\Http\Controllers\SlackInteractionController;
 use App\Http\Controllers\StandardPlanController;
+use App\Http\Controllers\StandbyDutyController;
+use App\Http\Controllers\StandbySwapController;
 use App\Http\Controllers\StatisticsController;
 use App\Http\Controllers\SwitchRoleController;
 use App\Http\Controllers\TrmnlDashboardController;
@@ -95,7 +97,7 @@ Route::get('/auth/slack/callback', [SlackController::class, 'callback'])->name('
 Route::get('/help/{topic?}', fn (?string $topic = null) => Inertia::render('Help', ['topic' => $topic]))
     ->whereIn('topic', [
         'getting-started', 'pickups', 'absences', 'holidays',
-        'excursions', 'slack', 'staff', 'glossary',
+        'excursions', 'standby', 'slack', 'staff', 'glossary',
     ])
     ->name('help');
 
@@ -191,6 +193,15 @@ Route::middleware('auth')->group(function () {
     // Re-offering a removed day needs the tombstone resolved, hence withTrashed().
     Route::patch('/care-days/{careDay}/restore', [HolidayPeriodController::class, 'restoreCareDay'])
         ->withTrashed()->name('care-days.restore');
+
+    // Springerdienst — readable by everyone, filled by the coordinator (policy-gated).
+    Route::get('/standby', [StandbyDutyController::class, 'index'])->name('standby.index');
+    Route::put('/standby', [StandbyDutyController::class, 'update'])->name('standby.update');
+    // Swaps between families: ask, answer (accept/decline), withdraw.
+    Route::post('/standby/swaps', [StandbySwapController::class, 'store'])->name('standby.swaps.store');
+    Route::patch('/standby/swaps/{swap}/accept', [StandbySwapController::class, 'accept'])->name('standby.swaps.accept');
+    Route::patch('/standby/swaps/{swap}/decline', [StandbySwapController::class, 'decline'])->name('standby.swaps.decline');
+    Route::delete('/standby/swaps/{swap}', [StandbySwapController::class, 'destroy'])->name('standby.swaps.destroy');
 
     // Ferienbetreuung sign-ups — parents for their own children, staff for anyone.
     Route::get('/care', [HolidayCareRegistrationController::class, 'index'])->name('care.index');

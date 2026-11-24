@@ -19,6 +19,7 @@ use App\Models\HomeworkDefault;
 use App\Support\CompanionNotes;
 use App\Support\DayWindows;
 use App\Support\EffectivePlan;
+use App\Support\StandbyRoster;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
@@ -398,6 +399,8 @@ class WeeklyOverviewController extends Controller
             'careDays' => $careDays->map(fn (HolidayCareDay $day): string => $day->period->name)->all(),
             // date => Schließzeit name, for the day headers and the locked cells.
             'closedDays' => $closedDays,
+            // date => that day's Springerdienst names (null = „offen"), under the day header.
+            'standby' => StandbyRoster::namesBetween($weekStart, $weekEnd, $user),
             'children' => $allChildren->map(fn (Child $c) => [
                 'id' => $c->id,
                 'name' => $c->name,
