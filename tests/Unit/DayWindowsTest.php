@@ -98,5 +98,16 @@ it('returns every window a time falls into', function () {
     ];
 
     expect(array_column(DayWindows::hits('14:45', $windows), 'kind'))->toBe(['homework', 'activity'])
-        ->and(DayWindows::hits('17:00', $windows))->toBe([]);
+        ->and(DayWindows::hits('17:00', $windows))->toBe([])
+        // A pickup right at a start — a handover as the group leaves, too — is fine.
+        ->and(DayWindows::hits('08:00', $windows))->toBe([])
+        ->and(DayWindows::hits('14:00', $windows))->toBe([]);
+});
+
+it('counts an arrival right at the departure as missing the group, but not one at the return', function () {
+    expect(DayWindows::arrivesDuring('13:30', '13:30', '17:00'))->toBeTrue()
+        ->and(DayWindows::arrivesDuring('16:59', '13:30', '17:00'))->toBeTrue()
+        ->and(DayWindows::arrivesDuring('17:00', '13:30', '17:00'))->toBeFalse()
+        ->and(DayWindows::arrivesDuring('13:29', '13:30', '17:00'))->toBeFalse()
+        ->and(DayWindows::arrivesDuring(null, '13:30', '17:00'))->toBeFalse();
 });

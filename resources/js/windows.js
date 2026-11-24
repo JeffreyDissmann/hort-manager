@@ -56,6 +56,7 @@ export function programWindows(program, translate) {
 /**
  * Does the pickup fall inside the trip? A trip without a return time can't be judged —
  * nobody knows when the group is back; a missing departure counts as „from the morning".
+ * A handover right as the group leaves is fine, like at any other window's edge.
  */
 export function inExcursion(time, excursion) {
     if (!excursion?.return_at) {

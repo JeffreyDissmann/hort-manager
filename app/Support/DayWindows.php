@@ -14,8 +14,9 @@ use App\Models\HomeworkDefault;
  * Betreuungszeit of a Ferienbetreuung — and the one test everything asks of them: does
  * a pickup fall inside?
  *
- * The rule itself (open `(from, to)`, so a pickup at the very start or end of the
- * Hausaufgaben is fine) was written out eleven times across the app, and it drifted:
+ * The rule itself (open `(from, to)`, so a pickup at the very start or end of a window
+ * is fine — also a handover as an Ausflug leaves) was written out eleven times across
+ * the app, and it drifted:
  * the Ferien-Hausaufgaben leak existed in exactly one copy. This class holds the test
  * and the window shapes; the callers keep their own loading, because the board and the
  * standing summary batch their queries while the Slack assistant looks up a single day.
@@ -38,6 +39,20 @@ class DayWindows
         }
 
         return $time > self::short($from) && $time < self::short($to);
+    }
+
+    /**
+     * Does an *arrival* miss the group? `$from <= $time < $to`: unlike a pickup (handed
+     * over as the group leaves — fine), a child arriving at the moment the bus leaves
+     * arrives to an empty Hort. Arriving at the return time is fine.
+     */
+    public static function arrivesDuring(?string $time, ?string $from, ?string $to): bool
+    {
+        if ($time === null || $from === null || $to === null) {
+            return false;
+        }
+
+        return $time >= self::short($from) && $time < self::short($to);
     }
 
     /**

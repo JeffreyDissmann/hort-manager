@@ -8,10 +8,13 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
-- **A pickup exactly when an Aktivität (or the Hausaufgaben, or an Ausflug) starts no
-  longer counts as inside it.** Windows are now open at both ends, `(from, to)`, in
-  `DayWindows` and `resources/js/windows.js` alike — „Abholzeiten prüfen" flagged a
-  15:30 pickup against an Aktivität 15:30–16:30.
+- **A pickup exactly when the Hausaufgaben, an Aktivität or an Ausflug start no longer
+  counts as inside them** — „Abholzeiten prüfen" flagged a 15:30 pickup against an
+  Aktivität 15:30–16:30. Windows are open at both ends, `(from, to)`, in `DayWindows` and
+  `resources/js/windows.js` alike (a handover as the group leaves is fine); on „Heute"
+  the Aktivität card now sits after a pickup at its start time. A „kommt später" right at
+  an Ausflug's departure is still flagged (`DayWindows::arrivesDuring`, `[from, to)`):
+  that child arrives to an empty Hort. Reported by Markus.
 
 ## [2026.11.23] — 2026-11-23
 

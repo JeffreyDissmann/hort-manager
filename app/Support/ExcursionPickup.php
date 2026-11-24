@@ -148,7 +148,7 @@ class ExcursionPickup
 
         $arrival = EffectivePlan::for($child->id, $date)['arrives_at'] ?? null;
 
-        if ($window !== null && DayWindows::contains($arrival, $window['from'], $window['to'])) {
+        if ($window !== null && DayWindows::arrivesDuring($arrival, $window['from'], $window['to'])) {
             $warnings[] = __('flash.rsvp_clash_arrival', [
                 'name' => $child->name,
                 'time' => (string) $arrival,
