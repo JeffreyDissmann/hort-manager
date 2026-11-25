@@ -6,6 +6,8 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [2026.11.25] — 2026-11-25
+
 ### Added
 
 - **Choose who takes part before „Fair zufällig auffüllen".** A dialog lists every
