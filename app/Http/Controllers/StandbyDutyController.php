@@ -25,6 +25,9 @@ use Inertia\Response;
  */
 class StandbyDutyController extends Controller
 {
+    /** Session key: children left out of „Fair zufällig auffüllen". */
+    private const EXCLUDED_KEY = 'standby.fill_excluded';
+
     public function index(Request $request): Response
     {
         $this->authorize('viewAny', StandbyDuty::class);
@@ -35,10 +38,17 @@ class StandbyDutyController extends Controller
         $to = $month->copy()->endOfMonth()->startOfDay();
         $canManage = $user->can('manage', StandbyDuty::class);
 
+        // Who the coordinator leaves out of the fill (e.g. Vorstand families). Kept in the
+        // session — not the database — so filling month after month keeps the choice.
+        if ($canManage && $request->boolean('propose')) {
+            $request->session()->put(self::EXCLUDED_KEY, array_values(array_map('intval', (array) $request->query('exclude', []))));
+        }
+        $excluded = $request->session()->get(self::EXCLUDED_KEY, []);
+
         // Only the slots still ahead are proposed; past days are history.
         $proposeFrom = $from->max(Carbon::today());
         $proposal = $canManage && $request->boolean('propose') && $proposeFrom->lte($to)
-            ? app(StandbyFill::class)->propose($proposeFrom, $to)
+            ? app(StandbyFill::class)->propose($proposeFrom, $to, $excluded)
             : null;
 
         return Inertia::render('Standby/Index', [
@@ -54,6 +64,7 @@ class StandbyDutyController extends Controller
             'children' => $canManage ? StandbyRoster::eligibleChildren($from, $to) : [],
             'counts' => $canManage ? $this->schoolYearCounts($from) : [],
             'proposal' => $proposal,
+            'fillExcluded' => $canManage ? $excluded : [],
             // Swaps: the viewer's own dates they could offer, and their open requests.
             'ownUpcoming' => StandbyRoster::upcomingFor($user),
             'swaps' => app(StandbySwaps::class)->openFor($user),

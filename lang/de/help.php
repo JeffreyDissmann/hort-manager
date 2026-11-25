@@ -242,6 +242,7 @@ return [
         'coordinator_points' => [
             'Pro Tag wählt ihr ein Kind aus. Daneben steht, wie oft es dieses Schuljahr schon eingeteilt war – gezählt wird die Einteilung, nicht ob die Familie tatsächlich einspringen musste.',
             '<strong>Fair zufällig auffüllen</strong> schlägt für die offenen Tage ab heute die Kinder vor, die am seltensten eingeteilt waren: nie eine Familie zweimal am selben Tag und möglichst nicht an zwei Hort-Tagen hintereinander. Gespeichert wird erst mit <strong>Speichern</strong>.',
+            'Vor dem Auffüllen fragt der Hort-Manager, <strong>wer eingeteilt wird</strong>: alle Kinder sind angehakt, und ihr nehmt die Haken bei denen raus, deren Familie keinen Springerdienst macht – zum Beispiel Vorstandsfamilien. Die Auswahl bleibt gemerkt, solange ihr angemeldet seid, auch für die nächsten Monate.',
             'Haben zwei Familien getauscht, bekommt ihr Bescheid (unter <strong>Profil → Benachrichtigungen</strong>: „Springerdienst-Tausch“).',
             'Verlässt ein Kind den Hort, sind seine künftigen Tage wieder offen.',
         ],

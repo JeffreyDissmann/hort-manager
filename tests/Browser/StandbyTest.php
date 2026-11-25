@@ -42,6 +42,7 @@ it('fills the month from the fair proposal once saved', function () {
 
     $page = actAndVisit(User::factory()->standbyCoordinator()->create(), "/standby?month={$month}")
         ->click('@standby-fill')
+        ->click('@fill-go')
         ->assertVisible('@standby-savebar');
 
     // A proposal is only a proposal until saved.
@@ -51,6 +52,25 @@ it('fills the month from the fair proposal once saved', function () {
 
     $start = now()->addMonthNoOverflow()->startOfMonth();
     expect(StandbyDuty::count())->toBe(count(StandbyRoster::slotsBetween($start, $start->copy()->endOfMonth())));
+});
+
+it('leaves an unticked child out of the fair fill', function () {
+    [$month] = standbyNextMonth();
+    $children = Child::factory()->count(3)->sequence(fn ($s) => ['name' => "Kind {$s->index}"])
+        ->create()
+        ->each(fn (Child $child) => $child->guardians()->attach(User::factory()->create()));
+    $vorstand = $children->first();
+
+    actAndVisit(User::factory()->standbyCoordinator()->create(), "/standby?month={$month}")
+        ->click('@standby-fill')
+        ->click("@fill-child-{$vorstand->id}")
+        ->click('@fill-go')
+        ->assertVisible('@standby-savebar')
+        ->click('@standby-save')
+        ->assertMissing('@standby-savebar');
+
+    expect(StandbyDuty::count())->toBeGreaterThan(0)
+        ->and(StandbyDuty::where('child_id', $vorstand->id)->count())->toBe(0);
 });
 
 it('lets one family ask for a swap and the other accept it', function () {

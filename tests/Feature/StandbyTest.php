@@ -245,6 +245,44 @@ describe('fair fill', function () {
             ->get('/standby?month=2027-01&propose=1')
             ->assertInertia(fn (AssertableInertia $page) => $page->where('proposal', null));
     });
+
+    it('leaves out the children the coordinator unticked', function () {
+        $vorstand = standbyChild();
+        $others = collect(range(1, 3))->map(fn () => standbyChild());
+
+        $proposal = collect(app(StandbyFill::class)->propose(Carbon::parse('2027-03-01'), Carbon::parse('2027-03-12'), [$vorstand->id]));
+
+        expect($proposal)->toHaveCount(10)
+            ->and($proposal->where('child_id', $vorstand->id))->toBeEmpty();
+    });
+
+    it('remembers who was left out for the next months, in the session only', function () {
+        $vorstand = standbyChild();
+        standbyChild();
+        standbyChild();
+
+        $this->actingAs($this->coordinator)
+            ->get("/standby?month=2027-03&propose=1&exclude[]={$vorstand->id}")
+            ->assertSessionHas('standby.fill_excluded', [$vorstand->id]);
+
+        // Next month: the page offers the same choice again, and the fill honours it.
+        $this->actingAs($this->coordinator)
+            ->get('/standby?month=2027-04')
+            ->assertInertia(fn (AssertableInertia $page) => $page->where('fillExcluded', [$vorstand->id]));
+
+        // Re-proposing with everyone ticked again clears it.
+        $this->actingAs($this->coordinator)
+            ->get('/standby?month=2027-04&propose=1')
+            ->assertSessionHas('standby.fill_excluded', [])
+            ->assertInertia(fn (AssertableInertia $page) => $page->where('proposal', fn ($p) => collect($p)->contains('child_id', $vorstand->id)));
+    });
+
+    it('does not let a parent set the exclusion', function () {
+        $this->actingAs(User::factory()->parent()->create())
+            ->get('/standby?month=2027-03&propose=1&exclude[]=1')
+            ->assertSessionMissing('standby.fill_excluded')
+            ->assertInertia(fn (AssertableInertia $page) => $page->where('fillExcluded', []));
+    });
 });
 
 describe('board and Wochenplan', function () {

@@ -216,6 +216,7 @@ return [
         'coordinator_points' => [
             'Pick a child for each day. Next to it you see how often it has been on the list this school year – it counts being on the list, not whether the family actually had to step in.',
             '<strong>Fill fairly at random</strong> proposes, for the open days from today, the children who were on the list least often: never one family twice on the same day, and if possible not on two Hort days in a row. Nothing is stored until you <strong>Save</strong>.',
+            'Before filling, Hort-Manager asks <strong>who is put on the list</strong>: every child is ticked, and you untick the ones whose family doesn’t do standby duty – for example board families. The choice is remembered while you are signed in, for the next months too.',
             'When two families have swapped, you’re told (under <strong>Profile → Notifications</strong>: “Standby swaps”).',
             'When a child leaves the Hort, its future days show as open again.',
         ],
