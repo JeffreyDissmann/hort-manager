@@ -25,6 +25,8 @@ const props = defineProps({
     children: { type: Array, default: () => [] },
     counts: { type: [Object, Array], default: () => ({}) },
     proposal: { type: Array, default: null },
+    // Children left out of the fair fill — remembered in the session across months.
+    fillExcluded: { type: Array, default: () => [] },
     // Swaps: the viewer's own dates from tomorrow on, and their open requests.
     ownUpcoming: { type: Array, default: () => [] },
     swaps: { type: Object, default: () => ({ incoming: [], outgoing: [] }) },
@@ -95,8 +97,31 @@ function discard() {
     router.get(standbyIndex({ query: { month: props.month.value } }).url, {}, { preserveScroll: true });
 }
 
+// The fill dialog: everyone ticked except who was left out last time; untick to leave
+// a child (e.g. a Vorstand family) out of the proposal.
+const fillOpen = ref(false);
+const fillIncluded = ref(new Set());
+
+function openFill() {
+    const excluded = new Set(props.fillExcluded);
+    fillIncluded.value = new Set(props.children.filter((c) => !excluded.has(c.id)).map((c) => c.id));
+    fillOpen.value = true;
+}
+
+function toggleFill(id) {
+    const next = new Set(fillIncluded.value);
+    next.has(id) ? next.delete(id) : next.add(id);
+    fillIncluded.value = next;
+}
+
+function setAllFill(on) {
+    fillIncluded.value = new Set(on ? props.children.map((c) => c.id) : []);
+}
+
 function propose() {
-    router.get(standbyIndex({ query: { month: props.month.value, propose: 1 } }).url, {}, { preserveScroll: true });
+    const exclude = props.children.filter((c) => !fillIncluded.value.has(c.id)).map((c) => c.id);
+    fillOpen.value = false;
+    router.get(standbyIndex({ query: { month: props.month.value, propose: 1, exclude } }).url, {}, { preserveScroll: true });
 }
 
 function goTo(month) {
@@ -235,7 +260,7 @@ const openFillableCount = computed(
 
             <!-- Coordinator: fair random fill -->
             <div v-if="canManage" class="flex flex-wrap items-center gap-3 rounded-2xl bg-surface p-4 shadow-sm">
-                <SecondaryButton :disabled="openFillableCount === 0" data-testid="standby-fill" @click="propose">
+                <SecondaryButton :disabled="openFillableCount === 0" data-testid="standby-fill" @click="openFill">
                     <SparklesIcon class="mr-1 h-4 w-4" /> {{ $t('standby.fill') }}
                 </SecondaryButton>
                 <p class="min-w-0 flex-1 text-xs text-ink/50">
@@ -331,6 +356,44 @@ const openFillableCount = computed(
                 </ul>
             </div>
         </div>
+
+        <!-- Fair fill: who takes part this time. -->
+        <Modal :show="fillOpen" max-width="md" :label="$t('standby.fill_title')" @close="fillOpen = false">
+            <form class="space-y-4 p-6" @submit.prevent="propose">
+                <h3 class="text-lg font-semibold text-ink">{{ $t('standby.fill_title') }}</h3>
+                <p class="text-sm text-ink/70">{{ $t('standby.fill_pick_intro') }}</p>
+                <div class="flex gap-3 text-xs">
+                    <button type="button" class="font-medium text-hort-teal-dark hover:underline" @click="setAllFill(true)">
+                        {{ $t('standby.fill_all') }}
+                    </button>
+                    <button type="button" class="font-medium text-hort-teal-dark hover:underline" @click="setAllFill(false)">
+                        {{ $t('standby.fill_none') }}
+                    </button>
+                </div>
+                <div class="max-h-80 space-y-1 overflow-y-auto">
+                    <label
+                        v-for="child in children"
+                        :key="child.id"
+                        class="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-sm transition hover:bg-ink/5"
+                    >
+                        <input
+                            type="checkbox"
+                            :checked="fillIncluded.has(child.id)"
+                            class="rounded border-ink/20 text-hort-teal-dark focus:ring-hort-teal"
+                            :data-testid="`fill-child-${child.id}`"
+                            @change="toggleFill(child.id)"
+                        />
+                        <span class="text-ink">{{ child.name }}</span>
+                        <span class="ml-auto text-xs text-ink/50">{{ $t('standby.count_suffix', { count: countFor(child.id) }) }}</span>
+                    </label>
+                </div>
+                <p class="rounded-lg bg-ink/5 px-3 py-2 text-xs text-ink/70">{{ $t('standby.fill_pick_note') }}</p>
+                <div class="flex justify-end gap-2">
+                    <SecondaryButton type="button" @click="fillOpen = false">{{ $t('common.cancel') }}</SecondaryButton>
+                    <PrimaryButton :disabled="fillIncluded.size === 0" data-testid="fill-go">{{ $t('standby.fill_go') }}</PrimaryButton>
+                </div>
+            </form>
+        </Modal>
 
         <!-- Swap request: pick which own date to offer for the chosen one. -->
         <Modal :show="swapTarget !== null" max-width="md" :label="$t('standby.swap_title')" @close="swapTarget = null">

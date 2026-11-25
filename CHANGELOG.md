@@ -6,6 +6,15 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [2026.11.25] — 2026-11-25
+
+### Added
+
+- **Choose who takes part before „Fair zufällig auffüllen".** A dialog lists every
+  eligible child, all ticked; the coordinator unticks families who don't do
+  Springerdienst (e.g. the Vorstand). The choice is kept in the session, not the
+  database, so filling month after month keeps it. Days already filled stay as they are.
+
 ## [2026.11.24] — 2026-11-24
 
 ### Added

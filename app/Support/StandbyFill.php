@@ -13,7 +13,8 @@ use Illuminate\Support\Carbon;
  * range. Nothing is saved: the coordinator sees the proposal, adjusts it and saves.
  *
  * Per slot, in date order:
- * - only children enrolled that day with at least one guardian;
+ * - only children enrolled that day with at least one guardian, minus the ones the
+ *   coordinator left out for this fill (e.g. Vorstand families, who don't do it);
  * - never a family already on that day (two children sharing a guardian are one family);
  * - not a family on the neighbouring Hort day either, unless nobody else is left;
  * - the fewest Springerdienste in the date's school year first — counting what is
@@ -33,11 +34,17 @@ class StandbyFill
     /** @var array<string, list<int>> `Y-m-d` → child ids on that day (saved + proposed) */
     private array $byDate = [];
 
+    /** @var list<int> children this fill must not pick */
+    private array $excluded = [];
+
     /**
+     * @param  list<int>  $excludedChildIds  left out of this fill; their saved days stay
      * @return list<array{date: string, slot: int, child_id: int}>
      */
-    public function propose(Carbon $from, Carbon $to): array
+    public function propose(Carbon $from, Carbon $to, array $excludedChildIds = []): array
     {
+        $this->excluded = $excludedChildIds;
+
         $slots = StandbyRoster::slotsBetween($from, $to);
 
         if ($slots === []) {
@@ -101,6 +108,7 @@ class StandbyFill
         $candidates = Child::query()
             ->activeOn($date)
             ->whereIn('id', array_keys($this->guardians))
+            ->whereNotIn('id', $this->excluded)
             ->pluck('id')
             ->reject(fn (int $id): bool => $this->sharesFamilyWithAny($id, $sameDay))
             ->values();
